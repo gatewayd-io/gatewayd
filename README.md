@@ -23,6 +23,34 @@ The high-level component architecture diagram is depicted below:
 
 ![Architecture diagrams](assets/Architecture%20Diagram%20v0.0.1.svg)
 
+## Build and Run
+
+You can build and run gatewayd by running the following commands. You must have Go and git installed.
+
+```bash
+git clone git@github.com:gatewayd-io/gatewayd.git && cd gatewayd
+go mod tidy && go build
+./gatewayd
+Listening on host: ::, port: 15432
+```
+
+The server will start listening on the default 15432 port and will proxy any clients that connects to its port to a PostgreSQL server running on port 5432. While the server is running, run the following commands to test the proxy feature(s). You must have Docker and `psql` installed.
+
+```bash
+# This run a PostgreSQL server as a Docker container
+docker run --rm --name postgres-test -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres
+# This will try to connect to the PostgreSQL server via gatewayd
+psql -U postgres -p 15432 -h localhost
+```
+
+After entering the password, `postgres`, you can see the messages being passed between the PostgreSQL and the `psql` client in the terminal the gatewayd is running in. The `psql` command will work normally.
+
+You can remove the Docker container by stopping it:
+
+```bash
+docker stop postgres-test
+```
+
 <!--
 ## Support
 
