@@ -1,6 +1,6 @@
 package main
 
-import "github.com/mostafa/gatewayd/network"
+import "github.com/gatewayd-io/gatewayd/network"
 
 func main() {
 	err := network.NewListener(&network.ListenerCfg{

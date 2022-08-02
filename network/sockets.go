@@ -1,9 +1,16 @@
 package network
 
 import (
+	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net"
+
+	"github.com/auxten/postgresql-parser/pkg/sql/parser"
+	wire "github.com/jeroenrinzema/psql-wire"
+	"github.com/lib/pq/oid"
+	pg_query "github.com/pganalyze/pg_query_go"
 )
 
 type ListenerCfg struct {
@@ -48,28 +55,78 @@ func NewDialerCfg(cfg *DialerCfg) *DialerCfg {
 }
 
 func NewListener(listenerCfg *ListenerCfg) error {
-	// Listen for incoming connections.
-	listener, err := net.Listen(listenerCfg.Protocol, listenerCfg.Address)
-	if err != nil {
-		panic(err)
-	}
-	defer listener.Close()
-	host, port, err := net.SplitHostPort(listener.Addr().String())
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("Listening on host: %s, port: %s\n", host, port)
+	// // Listen for incoming connections.
+	// listener, err := net.Listen(listenerCfg.Protocol, listenerCfg.Address)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// defer listener.Close()
+	// host, port, err := net.SplitHostPort(listener.Addr().String())
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// fmt.Printf("Listening on host: %s, port: %s\n", host, port)
 
-	for {
-		// Listen for an incoming conn
-		conn, err := listener.Accept()
-		if err != nil {
-			panic(err)
-		}
+	// for {
+	// 	// Listen for an incoming conn
+	// 	conn, err := listener.Accept()
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
 
-		// Handle connections in a new goroutine
-		go listenerCfg.ConnHandler(conn, nil)
-	}
+	// 	// Handle connections in a new goroutine
+	// 	go listenerCfg.ConnHandler(conn, nil)
+	// }
+
+	wire.ListenAndServe(
+		listenerCfg.Address,
+		func(ctx context.Context, query string, writer wire.DataWriter) error {
+			// Parse the query.
+			statements, err := parser.Parse(query)
+			if err != nil {
+				return err
+			}
+			for _, stmt := range statements {
+				fmt.Printf("postgresql-parser: %#v\n", stmt)
+			}
+
+			// // Parse the query into a ParseTreeList.
+			// parsetreelist, err := pg_query.Parse(query)
+			// if err != nil {
+			// 	return err
+			// }
+			// fmt.Printf("pg_query: %#v\n", parsetreelist)
+
+			// // Parse the query and create a fingerprint.
+			// fingerprint, err := pg_query.FastFingerprint(query)
+			// if err != nil {
+			// 	return err
+			// }
+			// fmt.Printf("pg_query fingerprint: %s\n", fingerprint)
+
+			// Parse the query into a JSON string.
+			tree, err := pg_query.ParseToJSON(query)
+			if err != nil {
+				return err
+			}
+			fmt.Printf("pg_query: %s\n", tree)
+
+			table := wire.Columns{
+				{
+					Table:  0,
+					Name:   "id",
+					Width:  4,
+					Oid:    oid.T_int4,
+					Format: wire.TextFormat,
+				},
+				{
+					Table:  0,
+					Name:   "name",
+					Width:  32,
+					Oid:    oid.T_text,
+					Format: wire.TextFormat,
+				},
+			}
 }
 
 func NewDialer(dialerCfg *DialerCfg) (net.Conn, error) {
@@ -127,13 +184,19 @@ func ProxyHandler(src net.Conn, dialerCfg *DialerCfg) {
 			var buf []byte
 			for {
 				buf = make([]byte, 1024)
-				len, err := src.Read(buf)
+				size, err := src.Read(buf)
 				if err != nil {
 					fmt.Printf("Error reading: %#v\n", err)
 					break
 				}
-				fmt.Printf("C2S: %s %s\n", string(buf[0]), string(buf[1:len]))
-				dst.Write(buf[:len])
+
+				binary_query := buf[:size]
+				query := getQuery(binary_query)
+
+				fmt.Printf("C2S: %s\n", query)
+				fmt.Printf("Parsed Query: %s\n", parseQuery(query))
+
+				dst.Write(binary_query)
 			}
 			dst.Close()
 			src.Close()
@@ -154,4 +217,21 @@ func ProxyHandler(src net.Conn, dialerCfg *DialerCfg) {
 			src.Close()
 		}()
 	}
+}
+
+func getQuery(buffer []byte) string {
+	pos := bytes.IndexByte(buffer, 0)
+	if pos == -1 {
+		panic("Invalid query")
+	}
+
+	return string(buffer[:pos])
+}
+
+func parseQuery(query string) string {
+	tree, err := pg_query.ParseToJSON(query)
+	if err != nil {
+		panic(err)
+	}
+	return tree
 }
