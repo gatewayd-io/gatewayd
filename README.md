@@ -1,4 +1,4 @@
-# GatewayD
+# <img src="https://github.com/gatewayd-io/gatewayd/blob/main/assets/gatewayd-logo.png" alt="gatewayd logo" style="height: 32px; width:32px;"/> GatewayD
 
 GatewayD is a cloud-native database gateway and framework. It sits in between your database(s) and your database client(s) and proxies all queries to and their responses from the database. While doing so, it supports the following features:
 
@@ -21,7 +21,7 @@ The ultimate goal is to be able to replace everything, even the core parts, with
 
 The high-level component architecture diagram is depicted below:
 
-![Architecture diagrams](assets/Architecture%20Diagram%20v0.0.1.svg)
+![Architecture diagrams](assets/architecture-diagram-v0.0.1.png)
 
 ## Build and Run
 
