@@ -1,6 +1,6 @@
 # GatewayD
 
-GatewayD is a cloud-native database gateway and framework. It sits in between your database(s) and your database client(s) and proxies all queries to and their responses from the database. While doing so, it supports the following features:
+GatewayD is a cloud-native database gateway and framework. It acts like an API gateway, but instead sits between the applications or microservices, a.k.a. database clients, and proxies connections to the database(s). The database clients are drivers, OXMs, libraries, migration runners, CLIs, UIs, and whatever tries to connect to the database via its wire protocol. The core proxies connections between the client(s) and the database(s), while providing connection pooling, bouncing, and a few other network-level and socket-level features. It also provides a plugin framework, so that the rest of the functionality are implemented on top as plugins. So, whatever happens inside the core needs to be accessible by plugins. Query processing, AAA, security, traffic control, o11y, transformations, logging, and other functionalities are implemented with plugins. There will be core and community plugins. There will be a package manager to manage and update all the plugins. These are the features:
 
 - Manage authentication, authorization and access
 - Support multiple database backends (SQL and NoSQL)
