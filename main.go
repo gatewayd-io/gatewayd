@@ -1,19 +1,19 @@
 package main
 
-import "github.com/mostafa/gatewayd/network"
+import (
+	"github.com/gatewayd-io/gatewayd/network"
+	"github.com/panjf2000/gnet/v2"
+)
 
 func main() {
-	err := network.NewListener(&network.ListenerCfg{
-		Protocol:    "tcp",
-		Address:     ":15432", // incoming port
-		ConnHandler: network.ProxyHandler,
-		DialerCfg: &network.DialerCfg{
-			ZeroCopy: true,
-			Protocol: "tcp",
-			Address:  ":5432", // database port
+	// Create a PostgreSQL server.
+	server := &network.PostgreSQLServer{
+		Address: ":15432",
+		Options: []gnet.Option{
+			gnet.WithMulticore(true),
+			gnet.WithReusePort(true),
+			gnet.WithTicker(false),
 		},
-	})
-	if err != nil {
-		panic(err)
 	}
+	server.Run()
 }
