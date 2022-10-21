@@ -12,6 +12,7 @@ import (
 func main() {
 	// Create a server
 	server := &network.Server{
+		Network: "unix",
 		Address: ":15432",
 		Options: []gnet.Option{
 			// Scheduling options

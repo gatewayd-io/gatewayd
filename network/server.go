@@ -10,9 +10,10 @@ import (
 
 type Server struct {
 	gnet.BuiltinEventEngine
+	engine gnet.Engine
 
+	Network   string // tcp/udp/unix
 	Address   string
-	engine    gnet.Engine
 	Options   []gnet.Option
 	SoftLimit int
 	HardLimit int
@@ -89,7 +90,7 @@ func (s *Server) OnTick() (delay time.Duration, action gnet.Action) {
 }
 
 func (s *Server) Run() {
-	err := gnet.Run(s, s.Address, s.Options...)
+	err := gnet.Run(s, s.Network+"://"+s.Address, s.Options...)
 	if err != nil {
 		logrus.Error(err)
 	}
