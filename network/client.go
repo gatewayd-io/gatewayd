@@ -12,6 +12,8 @@ type Client struct {
 	ReceiveBufferSize int
 	Network           string // tcp/udp/unix
 	Address           string
+
+	// TODO: add read/write deadline and deal with timeouts
 }
 
 func NewClient(network, address string, receiveBufferSize int) *Client {
@@ -37,17 +39,19 @@ func (c *Client) Send(data []byte) {
 	logrus.Infof("Sent %d bytes to %s", len(data), c.Address)
 }
 
-func (c *Client) Receive() []byte {
+func (c *Client) Receive() (int, []byte) {
 	buf := make([]byte, c.ReceiveBufferSize)
 	read, err := c.Read(buf)
 	if err != nil {
 		logrus.Error(err)
 	}
 	logrus.Infof("Received %d bytes from %s", read, c.Address)
-	return buf
+	return read, buf
 }
 
 func (c *Client) Close() {
-	c.Conn.Close()
+	if c.Conn != nil {
+		c.Conn.Close()
+	}
 	logrus.Infof("Closed connection to %s", c.Address)
 }
