@@ -9,6 +9,7 @@ import (
 type Client struct {
 	net.Conn
 
+	ID                string
 	ReceiveBufferSize int
 	Network           string // tcp/udp/unix
 	Address           string
@@ -16,8 +17,12 @@ type Client struct {
 	// TODO: add read/write deadline and deal with timeouts
 }
 
-func NewClient(network, address string, receiveBufferSize int) *Client {
-	c := Client{Network: network, Address: address}
+func NewClient(network, address string, receiveBufferSize int) Client {
+	c := Client{
+		ID:      GetID(network, address),
+		Network: network,
+		Address: address,
+	}
 	conn, err := net.Dial(c.Network, c.Address)
 	if err != nil {
 		logrus.Error(err)
@@ -27,11 +32,12 @@ func NewClient(network, address string, receiveBufferSize int) *Client {
 		c.ReceiveBufferSize = 4096
 	}
 	logrus.Infof("New client created: %s", c.Address)
+	c.ID = GetID(conn.LocalAddr().Network(), conn.LocalAddr().String())
 
-	return &c
+	return c
 }
 
-func (c *Client) Send(data []byte) {
+func (c Client) Send(data []byte) {
 	_, err := c.Write(data)
 	if err != nil {
 		logrus.Error(err)
@@ -39,7 +45,7 @@ func (c *Client) Send(data []byte) {
 	logrus.Infof("Sent %d bytes to %s", len(data), c.Address)
 }
 
-func (c *Client) Receive() (int, []byte) {
+func (c Client) Receive() (int, []byte) {
 	buf := make([]byte, c.ReceiveBufferSize)
 	read, err := c.Read(buf)
 	if err != nil {
@@ -49,7 +55,7 @@ func (c *Client) Receive() (int, []byte) {
 	return read, buf
 }
 
-func (c *Client) Close() {
+func (c Client) Close() {
 	if c.Conn != nil {
 		c.Conn.Close()
 	}

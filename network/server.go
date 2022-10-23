@@ -1,7 +1,6 @@
 package network
 
 import (
-	"syscall"
 	"time"
 
 	"github.com/panjf2000/gnet/v2"
@@ -11,24 +10,13 @@ import (
 type Server struct {
 	gnet.BuiltinEventEngine
 	engine gnet.Engine
+	proxy  Proxy
 
 	Network   string // tcp/udp/unix
 	Address   string
 	Options   []gnet.Option
 	SoftLimit int
 	HardLimit int
-	// TODO: Clients should be moved to the proxy struct
-	Clients map[string]*Client
-}
-
-func GetRLimit() syscall.Rlimit {
-	var limits syscall.Rlimit
-	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &limits); err != nil {
-		logrus.Error(err)
-	}
-	logrus.Infof("Current system soft limit: %d", limits.Cur)
-	logrus.Infof("Current system hard limit: %d", limits.Max)
-	return limits
 }
 
 func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
@@ -48,6 +36,8 @@ func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 		logrus.Info("Hard limit is not set, using the current system hard limit")
 	}
 
+	s.proxy = NewProxy(10)
+
 	logrus.Infof("PostgreSQL server is listening on %s\n", s.Address)
 	return gnet.None
 }
@@ -63,9 +53,7 @@ func (s *Server) OnOpen(c gnet.Conn) (out []byte, action gnet.Action) {
 		return nil, gnet.Close
 	}
 
-	if _, ok := s.Clients[c.RemoteAddr().String()]; !ok {
-		s.Clients[c.RemoteAddr().String()] = NewClient("tcp", "localhost:5432", 4096)
-	}
+	s.proxy.Connect(c)
 
 	logrus.Infof("PostgreSQL server is opening a connection from %s", c.RemoteAddr().String())
 	return nil, gnet.None
@@ -73,22 +61,16 @@ func (s *Server) OnOpen(c gnet.Conn) (out []byte, action gnet.Action) {
 
 func (s *Server) OnClose(c gnet.Conn, err error) (action gnet.Action) {
 	logrus.Infof("PostgreSQL server is closing a connection from %s", c.RemoteAddr().String())
-	s.Clients[c.RemoteAddr().String()].Close()
+
+	s.proxy.Disconnect(c)
+
 	return gnet.Close
 }
 
 func (s *Server) OnTraffic(c gnet.Conn) gnet.Action {
-	// buf contains the data from the client (query)
-	buf, _ := c.Next(-1)
-
-	// TODO: parse the buffer and send the response or error
-	// TODO: This is a very basic implementation of the gateway
-	// and it is synchronous. I should make it asynchronous.
-	logrus.Infof("Received %d bytes from %s", len(buf), c.RemoteAddr().String())
-	s.Clients[c.RemoteAddr().String()].Send(buf)
-	size, response := s.Clients[c.RemoteAddr().String()].Receive()
-	// Write writes the response to the client
-	c.Write(response[:size])
+	if err := s.proxy.PassThrough(c); err != nil {
+		logrus.Error(err)
+	}
 
 	// logrus.Infof("Received data: %s", string(buf))
 	return gnet.None
@@ -96,6 +78,7 @@ func (s *Server) OnTraffic(c gnet.Conn) gnet.Action {
 
 func (s *Server) OnShutdown(engine gnet.Engine) {
 	logrus.Println("PostgreSQL server is shutting down...")
+	s.proxy.Shutdown()
 }
 
 func (s *Server) OnTick() (delay time.Duration, action gnet.Action) {

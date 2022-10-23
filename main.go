@@ -46,7 +46,6 @@ func main() {
 			gnet.WithTCPKeepAlive(time.Second * 3),
 			gnet.WithTCPNoDelay(gnet.TCPNoDelay),
 		},
-		Clients: make(map[string]*network.Client),
 	}
 	server.Run()
 }
