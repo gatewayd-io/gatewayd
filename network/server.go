@@ -36,13 +36,15 @@ func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 		logrus.Info("Hard limit is not set, using the current system hard limit")
 	}
 
-	s.proxy = NewProxy(10)
+	// Create a proxy with an elastic buffer pool
+	s.proxy = NewProxy(10, true, false)
 
 	logrus.Infof("PostgreSQL server is listening on %s\n", s.Address)
 	return gnet.None
 }
 
 func (s *Server) OnOpen(c gnet.Conn) (out []byte, action gnet.Action) {
+	logrus.Infof("PostgreSQL server is opening a connection from %s", c.RemoteAddr().String())
 	if s.engine.CountConnections() >= s.SoftLimit {
 		logrus.Warn("Soft limit reached")
 	}
@@ -55,7 +57,6 @@ func (s *Server) OnOpen(c gnet.Conn) (out []byte, action gnet.Action) {
 
 	s.proxy.Connect(c)
 
-	logrus.Infof("PostgreSQL server is opening a connection from %s", c.RemoteAddr().String())
 	return nil, gnet.None
 }
 
