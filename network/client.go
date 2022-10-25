@@ -29,6 +29,7 @@ func NewClient(network, address string, receiveBufferSize int) *Client {
 	conn, err := net.Dial(c.Network, c.Address)
 	if err != nil {
 		logrus.Error(err)
+		return nil
 	}
 	c.Conn = conn
 	if c.ReceiveBufferSize == 0 {

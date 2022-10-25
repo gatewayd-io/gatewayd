@@ -2,6 +2,7 @@ package network
 
 import (
 	"errors"
+	"os"
 	"sync"
 
 	"github.com/panjf2000/gnet/v2"
@@ -39,10 +40,18 @@ func NewProxy(size int, elastic, reuseElasticClients bool) *ProxyImpl {
 
 	if !proxy.Elastic {
 		for i := 0; i < size; i++ {
-			c := NewClient("tcp", "localhost:5432", 4096)
-			if err := proxy.pool.Put(c); err != nil {
-				logrus.Panic(err)
+			client := NewClient("tcp", "localhost:5432", 4096)
+			if client != nil {
+				if err := proxy.pool.Put(client); err != nil {
+					logrus.Panic(err)
+				}
 			}
+		}
+
+		logrus.Infof("There are %d clients in the pool", len(proxy.pool.ClientIDs()))
+		if len(proxy.pool.ClientIDs()) != size {
+			logrus.Error("The pool size is incorrect, either because the clients are cannot connect (no network connectivity) or the server is not running")
+			os.Exit(1)
 		}
 	}
 
@@ -90,7 +99,7 @@ func (pr *ProxyImpl) Disconnect(c gnet.Conn) error {
 
 	// TODO: The connection is unstable when I put the client back in the pool
 	// If the client is not in the pool, put it back
-	if client.ID != "" {
+	if client != nil && client.ID != "" {
 		if pr.Elastic && pr.ReuseElasticClients {
 			if err := pr.pool.Put(client); err != nil {
 				return err
