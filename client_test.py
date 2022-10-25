@@ -14,12 +14,12 @@ def worker(id):
         conn.execute(
             "CREATE TABLE IF NOT EXISTS test (id serial PRIMARY KEY, num integer, data varchar);")
         conn.execute("INSERT INTO test (num, data) VALUES (%s, %s)", (id, "abc'def"))
+        conn.execute("COMMIT")
 
         for row in conn.execute("SELECT * FROM test;"):
             print("ID=%s, NUM=%s, DATA=%s" % row)
 
         # conn.execute("DROP TABLE test;")
-        conn.execute("COMMIT")
         conn.close()
     except KeyboardInterrupt:
         if conn:
@@ -32,7 +32,8 @@ def worker(id):
 
 
 if __name__ == '__main__':
-    with ThreadPoolExecutor(max_workers=2) as executor:
+    with ThreadPoolExecutor(max_workers=10) as executor:
         # Create 11 connections to the server and run queries in parallel
         # This will cause the server to crash
-        executor.map(worker, range(1, 12, 1))
+        for i in range(11):
+            executor.submit(worker, i)

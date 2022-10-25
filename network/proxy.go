@@ -13,6 +13,7 @@ type Proxy interface {
 	Connect(c gnet.Conn) error
 	Disconnect(c gnet.Conn) error
 	PassThrough(c gnet.Conn) error
+	Reconnect(cl *Client) *Client
 	Shutdown()
 	Size() int
 }
@@ -92,25 +93,23 @@ func (pr *ProxyImpl) Connect(c gnet.Conn) error {
 
 func (pr *ProxyImpl) Disconnect(c gnet.Conn) error {
 	var client *Client
-	if c, ok := pr.connClients.Load(c); ok {
-		client = c.(*Client)
+	if cl, ok := pr.connClients.Load(c); ok {
+		client = cl.(*Client)
 	}
 	pr.connClients.Delete(c)
 
 	// TODO: The connection is unstable when I put the client back in the pool
 	// If the client is not in the pool, put it back
-	if client != nil && client.ID != "" {
-		if pr.Elastic && pr.ReuseElasticClients {
+
+	if pr.Elastic && pr.ReuseElasticClients || !pr.Elastic {
+		client = pr.Reconnect(client)
+		if client != nil && client.ID != "" {
 			if err := pr.pool.Put(client); err != nil {
 				return err
 			}
-		} else {
-			// FIXME: Close the client connection, as it is not reusable???
-			pr.pool.Put(client)
-			// pr.pool.Put(NewClient("tcp", "localhost:5432", 4096))
 		}
 	} else {
-		return errors.New("client is not connected (disconnect)")
+		client.Close()
 	}
 
 	logrus.Infof("[D] There are %d clients in the pool", len(pr.pool.ClientIDs()))
@@ -144,17 +143,31 @@ func (pr *ProxyImpl) PassThrough(c gnet.Conn) error {
 	// Receive the response from the server
 	size, response, err := client.Receive()
 	if err != nil {
-		return err
-	}
-
-	if size == 0 {
-		return errors.New("no response from the server")
+		// FIXME: Is this the right way to handle this error?
+		if err.Error() == "EOF" {
+			logrus.Error("The client is not connected to the server anymore")
+			// Either the client is not connected to the server anymore or
+			// server forceful closed the connection
+			// Reconnect the client
+			client = pr.Reconnect(client)
+			// Store the client in the map, replacing the old one
+			pr.connClients.Store(c, client)
+		}
+		// return err
 	}
 
 	// Write the response to the incoming connection
 	c.Write(response[:size])
 
 	return nil
+}
+
+func (pr *ProxyImpl) Reconnect(cl *Client) *Client {
+	// Close the client
+	if cl != nil && cl.ID != "" {
+		cl.Close()
+	}
+	return NewClient("tcp", "localhost:5432", 4096)
 }
 
 func (pr *ProxyImpl) Shutdown() {

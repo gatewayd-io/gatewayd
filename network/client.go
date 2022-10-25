@@ -22,6 +22,8 @@ type Client struct {
 // unexpected EOF on client connection with an open transaction
 
 func NewClient(network, address string, receiveBufferSize int) *Client {
+	// TODO: Resolve the address and return an error if it can't be resolved
+
 	c := Client{
 		Network: network,
 		Address: address,
