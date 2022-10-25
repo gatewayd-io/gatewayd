@@ -1,6 +1,9 @@
 package main
 
 import (
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/gatewayd-io/gatewayd/network"
@@ -45,5 +48,31 @@ func main() {
 			gnet.WithTCPNoDelay(gnet.TCPNoDelay),
 		},
 	}
+
+	// Shutdown the server gracefully
+	var signals []os.Signal
+	signals = append(signals,
+		os.Interrupt,
+		os.Kill,
+		syscall.SIGTERM,
+		syscall.SIGABRT,
+		syscall.SIGQUIT,
+		syscall.SIGHUP,
+		syscall.SIGINT,
+	)
+	signalsCh := make(chan os.Signal, 1)
+	signal.Notify(signalsCh, signals...)
+	go func() {
+		for sig := range signalsCh {
+			for _, s := range signals {
+				if sig != s {
+					server.Shutdown()
+					os.Exit(0)
+				}
+			}
+		}
+	}()
+
+	// Run the server
 	server.Run()
 }
