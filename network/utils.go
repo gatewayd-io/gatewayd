@@ -3,6 +3,7 @@ package network
 import (
 	"crypto/sha1"
 	"encoding/hex"
+	"fmt"
 	"syscall"
 
 	"github.com/sirupsen/logrus"
@@ -18,9 +19,9 @@ func GetRLimit() syscall.Rlimit {
 	return limits
 }
 
-func GetID(network, address string) string {
+func GetID(network, address string, seed int) string {
 	hash := sha1.New()
-	_, err := hash.Write([]byte(network + "://" + address))
+	_, err := hash.Write([]byte(fmt.Sprintf("%s://%s%d", network, address, seed)))
 	if err != nil {
 		logrus.Error(err)
 	}

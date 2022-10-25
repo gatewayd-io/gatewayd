@@ -36,8 +36,8 @@ func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 		logrus.Info("Hard limit is not set, using the current system hard limit")
 	}
 
-	// Create a proxy with an elastic buffer pool
-	s.proxy = NewProxy(10, true, false)
+	// Create a proxy with a fixed/elastic buffer pool
+	s.proxy = NewProxy(10, false, false)
 
 	logrus.Infof("PostgreSQL server is listening on %s\n", s.Address)
 	return gnet.None
@@ -55,7 +55,9 @@ func (s *Server) OnOpen(c gnet.Conn) (out []byte, action gnet.Action) {
 		return nil, gnet.Close
 	}
 
-	s.proxy.Connect(c)
+	if err := s.proxy.Connect(c); err != nil {
+		return nil, gnet.Close
+	}
 
 	return nil, gnet.None
 }
@@ -63,7 +65,9 @@ func (s *Server) OnOpen(c gnet.Conn) (out []byte, action gnet.Action) {
 func (s *Server) OnClose(c gnet.Conn, err error) (action gnet.Action) {
 	logrus.Infof("PostgreSQL server is closing a connection from %s", c.RemoteAddr().String())
 
-	s.proxy.Disconnect(c)
+	if err := s.proxy.Disconnect(c); err != nil {
+		logrus.Error(err)
+	}
 
 	return gnet.Close
 }
@@ -71,6 +75,8 @@ func (s *Server) OnClose(c gnet.Conn, err error) (action gnet.Action) {
 func (s *Server) OnTraffic(c gnet.Conn) gnet.Action {
 	if err := s.proxy.PassThrough(c); err != nil {
 		logrus.Error(err)
+		// TODO: Close the connection *gracefully*
+		return gnet.Close
 	}
 
 	// logrus.Infof("Received data: %s", string(buf))

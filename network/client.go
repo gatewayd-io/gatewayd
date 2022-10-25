@@ -17,9 +17,12 @@ type Client struct {
 	// TODO: add read/write deadline and deal with timeouts
 }
 
-func NewClient(network, address string, receiveBufferSize int) Client {
+// TODO: implement a better connection management algorithm
+// TODO: Fix the connection leak:
+// unexpected EOF on client connection with an open transaction
+
+func NewClient(network, address string, receiveBufferSize int) *Client {
 	c := Client{
-		ID:      GetID(network, address),
 		Network: network,
 		Address: address,
 	}
@@ -32,32 +35,37 @@ func NewClient(network, address string, receiveBufferSize int) Client {
 		c.ReceiveBufferSize = 4096
 	}
 	logrus.Infof("New client created: %s", c.Address)
-	c.ID = GetID(conn.LocalAddr().Network(), conn.LocalAddr().String())
+	c.ID = GetID(conn.LocalAddr().Network(), conn.LocalAddr().String(), 1000)
 
-	return c
+	return &c
 }
 
-func (c Client) Send(data []byte) {
+func (c Client) Send(data []byte) error {
 	_, err := c.Write(data)
 	if err != nil {
-		logrus.Error(err)
+		logrus.Errorf("Couldn't send data to the server: %s", err)
+		return err
 	}
 	logrus.Infof("Sent %d bytes to %s", len(data), c.Address)
+	// logrus.Infof("Sent data: %s", data)
+	return nil
 }
 
-func (c Client) Receive() (int, []byte) {
+func (c Client) Receive() (int, []byte, error) {
 	buf := make([]byte, c.ReceiveBufferSize)
 	read, err := c.Read(buf)
 	if err != nil {
-		logrus.Error(err)
+		logrus.Errorf("Couldn't receive data from the server: %s", err)
+		return 0, nil, err
 	}
 	logrus.Infof("Received %d bytes from %s", read, c.Address)
-	return read, buf
+	// logrus.Infof("Received data: %s", buf[:read])
+	return read, buf, nil
 }
 
 func (c Client) Close() {
+	logrus.Infof("Closing connection to %s", c.Address)
 	if c.Conn != nil {
 		c.Conn.Close()
 	}
-	logrus.Infof("Closed connection to %s", c.Address)
 }

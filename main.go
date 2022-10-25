@@ -5,8 +5,6 @@ import (
 
 	"github.com/gatewayd-io/gatewayd/network"
 	"github.com/panjf2000/gnet/v2"
-	"github.com/sirupsen/logrus"
-	"go.uber.org/zap/zapcore"
 )
 
 func main() {
@@ -17,7 +15,7 @@ func main() {
 		Options: []gnet.Option{
 			// Scheduling options
 			gnet.WithMulticore(true),
-			gnet.WithLockOSThread(true),
+			gnet.WithLockOSThread(false),
 			// NumEventLoop overrides Multicore option.
 			// gnet.WithNumEventLoop(1),
 
@@ -29,9 +27,9 @@ func main() {
 
 			// Logger options
 			// TODO: This is a temporary solution and will be replaced.
-			gnet.WithLogger(logrus.New()),
-			gnet.WithLogPath("./gnet.log"),
-			gnet.WithLogLevel(zapcore.DebugLevel),
+			// gnet.WithLogger(logrus.New()),
+			// gnet.WithLogPath("./gnet.log"),
+			// gnet.WithLogLevel(zapcore.DebugLevel),
 
 			// Buffer options
 			// TODO: This should be configurable and optimized.
