@@ -40,12 +40,23 @@ func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 	// Create a proxy with a fixed/elastic buffer pool
 	s.proxy = NewProxy(10, false, false)
 
-	logrus.Infof("PostgreSQL server is listening on %s\n", s.Address)
+	// Try to resolve the address and log an error if it can't be resolved
+	addr, err := Resolve(s.Network, s.Address)
+	if err != nil {
+		logrus.Error(err)
+	}
+
+	if addr != "" {
+		logrus.Infof("GatewayD is listening on %s", addr)
+	} else {
+		logrus.Error("GatewayD is listening on %s (cannot resolve address)", addr)
+	}
+
 	return gnet.None
 }
 
 func (s *Server) OnOpen(c gnet.Conn) (out []byte, action gnet.Action) {
-	logrus.Infof("PostgreSQL server is opening a connection from %s", c.RemoteAddr().String())
+	logrus.Infof("GatewayD is opening a connection from %s", c.RemoteAddr().String())
 	if s.engine.CountConnections() >= s.SoftLimit {
 		logrus.Warn("Soft limit reached")
 	}
@@ -64,7 +75,7 @@ func (s *Server) OnOpen(c gnet.Conn) (out []byte, action gnet.Action) {
 }
 
 func (s *Server) OnClose(c gnet.Conn, err error) (action gnet.Action) {
-	logrus.Infof("PostgreSQL server is closing a connection from %s", c.RemoteAddr().String())
+	logrus.Infof("GatewayD is closing a connection from %s", c.RemoteAddr().String())
 
 	if err := s.proxy.Disconnect(c); err != nil {
 		logrus.Error(err)
@@ -93,19 +104,26 @@ func (s *Server) OnTraffic(c gnet.Conn) gnet.Action {
 }
 
 func (s *Server) OnShutdown(engine gnet.Engine) {
-	logrus.Println("PostgreSQL server is shutting down...")
+	logrus.Println("GatewayD is shutting down...")
 	s.proxy.Shutdown()
 }
 
 func (s *Server) OnTick() (delay time.Duration, action gnet.Action) {
-	logrus.Println("PostgreSQL server is ticking...")
+	logrus.Println("GatewayD is ticking...")
 	logrus.Infof("Active connections: %d", s.engine.CountConnections())
 	return time.Second * 5, gnet.None
 }
 
 func (s *Server) Run() {
-	logrus.Infof("PostgreSQL server is running with PID %d", os.Getpid())
-	err := gnet.Run(s, s.Network+"://"+s.Address, s.Options...)
+	logrus.Infof("GatewayD is running with PID %d", os.Getpid())
+
+	// Try to resolve the address and log an error if it can't be resolved
+	addr, err := Resolve(s.Network, s.Address)
+	if err != nil {
+		logrus.Error(err)
+	}
+
+	err = gnet.Run(s, s.Network+"://"+addr, s.Options...)
 	if err != nil {
 		logrus.Error(err)
 	}
