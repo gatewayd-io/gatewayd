@@ -30,11 +30,9 @@ You can build and run gatewayd by running the following commands. You must have 
 ```bash
 git clone git@github.com:gatewayd-io/gatewayd.git && cd gatewayd
 go mod tidy && go run main.go
-INFO[0000] Current system soft limit: 1024
-INFO[0000] Current system hard limit: 1048576
-INFO[0000] Soft limit is not set, using the current system soft limit
-INFO[0000] Hard limit is not set, using the current system hard limit
-INFO[0000] PostgreSQL server is listening on :15432
+INFO[0000] GatewayD is running with PID 31403
+INFO[0000] There are 10 clients in the pool
+INFO[0000] GatewayD is listening on 0.0.0.0:15432
 ```
 
 ## Run tests

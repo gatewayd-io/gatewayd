@@ -70,25 +70,25 @@ func (pr *ProxyImpl) Connect(c gnet.Conn) error {
 		if pr.Elastic {
 			// Create a new client
 			client = NewClient("tcp", "localhost:5432", 4096)
-			logrus.Infof("Reused the client %s by putting it back in the pool", client.ID)
+			logrus.Debugf("Reused the client %s by putting it back in the pool", client.ID)
 		} else {
 			return errors.New("pool is exhausted")
 		}
 	} else {
 		// Get a client from the pool
-		logrus.Infof("Available clients: %v", len(clientIDs))
+		logrus.Debugf("Available clients: %v", len(clientIDs))
 		client = pr.pool.Pop(clientIDs[0])
 	}
 
 	if client.ID != "" {
 		pr.connClients.Store(c, client)
-		logrus.Infof("Client %s has been assigned to %s", client.ID, c.RemoteAddr().String())
+		logrus.Debugf("Client %s has been assigned to %s", client.ID, c.RemoteAddr().String())
 	} else {
 		return errors.New("client is not connected (connect)")
 	}
 
-	logrus.Infof("[C] There are %d clients in the pool", len(pr.pool.ClientIDs()))
-	logrus.Infof("[C] There are %d clients in use", pr.Size())
+	logrus.Debugf("[C] There are %d clients in the pool", len(pr.pool.ClientIDs()))
+	logrus.Debugf("[C] There are %d clients in use", pr.Size())
 
 	return nil
 }
@@ -102,7 +102,6 @@ func (pr *ProxyImpl) Disconnect(c gnet.Conn) error {
 
 	// TODO: The connection is unstable when I put the client back in the pool
 	// If the client is not in the pool, put it back
-
 	if pr.Elastic && pr.ReuseElasticClients || !pr.Elastic {
 		client = pr.Reconnect(client)
 		if client != nil && client.ID != "" {
@@ -114,8 +113,8 @@ func (pr *ProxyImpl) Disconnect(c gnet.Conn) error {
 		client.Close()
 	}
 
-	logrus.Infof("[D] There are %d clients in the pool", len(pr.pool.ClientIDs()))
-	logrus.Infof("[D] There are %d clients in use", pr.Size())
+	logrus.Debugf("[D] There are %d clients in the pool", len(pr.pool.ClientIDs()))
+	logrus.Debugf("[D] There are %d clients in use", pr.Size())
 
 	return nil
 }
@@ -147,7 +146,7 @@ func (pr *ProxyImpl) PassThrough(c gnet.Conn, onIncomingTraffic, onOutgoingTraff
 	// TODO: parse the buffer and send the response or error
 	// TODO: This is a very basic implementation of the gateway
 	// and it is synchronous. I should make it asynchronous.
-	logrus.Infof("Received %d bytes from %s", len(buf), c.RemoteAddr().String())
+	logrus.Debugf("Received %d bytes from %s", len(buf), c.RemoteAddr().String())
 
 	// Send the query to the server
 	err = client.Send(buf)
@@ -193,14 +192,14 @@ func (pr *ProxyImpl) Reconnect(cl *Client) *Client {
 
 func (pr *ProxyImpl) Shutdown() {
 	pr.pool.Shutdown()
-	logrus.Info("All busy client connections have been closed")
+	logrus.Debug("All busy client connections have been closed")
 
 	availableClients := pr.pool.ClientIDs()
 	for _, clientID := range availableClients {
 		client := pr.pool.Pop(clientID)
 		client.Close()
 	}
-	logrus.Info("All available client connections have been closed")
+	logrus.Debug("All available client connections have been closed")
 }
 
 func (pr *ProxyImpl) Size() int {
