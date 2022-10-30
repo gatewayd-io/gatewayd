@@ -14,7 +14,7 @@ type Traffic func(buf []byte, err error) error
 type Proxy interface {
 	Connect(c gnet.Conn) error
 	Disconnect(c gnet.Conn) error
-	PassThrough(c gnet.Conn, incoming, outgoing Traffic) error
+	PassThrough(c gnet.Conn, onIncomingTraffic, onOutgoingTraffic Traffic) error
 	Reconnect(cl *Client) *Client
 	Shutdown()
 	Size() int
@@ -120,7 +120,7 @@ func (pr *ProxyImpl) Disconnect(c gnet.Conn) error {
 	return nil
 }
 
-func (pr *ProxyImpl) PassThrough(c gnet.Conn, incoming, outgoing Traffic) error {
+func (pr *ProxyImpl) PassThrough(c gnet.Conn, onIncomingTraffic, onOutgoingTraffic Traffic) error {
 	var client *Client
 	if c, ok := pr.connClients.Load(c); !ok {
 		return errors.New("client is not connected (passthrough)")
@@ -133,7 +133,7 @@ func (pr *ProxyImpl) PassThrough(c gnet.Conn, incoming, outgoing Traffic) error 
 	if err != nil {
 		logrus.Errorf("Error reading from client: %v", err)
 	}
-	if err = incoming(buf, err); err != nil {
+	if err = onIncomingTraffic(buf, err); err != nil {
 		logrus.Errorf("Error processing data from client: %v", err)
 	}
 
@@ -157,7 +157,7 @@ func (pr *ProxyImpl) PassThrough(c gnet.Conn, incoming, outgoing Traffic) error 
 
 	// Receive the response from the server
 	size, response, err := client.Receive()
-	if err := outgoing(response[:size], err); err != nil {
+	if err := onOutgoingTraffic(response[:size], err); err != nil {
 		logrus.Errorf("Error processing data from server: %v", err)
 	}
 
