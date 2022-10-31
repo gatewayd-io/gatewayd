@@ -127,10 +127,10 @@ func (pr *ProxyImpl) PassThrough(c gnet.Conn, onIncomingTraffic, onOutgoingTraff
 	// that listens for data from the server and sends it to the client
 
 	var client *Client
-	if c, ok := pr.connClients.Load(c); !ok {
-		return errors.New("client is not connected (passthrough)")
-	} else {
+	if c, ok := pr.connClients.Load(c); ok {
 		client = c.(*Client)
+	} else {
+		return errors.New("client not found")
 	}
 
 	// buf contains the data from the client (query)
