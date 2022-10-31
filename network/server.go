@@ -8,6 +8,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type Status string
+
+const (
+	Running Status = "running"
+	Stopped Status = "stopped"
+)
+
 type Server struct {
 	gnet.BuiltinEventEngine
 	engine gnet.Engine
@@ -18,6 +25,7 @@ type Server struct {
 	Options   []gnet.Option
 	SoftLimit int
 	HardLimit int
+	Status    Status
 }
 
 func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
@@ -51,6 +59,8 @@ func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 	} else {
 		logrus.Warnf("GatewayD is listening on %s (cannot resolve address)", addr)
 	}
+
+	s.Status = Running
 
 	return gnet.None
 }
@@ -105,6 +115,7 @@ func (s *Server) OnTraffic(c gnet.Conn) gnet.Action {
 func (s *Server) OnShutdown(engine gnet.Engine) {
 	logrus.Println("GatewayD is shutting down...")
 	s.proxy.Shutdown()
+	s.Status = Stopped
 }
 
 func (s *Server) OnTick() (delay time.Duration, action gnet.Action) {

@@ -15,6 +15,7 @@ func main() {
 	server := &network.Server{
 		Network: "tcp",
 		Address: "0.0.0.0:15432",
+		Status:  network.Stopped,
 		Options: []gnet.Option{
 			// Scheduling options
 			gnet.WithMulticore(true),
