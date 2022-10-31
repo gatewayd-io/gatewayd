@@ -1,7 +1,7 @@
 package network
 
 import (
-	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"net"
@@ -21,7 +21,7 @@ func GetRLimit() syscall.Rlimit {
 }
 
 func GetID(network, address string, seed int) string {
-	hash := sha1.New()
+	hash := sha256.New()
 	_, err := hash.Write([]byte(fmt.Sprintf("%s://%s%d", network, address, seed)))
 	if err != nil {
 		logrus.Error(err)
