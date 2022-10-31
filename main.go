@@ -10,6 +10,7 @@ import (
 	"github.com/panjf2000/gnet/v2"
 )
 
+//nolint:funlen
 func main() {
 	// Create a server
 	server := &network.Server{
