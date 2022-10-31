@@ -14,7 +14,7 @@ func TestGetRlimit(t *testing.T) {
 
 func TestGetID(t *testing.T) {
 	id := GetID("tcp", "localhost:5432", 1)
-	assert.Equal(t, "7b0a81105ebe3e390c617d9757feac3d5ea1a3d5", id)
+	assert.Equal(t, "0cf47ee4e436ecb40dbd1d2d9a47179d1f6d98e2ea18d6fbd1cdfa85d3cec94f", id)
 }
 
 func TestResolve(t *testing.T) {
