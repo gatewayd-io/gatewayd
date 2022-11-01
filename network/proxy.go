@@ -133,6 +133,7 @@ func (pr *ProxyImpl) Disconnect(gconn gnet.Conn) error {
 	return nil
 }
 
+//nolint:funlen
 func (pr *ProxyImpl) PassThrough(gconn gnet.Conn, onIncomingTraffic, onOutgoingTraffic Traffic) error {
 	// TODO: Handle bi-directional traffic
 	// Currently the passthrough is a one-way street from the client to the server, that is,
