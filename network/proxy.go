@@ -170,22 +170,19 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn, onIncomingTraffic, onOutgoingT
 		logrus.Errorf("Error processing data from server: %s", err)
 	}
 
-	if err != nil {
-		// FIXME: Is this the right way to handle this error?
-		if err.Error() == "EOF" {
-			logrus.Error("The client is not connected to the server anymore")
-			// Either the client is not connected to the server anymore or
-			// server forceful closed the connection
-			// Reconnect the client
-			client = pr.Reconnect(client)
-			// Store the client in the map, replacing the old one
-			pr.connClients.Store(gconn, client)
-		} else {
-			// Write the error to the client
-			_, err := gconn.Write(response[:size])
-			if err != nil {
-				logrus.Errorf("Error writing the error to client: %v", err)
-			}
+	if err != nil && err.Error() == "EOF" {
+		logrus.Error("The client is not connected to the server anymore")
+		// Either the client is not connected to the server anymore or
+		// server forceful closed the connection
+		// Reconnect the client
+		client = pr.Reconnect(client)
+		// Store the client in the map, replacing the old one
+		pr.connClients.Store(gconn, client)
+	} else if err != nil {
+		// Write the error to the client
+		_, err := gconn.Write(response[:size])
+		if err != nil {
+			logrus.Errorf("Error writing the error to client: %v", err)
 		}
 	} else {
 		// Write the response to the incoming connection
