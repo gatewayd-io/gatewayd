@@ -101,7 +101,9 @@ func (pr *ProxyImpl) Connect(gconn gnet.Conn) error {
 func (pr *ProxyImpl) Disconnect(gconn gnet.Conn) error {
 	var client *Client
 	if cl, ok := pr.connClients.Load(gconn); ok {
-		client = cl.(*Client)
+		if c, ok := cl.(*Client); ok {
+			client = c
+		}
 	}
 	pr.connClients.Delete(gconn)
 
@@ -133,7 +135,9 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn, onIncomingTraffic, onOutgoingT
 
 	var client *Client
 	if c, ok := pr.connClients.Load(gconn); ok {
-		client = c.(*Client)
+		if cl, ok := c.(*Client); ok {
+			client = cl
+		}
 	} else {
 		return ClientNotFound
 	}
