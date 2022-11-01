@@ -65,7 +65,7 @@ func NewClient(network, address string, receiveBufferSize int) *Client {
 
 func (c *Client) Send(data []byte) error {
 	if _, err := c.Write(data); err != nil {
-		logrus.Errorf("Couldn't send data to the server: %w", err)
+		logrus.Errorf("Couldn't send data to the server: %s", err)
 		return fmt.Errorf("Couldn't send data to the server: %w", err)
 	}
 	logrus.Debugf("Sent %d bytes to %s", len(data), c.Address)
@@ -77,7 +77,7 @@ func (c *Client) Receive() (int, []byte, error) {
 	buf := make([]byte, c.ReceiveBufferSize)
 	read, err := c.Read(buf)
 	if err != nil {
-		logrus.Errorf("Couldn't receive data from the server: %w", err)
+		logrus.Errorf("Couldn't receive data from the server: %s", err)
 		return 0, nil, fmt.Errorf("Couldn't receive data from the server: %w", err)
 	}
 	logrus.Debugf("Received %d bytes from %s", read, c.Address)

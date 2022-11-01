@@ -167,7 +167,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn, onIncomingTraffic, onOutgoingT
 	// Receive the response from the server
 	size, response, err := client.Receive()
 	if err := onOutgoingTraffic(response[:size], err); err != nil {
-		logrus.Errorf("Error processing data from server: %w", err)
+		logrus.Errorf("Error processing data from server: %s", err)
 	}
 
 	if err != nil {
