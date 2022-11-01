@@ -15,6 +15,8 @@ const (
 	Stopped Status = "stopped"
 
 	DefaultTickInterval = 5 * time.Second
+	DefaultPoolSize     = 10
+	DefaultBufferSize   = 4096
 )
 
 type Server struct {
@@ -22,13 +24,17 @@ type Server struct {
 	engine gnet.Engine
 	proxy  Proxy
 
-	Network      string // tcp/udp/unix
-	Address      string
-	Options      []gnet.Option
-	SoftLimit    int
-	HardLimit    int
-	Status       Status
-	TickInterval int
+	Network             string // tcp/udp/unix
+	Address             string
+	Options             []gnet.Option
+	SoftLimit           int
+	HardLimit           int
+	Status              Status
+	TickInterval        int
+	PoolSize            int
+	ElasticPool         bool
+	ReuseElasticClients bool
+	BufferSize          int
 }
 
 func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
@@ -48,8 +54,18 @@ func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 		logrus.Debugf("Hard limit is not set, using the current system hard limit")
 	}
 
+	if s.PoolSize == 0 {
+		s.PoolSize = DefaultPoolSize
+		logrus.Debugf("Client connections is not set, using the default value")
+	}
+
+	if s.BufferSize == 0 {
+		s.BufferSize = DefaultBufferSize
+		logrus.Debugf("Buffer size is not set, using the default value")
+	}
+
 	// Create a proxy with a fixed/elastic buffer pool
-	s.proxy = NewProxy(10, false, false)
+	s.proxy = NewProxy(s.PoolSize, s.BufferSize, s.ElasticPool, s.ReuseElasticClients)
 
 	// Try to resolve the address and log an error if it can't be resolved
 	addr, err := Resolve(s.Network, s.Address)

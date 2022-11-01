@@ -19,12 +19,12 @@ func TestNewClient(t *testing.T) {
 		}
 	}()
 
-	client := NewClient("tcp", "localhost:5432", 4096)
+	client := NewClient("tcp", "localhost:5432", DefaultBufferSize)
 	defer client.Close()
 
 	assert.Equal(t, "tcp", client.Network)
 	assert.Equal(t, "127.0.0.1:5432", client.Address)
-	assert.Equal(t, 4096, client.ReceiveBufferSize)
+	assert.Equal(t, DefaultBufferSize, client.ReceiveBufferSize)
 	assert.NotEmpty(t, client.ID)
 	assert.NotNil(t, client.Conn)
 }
@@ -41,7 +41,7 @@ func TestSend(t *testing.T) {
 		}
 	}()
 
-	client := NewClient("tcp", "localhost:5432", 4096)
+	client := NewClient("tcp", "localhost:5432", DefaultBufferSize)
 	defer client.Close()
 
 	assert.NotNil(t, client)
@@ -61,7 +61,7 @@ func TestReceive(t *testing.T) {
 		}
 	}()
 
-	client := NewClient("tcp", "localhost:5432", 4096)
+	client := NewClient("tcp", "localhost:5432", DefaultBufferSize)
 	defer client.Close()
 
 	assert.NotNil(t, client)
@@ -91,7 +91,7 @@ func TestClose(t *testing.T) {
 		}
 	}()
 
-	client := NewClient("tcp", "localhost:5432", 4096)
+	client := NewClient("tcp", "localhost:5432", DefaultBufferSize)
 	assert.NotNil(t, client)
 	client.Close()
 	assert.Equal(t, "", client.ID)

@@ -33,7 +33,7 @@ func TestRunServer(t *testing.T) {
 
 	for {
 		if server.Status == Running {
-			client := NewClient("tcp", "localhost:15432", 4096)
+			client := NewClient("tcp", "localhost:15432", DefaultBufferSize)
 			defer client.Close()
 
 			assert.NotNil(t, client)

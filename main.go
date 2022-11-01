@@ -10,6 +10,10 @@ import (
 	"github.com/panjf2000/gnet/v2"
 )
 
+const (
+	DefaultTCPKeepAlive = 3 * time.Second
+)
+
 //nolint:funlen
 func main() {
 	// Create a server
@@ -38,15 +42,15 @@ func main() {
 
 			// Buffer options
 			// TODO: This should be configurable and optimized.
-			gnet.WithReadBufferCap(4096),
-			gnet.WithWriteBufferCap(4096),
-			gnet.WithSocketRecvBuffer(4096),
-			gnet.WithSocketSendBuffer(4096),
+			gnet.WithReadBufferCap(network.DefaultBufferSize),
+			gnet.WithWriteBufferCap(network.DefaultBufferSize),
+			gnet.WithSocketRecvBuffer(network.DefaultBufferSize),
+			gnet.WithSocketSendBuffer(network.DefaultBufferSize),
 
 			// TCP options
 			gnet.WithReuseAddr(true),
 			gnet.WithReusePort(true),
-			gnet.WithTCPKeepAlive(time.Second * 3),
+			gnet.WithTCPKeepAlive(DefaultTCPKeepAlive),
 			gnet.WithTCPNoDelay(gnet.TCPNoDelay),
 		},
 	}
