@@ -3,10 +3,10 @@ package network
 import "encoding/binary"
 
 func CreatePostgreSQLPacket(typ byte, msg []byte) []byte {
-	packet := make([]byte, 0, 1+4+len(msg))
+	var packet []byte
 
 	packet = append(packet, typ)
-	binary.BigEndian.PutUint32(packet, uint32(len(msg)+4))
+	binary.BigEndian.PutUint32(packet[1:], uint32(len(msg)+4))
 	packet = append(packet, msg...)
 
 	return packet
