@@ -8,7 +8,7 @@ import (
 
 type Pool interface {
 	ForEach(callback func(client *Client) error)
-	Pool() sync.Map
+	Pool() *sync.Map
 	ClientIDs() []string
 	Put(client *Client) error
 	Pop(ID string) *Client
@@ -37,8 +37,8 @@ func (p *PoolImpl) ForEach(callback func(client *Client) error) {
 	})
 }
 
-func (p *PoolImpl) Pool() sync.Map {
-	return p.pool
+func (p *PoolImpl) Pool() *sync.Map {
+	return &p.pool
 }
 
 func (p *PoolImpl) ClientIDs() []string {
