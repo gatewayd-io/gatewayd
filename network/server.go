@@ -65,7 +65,7 @@ func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 	return gnet.None
 }
 
-func (s *Server) OnOpen(gconn gnet.Conn) (out []byte, action gnet.Action) {
+func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 	logrus.Debugf("GatewayD is opening a connection from %s", gconn.RemoteAddr().String())
 	if s.engine.CountConnections() >= s.SoftLimit {
 		logrus.Warn("Soft limit reached")
@@ -87,7 +87,7 @@ func (s *Server) OnOpen(gconn gnet.Conn) (out []byte, action gnet.Action) {
 	return nil, gnet.None
 }
 
-func (s *Server) OnClose(gconn gnet.Conn, err error) (action gnet.Action) {
+func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 	logrus.Debugf("GatewayD is closing a connection from %s", gconn.RemoteAddr().String())
 
 	if err := s.proxy.Disconnect(gconn); err != nil {
@@ -121,7 +121,7 @@ func (s *Server) OnShutdown(engine gnet.Engine) {
 	s.Status = Stopped
 }
 
-func (s *Server) OnTick() (delay time.Duration, action gnet.Action) {
+func (s *Server) OnTick() (time.Duration, gnet.Action) {
 	logrus.Println("GatewayD is ticking...")
 	logrus.Infof("Active connections: %d", s.engine.CountConnections())
 	return time.Second * 5, gnet.None
