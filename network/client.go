@@ -1,6 +1,7 @@
 package network
 
 import (
+	"fmt"
 	"net"
 
 	"github.com/sirupsen/logrus"
@@ -63,7 +64,7 @@ func (c *Client) Send(data []byte) error {
 	_, err := c.Write(data)
 	if err != nil {
 		logrus.Errorf("Couldn't send data to the server: %s", err)
-		return err
+		return fmt.Errorf("Couldn't send data to the server: %s", err)
 	}
 	logrus.Debugf("Sent %d bytes to %s", len(data), c.Address)
 	// logrus.Infof("Sent data: %s", data)
@@ -75,7 +76,7 @@ func (c *Client) Receive() (int, []byte, error) {
 	read, err := c.Read(buf)
 	if err != nil {
 		logrus.Errorf("Couldn't receive data from the server: %s", err)
-		return 0, nil, err
+		return 0, nil, fmt.Errorf("Couldn't receive data from the server: %s", err)
 	}
 	logrus.Debugf("Received %d bytes from %s", read, c.Address)
 	// logrus.Infof("Received data: %s", buf[:read])

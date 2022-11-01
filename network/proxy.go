@@ -2,6 +2,7 @@ package network
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"sync"
 
@@ -106,7 +107,7 @@ func (pr *ProxyImpl) Disconnect(c gnet.Conn) error {
 		client = pr.Reconnect(client)
 		if client != nil && client.ID != "" {
 			if err := pr.pool.Put(client); err != nil {
-				return err
+				return fmt.Errorf("failed to put the client back in the pool: %w", err)
 			}
 		}
 	} else {
