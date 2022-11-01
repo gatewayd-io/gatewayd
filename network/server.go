@@ -65,46 +65,46 @@ func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 	return gnet.None
 }
 
-func (s *Server) OnOpen(c gnet.Conn) (out []byte, action gnet.Action) {
-	logrus.Debugf("GatewayD is opening a connection from %s", c.RemoteAddr().String())
+func (s *Server) OnOpen(gconn gnet.Conn) (out []byte, action gnet.Action) {
+	logrus.Debugf("GatewayD is opening a connection from %s", gconn.RemoteAddr().String())
 	if s.engine.CountConnections() >= s.SoftLimit {
 		logrus.Warn("Soft limit reached")
 	}
 	if s.engine.CountConnections() >= s.HardLimit {
 		logrus.Error("Hard limit reached")
-		_, err := c.Write([]byte("Hard limit reached\n"))
+		_, err := gconn.Write([]byte("Hard limit reached\n"))
 		if err != nil {
 			logrus.Error(err)
 		}
-		c.Close()
+		gconn.Close()
 		return nil, gnet.Close
 	}
 
-	if err := s.proxy.Connect(c); err != nil {
+	if err := s.proxy.Connect(gconn); err != nil {
 		return nil, gnet.Close
 	}
 
 	return nil, gnet.None
 }
 
-func (s *Server) OnClose(c gnet.Conn, err error) (action gnet.Action) {
-	logrus.Debugf("GatewayD is closing a connection from %s", c.RemoteAddr().String())
+func (s *Server) OnClose(gconn gnet.Conn, err error) (action gnet.Action) {
+	logrus.Debugf("GatewayD is closing a connection from %s", gconn.RemoteAddr().String())
 
-	if err := s.proxy.Disconnect(c); err != nil {
+	if err := s.proxy.Disconnect(gconn); err != nil {
 		logrus.Error(err)
 	}
 
 	return gnet.Close
 }
 
-func (s *Server) OnTraffic(c gnet.Conn) gnet.Action {
-	if err := s.proxy.PassThrough(c, func(buf []byte, err error) error {
+func (s *Server) OnTraffic(gconn gnet.Conn) gnet.Action {
+	if err := s.proxy.PassThrough(gconn, func(buf []byte, err error) error {
 		// TODO: Implement the traffic handler
-		logrus.Infof("GatewayD is passing traffic from %s to %s", c.RemoteAddr().String(), c.LocalAddr().String())
+		logrus.Infof("GatewayD is passing traffic from %s to %s", gconn.RemoteAddr().String(), gconn.LocalAddr().String())
 		return nil
 	}, func(buf []byte, err error) error {
 		// TODO: Implement the traffic handler
-		logrus.Infof("GatewayD is passing traffic from %s to %s", c.LocalAddr().String(), c.RemoteAddr().String())
+		logrus.Infof("GatewayD is passing traffic from %s to %s", gconn.LocalAddr().String(), gconn.RemoteAddr().String())
 		return nil
 	}); err != nil {
 		logrus.Error(err)
