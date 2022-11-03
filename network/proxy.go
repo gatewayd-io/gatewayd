@@ -11,7 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type Traffic func(buf []byte, err error) error
+type Traffic func(gconn gnet.Conn, cl *Client, buf []byte, err error) error
 
 type Proxy interface {
 	Connect(gconn gnet.Conn) error
@@ -155,7 +155,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn, onIncomingTraffic, onOutgoingT
 	if err != nil {
 		logrus.Errorf("Error reading from client: %v", err)
 	}
-	if err = onIncomingTraffic(buf, err); err != nil {
+	if err = onIncomingTraffic(gconn, client, buf, err); err != nil {
 		logrus.Errorf("Error processing data from client: %v", err)
 	}
 
@@ -172,7 +172,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn, onIncomingTraffic, onOutgoingT
 
 	// Receive the response from the server
 	size, response, err := client.Receive()
-	if err := onOutgoingTraffic(response[:size], err); err != nil {
+	if err := onOutgoingTraffic(gconn, client, response[:size], err); err != nil {
 		logrus.Errorf("Error processing data from server: %s", err)
 	}
 
