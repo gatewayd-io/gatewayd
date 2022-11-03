@@ -89,8 +89,7 @@ func main() {
 	}()
 
 	// Run the server
-	err := server.Run()
-	if err != nil {
+	if err := server.Run(); err != nil {
 		logrus.Error(err)
 	}
 }
