@@ -143,8 +143,8 @@ func NewServer(
 	tickInterval, poolSize, bufferSize int,
 	elasticPool, reuseElasticClients bool,
 	options []gnet.Option,
-	onIncomingTraffic, onOutgoingTraffic Traffic) *Server {
-
+	onIncomingTraffic, onOutgoingTraffic Traffic,
+) *Server {
 	server := Server{
 		Network:      network,
 		Address:      address,
