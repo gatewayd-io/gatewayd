@@ -56,7 +56,8 @@ func TestRunServer(t *testing.T) {
 		t.Helper()
 		defer wg.Done()
 
-		server.Run()
+		err := server.Run()
+		assert.Nil(t, err)
 	}(t, server)
 
 	go func(t *testing.T, server *Server) {
