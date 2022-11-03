@@ -7,8 +7,7 @@ import (
 type WriteBuffer struct {
 	Bytes []byte
 
-	msgStart   int
-	paramStart int
+	msgStart int
 }
 
 func writeStartupMsg(buf *WriteBuffer, user, database, appName string) {
