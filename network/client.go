@@ -1,9 +1,14 @@
 package network
 
 import (
+	"fmt"
 	"net"
 
 	"github.com/sirupsen/logrus"
+)
+
+const (
+	DefaultSeed = 1000
 )
 
 type Client struct {
@@ -13,7 +18,6 @@ type Client struct {
 	ReceiveBufferSize int
 	Network           string // tcp/udp/unix
 	Address           string
-
 	// TODO: add read/write deadline and deal with timeouts
 }
 
@@ -51,19 +55,18 @@ func NewClient(network, address string, receiveBufferSize int) *Client {
 
 	client.Conn = conn
 	if client.ReceiveBufferSize == 0 {
-		client.ReceiveBufferSize = 4096
+		client.ReceiveBufferSize = DefaultBufferSize
 	}
 	logrus.Debugf("New client created: %s", client.Address)
-	client.ID = GetID(conn.LocalAddr().Network(), conn.LocalAddr().String(), 1000)
+	client.ID = GetID(conn.LocalAddr().Network(), conn.LocalAddr().String(), DefaultSeed)
 
 	return &client
 }
 
 func (c *Client) Send(data []byte) error {
-	_, err := c.Write(data)
-	if err != nil {
+	if _, err := c.Write(data); err != nil {
 		logrus.Errorf("Couldn't send data to the server: %s", err)
-		return err
+		return fmt.Errorf("couldn't send data to the server: %w", err)
 	}
 	logrus.Debugf("Sent %d bytes to %s", len(data), c.Address)
 	// logrus.Infof("Sent data: %s", data)
@@ -75,7 +78,7 @@ func (c *Client) Receive() (int, []byte, error) {
 	read, err := c.Read(buf)
 	if err != nil {
 		logrus.Errorf("Couldn't receive data from the server: %s", err)
-		return 0, nil, err
+		return 0, nil, fmt.Errorf("couldn't receive data from the server: %w", err)
 	}
 	logrus.Debugf("Received %d bytes from %s", read, c.Address)
 	// logrus.Infof("Received data: %s", buf[:read])

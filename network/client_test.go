@@ -19,14 +19,14 @@ func TestNewClient(t *testing.T) {
 		}
 	}()
 
-	c := NewClient("tcp", "localhost:5432", 4096)
-	defer c.Close()
+	client := NewClient("tcp", "localhost:5432", DefaultBufferSize)
+	defer client.Close()
 
-	assert.Equal(t, "tcp", c.Network)
-	assert.Equal(t, "127.0.0.1:5432", c.Address)
-	assert.Equal(t, 4096, c.ReceiveBufferSize)
-	assert.NotEmpty(t, c.ID)
-	assert.NotNil(t, c.Conn)
+	assert.Equal(t, "tcp", client.Network)
+	assert.Equal(t, "127.0.0.1:5432", client.Address)
+	assert.Equal(t, DefaultBufferSize, client.ReceiveBufferSize)
+	assert.NotEmpty(t, client.ID)
+	assert.NotNil(t, client.Conn)
 }
 
 func TestSend(t *testing.T) {
@@ -41,11 +41,11 @@ func TestSend(t *testing.T) {
 		}
 	}()
 
-	c := NewClient("tcp", "localhost:5432", 4096)
-	defer c.Close()
+	client := NewClient("tcp", "localhost:5432", DefaultBufferSize)
+	defer client.Close()
 
-	assert.NotNil(t, c)
-	err := c.Send(CreatePostgreSQLPacket('Q', []byte("select 1;")))
+	assert.NotNil(t, client)
+	err := client.Send(CreatePostgreSQLPacket('Q', []byte("select 1;")))
 	assert.Nil(t, err)
 }
 
@@ -61,22 +61,22 @@ func TestReceive(t *testing.T) {
 		}
 	}()
 
-	c := NewClient("tcp", "localhost:5432", 4096)
-	defer c.Close()
+	client := NewClient("tcp", "localhost:5432", DefaultBufferSize)
+	defer client.Close()
 
-	assert.NotNil(t, c)
-	err := c.Send(CreatePostgreSQLPacket('Q', []byte("select 1;")))
+	assert.NotNil(t, client)
+	err := client.Send(CreatePgStartupPacket())
 	assert.Nil(t, err)
 
-	size, data, err := c.Receive()
-	msg := "SFATAL\x00VFATAL\x00C0A000\x00Munsupported frontend protocol 0.0: server supports 3.0 to 3.0\x00Fpostmaster.c\x00L2138\x00RProcessStartupPacket\x00\x00"
-	assert.Equal(t, 132, size)
+	size, data, err := client.Receive()
+	msg := "\x00\x00\x00\x03"
+	assert.Equal(t, 9, size)
 	assert.Equal(t, len(data[:size]), size)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, data[:size])
 	assert.Equal(t, msg, string(data[5:size]))
-	assert.Equal(t, "E", string(data[0]))
-	assert.Equal(t, 83, int(data[5]))
+	// AuthenticationOk
+	assert.Equal(t, uint8(0x52), data[0])
 }
 
 func TestClose(t *testing.T) {
@@ -91,12 +91,12 @@ func TestClose(t *testing.T) {
 		}
 	}()
 
-	c := NewClient("tcp", "localhost:5432", 4096)
-	assert.NotNil(t, c)
-	c.Close()
-	assert.Equal(t, "", c.ID)
-	assert.Equal(t, "", c.Network)
-	assert.Equal(t, "", c.Address)
-	assert.Nil(t, c.Conn)
-	assert.Equal(t, 0, c.ReceiveBufferSize)
+	client := NewClient("tcp", "localhost:5432", DefaultBufferSize)
+	assert.NotNil(t, client)
+	client.Close()
+	assert.Equal(t, "", client.ID)
+	assert.Equal(t, "", client.Network)
+	assert.Equal(t, "", client.Address)
+	assert.Nil(t, client.Conn)
+	assert.Equal(t, 0, client.ReceiveBufferSize)
 }

@@ -1,7 +1,7 @@
 package network
 
 import (
-	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"net"
@@ -12,7 +12,7 @@ import (
 
 func GetRLimit() syscall.Rlimit {
 	var limits syscall.Rlimit
-	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &limits); err != nil {
+	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &limits); err != nil { //nolint:nosnakecase
 		logrus.Error(err)
 	}
 	logrus.Debugf("Current system soft limit: %d", limits.Cur)
@@ -21,7 +21,7 @@ func GetRLimit() syscall.Rlimit {
 }
 
 func GetID(network, address string, seed int) string {
-	hash := sha1.New()
+	hash := sha256.New()
 	_, err := hash.Write([]byte(fmt.Sprintf("%s://%s%d", network, address, seed)))
 	if err != nil {
 		logrus.Error(err)
@@ -42,6 +42,6 @@ func Resolve(network, address string) (string, error) {
 		return addr.String(), err
 	default:
 		logrus.Errorf("Network %s is not supported", network)
-		return "", fmt.Errorf("Network %s is not supported", network)
+		return "", ErrNetworkNotSupported
 	}
 }
