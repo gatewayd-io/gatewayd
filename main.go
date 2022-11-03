@@ -17,11 +17,17 @@ const (
 //nolint:funlen
 func main() {
 	// Create a server
-	server := &network.Server{
-		Network: "tcp",
-		Address: "0.0.0.0:15432",
-		Status:  network.Stopped,
-		Options: []gnet.Option{
+	server := network.NewServer(
+		"tcp",
+		"0.0.0.0:15432",
+		0,
+		0,
+		network.DefaultTickInterval,
+		network.DefaultPoolSize,
+		network.DefaultBufferSize,
+		false,
+		false,
+		[]gnet.Option{
 			// Scheduling options
 			gnet.WithMulticore(true),
 			gnet.WithLockOSThread(false),
@@ -53,7 +59,9 @@ func main() {
 			gnet.WithTCPKeepAlive(DefaultTCPKeepAlive),
 			gnet.WithTCPNoDelay(gnet.TCPNoDelay),
 		},
-	}
+		nil,
+		nil,
+	)
 
 	// Shutdown the server gracefully
 	var signals []os.Signal
