@@ -3,7 +3,7 @@ package network
 import (
 	"sync"
 
-	"github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 )
 
 type Pool interface {
@@ -18,7 +18,8 @@ type Pool interface {
 }
 
 type PoolImpl struct {
-	pool sync.Map
+	pool   sync.Map
+	logger zerolog.Logger
 }
 
 var _ Pool = &PoolImpl{}
@@ -28,7 +29,7 @@ func (p *PoolImpl) ForEach(callback func(client *Client) error) {
 		if c, ok := value.(*Client); ok {
 			err := callback(c)
 			if err != nil {
-				logrus.Errorf("an error occurred running the callback: %v", err)
+				p.logger.Debug().Err(err).Msg("an error occurred running the callback")
 			}
 			return true
 		}
@@ -55,7 +56,7 @@ func (p *PoolImpl) ClientIDs() []string {
 
 func (p *PoolImpl) Put(client *Client) error {
 	p.pool.Store(client.ID, client)
-	logrus.Debugf("Client %s has been put on the pool", client.ID)
+	p.logger.Debug().Msgf("Client %s has been put on the pool", client.ID)
 
 	return nil
 }
@@ -63,7 +64,7 @@ func (p *PoolImpl) Put(client *Client) error {
 func (p *PoolImpl) Pop(id string) *Client {
 	if client, ok := p.pool.Load(id); ok {
 		p.pool.Delete(id)
-		logrus.Debugf("Client %s has been popped from the pool", id)
+		p.logger.Debug().Msgf("Client %s has been popped from the pool", id)
 		if c, ok := client.(*Client); ok {
 			return c
 		}
@@ -104,6 +105,6 @@ func (p *PoolImpl) Shutdown() {
 	p.pool = sync.Map{}
 }
 
-func NewPool() *PoolImpl {
-	return &PoolImpl{pool: sync.Map{}}
+func NewPool(logger zerolog.Logger) *PoolImpl {
+	return &PoolImpl{pool: sync.Map{}, logger: logger}
 }

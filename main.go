@@ -6,9 +6,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/gatewayd-io/gatewayd/network"
 	"github.com/panjf2000/gnet/v2"
-	"github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 )
 
 const (
@@ -17,23 +18,26 @@ const (
 
 //nolint:funlen
 func main() {
+	// Create a logger
+	logger := logging.NewLogger(nil, zerolog.TimeFormatUnix, zerolog.InfoLevel, true)
+
 	// Create a pool
-	pool := network.NewPool()
+	pool := network.NewPool(logger)
 
 	// Add a client to the pool
 	for i := 0; i < network.DefaultPoolSize; i++ {
-		client := network.NewClient("tcp", "localhost:5432", network.DefaultBufferSize)
+		client := network.NewClient("tcp", "localhost:5432", network.DefaultBufferSize, logger)
 		if client != nil {
 			if err := pool.Put(client); err != nil {
-				logrus.Panic(err)
+				logger.Panic().Err(err).Msg("Failed to add client to pool")
 			}
 		}
 	}
 
 	// Verify that the pool is properly populated
-	logrus.Infof("There are %d clients in the pool", len(pool.ClientIDs()))
+	logger.Debug().Msgf("There are %d clients in the pool", len(pool.ClientIDs()))
 	if len(pool.ClientIDs()) != network.DefaultPoolSize {
-		logrus.Error(
+		logger.Error().Msg(
 			"The pool size is incorrect, either because " +
 				"the clients are cannot connect (no network connectivity) " +
 				"or the server is not running. Exiting...")
@@ -45,7 +49,7 @@ func main() {
 		Network:           "tcp",
 		Address:           "localhost:5432",
 		ReceiveBufferSize: network.DefaultBufferSize,
-	})
+	}, logger)
 
 	// Create a server
 	server := network.NewServer(
@@ -89,6 +93,7 @@ func main() {
 		nil,
 		nil,
 		proxy,
+		logger,
 	)
 
 	// Shutdown the server gracefully
@@ -117,6 +122,6 @@ func main() {
 
 	// Run the server
 	if err := server.Run(); err != nil {
-		logrus.Error(err)
+		logger.Error().Err(err).Msg("Failed to start server")
 	}
 }

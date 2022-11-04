@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 )
 
 const (
@@ -13,6 +13,8 @@ const (
 
 type Client struct {
 	net.Conn
+
+	logger zerolog.Logger
 
 	ID                string
 	ReceiveBufferSize int
@@ -23,13 +25,15 @@ type Client struct {
 
 // TODO: implement a better connection management algorithm
 
-func NewClient(network, address string, receiveBufferSize int) *Client {
+func NewClient(network, address string, receiveBufferSize int, logger zerolog.Logger) *Client {
 	var client Client
 
+	client.logger = logger
+
 	// Try to resolve the address and log an error if it can't be resolved
-	addr, err := Resolve(network, address)
+	addr, err := Resolve(network, address, logger)
 	if err != nil {
-		logrus.Error(err)
+		logger.Error().Err(err).Msg("Failed to resolve address")
 	}
 
 	// Create a resolved client
@@ -49,7 +53,7 @@ func NewClient(network, address string, receiveBufferSize int) *Client {
 	// Create a new connection
 	conn, err := net.Dial(client.Network, client.Address)
 	if err != nil {
-		logrus.Error(err)
+		logger.Error().Err(err).Msg("Failed to create a new connection")
 		return nil
 	}
 
@@ -57,19 +61,18 @@ func NewClient(network, address string, receiveBufferSize int) *Client {
 	if client.ReceiveBufferSize == 0 {
 		client.ReceiveBufferSize = DefaultBufferSize
 	}
-	logrus.Debugf("New client created: %s", client.Address)
-	client.ID = GetID(conn.LocalAddr().Network(), conn.LocalAddr().String(), DefaultSeed)
+	logger.Debug().Msgf("New client created: %s", client.Address)
+	client.ID = GetID(conn.LocalAddr().Network(), conn.LocalAddr().String(), DefaultSeed, logger)
 
 	return &client
 }
 
 func (c *Client) Send(data []byte) error {
 	if _, err := c.Write(data); err != nil {
-		logrus.Errorf("Couldn't send data to the server: %s", err)
+		c.logger.Error().Err(err).Msgf("Couldn't send data to the server: %s", err)
 		return fmt.Errorf("couldn't send data to the server: %w", err)
 	}
-	logrus.Debugf("Sent %d bytes to %s", len(data), c.Address)
-	// logrus.Infof("Sent data: %s", data)
+	c.logger.Debug().Msgf("Sent %d bytes to %s", len(data), c.Address)
 	return nil
 }
 
@@ -77,16 +80,15 @@ func (c *Client) Receive() (int, []byte, error) {
 	buf := make([]byte, c.ReceiveBufferSize)
 	read, err := c.Read(buf)
 	if err != nil {
-		logrus.Errorf("Couldn't receive data from the server: %s", err)
+		c.logger.Error().Err(err).Msgf("Couldn't receive data from the server: %s", err)
 		return 0, nil, fmt.Errorf("couldn't receive data from the server: %w", err)
 	}
-	logrus.Debugf("Received %d bytes from %s", read, c.Address)
-	// logrus.Infof("Received data: %s", buf[:read])
+	c.logger.Debug().Msgf("Received %d bytes from %s", read, c.Address)
 	return read, buf, nil
 }
 
 func (c *Client) Close() {
-	logrus.Debugf("Closing connection to %s", c.Address)
+	c.logger.Debug().Msgf("Closing connection to %s", c.Address)
 	if c.Conn != nil {
 		c.Conn.Close()
 	}
