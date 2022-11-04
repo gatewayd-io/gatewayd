@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
+	"github.com/gatewayd-io/gatewayd/logging"
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,7 +21,9 @@ func TestNewClient(t *testing.T) {
 		}
 	}()
 
-	client := NewClient("tcp", "localhost:5432", DefaultBufferSize)
+	logger := logging.NewLogger(nil, zerolog.TimeFormatUnix, zerolog.DebugLevel, true)
+
+	client := NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)
 	defer client.Close()
 
 	assert.Equal(t, "tcp", client.Network)
@@ -41,7 +45,9 @@ func TestSend(t *testing.T) {
 		}
 	}()
 
-	client := NewClient("tcp", "localhost:5432", DefaultBufferSize)
+	logger := logging.NewLogger(nil, zerolog.TimeFormatUnix, zerolog.DebugLevel, true)
+
+	client := NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)
 	defer client.Close()
 
 	assert.NotNil(t, client)
@@ -61,7 +67,9 @@ func TestReceive(t *testing.T) {
 		}
 	}()
 
-	client := NewClient("tcp", "localhost:5432", DefaultBufferSize)
+	logger := logging.NewLogger(nil, zerolog.TimeFormatUnix, zerolog.DebugLevel, true)
+
+	client := NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)
 	defer client.Close()
 
 	assert.NotNil(t, client)
@@ -91,7 +99,9 @@ func TestClose(t *testing.T) {
 		}
 	}()
 
-	client := NewClient("tcp", "localhost:5432", DefaultBufferSize)
+	logger := logging.NewLogger(nil, zerolog.TimeFormatUnix, zerolog.DebugLevel, true)
+
+	client := NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)
 	assert.NotNil(t, client)
 	client.Close()
 	assert.Equal(t, "", client.ID)

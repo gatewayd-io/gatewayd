@@ -4,11 +4,14 @@ import (
 	"testing"
 
 	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
+	"github.com/gatewayd-io/gatewayd/logging"
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewPool(t *testing.T) {
-	pool := NewPool()
+	logger := logging.NewLogger(nil, zerolog.TimeFormatUnix, zerolog.DebugLevel, true)
+	pool := NewPool(logger)
 	defer pool.Close()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
@@ -27,14 +30,16 @@ func TestPool_Put(t *testing.T) {
 		}
 	}()
 
-	pool := NewPool()
+	logger := logging.NewLogger(nil, zerolog.TimeFormatUnix, zerolog.DebugLevel, true)
+
+	pool := NewPool(logger)
 	defer pool.Close()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
 	assert.Equal(t, 0, pool.Size())
-	assert.NoError(t, pool.Put(NewClient("tcp", "localhost:5432", DefaultBufferSize)))
+	assert.NoError(t, pool.Put(NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)))
 	assert.Equal(t, 1, pool.Size())
-	assert.NoError(t, pool.Put(NewClient("tcp", "localhost:5432", DefaultBufferSize)))
+	assert.NoError(t, pool.Put(NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)))
 	assert.Equal(t, 2, pool.Size())
 }
 
@@ -50,15 +55,17 @@ func TestPool_Pop(t *testing.T) {
 		}
 	}()
 
-	pool := NewPool()
+	logger := logging.NewLogger(nil, zerolog.TimeFormatUnix, zerolog.DebugLevel, true)
+
+	pool := NewPool(logger)
 	defer pool.Close()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
 	assert.Equal(t, 0, pool.Size())
-	client1 := NewClient("tcp", "localhost:5432", DefaultBufferSize)
+	client1 := NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)
 	assert.NoError(t, pool.Put(client1))
 	assert.Equal(t, 1, pool.Size())
-	client2 := NewClient("tcp", "localhost:5432", DefaultBufferSize)
+	client2 := NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)
 	assert.NoError(t, pool.Put(client2))
 	assert.Equal(t, 2, pool.Size())
 	client := pool.Pop(client1.ID)
@@ -81,14 +88,16 @@ func TestPool_Close(t *testing.T) {
 		}
 	}()
 
-	pool := NewPool()
+	logger := logging.NewLogger(nil, zerolog.TimeFormatUnix, zerolog.DebugLevel, true)
+
+	pool := NewPool(logger)
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
 	assert.Equal(t, 0, pool.Size())
-	client1 := NewClient("tcp", "localhost:5432", DefaultBufferSize)
+	client1 := NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)
 	assert.NoError(t, pool.Put(client1))
 	assert.Equal(t, 1, pool.Size())
-	client2 := NewClient("tcp", "localhost:5432", DefaultBufferSize)
+	client2 := NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)
 	assert.NoError(t, pool.Put(client2))
 	assert.Equal(t, 2, pool.Size())
 	err := pool.Close()
@@ -108,15 +117,17 @@ func TestPool_Shutdown(t *testing.T) {
 		}
 	}()
 
-	pool := NewPool()
+	logger := logging.NewLogger(nil, zerolog.TimeFormatUnix, zerolog.DebugLevel, true)
+
+	pool := NewPool(logger)
 	defer pool.Close()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
 	assert.Equal(t, 0, pool.Size())
-	client1 := NewClient("tcp", "localhost:5432", DefaultBufferSize)
+	client1 := NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)
 	assert.NoError(t, pool.Put(client1))
 	assert.Equal(t, 1, pool.Size())
-	client2 := NewClient("tcp", "localhost:5432", DefaultBufferSize)
+	client2 := NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)
 	assert.NoError(t, pool.Put(client2))
 	assert.Equal(t, 2, pool.Size())
 	pool.Shutdown()
@@ -135,15 +146,17 @@ func TestPool_ForEach(t *testing.T) {
 		}
 	}()
 
-	pool := NewPool()
+	logger := logging.NewLogger(nil, zerolog.TimeFormatUnix, zerolog.DebugLevel, true)
+
+	pool := NewPool(logger)
 	defer pool.Close()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
 	assert.Equal(t, 0, pool.Size())
-	client1 := NewClient("tcp", "localhost:5432", DefaultBufferSize)
+	client1 := NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)
 	assert.NoError(t, pool.Put(client1))
 	assert.Equal(t, 1, pool.Size())
-	client2 := NewClient("tcp", "localhost:5432", DefaultBufferSize)
+	client2 := NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)
 	assert.NoError(t, pool.Put(client2))
 	assert.Equal(t, 2, pool.Size())
 	pool.ForEach(func(client *Client) error {
@@ -164,15 +177,17 @@ func TestPool_ClientIDs(t *testing.T) {
 		}
 	}()
 
-	pool := NewPool()
+	logger := logging.NewLogger(nil, zerolog.TimeFormatUnix, zerolog.DebugLevel, true)
+
+	pool := NewPool(logger)
 	defer pool.Close()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
 	assert.Equal(t, 0, pool.Size())
-	client1 := NewClient("tcp", "localhost:5432", DefaultBufferSize)
+	client1 := NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)
 	assert.NoError(t, pool.Put(client1))
 	assert.Equal(t, 1, pool.Size())
-	client2 := NewClient("tcp", "localhost:5432", DefaultBufferSize)
+	client2 := NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)
 	assert.NoError(t, pool.Put(client2))
 	assert.Equal(t, 2, pool.Size())
 	ids := pool.ClientIDs()
