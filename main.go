@@ -24,10 +24,6 @@ func main() {
 		0,
 		0,
 		network.DefaultTickInterval,
-		network.DefaultPoolSize,
-		network.DefaultBufferSize,
-		false,
-		false,
 		[]gnet.Option{
 			// Scheduling options
 			gnet.WithMulticore(true),
@@ -62,6 +58,7 @@ func main() {
 		},
 		nil,
 		nil,
+		network.NewProxy(network.DefaultPoolSize, network.DefaultBufferSize, false, false),
 	)
 
 	// Shutdown the server gracefully

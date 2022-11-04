@@ -25,26 +25,26 @@ type Server struct {
 	engine gnet.Engine
 	proxy  Proxy
 
-	Network             string // tcp/udp/unix
-	Address             string
-	Options             []gnet.Option
-	SoftLimit           uint64
-	HardLimit           uint64
-	Status              Status
-	TickInterval        int
-	PoolSize            int
-	ElasticPool         bool
-	ReuseElasticClients bool
-	BufferSize          int
-	OnIncomingTraffic   Traffic
-	OnOutgoingTraffic   Traffic
+	Network      string // tcp/udp/unix
+	Address      string
+	Options      []gnet.Option
+	SoftLimit    uint64
+	HardLimit    uint64
+	Status       Status
+	TickInterval int
+	// PoolSize            int
+	// ElasticPool         bool
+	// ReuseElasticClients bool
+	// BufferSize        int
+	OnIncomingTraffic Traffic
+	OnOutgoingTraffic Traffic
 }
 
 func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 	s.engine = engine
 
 	// Create a proxy with a fixed/elastic buffer pool
-	s.proxy = NewProxy(s.PoolSize, s.BufferSize, s.ElasticPool, s.ReuseElasticClients)
+	// s.proxy = NewProxy(s.PoolSize, s.BufferSize, s.ElasticPool, s.ReuseElasticClients)
 
 	// Set the status to running
 	s.Status = Running
@@ -141,10 +141,10 @@ func (s *Server) IsRunning() bool {
 func NewServer(
 	network, address string,
 	softLimit, hardLimit uint64,
-	tickInterval, poolSize, bufferSize int,
-	elasticPool, reuseElasticClients bool,
+	tickInterval int,
 	options []gnet.Option,
 	onIncomingTraffic, onOutgoingTraffic Traffic,
+	proxy Proxy,
 ) *Server {
 	server := Server{
 		Network:      network,
@@ -194,23 +194,6 @@ func NewServer(
 		server.TickInterval = tickInterval
 	}
 
-	if poolSize == 0 {
-		server.PoolSize = DefaultPoolSize
-		logrus.Debugf("Client connections is not set, using the default value")
-	} else {
-		server.PoolSize = poolSize
-	}
-
-	if bufferSize == 0 {
-		server.BufferSize = DefaultBufferSize
-		logrus.Debugf("Buffer size is not set, using the default value")
-	} else {
-		server.BufferSize = bufferSize
-	}
-
-	server.ElasticPool = elasticPool
-	server.ReuseElasticClients = reuseElasticClients
-
 	if onIncomingTraffic == nil {
 		server.OnIncomingTraffic = func(gconn gnet.Conn, cl *Client, buf []byte, err error) error {
 			// TODO: Implement the traffic handler
@@ -230,6 +213,8 @@ func NewServer(
 	} else {
 		server.OnOutgoingTraffic = onOutgoingTraffic
 	}
+
+	server.proxy = proxy
 
 	return &server
 }
