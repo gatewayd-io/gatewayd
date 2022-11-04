@@ -200,7 +200,10 @@ func NewServer(
 	if onIncomingTraffic == nil {
 		server.OnIncomingTraffic = func(gconn gnet.Conn, cl *Client, buf []byte, err error) error {
 			// TODO: Implement the traffic handler
-			logger.Info().Msgf("GatewayD is passing traffic from %s to %s", gconn.RemoteAddr().String(), gconn.LocalAddr().String())
+			logger.Info().Msgf(
+				"GatewayD is passing traffic from %s to %s",
+				gconn.RemoteAddr().String(),
+				gconn.LocalAddr().String())
 			return nil
 		}
 	} else {
@@ -210,7 +213,10 @@ func NewServer(
 	if onOutgoingTraffic == nil {
 		server.OnOutgoingTraffic = func(gconn gnet.Conn, cl *Client, buf []byte, err error) error {
 			// TODO: Implement the traffic handler
-			logger.Info().Msgf("GatewayD is passing traffic from %s to %s", gconn.LocalAddr().String(), gconn.RemoteAddr().String())
+			logger.Info().Msgf(
+				"GatewayD is passing traffic from %s to %s",
+				gconn.LocalAddr().String(),
+				gconn.RemoteAddr().String())
 			return nil
 		}
 	} else {
