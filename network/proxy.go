@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"sync"
 
 	"github.com/panjf2000/gnet/v2"
@@ -23,51 +22,32 @@ type Proxy interface {
 }
 
 type ProxyImpl struct {
-	pool        Pool
-	connClients sync.Map
+	pool    Pool
+	clients sync.Map
 
-	PoolSize            int
 	Elastic             bool
 	ReuseElasticClients bool
-	BufferSize          int
+
+	// ClientConfig is used for elastic proxy and reconnection
+	ClientConfig *Client
 }
 
 var _ Proxy = &ProxyImpl{}
 
-func NewProxy(size, bufferSize int, elastic, reuseElasticClients bool) *ProxyImpl {
+func NewProxy(
+	pool Pool, elastic, reuseElasticClients bool, clientConfig *Client,
+) *ProxyImpl {
 	proxy := ProxyImpl{
-		pool:        NewPool(),
-		connClients: sync.Map{},
-
-		PoolSize:            size,
+		clients:             sync.Map{},
 		Elastic:             elastic,
 		ReuseElasticClients: reuseElasticClients,
+		ClientConfig:        clientConfig,
 	}
 
-	if proxy.Elastic {
-		return &proxy
-	}
-
-	if bufferSize == 0 {
-		proxy.BufferSize = DefaultBufferSize
-	}
-
-	for i := 0; i < size; i++ {
-		client := NewClient("tcp", "localhost:5432", proxy.BufferSize)
-		if client != nil {
-			if err := proxy.pool.Put(client); err != nil {
-				logrus.Panic(err)
-			}
-		}
-	}
-
-	logrus.Infof("There are %d clients in the pool", len(proxy.pool.ClientIDs()))
-	if len(proxy.pool.ClientIDs()) != size {
-		logrus.Error(
-			"The pool size is incorrect, either because " +
-				"the clients are cannot connect (no network connectivity) " +
-				"or the server is not running")
-		os.Exit(1)
+	if pool != nil {
+		proxy.pool = pool
+	} else {
+		proxy.pool = NewPool()
 	}
 
 	return &proxy
@@ -81,7 +61,11 @@ func (pr *ProxyImpl) Connect(gconn gnet.Conn) error {
 		// Pool is exhausted
 		if pr.Elastic {
 			// Create a new client
-			client = NewClient("tcp", "localhost:5432", pr.BufferSize)
+			client = NewClient(
+				pr.ClientConfig.Network,
+				pr.ClientConfig.Address,
+				pr.ClientConfig.ReceiveBufferSize,
+			)
 			logrus.Debugf("Reused the client %s by putting it back in the pool", client.ID)
 		} else {
 			return ErrPoolExhausted
@@ -93,7 +77,7 @@ func (pr *ProxyImpl) Connect(gconn gnet.Conn) error {
 	}
 
 	if client.ID != "" {
-		pr.connClients.Store(gconn, client)
+		pr.clients.Store(gconn, client)
 		logrus.Debugf("Client %s has been assigned to %s", client.ID, gconn.RemoteAddr().String())
 	} else {
 		return ErrClientNotConnected
@@ -107,12 +91,12 @@ func (pr *ProxyImpl) Connect(gconn gnet.Conn) error {
 
 func (pr *ProxyImpl) Disconnect(gconn gnet.Conn) error {
 	var client *Client
-	if cl, ok := pr.connClients.Load(gconn); ok {
+	if cl, ok := pr.clients.Load(gconn); ok {
 		if c, ok := cl.(*Client); ok {
 			client = c
 		}
 	}
-	pr.connClients.Delete(gconn)
+	pr.clients.Delete(gconn)
 
 	// TODO: The connection is unstable when I put the client back in the pool
 	// If the client is not in the pool, put it back
@@ -142,7 +126,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn, onIncomingTraffic, onOutgoingT
 	// that listens for data from the server and sends it to the client
 
 	var client *Client
-	if c, ok := pr.connClients.Load(gconn); ok {
+	if c, ok := pr.clients.Load(gconn); ok {
 		if cl, ok := c.(*Client); ok {
 			client = cl
 		}
@@ -184,7 +168,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn, onIncomingTraffic, onOutgoingT
 		// Reconnect the client
 		client = pr.Reconnect(client)
 		// Store the client in the map, replacing the old one
-		pr.connClients.Store(gconn, client)
+		pr.clients.Store(gconn, client)
 		return err
 	}
 
@@ -211,7 +195,11 @@ func (pr *ProxyImpl) Reconnect(cl *Client) *Client {
 	if cl != nil && cl.ID != "" {
 		cl.Close()
 	}
-	return NewClient("tcp", "localhost:5432", pr.BufferSize)
+	return NewClient(
+		pr.ClientConfig.Network,
+		pr.ClientConfig.Address,
+		pr.ClientConfig.ReceiveBufferSize,
+	)
 }
 
 func (pr *ProxyImpl) Shutdown() {
@@ -228,7 +216,7 @@ func (pr *ProxyImpl) Shutdown() {
 
 func (pr *ProxyImpl) Size() int {
 	var size int
-	pr.connClients.Range(func(_, _ interface{}) bool {
+	pr.clients.Range(func(_, _ interface{}) bool {
 		size++
 		return true
 	})

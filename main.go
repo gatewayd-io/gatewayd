@@ -17,6 +17,36 @@ const (
 
 //nolint:funlen
 func main() {
+	// Create a pool
+	pool := network.NewPool()
+
+	// Add a client to the pool
+	for i := 0; i < network.DefaultPoolSize; i++ {
+		client := network.NewClient("tcp", "localhost:5432", network.DefaultBufferSize)
+		if client != nil {
+			if err := pool.Put(client); err != nil {
+				logrus.Panic(err)
+			}
+		}
+	}
+
+	// Verify that the pool is properly populated
+	logrus.Infof("There are %d clients in the pool", len(pool.ClientIDs()))
+	if len(pool.ClientIDs()) != network.DefaultPoolSize {
+		logrus.Error(
+			"The pool size is incorrect, either because " +
+				"the clients are cannot connect (no network connectivity) " +
+				"or the server is not running. Exiting...")
+		os.Exit(1)
+	}
+
+	// Create a prefork proxy with the pool of clients
+	proxy := network.NewProxy(pool, false, false, &network.Client{
+		Network:           "tcp",
+		Address:           "localhost:5432",
+		ReceiveBufferSize: network.DefaultBufferSize,
+	})
+
 	// Create a server
 	server := network.NewServer(
 		"tcp",
@@ -24,10 +54,6 @@ func main() {
 		0,
 		0,
 		network.DefaultTickInterval,
-		network.DefaultPoolSize,
-		network.DefaultBufferSize,
-		false,
-		false,
 		[]gnet.Option{
 			// Scheduling options
 			gnet.WithMulticore(true),
@@ -62,6 +88,7 @@ func main() {
 		},
 		nil,
 		nil,
+		proxy,
 	)
 
 	// Shutdown the server gracefully
