@@ -7,29 +7,29 @@ import (
 	"net"
 	"syscall"
 
-	"github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 )
 
-func GetRLimit() syscall.Rlimit {
+func GetRLimit(logger zerolog.Logger) syscall.Rlimit {
 	var limits syscall.Rlimit
 	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &limits); err != nil { //nolint:nosnakecase
-		logrus.Error(err)
+		logger.Error().Err(err).Msg("Failed to get rlimit")
 	}
-	logrus.Debugf("Current system soft limit: %d", limits.Cur)
-	logrus.Debugf("Current system hard limit: %d", limits.Max)
+	logger.Debug().Msgf("Current system soft limit: %d", limits.Cur)
+	logger.Debug().Msgf("Current system hard limit: %d", limits.Max)
 	return limits
 }
 
-func GetID(network, address string, seed int) string {
+func GetID(network, address string, seed int, logger zerolog.Logger) string {
 	hash := sha256.New()
 	_, err := hash.Write([]byte(fmt.Sprintf("%s://%s%d", network, address, seed)))
 	if err != nil {
-		logrus.Error(err)
+		logger.Error().Err(err).Msg("Failed to generate ID")
 	}
 	return hex.EncodeToString(hash.Sum(nil))
 }
 
-func Resolve(network, address string) (string, error) {
+func Resolve(network, address string, logger zerolog.Logger) (string, error) {
 	switch network {
 	case "tcp", "tcp4", "tcp6":
 		addr, err := net.ResolveTCPAddr(network, address)
@@ -41,7 +41,7 @@ func Resolve(network, address string) (string, error) {
 		addr, err := net.ResolveUnixAddr(network, address)
 		return addr.String(), err
 	default:
-		logrus.Errorf("Network %s is not supported", network)
+		logger.Error().Msgf("Network %s is not supported", network)
 		return "", ErrNetworkNotSupported
 	}
 }

@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"github.com/panjf2000/gnet/v2"
-	"github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 )
 
 type Traffic func(gconn gnet.Conn, cl *Client, buf []byte, err error) error
@@ -24,6 +24,7 @@ type Proxy interface {
 type ProxyImpl struct {
 	pool    Pool
 	clients sync.Map
+	logger  zerolog.Logger
 
 	Elastic             bool
 	ReuseElasticClients bool
@@ -35,10 +36,11 @@ type ProxyImpl struct {
 var _ Proxy = &ProxyImpl{}
 
 func NewProxy(
-	pool Pool, elastic, reuseElasticClients bool, clientConfig *Client,
+	pool Pool, elastic, reuseElasticClients bool, clientConfig *Client, logger zerolog.Logger,
 ) *ProxyImpl {
 	proxy := ProxyImpl{
 		clients:             sync.Map{},
+		logger:              logger,
 		Elastic:             elastic,
 		ReuseElasticClients: reuseElasticClients,
 		ClientConfig:        clientConfig,
@@ -47,7 +49,7 @@ func NewProxy(
 	if pool != nil {
 		proxy.pool = pool
 	} else {
-		proxy.pool = NewPool()
+		proxy.pool = NewPool(logger)
 	}
 
 	return &proxy
@@ -65,26 +67,27 @@ func (pr *ProxyImpl) Connect(gconn gnet.Conn) error {
 				pr.ClientConfig.Network,
 				pr.ClientConfig.Address,
 				pr.ClientConfig.ReceiveBufferSize,
+				pr.logger,
 			)
-			logrus.Debugf("Reused the client %s by putting it back in the pool", client.ID)
+			pr.logger.Debug().Msgf("Reused the client %s by putting it back in the pool", client.ID)
 		} else {
 			return ErrPoolExhausted
 		}
 	} else {
 		// Get a client from the pool
-		logrus.Debugf("Available clients: %v", len(clientIDs))
+		pr.logger.Debug().Msgf("Available clients: %v", len(clientIDs))
 		client = pr.pool.Pop(clientIDs[0])
 	}
 
 	if client.ID != "" {
 		pr.clients.Store(gconn, client)
-		logrus.Debugf("Client %s has been assigned to %s", client.ID, gconn.RemoteAddr().String())
+		pr.logger.Debug().Msgf("Client %s has been assigned to %s", client.ID, gconn.RemoteAddr().String())
 	} else {
 		return ErrClientNotConnected
 	}
 
-	logrus.Debugf("[C] There are %d clients in the pool", len(pr.pool.ClientIDs()))
-	logrus.Debugf("[C] There are %d clients in use", pr.Size())
+	pr.logger.Debug().Msgf("[C] There are %d clients in the pool", len(pr.pool.ClientIDs()))
+	pr.logger.Debug().Msgf("[C] There are %d clients in use", pr.Size())
 
 	return nil
 }
@@ -104,6 +107,7 @@ func (pr *ProxyImpl) Disconnect(gconn gnet.Conn) error {
 		client = pr.Reconnect(client)
 		if client != nil && client.ID != "" {
 			if err := pr.pool.Put(client); err != nil {
+				pr.logger.Error().Err(err).Msgf("Failed to put the client %s back in the pool", client.ID)
 				return fmt.Errorf("failed to put the client back in the pool: %w", err)
 			}
 		}
@@ -111,8 +115,8 @@ func (pr *ProxyImpl) Disconnect(gconn gnet.Conn) error {
 		client.Close()
 	}
 
-	logrus.Debugf("[D] There are %d clients in the pool", len(pr.pool.ClientIDs()))
-	logrus.Debugf("[D] There are %d clients in use", pr.Size())
+	pr.logger.Debug().Msgf("[D] There are %d clients in the pool", len(pr.pool.ClientIDs()))
+	pr.logger.Debug().Msgf("[D] There are %d clients in use", pr.Size())
 
 	return nil
 }
@@ -137,16 +141,16 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn, onIncomingTraffic, onOutgoingT
 	// buf contains the data from the client (query)
 	buf, err := gconn.Next(-1)
 	if err != nil {
-		logrus.Errorf("Error reading from client: %v", err)
+		pr.logger.Error().Err(err).Msgf("Error reading from client: %v", err)
 	}
 	if err = onIncomingTraffic(gconn, client, buf, err); err != nil {
-		logrus.Errorf("Error processing data from client: %v", err)
+		pr.logger.Error().Err(err).Msgf("Error processing data from client: %v", err)
 	}
 
 	// TODO: parse the buffer and send the response or error
 	// TODO: This is a very basic implementation of the gateway
 	// and it is synchronous. I should make it asynchronous.
-	logrus.Debugf("Received %d bytes from %s", len(buf), gconn.RemoteAddr().String())
+	pr.logger.Debug().Msgf("Received %d bytes from %s", len(buf), gconn.RemoteAddr().String())
 
 	// Send the query to the server
 	err = client.Send(buf)
@@ -157,12 +161,12 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn, onIncomingTraffic, onOutgoingT
 	// Receive the response from the server
 	size, response, err := client.Receive()
 	if err := onOutgoingTraffic(gconn, client, response[:size], err); err != nil {
-		logrus.Errorf("Error processing data from server: %s", err)
+		pr.logger.Error().Err(err).Msgf("Error processing data from server: %s", err)
 	}
 
 	if err != nil && errors.Is(err, io.EOF) {
 		// The server has closed the connection
-		logrus.Error("The client is not connected to the server anymore")
+		pr.logger.Error().Err(err).Msg("The client is not connected to the server anymore")
 		// Either the client is not connected to the server anymore or
 		// server forceful closed the connection
 		// Reconnect the client
@@ -176,7 +180,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn, onIncomingTraffic, onOutgoingT
 		// Write the error to the client
 		_, err := gconn.Write(response[:size])
 		if err != nil {
-			logrus.Errorf("Error writing the error to client: %v", err)
+			pr.logger.Error().Err(err).Msgf("Error writing the error to client: %v", err)
 		}
 		return fmt.Errorf("error receiving data from server: %w", err)
 	}
@@ -184,7 +188,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn, onIncomingTraffic, onOutgoingT
 	// Write the response to the incoming connection
 	_, err = gconn.Write(response[:size])
 	if err != nil {
-		logrus.Errorf("Error writing to client: %v", err)
+		pr.logger.Error().Err(err).Msgf("Error writing to client: %v", err)
 	}
 
 	return nil
@@ -199,19 +203,20 @@ func (pr *ProxyImpl) Reconnect(cl *Client) *Client {
 		pr.ClientConfig.Network,
 		pr.ClientConfig.Address,
 		pr.ClientConfig.ReceiveBufferSize,
+		pr.logger,
 	)
 }
 
 func (pr *ProxyImpl) Shutdown() {
 	pr.pool.Shutdown()
-	logrus.Debug("All busy client connections have been closed")
+	pr.logger.Debug().Msg("All busy client connections have been closed")
 
 	availableClients := pr.pool.ClientIDs()
 	for _, clientID := range availableClients {
 		client := pr.pool.Pop(clientID)
 		client.Close()
 	}
-	logrus.Debug("All available client connections have been closed")
+	pr.logger.Debug().Msg("All available client connections have been closed")
 }
 
 func (pr *ProxyImpl) Size() int {
