@@ -17,7 +17,7 @@ const (
 	DefaultTCPKeepAlive = 3 * time.Second
 )
 
-// runCmd represents the run command
+// runCmd represents the run command.
 var runCmd = &cobra.Command{
 	Use:   "run",
 	Short: "Run a gatewayd instance",
