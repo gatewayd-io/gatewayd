@@ -10,8 +10,15 @@ import (
 )
 
 func TestNewPool(t *testing.T) {
-	logger := logging.NewLogger(nil, zerolog.TimeFormatUnix, zerolog.DebugLevel, true)
-	pool := NewPool(logger)
+	cfg := logging.LoggerConfig{
+		Output:     nil,
+		TimeFormat: zerolog.TimeFormatUnix,
+		Level:      zerolog.DebugLevel,
+		NoColor:    true,
+	}
+
+	logger := logging.NewLogger(cfg)
+	pool := NewPool(logger, 0, nil)
 	defer pool.Close()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
@@ -30,9 +37,16 @@ func TestPool_Put(t *testing.T) {
 		}
 	}()
 
-	logger := logging.NewLogger(nil, zerolog.TimeFormatUnix, zerolog.DebugLevel, true)
+	cfg := logging.LoggerConfig{
+		Output:     nil,
+		TimeFormat: zerolog.TimeFormatUnix,
+		Level:      zerolog.DebugLevel,
+		NoColor:    true,
+	}
 
-	pool := NewPool(logger)
+	logger := logging.NewLogger(cfg)
+
+	pool := NewPool(logger, 0, nil)
 	defer pool.Close()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
@@ -55,9 +69,16 @@ func TestPool_Pop(t *testing.T) {
 		}
 	}()
 
-	logger := logging.NewLogger(nil, zerolog.TimeFormatUnix, zerolog.DebugLevel, true)
+	cfg := logging.LoggerConfig{
+		Output:     nil,
+		TimeFormat: zerolog.TimeFormatUnix,
+		Level:      zerolog.DebugLevel,
+		NoColor:    true,
+	}
 
-	pool := NewPool(logger)
+	logger := logging.NewLogger(cfg)
+
+	pool := NewPool(logger, 0, nil)
 	defer pool.Close()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
@@ -88,9 +109,16 @@ func TestPool_Close(t *testing.T) {
 		}
 	}()
 
-	logger := logging.NewLogger(nil, zerolog.TimeFormatUnix, zerolog.DebugLevel, true)
+	cfg := logging.LoggerConfig{
+		Output:     nil,
+		TimeFormat: zerolog.TimeFormatUnix,
+		Level:      zerolog.DebugLevel,
+		NoColor:    true,
+	}
 
-	pool := NewPool(logger)
+	logger := logging.NewLogger(cfg)
+
+	pool := NewPool(logger, 0, nil)
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
 	assert.Equal(t, 0, pool.Size())
@@ -117,9 +145,16 @@ func TestPool_Shutdown(t *testing.T) {
 		}
 	}()
 
-	logger := logging.NewLogger(nil, zerolog.TimeFormatUnix, zerolog.DebugLevel, true)
+	cfg := logging.LoggerConfig{
+		Output:     nil,
+		TimeFormat: zerolog.TimeFormatUnix,
+		Level:      zerolog.DebugLevel,
+		NoColor:    true,
+	}
 
-	pool := NewPool(logger)
+	logger := logging.NewLogger(cfg)
+
+	pool := NewPool(logger, 0, nil)
 	defer pool.Close()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
@@ -146,9 +181,16 @@ func TestPool_ForEach(t *testing.T) {
 		}
 	}()
 
-	logger := logging.NewLogger(nil, zerolog.TimeFormatUnix, zerolog.DebugLevel, true)
+	cfg := logging.LoggerConfig{
+		Output:     nil,
+		TimeFormat: zerolog.TimeFormatUnix,
+		Level:      zerolog.DebugLevel,
+		NoColor:    true,
+	}
 
-	pool := NewPool(logger)
+	logger := logging.NewLogger(cfg)
+
+	pool := NewPool(logger, 0, nil)
 	defer pool.Close()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
@@ -177,9 +219,16 @@ func TestPool_ClientIDs(t *testing.T) {
 		}
 	}()
 
-	logger := logging.NewLogger(nil, zerolog.TimeFormatUnix, zerolog.DebugLevel, true)
+	cfg := logging.LoggerConfig{
+		Output:     nil,
+		TimeFormat: zerolog.TimeFormatUnix,
+		Level:      zerolog.DebugLevel,
+		NoColor:    true,
+	}
 
-	pool := NewPool(logger)
+	logger := logging.NewLogger(cfg)
+
+	pool := NewPool(logger, 0, nil)
 	defer pool.Close()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())

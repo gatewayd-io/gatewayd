@@ -11,7 +11,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// Global koanf instance. Using "." as the key path delimiter
+// Global koanf instance. Using "." as the key path delimiter.
 var konfig = koanf.New(".")
 
 func getPath(path string) string {
@@ -23,14 +23,13 @@ func getPath(path string) string {
 	return path
 }
 
-func resolvePath(path string) map[string]string {
-	ref := getPath(path)
-	if ref != path {
-		return konfig.StringMap(ref)
-	}
-
-	return nil
-}
+// func resolvePath(path string) map[string]string {
+// 	ref := getPath(path)
+// 	if ref != path {
+// 		return konfig.StringMap(ref)
+// 	}
+// 	return nil
+// }
 
 func loggerConfig() logging.LoggerConfig {
 	cfg := logging.LoggerConfig{}
@@ -121,29 +120,27 @@ type ServerConfig struct {
 	SoftLimit        uint64
 	HardLimit        uint64
 	EnableTicker     bool
-	TickInterval     int
 	MultiCore        bool
 	LockOSThread     bool
+	ReuseAddress     bool
+	ReusePort        bool
 	LoadBalancer     gnet.LoadBalancing
+	TickInterval     int
 	ReadBufferCap    int
 	WriteBufferCap   int
 	SocketRecvBuffer int
 	SocketSendBuffer int
-	ReuseAddress     bool
-	ReusePort        bool
 	TCPKeepAlive     time.Duration
 	TCPNoDelay       gnet.TCPSocketOpt
 	// OnIncomingTraffic string
 	// OnOutgoingTraffic string
 }
 
-var (
-	loadBalancer = map[string]gnet.LoadBalancing{
-		"roundrobin":       gnet.RoundRobin,
-		"leastconnections": gnet.LeastConnections,
-		"sourceaddrhash":   gnet.SourceAddrHash,
-	}
-)
+var loadBalancer = map[string]gnet.LoadBalancing{
+	"roundrobin":       gnet.RoundRobin,
+	"leastconnections": gnet.LeastConnections,
+	"sourceaddrhash":   gnet.SourceAddrHash,
+}
 
 func getLoadBalancer(name string) gnet.LoadBalancing {
 	if lb, ok := loadBalancer[name]; ok {
