@@ -3,12 +3,8 @@ package cmd
 import (
 	"os"
 
-	"github.com/knadh/koanf"
 	"github.com/spf13/cobra"
 )
-
-// Global koanf instance. Using "." as the key path delimiter
-var konfig = koanf.New(".")
 
 var rootCmd = &cobra.Command{
 	Use:   "gatewayd",
@@ -23,5 +19,3 @@ func Execute() {
 		os.Exit(1)
 	}
 }
-
-func init() {}
