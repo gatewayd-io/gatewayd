@@ -26,17 +26,13 @@ type Server struct {
 	proxy  Proxy
 	logger zerolog.Logger
 
-	Network      string // tcp/udp/unix
-	Address      string
-	Options      []gnet.Option
-	SoftLimit    uint64
-	HardLimit    uint64
-	Status       Status
-	TickInterval int
-	// PoolSize            int
-	// ElasticPool         bool
-	// ReuseElasticClients bool
-	// BufferSize        int
+	Network           string // tcp/udp/unix
+	Address           string
+	Options           []gnet.Option
+	SoftLimit         uint64
+	HardLimit         uint64
+	Status            Status
+	TickInterval      int
 	OnIncomingTraffic Traffic
 	OnOutgoingTraffic Traffic
 }
