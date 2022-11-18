@@ -28,12 +28,15 @@ func TestRunServer(t *testing.T) {
 
 	logger := logging.NewLogger(cfg)
 
+	hooksConfig := NewHookConfig()
+
 	onIncomingTraffic := func(gconn gnet.Conn, cl *Client, buf []byte, err error) error {
 		logger.Info().Msg("Incoming traffic")
 		assert.Equal(t, CreatePgStartupPacket(), buf)
 		assert.Nil(t, err)
 		return nil
 	}
+	hooksConfig.AddHook(OnIncomingTraffic, 1, onIncomingTraffic)
 
 	onOutgoingTraffic := func(gconn gnet.Conn, cl *Client, buf []byte, err error) error {
 		logger.Info().Msg("Outgoing traffic")
@@ -41,9 +44,10 @@ func TestRunServer(t *testing.T) {
 		assert.Nil(t, err)
 		return nil
 	}
+	hooksConfig.AddHook(OnOutgoingTraffic, 1, onOutgoingTraffic)
 
 	// Create a connection pool
-	pool := NewPool(logger, 0, nil)
+	pool := NewPool(logger, 0, nil, nil)
 	assert.NoError(t, pool.Put(NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)))
 	assert.NoError(t, pool.Put(NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)))
 
@@ -68,6 +72,7 @@ func TestRunServer(t *testing.T) {
 		onOutgoingTraffic,
 		proxy,
 		logger,
+		hooksConfig,
 	)
 	assert.NotNil(t, server)
 

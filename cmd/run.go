@@ -18,7 +18,10 @@ const (
 	DefaultTCPKeepAlive = 3 * time.Second
 )
 
-var configFile string
+var (
+	configFile  string
+	hooksConfig = network.NewHookConfig()
+)
 
 // runCmd represents the run command.
 var runCmd = &cobra.Command{
@@ -30,17 +33,21 @@ var runCmd = &cobra.Command{
 				panic(err)
 			}
 		}
+		hooksConfig.RunHooks(network.OnConfigLoaded, konfig)
 
 		// Create a new logger from the config
 		logger := logging.NewLogger(loggerConfig())
+		hooksConfig.RunHooks(network.OnNewLogger, logger)
 
 		// Create and initialize a pool of connections
 		poolSize, poolClientConfig := poolConfig()
-		pool := network.NewPool(logger, poolSize, poolClientConfig)
+		pool := network.NewPool(logger, poolSize, poolClientConfig, hooksConfig.OnNewClient())
+		hooksConfig.RunHooks(network.OnNewPool, pool)
 
 		// Create a prefork proxy with the pool of clients
 		elastic, reuseElasticClients, elasticClientConfig := proxyConfig()
 		proxy := network.NewProxy(pool, elastic, reuseElasticClients, elasticClientConfig, logger)
+		hooksConfig.RunHooks(network.OnNewProxy, proxy)
 
 		// Create a server
 		serverConfig := serverConfig()
@@ -86,7 +93,9 @@ var runCmd = &cobra.Command{
 			nil,
 			proxy,
 			logger,
+			hooksConfig,
 		)
+		hooksConfig.RunHooks(network.OnNewServer, server)
 
 		// Shutdown the server gracefully
 		var signals []os.Signal
@@ -101,16 +110,18 @@ var runCmd = &cobra.Command{
 		)
 		signalsCh := make(chan os.Signal, 1)
 		signal.Notify(signalsCh, signals...)
-		go func() {
+		go func(hooksConfig *network.HookConfig) {
 			for sig := range signalsCh {
 				for _, s := range signals {
 					if sig != s {
+						hooksConfig.RunHooks(network.OnSignal, sig)
+
 						server.Shutdown()
 						os.Exit(0)
 					}
 				}
 			}
-		}()
+		}(hooksConfig)
 
 		// Run the server
 		if err := server.Run(); err != nil {

@@ -22,32 +22,39 @@ const (
 
 type Server struct {
 	gnet.BuiltinEventEngine
-	engine gnet.Engine
-	proxy  Proxy
-	logger zerolog.Logger
+	engine      gnet.Engine
+	proxy       Proxy
+	logger      zerolog.Logger
+	hooksConfig *HookConfig
 
-	Network           string // tcp/udp/unix
-	Address           string
-	Options           []gnet.Option
-	SoftLimit         uint64
-	HardLimit         uint64
-	Status            Status
-	TickInterval      int
-	OnIncomingTraffic Traffic
-	OnOutgoingTraffic Traffic
+	Network      string // tcp/udp/unix
+	Address      string
+	Options      []gnet.Option
+	SoftLimit    uint64
+	HardLimit    uint64
+	Status       Status
+	TickInterval int
 }
 
 func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
+	s.logger.Debug().Msg("GatewayD is booting...")
+
+	s.hooksConfig.RunHooks(OnBooting, s, engine)
+
 	s.engine = engine
 
 	// Set the status to running
 	s.Status = Running
+
+	s.hooksConfig.RunHooks(OnBooted, s, engine)
 
 	return gnet.None
 }
 
 func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 	s.logger.Debug().Msgf("GatewayD is opening a connection from %s", gconn.RemoteAddr().String())
+
+	s.hooksConfig.RunHooks(OnOpening, s, gconn)
 
 	if uint64(s.engine.CountConnections()) >= s.SoftLimit {
 		s.logger.Warn().Msg("Soft limit reached")
@@ -67,11 +74,15 @@ func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 		return nil, gnet.Close
 	}
 
+	s.hooksConfig.RunHooks(OnOpened, s, gconn)
+
 	return nil, gnet.None
 }
 
 func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 	s.logger.Debug().Msgf("GatewayD is closing a connection from %s", gconn.RemoteAddr().String())
+
+	s.hooksConfig.RunHooks(OnClosing, s, gconn, err)
 
 	if err := s.proxy.Disconnect(gconn); err != nil {
 		s.logger.Error().Err(err).Msg("Failed to disconnect from the client")
@@ -81,11 +92,18 @@ func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 		return gnet.Shutdown
 	}
 
+	s.hooksConfig.RunHooks(OnClosed, s, gconn, err)
+
 	return gnet.Close
 }
 
 func (s *Server) OnTraffic(gconn gnet.Conn) gnet.Action {
-	if err := s.proxy.PassThrough(gconn, s.OnIncomingTraffic, s.OnOutgoingTraffic); err != nil {
+	s.hooksConfig.RunHooks(OnTraffic, s, gconn)
+
+	if err := s.proxy.PassThrough(
+		gconn,
+		s.hooksConfig.onIncomingTraffic,
+		s.hooksConfig.onOutgoingTraffic); err != nil {
 		s.logger.Error().Err(err).Msg("Failed to pass through traffic")
 		// TODO: Close the connection *gracefully*
 		return gnet.Close
@@ -96,6 +114,7 @@ func (s *Server) OnTraffic(gconn gnet.Conn) gnet.Action {
 
 func (s *Server) OnShutdown(engine gnet.Engine) {
 	s.logger.Debug().Msg("GatewayD is shutting down...")
+	s.hooksConfig.RunHooks(OnShutdown, s, engine)
 	s.proxy.Shutdown()
 	s.Status = Stopped
 }
@@ -103,6 +122,7 @@ func (s *Server) OnShutdown(engine gnet.Engine) {
 func (s *Server) OnTick() (time.Duration, gnet.Action) {
 	s.logger.Debug().Msg("GatewayD is ticking...")
 	s.logger.Info().Msgf("Active connections: %d", s.engine.CountConnections())
+	s.hooksConfig.RunHooks(OnTick, s)
 	return time.Duration(s.TickInterval * int(time.Second)), gnet.None
 }
 
@@ -114,6 +134,9 @@ func (s *Server) Run() error {
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to resolve address")
 	}
+
+	// Since gnet.Run is blocking, we need to run OnRun before it
+	s.hooksConfig.RunHooks(OnRun, s)
 
 	err = gnet.Run(s, s.Network+"://"+addr, s.Options...)
 	if err != nil {
@@ -142,6 +165,7 @@ func NewServer(
 	onIncomingTraffic, onOutgoingTraffic Traffic,
 	proxy Proxy,
 	logger zerolog.Logger,
+	hooksConfig *HookConfig,
 ) *Server {
 	server := Server{
 		Network:      network,
@@ -193,34 +217,9 @@ func NewServer(
 		server.TickInterval = tickInterval
 	}
 
-	if onIncomingTraffic == nil {
-		server.OnIncomingTraffic = func(gconn gnet.Conn, cl *Client, buf []byte, err error) error {
-			// TODO: Implement the traffic handler
-			logger.Info().Msgf(
-				"GatewayD is passing traffic from %s to %s",
-				gconn.RemoteAddr().String(),
-				gconn.LocalAddr().String())
-			return nil
-		}
-	} else {
-		server.OnIncomingTraffic = onIncomingTraffic
-	}
-
-	if onOutgoingTraffic == nil {
-		server.OnOutgoingTraffic = func(gconn gnet.Conn, cl *Client, buf []byte, err error) error {
-			// TODO: Implement the traffic handler
-			logger.Info().Msgf(
-				"GatewayD is passing traffic from %s to %s",
-				gconn.LocalAddr().String(),
-				gconn.RemoteAddr().String())
-			return nil
-		}
-	} else {
-		server.OnOutgoingTraffic = onOutgoingTraffic
-	}
-
 	server.proxy = proxy
 	server.logger = logger
+	server.hooksConfig = hooksConfig
 
 	return &server
 }
