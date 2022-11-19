@@ -15,7 +15,7 @@ const (
 	Running Status = "running"
 	Stopped Status = "stopped"
 
-	DefaultTickInterval = 5
+	DefaultTickInterval = 5 * time.Second
 	DefaultPoolSize     = 10
 	DefaultBufferSize   = 4096
 )
@@ -33,7 +33,7 @@ type Server struct {
 	SoftLimit    uint64
 	HardLimit    uint64
 	Status       Status
-	TickInterval int
+	TickInterval time.Duration
 }
 
 func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
@@ -47,6 +47,8 @@ func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 	s.Status = Running
 
 	s.hooksConfig.RunHooks(OnBooted, s, engine)
+
+	s.logger.Debug().Msg("GatewayD booted")
 
 	return gnet.None
 }
@@ -123,7 +125,7 @@ func (s *Server) OnTick() (time.Duration, gnet.Action) {
 	s.logger.Debug().Msg("GatewayD is ticking...")
 	s.logger.Info().Msgf("Active connections: %d", s.engine.CountConnections())
 	s.hooksConfig.RunHooks(OnTick, s)
-	return time.Duration(s.TickInterval * int(time.Second)), gnet.None
+	return s.TickInterval, gnet.None
 }
 
 func (s *Server) Run() error {
@@ -160,7 +162,7 @@ func (s *Server) IsRunning() bool {
 func NewServer(
 	network, address string,
 	softLimit, hardLimit uint64,
-	tickInterval int,
+	tickInterval time.Duration,
 	options []gnet.Option,
 	onIncomingTraffic, onOutgoingTraffic Traffic,
 	proxy Proxy,
@@ -211,7 +213,7 @@ func NewServer(
 	}
 
 	if tickInterval == 0 {
-		server.TickInterval = int(DefaultTickInterval)
+		server.TickInterval = DefaultTickInterval
 		logger.Debug().Msgf("Tick interval is not set, using the default value")
 	} else {
 		server.TickInterval = tickInterval

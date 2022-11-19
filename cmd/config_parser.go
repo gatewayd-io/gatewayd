@@ -125,7 +125,7 @@ type ServerConfig struct {
 	ReuseAddress     bool
 	ReusePort        bool
 	LoadBalancer     gnet.LoadBalancing
-	TickInterval     int
+	TickInterval     time.Duration
 	ReadBufferCap    int
 	WriteBufferCap   int
 	SocketRecvBuffer int
@@ -165,7 +165,7 @@ func serverConfig() *ServerConfig {
 		SoftLimit:        uint64(konfig.Int64("server.softLimit")),
 		HardLimit:        uint64(konfig.Int64("server.hardLimit")),
 		EnableTicker:     konfig.Bool("server.enableTicker"),
-		TickInterval:     konfig.Int("server.tickInterval"),
+		TickInterval:     konfig.Duration("server.tickInterval"),
 		MultiCore:        konfig.Bool("server.multiCore"),
 		LockOSThread:     konfig.Bool("server.lockOSThread"),
 		LoadBalancer:     getLoadBalancer(konfig.String("server.loadBalancer")),
