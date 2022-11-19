@@ -41,7 +41,9 @@ func TestNewProxy(t *testing.T) {
 	assert.NotNil(t, proxy)
 	assert.Equal(t, 0, proxy.busyConnections.Size(), "Proxy should have no connected clients")
 	assert.Equal(t, 1, proxy.availableConnections.Size())
-	assert.NotEqual(t, client.ID, proxy.availableConnections.Pop(client.ID).(*Client).ID)
+	if c, ok := proxy.availableConnections.Pop(client.ID).(*Client); ok {
+		assert.NotEqual(t, "", c.ID)
+	}
 	assert.Equal(t, false, proxy.Elastic)
 	assert.Equal(t, false, proxy.ReuseElasticClients)
 
