@@ -47,9 +47,11 @@ func TestRunServer(t *testing.T) {
 	hooksConfig.AddHook(OnOutgoingTraffic, 1, onOutgoingTraffic)
 
 	// Create a connection pool
-	pool := NewPool(logger, 0, nil, nil)
-	assert.NoError(t, pool.Put(NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)))
-	assert.NoError(t, pool.Put(NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)))
+	pool := NewEmptyPool(logger)
+	client1 := NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)
+	pool.Put(client1.ID, client1)
+	client2 := NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)
+	pool.Put(client2.ID, client2)
 
 	// Create a proxy with a fixed buffer pool
 	proxy := NewProxy(pool, false, false, &Client{

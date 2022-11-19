@@ -32,19 +32,22 @@ func TestNewProxy(t *testing.T) {
 
 	// Create a connection pool
 	pool := NewPool(logger, 0, nil, nil)
-	assert.NoError(t, pool.Put(NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)))
+	client := NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)
+	pool.Put(client.ID, client)
 
 	// Create a proxy with a fixed buffer pool
 	proxy := NewProxy(pool, false, false, nil, logger)
 
 	assert.NotNil(t, proxy)
-	assert.Equal(t, 0, proxy.Size(), "Proxy should have no connected clients")
-	assert.Equal(t, 1, len(proxy.pool.ClientIDs()))
-	assert.NotEqual(t, "", proxy.pool.ClientIDs()[0])
+	assert.Equal(t, 0, proxy.busyConnections.Size(), "Proxy should have no connected clients")
+	assert.Equal(t, 1, proxy.availableConnections.Size())
+	if c, ok := proxy.availableConnections.Pop(client.ID).(*Client); ok {
+		assert.NotEqual(t, "", c.ID)
+	}
 	assert.Equal(t, false, proxy.Elastic)
 	assert.Equal(t, false, proxy.ReuseElasticClients)
 
-	proxy.pool.Close()
+	proxy.availableConnections.Clear()
 }
 
 func TestNewProxyElastic(t *testing.T) {
@@ -68,13 +71,13 @@ func TestNewProxyElastic(t *testing.T) {
 	}, logger)
 
 	assert.NotNil(t, proxy)
-	assert.Equal(t, 0, proxy.Size())
-	assert.Equal(t, 0, len(proxy.pool.ClientIDs()))
+	assert.Equal(t, 0, proxy.busyConnections.Size())
+	assert.Equal(t, 0, proxy.availableConnections.Size())
 	assert.Equal(t, true, proxy.Elastic)
 	assert.Equal(t, false, proxy.ReuseElasticClients)
 	assert.Equal(t, "tcp", proxy.ClientConfig.Network)
 	assert.Equal(t, "localhost:5432", proxy.ClientConfig.Address)
 	assert.Equal(t, DefaultBufferSize, proxy.ClientConfig.ReceiveBufferSize)
 
-	proxy.pool.Close()
+	proxy.availableConnections.Clear()
 }
