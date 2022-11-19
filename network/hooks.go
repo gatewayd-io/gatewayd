@@ -172,76 +172,206 @@ func (h *HookConfig) AddHook(hookType HookType, prio Prio, hook interface{}) {
 	}
 }
 
-//nolint:funlen
+//nolint:funlen,maintidx
 func (h *HookConfig) RunHooks(hookType HookType, params ...interface{}) {
 	switch hookType {
 	case OnConfigLoaded:
 		for _, hookDef := range h.onConfigLoaded {
-			hookDef(params[0].(*koanf.Koanf))
+			if konfig, ok := params[0].(*koanf.Koanf); ok {
+				hookDef(konfig)
+			}
 		}
 	case OnNewLogger:
 		for _, hookDef := range h.onNewLogger {
-			hookDef(params[0].(zerolog.Logger))
+			if logger, ok := params[0].(zerolog.Logger); ok {
+				hookDef(logger)
+			}
 		}
 	case OnNewPool:
 		for _, hookDef := range h.onNewPool {
-			hookDef(params[0].(*Pool))
+			if pool, ok := params[0].(*Pool); ok {
+				hookDef(pool)
+			}
 		}
 	case OnNewProxy:
 		for _, hookDef := range h.onNewProxy {
-			hookDef(params[0].(*Proxy))
+			if proxy, ok := params[0].(*Proxy); ok {
+				hookDef(proxy)
+			}
 		}
 	case OnNewServer:
 		for _, hookDef := range h.onNewServer {
-			hookDef(params[0].(*Server))
+			if server, ok := params[0].(*Server); ok {
+				hookDef(server)
+			}
 		}
 	case OnSignal:
 		for _, hookDef := range h.onSignal {
-			hookDef(params[0].(os.Signal))
+			if signal, ok := params[0].(os.Signal); ok {
+				hookDef(signal)
+			}
 		}
 	case OnRun:
 		for _, hookDef := range h.onRun {
-			hookDef(params[0].(*Server))
+			if server, ok := params[0].(*Server); ok {
+				hookDef(server)
+			}
 		}
 	case OnBooting:
 		for _, hookDef := range h.onBooting {
-			hookDef(params[0].(*Server), params[1].(gnet.Engine))
+			if server, ok := params[0].(*Server); ok {
+				if engine, ok := params[1].(gnet.Engine); ok {
+					hookDef(server, engine)
+				}
+			}
 		}
 	case OnBooted:
 		for _, hookDef := range h.onBooted {
-			hookDef(params[0].(*Server), params[1].(gnet.Engine))
+			if server, ok := params[0].(*Server); ok {
+				if engine, ok := params[1].(gnet.Engine); ok {
+					hookDef(server, engine)
+				}
+			}
 		}
 	case OnOpening:
 		for _, hookDef := range h.onOpening {
-			hookDef(params[0].(*Server), params[1].(gnet.Conn))
+			if server, ok := params[0].(*Server); ok {
+				if conn, ok := params[1].(gnet.Conn); ok {
+					hookDef(server, conn)
+				}
+			}
 		}
 	case OnOpened:
 		for _, hookDef := range h.onOpened {
-			hookDef(params[0].(*Server), params[1].(gnet.Conn))
+			if server, ok := params[0].(*Server); ok {
+				if conn, ok := params[1].(gnet.Conn); ok {
+					hookDef(server, conn)
+				}
+			}
 		}
 	case OnClosing:
 		for _, hookDef := range h.onClosing {
-			hookDef(params[0].(*Server), params[1].(gnet.Conn), params[2].(error))
+			if server, ok := params[0].(*Server); ok {
+				if conn, ok := params[1].(gnet.Conn); ok {
+					if err, ok := params[2].(error); ok {
+						hookDef(server, conn, err)
+					}
+				}
+			}
 		}
 	case OnClosed:
 		for _, hookDef := range h.onClosed {
-			hookDef(params[0].(*Server), params[1].(gnet.Conn), params[2].(error))
+			if server, ok := params[0].(*Server); ok {
+				if conn, ok := params[1].(gnet.Conn); ok {
+					if err, ok := params[2].(error); ok {
+						hookDef(server, conn, err)
+					}
+				}
+			}
 		}
 	case OnTraffic:
 		for _, hookDef := range h.onTraffic {
-			hookDef(params[0].(*Server), params[1].(gnet.Conn))
+			if server, ok := params[0].(*Server); ok {
+				if conn, ok := params[1].(gnet.Conn); ok {
+					hookDef(server, conn)
+				}
+			}
+		}
+	case OnIncomingTraffic:
+		for _, traffic := range h.onIncomingTraffic {
+			var conn gnet.Conn
+			var client *Client
+			var data []byte
+			var err error
+
+			if c, ok := params[0].(gnet.Conn); !ok {
+				continue
+			} else {
+				conn = c
+			}
+
+			if c, ok := params[1].(*Client); !ok {
+				continue
+			} else {
+				client = c
+			}
+
+			if d, ok := params[2].([]byte); !ok {
+				continue
+			} else {
+				data = d
+			}
+
+			if e, ok := params[3].(error); ok {
+				continue
+			} else {
+				err = e
+			}
+
+			err = traffic(conn, client, data, err)
+			if err != nil {
+				// TODO: handle error
+				continue // stop processing
+			}
+		}
+	case OnOutgoingTraffic:
+		for _, traffic := range h.onOutgoingTraffic {
+			var conn gnet.Conn
+			var client *Client
+			var data []byte
+			var err error
+
+			if c, ok := params[0].(gnet.Conn); !ok {
+				continue
+			} else {
+				conn = c
+			}
+
+			if c, ok := params[1].(*Client); !ok {
+				continue
+			} else {
+				client = c
+			}
+
+			if d, ok := params[2].([]byte); !ok {
+				continue
+			} else {
+				data = d
+			}
+
+			if e, ok := params[3].(error); ok {
+				continue
+			} else {
+				err = e
+			}
+
+			err = traffic(conn, client, data, err)
+			if err != nil {
+				// TODO: handle error
+				continue // stop processing
+			}
 		}
 	case OnShutdown:
 		for _, hookDef := range h.onShutdown {
-			hookDef(params[0].(*Server), params[1].(gnet.Engine))
+			if server, ok := params[0].(*Server); ok {
+				if engine, ok := params[1].(gnet.Engine); ok {
+					hookDef(server, engine)
+				}
+			}
 		}
 	case OnTick:
 		for _, hookDef := range h.onTick {
-			hookDef(params[0].(*Server), params[1].(gnet.Engine))
+			if server, ok := params[0].(*Server); ok {
+				if engine, ok := params[1].(gnet.Engine); ok {
+					hookDef(server, engine)
+				}
+			}
 		}
 	case OnNewClient:
 		for _, hookDef := range h.onNewClient {
-			hookDef(params[0].(*Client), params[1].(*Server))
+			if client, ok := params[0].(*Client); ok {
+				hookDef(client)
+			}
 		}
 	}
 }
