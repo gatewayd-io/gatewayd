@@ -63,8 +63,7 @@ func (p *PoolImpl) Put(client *Client) error {
 }
 
 func (p *PoolImpl) Pop(id string) *Client {
-	if client, ok := p.pool.Load(id); ok {
-		p.pool.Delete(id)
+	if client, ok := p.pool.LoadAndDelete(id); ok {
 		p.logger.Debug().Msgf("Client %s has been popped from the pool", id)
 		if c, ok := client.(*Client); ok {
 			return c
