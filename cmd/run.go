@@ -33,11 +33,17 @@ var runCmd = &cobra.Command{
 				panic(err)
 			}
 		}
-		hooksConfig.RunHooks(network.OnConfigLoaded, konfig)
+		// The config will be passed to the hooks, and in turn to the plugins that
+		// register to this hook.
+		// TODO: RunHooks should return the result or error of the hook, so that
+		// we can merge the config or check if the config is valid. This should
+		// happen for all hooks.
+		hooksConfig.RunHooks(network.OnConfigLoaded, konfig.All())
 
 		// Create a new logger from the config
 		logger := logging.NewLogger(loggerConfig())
-		hooksConfig.RunHooks(network.OnNewLogger, logger)
+		// This is a notification hook, so we don't care about the result.
+		hooksConfig.RunHooks(network.OnNewLogger)
 
 		// Create and initialize a pool of connections
 		poolSize, poolClientConfig := poolConfig()
