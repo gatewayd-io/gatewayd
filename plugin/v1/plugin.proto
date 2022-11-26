@@ -14,17 +14,28 @@ enum Action {
     ACTION_RELOAD = 3;
 }
 
+message SemVer {
+    uint32 major = 1;
+    uint32 minor = 2;
+    uint32 patch = 3;
+}
+
 message PluginConfig {
     string name = 1;
-    string version = 2;
+    SemVer version = 2;
     string description = 3;
     string author = 4;
     string license = 5;
-    string url = 6;
+    string remote_url = 6;
+    string url = 7;
     // internal and external config options
-    map<string, string> config = 7;
+    map<string, string> config = 8;
     // hooks it attaches to
-    repeated string hooks = 8;
+    repeated string hooks = 9;
+    // required plugins
+    map<string, string> requires = 10;
+    repeated string tags = 11;
+    repeated string categories = 12;
 }
 
 message PluginConfigRequest {
