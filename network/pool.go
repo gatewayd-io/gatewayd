@@ -12,13 +12,10 @@ type Callback func(key, value interface{}) bool
 type Pool interface {
 	ForEach(Callback)
 	Pool() *sync.Map
-	// ClientIDs() []string
 	Put(key, value interface{})
 	Pop(key interface{}) interface{}
 	Size() int
 	Clear()
-	// Close() error
-	// Shutdown()
 }
 
 type PoolImpl struct {
@@ -91,7 +88,7 @@ func NewPool(
 		)
 
 		for _, hook := range onNewClient {
-			hook(client)
+			hook(Signature{"client": client})
 		}
 
 		if client != nil {
@@ -104,8 +101,8 @@ func NewPool(
 	if pool.Size() != poolSize {
 		logger.Error().Msg(
 			"The pool size is incorrect, either because " +
-				"the clients are cannot connect (no network connectivity) " +
-				"or the server is not running. Exiting...")
+				"the clients cannot connect due to no network connectivity " +
+				"or the server is not running. exiting...")
 		os.Exit(1)
 	}
 
