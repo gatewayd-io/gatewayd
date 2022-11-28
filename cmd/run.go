@@ -33,27 +33,43 @@ var runCmd = &cobra.Command{
 				panic(err)
 			}
 		}
+
+		// Get hooks signature verification policy
+		hooksConfig.Verification = verificationPolicy()
+
 		// The config will be passed to the hooks, and in turn to the plugins that
 		// register to this hook.
 		// TODO: RunHooks should return the result or error of the hook, so that
 		// we can merge the config or check if the config is valid. This should
 		// happen for all hooks.
-		hooksConfig.RunHooks(network.OnConfigLoaded, konfig.All())
+		hooksConfig.RunHooks(
+			network.OnConfigLoaded,
+			network.Signature{"config": konfig.All()},
+			hooksConfig.Verification)
 
 		// Create a new logger from the config
 		logger := logging.NewLogger(loggerConfig())
+		hooksConfig.Logger = logger
 		// This is a notification hook, so we don't care about the result.
-		hooksConfig.RunHooks(network.OnNewLogger)
+		hooksConfig.RunHooks(
+			network.OnNewLogger, network.Signature{"logger": logger}, hooksConfig.Verification)
 
 		// Create and initialize a pool of connections
 		poolSize, poolClientConfig := poolConfig()
-		pool := network.NewPool(logger, poolSize, poolClientConfig, hooksConfig.OnNewClient())
-		hooksConfig.RunHooks(network.OnNewPool, pool)
+		pool := network.NewPool(
+			logger,
+			poolSize,
+			poolClientConfig,
+			hooksConfig.GetHook(network.OnNewClient),
+		)
+		hooksConfig.RunHooks(
+			network.OnNewPool, network.Signature{"pool": pool}, hooksConfig.Verification)
 
 		// Create a prefork proxy with the pool of clients
 		elastic, reuseElasticClients, elasticClientConfig := proxyConfig()
 		proxy := network.NewProxy(pool, elastic, reuseElasticClients, elasticClientConfig, logger)
-		hooksConfig.RunHooks(network.OnNewProxy, proxy)
+		hooksConfig.RunHooks(
+			network.OnNewProxy, network.Signature{"proxy": proxy}, hooksConfig.Verification)
 
 		// Create a server
 		serverConfig := serverConfig()
@@ -100,7 +116,10 @@ var runCmd = &cobra.Command{
 			logger,
 			hooksConfig,
 		)
-		hooksConfig.RunHooks(network.OnNewServer, server)
+		hooksConfig.RunHooks(
+			network.OnNewServer, network.Signature{"server": server}, hooksConfig.Verification)
+
+		// TODO: Load plugins and register them to the hooks
 
 		// Shutdown the server gracefully
 		var signals []os.Signal
@@ -119,7 +138,8 @@ var runCmd = &cobra.Command{
 			for sig := range signalsCh {
 				for _, s := range signals {
 					if sig != s {
-						hooksConfig.RunHooks(network.OnSignal, sig)
+						hooksConfig.RunHooks(
+							network.OnSignal, network.Signature{"signal": sig}, hooksConfig.Verification)
 
 						server.Shutdown()
 						os.Exit(0)
