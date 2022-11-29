@@ -30,18 +30,27 @@ func TestRunServer(t *testing.T) {
 
 	hooksConfig := NewHookConfig()
 
-	onIncomingTraffic := func(gconn gnet.Conn, cl *Client, buf []byte, err error) error {
+	onIncomingTraffic := func(params Signature) Signature {
+		if params["buffer"] == nil {
+			t.Fatal("buffer is nil")
+		}
+
 		logger.Info().Msg("Incoming traffic")
-		assert.Equal(t, CreatePgStartupPacket(), buf)
-		assert.Nil(t, err)
+		assert.Equal(t, CreatePgStartupPacket(), params["buffer"].([]byte))
+		assert.Nil(t, params["error"].(error))
 		return nil
 	}
 	hooksConfig.AddHook(OnIncomingTraffic, 1, onIncomingTraffic)
 
-	onOutgoingTraffic := func(gconn gnet.Conn, cl *Client, buf []byte, err error) error {
+	onOutgoingTraffic := func(params Signature) Signature {
+		if params["buffer"] == nil {
+			t.Fatal("buffer is nil")
+		}
+
 		logger.Info().Msg("Outgoing traffic")
-		assert.Equal(t, CreatePostgreSQLPacket('R', []byte{0x0, 0x0, 0x0, 0x3}), buf)
-		assert.Nil(t, err)
+		assert.Equal(
+			t, CreatePostgreSQLPacket('R', []byte{0x0, 0x0, 0x0, 0x3}), params["buffer"].([]byte))
+		assert.Nil(t, params["error"].(error))
 		return nil
 	}
 	hooksConfig.AddHook(OnOutgoingTraffic, 1, onOutgoingTraffic)
