@@ -6,17 +6,22 @@ import (
 	goplugin "github.com/hashicorp/go-plugin"
 )
 
-type PluginClients struct {
+const (
+	minPort uint = 50000
+	maxPort uint = 50002
+)
+
+type Clients struct {
 	Clients []*goplugin.Client
 }
 
-func NewPluginClient() *PluginClients {
-	return &PluginClients{
+func NewPluginClient() *Clients {
+	return &Clients{
 		Clients: make([]*goplugin.Client, 0, 1),
 	}
 }
 
-func (p *PluginClients) Load() error {
+func (p *Clients) Load() error {
 	client := goplugin.NewClient(&goplugin.ClientConfig{
 		HandshakeConfig: goplugin.HandshakeConfig{
 			ProtocolVersion: 1,
@@ -32,8 +37,8 @@ func (p *PluginClients) Load() error {
 		// TLSConfig:        nil,
 		// Reattach:         nil,
 		// SecureConfig:     nil,
-		MinPort: 50000,
-		MaxPort: 50002,
+		MinPort: minPort,
+		MaxPort: maxPort,
 		// StartTimeout: 10,
 		// AutoMTLS:        false,
 		// GRPCDialOptions: nil,
