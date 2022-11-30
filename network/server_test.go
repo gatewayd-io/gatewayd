@@ -41,11 +41,7 @@ func TestRunServer(t *testing.T) {
 		} else {
 			t.Fatal("buffer is not a []byte")
 		}
-		if err, ok := params["error"].(error); ok {
-			assert.Nil(t, err)
-		} else {
-			t.Fatal("error is not an instance of error")
-		}
+		assert.Nil(t, params["error"])
 		return nil
 	}
 	hooksConfig.Add(OnIncomingTraffic, 1, onIncomingTraffic)
@@ -62,11 +58,7 @@ func TestRunServer(t *testing.T) {
 		} else {
 			t.Fatal("buffer is not a []byte")
 		}
-		if err, ok := params["error"].(error); ok {
-			assert.Nil(t, err)
-		} else {
-			t.Fatal("error is not an instance of error")
-		}
+		assert.Nil(t, params["error"])
 		return nil
 	}
 	hooksConfig.Add(OnOutgoingTraffic, 1, onOutgoingTraffic)
@@ -95,8 +87,6 @@ func TestRunServer(t *testing.T) {
 		[]gnet.Option{
 			gnet.WithMulticore(true),
 		},
-		onIncomingTraffic,
-		onOutgoingTraffic,
 		proxy,
 		logger,
 		hooksConfig,
