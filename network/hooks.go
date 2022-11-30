@@ -8,8 +8,8 @@ import (
 )
 
 type (
-	// Prio is the priority of a hook
-	// Smaller values are executed first (higher priority)
+	// Prio is the priority of a hook.
+	// Smaller values are executed first (higher priority).
 	Prio      uint
 	HookType  string
 	Signature map[string]interface{}
