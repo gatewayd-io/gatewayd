@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/fergusstrange/embedded-postgres v1.19.0
+	github.com/google/go-cmp v0.5.9
 	github.com/hashicorp/go-plugin v1.4.6
 	github.com/knadh/koanf v1.4.4
 	github.com/panjf2000/gnet/v2 v2.1.2
