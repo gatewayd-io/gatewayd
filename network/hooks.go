@@ -8,15 +8,14 @@ import (
 )
 
 type (
-	Prio     uint
-	HookType string
+	// Prio is the priority of a hook
+	// Smaller values are executed first (higher priority)
+	Prio      uint
+	HookType  string
+	Signature map[string]interface{}
+	HookDef   func(Signature) Signature
+	Policy    int
 )
-
-type Signature map[string]interface{}
-
-type HookDef func(Signature) Signature
-
-type Policy int
 
 const (
 	Ignore Policy = iota // Ignore errors and continue
@@ -54,17 +53,22 @@ type HookConfig struct {
 
 func NewHookConfig() *HookConfig {
 	return &HookConfig{
-		hooks: make(map[HookType]map[Prio]HookDef),
+		hooks: map[HookType]map[Prio]HookDef{},
 	}
 }
 
-func (h *HookConfig) AddHook(hookType HookType, prio Prio, hook interface{}) {
-	if hookDef, ok := hook.(HookDef); ok {
-		h.hooks[hookType][prio] = hookDef
+func (h *HookConfig) Add(hookType HookType, prio Prio, hook HookDef) {
+	if len(h.hooks[hookType]) == 0 {
+		h.hooks[hookType] = map[Prio]HookDef{prio: hook}
+	} else {
+		if _, ok := h.hooks[hookType][prio]; ok {
+			h.Logger.Warn().Msgf("Hook %s replaced with priority %d.", hookType, prio)
+		}
+		h.hooks[hookType][prio] = hook
 	}
 }
 
-func (h *HookConfig) GetHook(hookType HookType) map[Prio]HookDef {
+func (h *HookConfig) Get(hookType HookType) map[Prio]HookDef {
 	return h.hooks[hookType]
 }
 
@@ -79,7 +83,7 @@ func verify(params, returnVal Signature) bool {
 }
 
 //nolint:funlen
-func (h *HookConfig) RunHooks(
+func (h *HookConfig) Run(
 	hookType HookType, args Signature, verification Policy,
 ) Signature {
 	// Sort hooks by priority
