@@ -224,7 +224,6 @@ func NewServer(
 	softLimit, hardLimit uint64,
 	tickInterval time.Duration,
 	options []gnet.Option,
-	onIncomingTraffic, onOutgoingTraffic HookDef,
 	proxy Proxy,
 	logger zerolog.Logger,
 	hooksConfig *HookConfig,
