@@ -21,6 +21,7 @@ type ProxyImpl struct {
 	availableConnections Pool
 	busyConnections      Pool
 	logger               zerolog.Logger
+	hookConfig           *HookConfig
 
 	Elastic             bool
 	ReuseElasticClients bool
@@ -32,12 +33,13 @@ type ProxyImpl struct {
 var _ Proxy = &ProxyImpl{}
 
 func NewProxy(
-	pool Pool, elastic, reuseElasticClients bool, clientConfig *Client, logger zerolog.Logger,
+	pool Pool, hookConfig *HookConfig, elastic, reuseElasticClients bool, clientConfig *Client, logger zerolog.Logger,
 ) *ProxyImpl {
 	return &ProxyImpl{
 		availableConnections: pool,
 		busyConnections:      NewEmptyPool(logger),
 		logger:               logger,
+		hookConfig:           hookConfig,
 		Elastic:              elastic,
 		ReuseElasticClients:  reuseElasticClients,
 		ClientConfig:         clientConfig,

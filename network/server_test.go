@@ -71,7 +71,7 @@ func TestRunServer(t *testing.T) {
 	pool.Put(client2.ID, client2)
 
 	// Create a proxy with a fixed buffer pool
-	proxy := NewProxy(pool, false, false, &Client{
+	proxy := NewProxy(pool, NewHookConfig(), false, false, &Client{
 		Network:           "tcp",
 		Address:           "localhost:5432",
 		ReceiveBufferSize: DefaultBufferSize,

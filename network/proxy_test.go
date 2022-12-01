@@ -36,7 +36,7 @@ func TestNewProxy(t *testing.T) {
 	pool.Put(client.ID, client)
 
 	// Create a proxy with a fixed buffer pool
-	proxy := NewProxy(pool, false, false, nil, logger)
+	proxy := NewProxy(pool, NewHookConfig(), false, false, nil, logger)
 
 	assert.NotNil(t, proxy)
 	assert.Equal(t, 0, proxy.busyConnections.Size(), "Proxy should have no connected clients")
@@ -64,7 +64,7 @@ func TestNewProxyElastic(t *testing.T) {
 	pool := NewPool(logger, 0, nil, nil)
 
 	// Create a proxy with an elastic buffer pool
-	proxy := NewProxy(pool, true, false, &Client{
+	proxy := NewProxy(pool, NewHookConfig(), true, false, &Client{
 		Network:           "tcp",
 		Address:           "localhost:5432",
 		ReceiveBufferSize: DefaultBufferSize,
