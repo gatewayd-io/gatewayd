@@ -12,11 +12,11 @@ import (
 )
 
 // Global koanf instance. Using "." as the key path delimiter.
-var konfig = koanf.New(".")
+var globalConfig = koanf.New(".")
 
 func getPath(path string) string {
-	ref := konfig.String(path)
-	if konfig.Exists(path) && konfig.StringMap(ref) != nil {
+	ref := globalConfig.String(path)
+	if globalConfig.Exists(path) && globalConfig.StringMap(ref) != nil {
 		return ref
 	}
 
@@ -32,7 +32,7 @@ func getPath(path string) string {
 // }
 
 func verificationPolicy() network.Policy {
-	vPolicy := konfig.String("plugins.verificationPolicy")
+	vPolicy := globalConfig.String("plugins.verificationPolicy")
 	verificationPolicy := network.Ignore // default
 	switch vPolicy {
 	case "ignore":
@@ -48,7 +48,7 @@ func verificationPolicy() network.Policy {
 
 func loggerConfig() logging.LoggerConfig {
 	cfg := logging.LoggerConfig{}
-	switch konfig.String("loggers.logger.output") {
+	switch globalConfig.String("loggers.logger.output") {
 	case "stdout":
 		cfg.Output = os.Stdout
 	case "console":
@@ -56,7 +56,7 @@ func loggerConfig() logging.LoggerConfig {
 		cfg.Output = nil
 	}
 
-	switch konfig.String("loggers.logger.timeFormat") {
+	switch globalConfig.String("loggers.logger.timeFormat") {
 	case "unixms":
 		cfg.TimeFormat = zerolog.TimeFormatUnixMs
 	case "unixmicro":
@@ -69,7 +69,7 @@ func loggerConfig() logging.LoggerConfig {
 		cfg.TimeFormat = zerolog.TimeFormatUnix
 	}
 
-	switch konfig.String("loggers.logger.level") {
+	switch globalConfig.String("loggers.logger.level") {
 	case "debug":
 		cfg.Level = zerolog.DebugLevel
 	case "info":
@@ -90,21 +90,21 @@ func loggerConfig() logging.LoggerConfig {
 		cfg.Level = zerolog.InfoLevel
 	}
 
-	cfg.NoColor = konfig.Bool("loggers.logger.noColor")
+	cfg.NoColor = globalConfig.Bool("loggers.logger.noColor")
 
 	return cfg
 }
 
 func poolConfig() (int, *network.Client) {
-	poolSize := konfig.Int("pool.size")
+	poolSize := globalConfig.Int("pool.size")
 	if poolSize == 0 {
 		poolSize = network.DefaultPoolSize
 	}
 
 	ref := getPath("pool.client")
-	net := konfig.String(ref + ".network")
-	address := konfig.String(ref + ".address")
-	receiveBufferSize := konfig.Int(ref + ".receiveBufferSize")
+	net := globalConfig.String(ref + ".network")
+	address := globalConfig.String(ref + ".address")
+	receiveBufferSize := globalConfig.Int(ref + ".receiveBufferSize")
 
 	return poolSize, &network.Client{
 		Network:           net,
@@ -114,13 +114,13 @@ func poolConfig() (int, *network.Client) {
 }
 
 func proxyConfig() (bool, bool, *network.Client) {
-	elastic := konfig.Bool("proxy.elastic")
-	reuseElasticClients := konfig.Bool("proxy.reuseElasticClients")
+	elastic := globalConfig.Bool("proxy.elastic")
+	reuseElasticClients := globalConfig.Bool("proxy.reuseElasticClients")
 
 	ref := getPath("pool.client")
-	net := konfig.String(ref + ".network")
-	address := konfig.String(ref + ".address")
-	receiveBufferSize := konfig.Int(ref + ".receiveBufferSize")
+	net := globalConfig.String(ref + ".network")
+	address := globalConfig.String(ref + ".address")
+	receiveBufferSize := globalConfig.Int(ref + ".receiveBufferSize")
 
 	return elastic, reuseElasticClients, &network.Client{
 		Network:           net,
@@ -166,7 +166,7 @@ func getLoadBalancer(name string) gnet.LoadBalancing {
 }
 
 func getTCPNoDelay() gnet.TCPSocketOpt {
-	if konfig.Bool("server.tcpNoDelay") {
+	if globalConfig.Bool("server.tcpNoDelay") {
 		return gnet.TCPNoDelay
 	}
 
@@ -175,22 +175,22 @@ func getTCPNoDelay() gnet.TCPSocketOpt {
 
 func serverConfig() *ServerConfig {
 	return &ServerConfig{
-		Network:          konfig.String("server.network"),
-		Address:          konfig.String("server.address"),
-		SoftLimit:        uint64(konfig.Int64("server.softLimit")),
-		HardLimit:        uint64(konfig.Int64("server.hardLimit")),
-		EnableTicker:     konfig.Bool("server.enableTicker"),
-		TickInterval:     konfig.Duration("server.tickInterval"),
-		MultiCore:        konfig.Bool("server.multiCore"),
-		LockOSThread:     konfig.Bool("server.lockOSThread"),
-		LoadBalancer:     getLoadBalancer(konfig.String("server.loadBalancer")),
-		ReadBufferCap:    konfig.Int("server.readBufferCap"),
-		WriteBufferCap:   konfig.Int("server.writeBufferCap"),
-		SocketRecvBuffer: konfig.Int("server.socketRecvBuffer"),
-		SocketSendBuffer: konfig.Int("server.socketSendBuffer"),
-		ReuseAddress:     konfig.Bool("server.reuseAddress"),
-		ReusePort:        konfig.Bool("server.reusePort"),
-		TCPKeepAlive:     konfig.Duration("server.tcpKeepAlive"),
+		Network:          globalConfig.String("server.network"),
+		Address:          globalConfig.String("server.address"),
+		SoftLimit:        uint64(globalConfig.Int64("server.softLimit")),
+		HardLimit:        uint64(globalConfig.Int64("server.hardLimit")),
+		EnableTicker:     globalConfig.Bool("server.enableTicker"),
+		TickInterval:     globalConfig.Duration("server.tickInterval"),
+		MultiCore:        globalConfig.Bool("server.multiCore"),
+		LockOSThread:     globalConfig.Bool("server.lockOSThread"),
+		LoadBalancer:     getLoadBalancer(globalConfig.String("server.loadBalancer")),
+		ReadBufferCap:    globalConfig.Int("server.readBufferCap"),
+		WriteBufferCap:   globalConfig.Int("server.writeBufferCap"),
+		SocketRecvBuffer: globalConfig.Int("server.socketRecvBuffer"),
+		SocketSendBuffer: globalConfig.Int("server.socketSendBuffer"),
+		ReuseAddress:     globalConfig.Bool("server.reuseAddress"),
+		ReusePort:        globalConfig.Bool("server.reusePort"),
+		TCPKeepAlive:     globalConfig.Duration("server.tcpKeepAlive"),
 		TCPNoDelay:       getTCPNoDelay(),
 		// OnIncomingTraffic: konfig.String("server.onIncomingTraffic"),
 		// OnOutgoingTraffic: konfig.String("server.onOutgoingTraffic"),
