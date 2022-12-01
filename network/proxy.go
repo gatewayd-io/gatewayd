@@ -123,7 +123,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 	// that listens for data from the server and sends it to the client
 
 	var client *Client
-	if cl, ok := pr.busyConnections.Pop(gconn).(*Client); ok {
+	if cl, ok := pr.busyConnections.Get(gconn).(*Client); ok {
 		client = cl
 	} else {
 		return ErrClientNotFound
