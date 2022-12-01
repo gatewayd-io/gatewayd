@@ -45,16 +45,18 @@ func NewProxy(
 }
 
 func (pr *ProxyImpl) Connect(gconn gnet.Conn) error {
-	var clientIDs []string
+	var clientID string
+	// Get the first available client from the pool
 	pr.availableConnections.ForEach(func(key, _ interface{}) bool {
-		if clientID, ok := key.(string); ok {
-			clientIDs = append(clientIDs, clientID)
+		if cid, ok := key.(string); ok {
+			clientID = cid
+			return false // stop the loop
 		}
 		return true
 	})
 
 	var client *Client
-	if len(clientIDs) == 0 {
+	if pr.availableConnections.Size() == 0 {
 		// Pool is exhausted
 		if pr.Elastic {
 			// Create a new client
@@ -70,13 +72,13 @@ func (pr *ProxyImpl) Connect(gconn gnet.Conn) error {
 		}
 	} else {
 		// Get a client from the pool
-		pr.logger.Debug().Msgf("Available clients: %v", len(clientIDs))
-		if cl, ok := pr.availableConnections.Pop(clientIDs[0]).(*Client); ok {
+		pr.logger.Debug().Msgf("Available clients: %v", pr.availableConnections.Size())
+		if cl, ok := pr.availableConnections.Pop(clientID).(*Client); ok {
 			client = cl
 		}
 	}
 
-	if client.ID != "" {
+	if clientID != "" || client.ID != "" {
 		pr.busyConnections.Put(gconn, client)
 		pr.logger.Debug().Msgf("Client %s has been assigned to %s", client.ID, gconn.RemoteAddr().String())
 	} else {
