@@ -136,7 +136,26 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 	if err != nil {
 		pr.logger.Error().Err(err).Msgf("Error reading from client: %v", err)
 	}
-	// TODO: OnIncomingTraffic hook should be called here
+
+	incomingTrafficResult := pr.hookConfig.Run(
+		OnIncomingTraffic,
+		Signature{
+			"gconn":  gconn,
+			"client": client,
+			"buffer": buf,
+			"error":  err,
+		},
+		pr.hookConfig.Verification)
+	if incomingTrafficResult != nil {
+		// TODO: Not sure if the gconn and client can be modified in the hook,
+		// so I'm not using the modified values here
+		if buffer, ok := incomingTrafficResult["buffer"].([]byte); ok {
+			buf = buffer
+		}
+		if err, ok := incomingTrafficResult["error"].(error); ok && err != nil {
+			pr.logger.Error().Err(err).Msg("Error in hook")
+		}
+	}
 
 	// TODO: This is a very basic implementation of the gateway
 	// and it is synchronous. I should make it asynchronous.
@@ -150,7 +169,25 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 
 	// Receive the response from the server
 	size, response, err := client.Receive()
-	// TODO: OnOutgoingTraffic hook should be called here
+	outgoingTrafficResult := pr.hookConfig.Run(
+		OnOutgoingTraffic,
+		Signature{
+			"gconn":    gconn,
+			"client":   client,
+			"response": response[:size],
+			"error":    err,
+		},
+		pr.hookConfig.Verification)
+	if outgoingTrafficResult != nil {
+		// TODO: Not sure if the gconn and client can be modified in the hook,
+		// so I'm not using the modified values here
+		if resp, ok := outgoingTrafficResult["response"].([]byte); ok {
+			response = resp
+		}
+		if err, ok := outgoingTrafficResult["error"].(error); ok && err != nil {
+			pr.logger.Error().Err(err).Msg("Error in hook")
+		}
+	}
 
 	if err != nil && errors.Is(err, io.EOF) {
 		// The server has closed the connection
