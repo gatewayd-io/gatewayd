@@ -158,6 +158,7 @@ var runCmd = &cobra.Command{
 			for sig := range signalsCh {
 				for _, s := range signals {
 					if sig != s {
+						// Notify the hooks that the server is shutting down
 						hooksConfig.Run(
 							network.OnSignal, network.Signature{"signal": sig}, hooksConfig.Verification)
 
