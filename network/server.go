@@ -190,12 +190,24 @@ func (s *Server) Run() error {
 	}
 
 	// Since gnet.Run is blocking, we need to run OnRun before it
-	s.hooksConfig.Run(
+	result := s.hooksConfig.Run(
 		OnRun,
 		Signature{
-			"server": s,
+			"server":  s,
+			"address": addr,
+			"error":   err,
 		},
 		s.hooksConfig.Verification)
+
+	if result != nil {
+		if err, ok := result["error"].(error); ok && err != nil {
+			s.logger.Err(err).Msg("The hook returned an error")
+		}
+
+		if address, ok := result["address"].(string); ok {
+			addr = address
+		}
+	}
 
 	err = gnet.Run(s, s.Network+"://"+addr, s.Options...)
 	if err != nil {
