@@ -30,7 +30,7 @@ func TestRunServer(t *testing.T) {
 
 	hooksConfig := NewHookConfig()
 
-	onIncomingTraffic := func(params Signature) Signature {
+	onIngressTraffic := func(params Signature) Signature {
 		if params["buffer"] == nil {
 			t.Fatal("buffer is nil")
 		}
@@ -44,9 +44,9 @@ func TestRunServer(t *testing.T) {
 		assert.Nil(t, params["error"])
 		return nil
 	}
-	hooksConfig.Add(OnIncomingTraffic, 1, onIncomingTraffic)
+	hooksConfig.Add(OnIngressTraffic, 1, onIngressTraffic)
 
-	onOutgoingTraffic := func(params Signature) Signature {
+	onEgressTraffic := func(params Signature) Signature {
 		if params["buffer"] == nil {
 			t.Fatal("buffer is nil")
 		}
@@ -61,7 +61,7 @@ func TestRunServer(t *testing.T) {
 		assert.Nil(t, params["error"])
 		return nil
 	}
-	hooksConfig.Add(OnOutgoingTraffic, 1, onOutgoingTraffic)
+	hooksConfig.Add(OnEgressTraffic, 1, onEgressTraffic)
 
 	// Create a connection pool
 	pool := NewEmptyPool(logger)

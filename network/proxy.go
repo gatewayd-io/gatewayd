@@ -138,7 +138,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 	}
 
 	result := pr.hookConfig.Run(
-		OnIncomingTraffic,
+		OnIngressTraffic,
 		Signature{
 			"gconn":  gconn,
 			"client": client,
@@ -170,7 +170,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 	// Receive the response from the server
 	size, response, err := client.Receive()
 	result = pr.hookConfig.Run(
-		OnOutgoingTraffic,
+		OnEgressTraffic,
 		Signature{
 			"gconn":    gconn,
 			"client":   client,

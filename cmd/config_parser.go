@@ -147,8 +147,6 @@ type ServerConfig struct {
 	SocketSendBuffer int
 	TCPKeepAlive     time.Duration
 	TCPNoDelay       gnet.TCPSocketOpt
-	// OnIncomingTraffic string
-	// OnOutgoingTraffic string
 }
 
 var loadBalancer = map[string]gnet.LoadBalancing{
@@ -192,7 +190,5 @@ func serverConfig() *ServerConfig {
 		ReusePort:        globalConfig.Bool("server.reusePort"),
 		TCPKeepAlive:     globalConfig.Duration("server.tcpKeepAlive"),
 		TCPNoDelay:       getTCPNoDelay(),
-		// OnIncomingTraffic: konfig.String("server.onIncomingTraffic"),
-		// OnOutgoingTraffic: konfig.String("server.onOutgoingTraffic"),
 	}
 }
