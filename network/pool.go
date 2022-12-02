@@ -20,8 +20,9 @@ type Pool interface {
 }
 
 type PoolImpl struct {
-	pool   sync.Map
-	logger zerolog.Logger
+	pool       sync.Map
+	logger     zerolog.Logger
+	hookConfig *HookConfig
 }
 
 var _ Pool = &PoolImpl{}
@@ -80,11 +81,12 @@ func NewPool(
 	logger zerolog.Logger,
 	poolSize int,
 	clientConfig *Client,
-	onNewClient map[Prio]HookDef,
+	hookConfig *HookConfig,
 ) *PoolImpl {
 	pool := PoolImpl{
-		pool:   sync.Map{},
-		logger: logger,
+		pool:       sync.Map{},
+		logger:     logger,
+		hookConfig: hookConfig,
 	}
 
 	// Add a client to the pool
@@ -96,9 +98,13 @@ func NewPool(
 			logger,
 		)
 
-		for _, hook := range onNewClient {
-			hook(Signature{"client": client})
-		}
+		hookConfig.Run(
+			OnNewClient,
+			Signature{
+				"client": client,
+			},
+			hookConfig.Verification,
+		)
 
 		if client != nil {
 			pool.Put(client.ID, client)
