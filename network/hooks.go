@@ -20,11 +20,11 @@ type (
 )
 
 const (
-	// Strict mode
+	// Strict mode.
 	Ignore Policy = iota // Ignore errors and continue
 	Abort                // Abort on first error and return results
 	Remove               // Remove the hook from the list on error and continue
-	// Non-strict (permissive) mode
+	// Non-strict (permissive) mode.
 	PassDown // Pass down the extra keys/values in result to the next plugins
 )
 
@@ -140,7 +140,6 @@ func (h *HookConfig) Run(
 			if idx == 0 {
 				returnVal = args
 			}
-			continue
 		// Abort execution of the plugins, log the error and return the result of the last hook.
 		case Abort:
 			errMsg := fmt.Sprintf(
@@ -167,7 +166,9 @@ func (h *HookConfig) Run(
 			if idx == 0 {
 				returnVal = args
 			}
-			continue
+		case PassDown:
+		default:
+			returnVal = result
 		}
 	}
 
