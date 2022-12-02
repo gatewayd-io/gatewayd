@@ -131,7 +131,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 		return ErrClientNotFound
 	}
 
-	// buf contains the data from the client (query)
+	// buf contains the data from the client (<type>, length, query)
 	buf, err := gconn.Next(-1)
 	if err != nil {
 		pr.logger.Error().Err(err).Msgf("Error reading from client: %v", err)

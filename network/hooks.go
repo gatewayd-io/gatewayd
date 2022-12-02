@@ -127,6 +127,7 @@ func (h *HookConfig) Run(
 		// At this point, the hook returned an invalid value, so we need to handle it.
 		// The result of the current hook will be ignored, regardless of the policy.
 		switch verification {
+		// Ignore the result of this plugin, log an error and execute the next hook.
 		case Ignore:
 			errMsg := fmt.Sprintf(
 				"Hook %s (Prio %d) returned invalid value, ignoring", hookType, prio)
@@ -140,6 +141,7 @@ func (h *HookConfig) Run(
 				returnVal = args
 			}
 			continue
+		// Abort execution of the plugins, log the error and return the result of the last hook.
 		case Abort:
 			errMsg := fmt.Sprintf(
 				"Hook %s (Prio %d) returned invalid value, aborting", hookType, prio)
@@ -152,6 +154,7 @@ func (h *HookConfig) Run(
 				return args
 			}
 			return returnVal
+		// Remove the hook from the registry, log the error and execute the next hook.
 		case Remove:
 			errMsg := fmt.Sprintf(
 				"Hook %s (Prio %d) returned invalid value, removing", hookType, prio)
