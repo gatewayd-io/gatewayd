@@ -35,7 +35,7 @@ func TestRunServer(t *testing.T) {
 			t.Fatal("buffer is nil")
 		}
 
-		logger.Info().Msg("Incoming traffic")
+		logger.Info().Msg("Ingress traffic")
 		if buf, ok := params["buffer"].([]byte); ok {
 			assert.Equal(t, CreatePgStartupPacket(), buf)
 		} else {
@@ -51,7 +51,7 @@ func TestRunServer(t *testing.T) {
 			t.Fatal("buffer is nil")
 		}
 
-		logger.Info().Msg("Outgoing traffic")
+		logger.Info().Msg("Egress traffic")
 		if buf, ok := params["buffer"].([]byte); ok {
 			assert.Equal(
 				t, CreatePostgreSQLPacket('R', []byte{0x0, 0x0, 0x0, 0x3}), buf)
@@ -71,7 +71,7 @@ func TestRunServer(t *testing.T) {
 	pool.Put(client2.ID, client2)
 
 	// Create a proxy with a fixed buffer pool
-	proxy := NewProxy(pool, NewHookConfig(), false, false, &Client{
+	proxy := NewProxy(pool, hooksConfig, false, false, &Client{
 		Network:           "tcp",
 		Address:           "localhost:5432",
 		ReceiveBufferSize: DefaultBufferSize,
