@@ -9,12 +9,10 @@ import (
 	"github.com/rs/zerolog"
 )
 
-type Traffic func(gconn gnet.Conn, cl *Client, buf []byte, err error) error
-
 type Proxy interface {
 	Connect(gconn gnet.Conn) error
 	Disconnect(gconn gnet.Conn) error
-	PassThrough(gconn gnet.Conn, onIncomingTraffic, onOutgoingTraffic map[Prio]Traffic) error
+	PassThrough(gconn gnet.Conn) error
 	Reconnect(cl *Client) *Client
 	Shutdown()
 }
@@ -23,6 +21,7 @@ type ProxyImpl struct {
 	availableConnections Pool
 	busyConnections      Pool
 	logger               zerolog.Logger
+	hookConfig           *HookConfig
 
 	Elastic             bool
 	ReuseElasticClients bool
@@ -34,12 +33,13 @@ type ProxyImpl struct {
 var _ Proxy = &ProxyImpl{}
 
 func NewProxy(
-	pool Pool, elastic, reuseElasticClients bool, clientConfig *Client, logger zerolog.Logger,
+	pool Pool, hookConfig *HookConfig, elastic, reuseElasticClients bool, clientConfig *Client, logger zerolog.Logger,
 ) *ProxyImpl {
 	return &ProxyImpl{
 		availableConnections: pool,
 		busyConnections:      NewEmptyPool(logger),
 		logger:               logger,
+		hookConfig:           hookConfig,
 		Elastic:              elastic,
 		ReuseElasticClients:  reuseElasticClients,
 		ClientConfig:         clientConfig,
@@ -47,16 +47,18 @@ func NewProxy(
 }
 
 func (pr *ProxyImpl) Connect(gconn gnet.Conn) error {
-	var clientIDs []string
+	var clientID string
+	// Get the first available client from the pool
 	pr.availableConnections.ForEach(func(key, _ interface{}) bool {
-		if clientID, ok := key.(string); ok {
-			clientIDs = append(clientIDs, clientID)
+		if cid, ok := key.(string); ok {
+			clientID = cid
+			return false // stop the loop
 		}
 		return true
 	})
 
 	var client *Client
-	if len(clientIDs) == 0 {
+	if pr.availableConnections.Size() == 0 {
 		// Pool is exhausted
 		if pr.Elastic {
 			// Create a new client
@@ -72,13 +74,13 @@ func (pr *ProxyImpl) Connect(gconn gnet.Conn) error {
 		}
 	} else {
 		// Get a client from the pool
-		pr.logger.Debug().Msgf("Available clients: %v", len(clientIDs))
-		if cl, ok := pr.availableConnections.Pop(clientIDs[0]).(*Client); ok {
+		pr.logger.Debug().Msgf("Available clients: %v", pr.availableConnections.Size())
+		if cl, ok := pr.availableConnections.Pop(clientID).(*Client); ok {
 			client = cl
 		}
 	}
 
-	if client.ID != "" {
+	if clientID != "" || client.ID != "" {
 		pr.busyConnections.Put(gconn, client)
 		pr.logger.Debug().Msgf("Client %s has been assigned to %s", client.ID, gconn.RemoteAddr().String())
 	} else {
@@ -115,11 +117,7 @@ func (pr *ProxyImpl) Disconnect(gconn gnet.Conn) error {
 }
 
 //nolint:funlen
-func (pr *ProxyImpl) PassThrough(
-	gconn gnet.Conn,
-	onIncomingTraffic,
-	onOutgoingTraffic map[Prio]Traffic,
-) error {
+func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 	// TODO: Handle bi-directional traffic
 	// Currently the passthrough is a one-way street from the client to the server, that is,
 	// the client can send data to the server and receive the response back, but the server
@@ -127,7 +125,7 @@ func (pr *ProxyImpl) PassThrough(
 	// that listens for data from the server and sends it to the client
 
 	var client *Client
-	if cl, ok := pr.busyConnections.Pop(gconn).(*Client); ok {
+	if cl, ok := pr.busyConnections.Get(gconn).(*Client); ok {
 		client = cl
 	} else {
 		return ErrClientNotFound
@@ -138,9 +136,24 @@ func (pr *ProxyImpl) PassThrough(
 	if err != nil {
 		pr.logger.Error().Err(err).Msgf("Error reading from client: %v", err)
 	}
-	for _, traffic := range onIncomingTraffic {
-		if err = traffic(gconn, client, buf, err); err != nil {
-			pr.logger.Error().Err(err).Msgf("Error processing data from client: %v", err)
+
+	result := pr.hookConfig.Run(
+		OnIngressTraffic,
+		Signature{
+			"gconn":  gconn,
+			"client": client,
+			"buffer": buf,
+			"error":  err,
+		},
+		pr.hookConfig.Verification)
+	if result != nil {
+		// TODO: Not sure if the gconn and client can be modified in the hook,
+		// so I'm not using the modified values here
+		if buffer, ok := result["buffer"].([]byte); ok {
+			buf = buffer
+		}
+		if err, ok := result["error"].(error); ok && err != nil {
+			pr.logger.Error().Err(err).Msg("Error in hook")
 		}
 	}
 
@@ -156,9 +169,23 @@ func (pr *ProxyImpl) PassThrough(
 
 	// Receive the response from the server
 	size, response, err := client.Receive()
-	for _, traffic := range onOutgoingTraffic {
-		if err := traffic(gconn, client, response[:size], err); err != nil {
-			pr.logger.Error().Err(err).Msgf("Error processing data from server: %s", err)
+	result = pr.hookConfig.Run(
+		OnEgressTraffic,
+		Signature{
+			"gconn":    gconn,
+			"client":   client,
+			"response": response[:size],
+			"error":    err,
+		},
+		pr.hookConfig.Verification)
+	if result != nil {
+		// TODO: Not sure if the gconn and client can be modified in the hook,
+		// so I'm not using the modified values here
+		if resp, ok := result["response"].([]byte); ok {
+			response = resp
+		}
+		if err, ok := result["error"].(error); ok && err != nil {
+			pr.logger.Error().Err(err).Msg("Error in hook")
 		}
 	}
 

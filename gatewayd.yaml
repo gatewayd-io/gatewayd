@@ -63,3 +63,6 @@ server:
 
   incomingTrafficHandler: "null"
   outgoingTrafficHandler: "null"
+
+plugins:
+  verificationPolicy: "ignore"

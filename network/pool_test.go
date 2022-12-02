@@ -238,8 +238,8 @@ func TestPool_GetClientIDs(t *testing.T) {
 		return true
 	})
 	assert.Equal(t, 2, len(ids))
-	assert.Contains(t, client1.ID, ids[0])
-	assert.Contains(t, client2.ID, ids[1])
+	assert.Contains(t, ids, client1.ID)
+	assert.Contains(t, ids, client2.ID)
 	client1.Close()
 	client2.Close()
 	pool.Clear()
