@@ -26,14 +26,14 @@ const (
 )
 
 const (
-	// Run command hooks (cmd/run.go)
+	// Run command hooks (cmd/run.go).
 	OnConfigLoaded HookType = "onConfigLoaded"
 	OnNewLogger    HookType = "onNewLogger"
 	OnNewPool      HookType = "onNewPool"
 	OnNewProxy     HookType = "onNewProxy"
 	OnNewServer    HookType = "onNewServer"
 	OnSignal       HookType = "onSignal"
-	// Server hooks (network/server.go)
+	// Server hooks (network/server.go).
 	OnRun            HookType = "onRun"
 	OnBooting        HookType = "onBooting"
 	OnBooted         HookType = "onBooted"
@@ -46,7 +46,7 @@ const (
 	OnEgressTraffic  HookType = "onEgressTraffic"
 	OnShutdown       HookType = "onShutdown"
 	OnTick           HookType = "onTick"
-	// Pool hooks (network/pool.go)
+	// Pool hooks (network/pool.go).
 	OnNewClient HookType = "onNewClient"
 )
 
