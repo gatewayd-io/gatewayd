@@ -47,16 +47,16 @@ func TestRunServer(t *testing.T) {
 	hooksConfig.Add(OnIngressTraffic, 1, onIngressTraffic)
 
 	onEgressTraffic := func(params Signature) Signature {
-		if params["buffer"] == nil {
-			t.Fatal("buffer is nil")
+		if params["response"] == nil {
+			t.Fatal("response is nil")
 		}
 
 		logger.Info().Msg("Egress traffic")
-		if buf, ok := params["buffer"].([]byte); ok {
+		if buf, ok := params["response"].([]byte); ok {
 			assert.Equal(
 				t, CreatePostgreSQLPacket('R', []byte{0x0, 0x0, 0x0, 0x3}), buf)
 		} else {
-			t.Fatal("buffer is not a []byte")
+			t.Fatal("response is not a []byte")
 		}
 		assert.Nil(t, params["error"])
 		return nil
