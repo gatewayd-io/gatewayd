@@ -8,6 +8,7 @@ import (
 
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/gatewayd-io/gatewayd/network"
+	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
 	"github.com/knadh/koanf"
 	"github.com/knadh/koanf/parsers/yaml"
