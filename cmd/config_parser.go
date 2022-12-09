@@ -101,6 +101,11 @@ func poolConfig() (int, *network.Client) {
 		poolSize = network.DefaultPoolSize
 	}
 
+	// Minimum pool size is 2.
+	if poolSize < 2 {
+		poolSize = network.MinimumPoolSize
+	}
+
 	ref := getPath("pool.client")
 	net := globalConfig.String(ref + ".network")
 	address := globalConfig.String(ref + ".address")

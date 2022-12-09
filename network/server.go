@@ -17,6 +17,7 @@ const (
 
 	DefaultTickInterval = 5 * time.Second
 	DefaultPoolSize     = 10
+	MinimumPoolSize     = 2
 	DefaultBufferSize   = 4096
 )
 
