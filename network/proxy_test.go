@@ -5,6 +5,7 @@ import (
 
 	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
 	"github.com/gatewayd-io/gatewayd/logging"
+	"github.com/gatewayd-io/gatewayd/pool"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 )
@@ -31,7 +32,7 @@ func TestNewProxy(t *testing.T) {
 	logger := logging.NewLogger(cfg)
 
 	// Create a connection pool
-	pool := NewPool(logger, 0, nil, nil)
+	pool := pool.NewPool()
 	client := NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)
 	pool.Put(client.ID, client)
 
@@ -61,7 +62,7 @@ func TestNewProxyElastic(t *testing.T) {
 	logger := logging.NewLogger(cfg)
 
 	// Create a connection pool
-	pool := NewPool(logger, 0, nil, nil)
+	pool := pool.NewPool()
 
 	// Create a proxy with an elastic buffer pool
 	proxy := NewProxy(pool, NewHookConfig(), true, false, &Client{

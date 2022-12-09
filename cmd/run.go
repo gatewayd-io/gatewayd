@@ -8,6 +8,7 @@ import (
 
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/gatewayd-io/gatewayd/network"
+	"github.com/gatewayd-io/gatewayd/pool"
 	"github.com/knadh/koanf"
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/confmap"
@@ -76,13 +77,41 @@ var runCmd = &cobra.Command{
 			network.OnNewLogger, network.Signature{"logger": logger}, hooksConfig.Verification)
 
 		// Create and initialize a pool of connections
-		poolSize, poolClientConfig := poolConfig()
-		pool := network.NewPool(
-			logger,
-			poolSize,
-			poolClientConfig,
-			hooksConfig,
-		)
+		pool := pool.NewPool()
+		poolSize, clientConfig := poolConfig()
+
+		// Add clients to the pool
+		for i := 0; i < poolSize; i++ {
+			client := network.NewClient(
+				clientConfig.Network,
+				clientConfig.Address,
+				clientConfig.ReceiveBufferSize,
+				logger,
+			)
+
+			hooksConfig.Run(
+				plugin.OnNewClient,
+				plugin.Signature{
+					"client": client,
+				},
+				hooksConfig.Verification,
+			)
+
+			if client != nil {
+				pool.Put(client.ID, client)
+			}
+		}
+
+		// Verify that the pool is properly populated
+		logger.Info().Msgf("There are %d clients in the pool", pool.Size())
+		if pool.Size() != poolSize {
+			logger.Error().Msg(
+				"The pool size is incorrect, either because " +
+					"the clients cannot connect due to no network connectivity " +
+					"or the server is not running. exiting...")
+			os.Exit(1)
+		}
+
 		hooksConfig.Run(
 			network.OnNewPool, network.Signature{"pool": pool}, hooksConfig.Verification)
 
