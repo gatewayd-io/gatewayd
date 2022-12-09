@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
 )
@@ -26,7 +27,7 @@ type Server struct {
 	engine      gnet.Engine
 	proxy       Proxy
 	logger      zerolog.Logger
-	hooksConfig *HookConfig
+	hooksConfig *plugin.HookConfig
 
 	Network      string // tcp/udp/unix
 	Address      string
@@ -41,8 +42,8 @@ func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 	s.logger.Debug().Msg("GatewayD is booting...")
 
 	s.hooksConfig.Run(
-		OnBooting,
-		Signature{
+		plugin.OnBooting,
+		plugin.Signature{
 			"server": s,
 			"engine": engine,
 		},
@@ -54,8 +55,8 @@ func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 	s.Status = Running
 
 	s.hooksConfig.Run(
-		OnBooted,
-		Signature{
+		plugin.OnBooted,
+		plugin.Signature{
 			"server": s,
 			"engine": engine,
 		},
@@ -70,8 +71,8 @@ func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 	s.logger.Debug().Msgf("GatewayD is opening a connection from %s", gconn.RemoteAddr().String())
 
 	s.hooksConfig.Run(
-		OnOpening,
-		Signature{
+		plugin.OnOpening,
+		plugin.Signature{
 			"server": s,
 			"gconn":  gconn,
 		},
@@ -96,8 +97,8 @@ func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 	}
 
 	s.hooksConfig.Run(
-		OnOpened,
-		Signature{
+		plugin.OnOpened,
+		plugin.Signature{
 			"server": s,
 			"gconn":  gconn,
 		},
@@ -110,8 +111,8 @@ func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 	s.logger.Debug().Msgf("GatewayD is closing a connection from %s", gconn.RemoteAddr().String())
 
 	s.hooksConfig.Run(
-		OnClosing,
-		Signature{
+		plugin.OnClosing,
+		plugin.Signature{
 			"server": s,
 			"gconn":  gconn,
 			"error":  err,
@@ -127,8 +128,8 @@ func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 	}
 
 	s.hooksConfig.Run(
-		OnClosed,
-		Signature{
+		plugin.OnClosed,
+		plugin.Signature{
 			"server": s,
 			"gconn":  gconn,
 			"error":  err,
@@ -140,8 +141,8 @@ func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 
 func (s *Server) OnTraffic(gconn gnet.Conn) gnet.Action {
 	s.hooksConfig.Run(
-		OnTraffic,
-		Signature{
+		plugin.OnTraffic,
+		plugin.Signature{
 			"server": s,
 			"gconn":  gconn,
 		},
@@ -159,8 +160,8 @@ func (s *Server) OnTraffic(gconn gnet.Conn) gnet.Action {
 func (s *Server) OnShutdown(engine gnet.Engine) {
 	s.logger.Debug().Msg("GatewayD is shutting down...")
 	s.hooksConfig.Run(
-		OnShutdown,
-		Signature{
+		plugin.OnShutdown,
+		plugin.Signature{
 			"server": s,
 			"engine": engine,
 		},
@@ -173,8 +174,8 @@ func (s *Server) OnTick() (time.Duration, gnet.Action) {
 	s.logger.Debug().Msg("GatewayD is ticking...")
 	s.logger.Info().Msgf("Active connections: %d", s.engine.CountConnections())
 	s.hooksConfig.Run(
-		OnTick,
-		Signature{
+		plugin.OnTick,
+		plugin.Signature{
 			"server": s,
 		},
 		s.hooksConfig.Verification)
@@ -192,8 +193,8 @@ func (s *Server) Run() error {
 
 	// Since gnet.Run is blocking, we need to run OnRun before it
 	result := s.hooksConfig.Run(
-		OnRun,
-		Signature{
+		plugin.OnRun,
+		plugin.Signature{
 			"server":  s,
 			"address": addr,
 			"error":   err,
@@ -236,7 +237,7 @@ func NewServer(
 	options []gnet.Option,
 	proxy Proxy,
 	logger zerolog.Logger,
-	hooksConfig *HookConfig,
+	hooksConfig *plugin.HookConfig,
 ) *Server {
 	server := Server{
 		Network:      network,
