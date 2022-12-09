@@ -44,8 +44,8 @@ var runCmd = &cobra.Command{
 		// The config will be passed to the hooks, and in turn to the plugins that
 		// register to this hook.
 		result := hooksConfig.Run(
-			network.OnConfigLoaded,
-			network.Signature{"config": globalConfig.All()},
+			plugin.OnConfigLoaded,
+			plugin.Signature{"config": globalConfig.All()},
 			hooksConfig.Verification)
 		if result != nil {
 			var config map[string]interface{}
@@ -75,7 +75,7 @@ var runCmd = &cobra.Command{
 		hooksConfig.Logger = logger
 		// This is a notification hook, so we don't care about the result.
 		hooksConfig.Run(
-			network.OnNewLogger, network.Signature{"logger": logger}, hooksConfig.Verification)
+			plugin.OnNewLogger, plugin.Signature{"logger": logger}, hooksConfig.Verification)
 
 		// Create and initialize a pool of connections
 		pool := pool.NewPool()
@@ -114,14 +114,14 @@ var runCmd = &cobra.Command{
 		}
 
 		hooksConfig.Run(
-			network.OnNewPool, network.Signature{"pool": pool}, hooksConfig.Verification)
+			plugin.OnNewPool, plugin.Signature{"pool": pool}, hooksConfig.Verification)
 
 		// Create a prefork proxy with the pool of clients
 		elastic, reuseElasticClients, elasticClientConfig := proxyConfig()
 		proxy := network.NewProxy(
 			pool, hooksConfig, elastic, reuseElasticClients, elasticClientConfig, logger)
 		hooksConfig.Run(
-			network.OnNewProxy, network.Signature{"proxy": proxy}, hooksConfig.Verification)
+			plugin.OnNewProxy, plugin.Signature{"proxy": proxy}, hooksConfig.Verification)
 
 		// Create a server
 		serverConfig := serverConfig()
@@ -167,9 +167,7 @@ var runCmd = &cobra.Command{
 			hooksConfig,
 		)
 		hooksConfig.Run(
-			network.OnNewServer, network.Signature{"server": server}, hooksConfig.Verification)
-
-		// TODO: Load plugins and register them to the hooks
+			plugin.OnNewServer, plugin.Signature{"server": server}, hooksConfig.Verification)
 
 		// Shutdown the server gracefully
 		var signals []os.Signal
@@ -184,13 +182,13 @@ var runCmd = &cobra.Command{
 		)
 		signalsCh := make(chan os.Signal, 1)
 		signal.Notify(signalsCh, signals...)
-		go func(hooksConfig *network.HookConfig) {
+		go func(hooksConfig *plugin.HookConfig) {
 			for sig := range signalsCh {
 				for _, s := range signals {
 					if sig != s {
 						// Notify the hooks that the server is shutting down
 						hooksConfig.Run(
-							network.OnSignal, network.Signature{"signal": sig}, hooksConfig.Verification)
+							plugin.OnSignal, plugin.Signature{"signal": sig}, hooksConfig.Verification)
 
 						server.Shutdown()
 						os.Exit(0)
