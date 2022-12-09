@@ -23,7 +23,7 @@ type ProxyImpl struct {
 	availableConnections pool.Pool
 	busyConnections      pool.Pool
 	logger               zerolog.Logger
-	hookConfig           *HookConfig
+	hookConfig           *plugin.HookConfig
 
 	Elastic             bool
 	ReuseElasticClients bool
