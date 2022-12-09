@@ -18,25 +18,25 @@ type Pool interface {
 	Clear()
 }
 
-type PoolImpl struct {
+type Impl struct {
 	pool sync.Map
 }
 
-var _ Pool = &PoolImpl{}
+var _ Pool = &Impl{}
 
-func (p *PoolImpl) ForEach(cb Callback) {
+func (p *Impl) ForEach(cb Callback) {
 	p.pool.Range(cb)
 }
 
-func (p *PoolImpl) Pool() *sync.Map {
+func (p *Impl) Pool() *sync.Map {
 	return &p.pool
 }
 
-func (p *PoolImpl) Put(key, value interface{}) {
+func (p *Impl) Put(key, value interface{}) {
 	p.pool.Store(key, value)
 }
 
-func (p *PoolImpl) Get(key interface{}) interface{} {
+func (p *Impl) Get(key interface{}) interface{} {
 	if value, ok := p.pool.Load(key); ok {
 		return value
 	}
@@ -44,11 +44,11 @@ func (p *PoolImpl) Get(key interface{}) interface{} {
 	return nil
 }
 
-func (p *PoolImpl) GetOrPut(key, value interface{}) (interface{}, bool) {
+func (p *Impl) GetOrPut(key, value interface{}) (interface{}, bool) {
 	return p.pool.LoadOrStore(key, value)
 }
 
-func (p *PoolImpl) Pop(key interface{}) interface{} {
+func (p *Impl) Pop(key interface{}) interface{} {
 	if value, ok := p.pool.LoadAndDelete(key); ok {
 		return value
 	}
@@ -56,11 +56,11 @@ func (p *PoolImpl) Pop(key interface{}) interface{} {
 	return nil
 }
 
-func (p *PoolImpl) Remove(key interface{}) {
+func (p *Impl) Remove(key interface{}) {
 	p.pool.Delete(key)
 }
 
-func (p *PoolImpl) Size() int {
+func (p *Impl) Size() int {
 	var size int
 	p.pool.Range(func(_, _ interface{}) bool {
 		size++
@@ -70,10 +70,10 @@ func (p *PoolImpl) Size() int {
 	return size
 }
 
-func (p *PoolImpl) Clear() {
+func (p *Impl) Clear() {
 	p.pool = sync.Map{}
 }
 
-func NewPool() *PoolImpl {
-	return &PoolImpl{pool: sync.Map{}}
+func NewPool() *Impl {
+	return &Impl{pool: sync.Map{}}
 }
