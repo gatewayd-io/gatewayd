@@ -103,7 +103,7 @@ func poolConfig() (int, *network.Client) {
 	}
 
 	// Minimum pool size is 2.
-	if poolSize < 2 {
+	if poolSize < network.MinimumPoolSize {
 		poolSize = network.MinimumPoolSize
 	}
 
