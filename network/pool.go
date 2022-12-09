@@ -9,12 +9,16 @@ import (
 
 type Callback func(key, value interface{}) bool
 
+// TODO: The logger is not necessary here, so remove it‽
+
 type Pool interface {
 	ForEach(Callback)
 	Pool() *sync.Map
 	Put(key, value interface{})
 	Get(key interface{}) interface{}
+	GetOrPut(key, value interface{}) (interface{}, bool)
 	Pop(key interface{}) interface{}
+	Remove(key interface{})
 	Size() int
 	Clear()
 }
@@ -48,6 +52,10 @@ func (p *PoolImpl) Get(key interface{}) interface{} {
 	return nil
 }
 
+func (p *PoolImpl) GetOrPut(key, value interface{}) (interface{}, bool) {
+	return p.pool.LoadOrStore(key, value)
+}
+
 func (p *PoolImpl) Pop(key interface{}) interface{} {
 	if value, ok := p.pool.LoadAndDelete(key); ok {
 		p.logger.Debug().Msg("Item has been popped from the pool")
@@ -55,6 +63,11 @@ func (p *PoolImpl) Pop(key interface{}) interface{} {
 	}
 
 	return nil
+}
+
+func (p *PoolImpl) Remove(key interface{}) {
+	p.pool.Delete(key)
+	p.logger.Debug().Msg("Item has been removed from the pool")
 }
 
 func (p *PoolImpl) Size() int {
