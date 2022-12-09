@@ -6,6 +6,8 @@ import (
 
 	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
 	"github.com/gatewayd-io/gatewayd/logging"
+	"github.com/gatewayd-io/gatewayd/plugin"
+	"github.com/gatewayd-io/gatewayd/pool"
 	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
@@ -28,9 +30,9 @@ func TestRunServer(t *testing.T) {
 
 	logger := logging.NewLogger(cfg)
 
-	hooksConfig := NewHookConfig()
+	hooksConfig := plugin.NewHookConfig()
 
-	onIngressTraffic := func(params Signature) Signature {
+	onIngressTraffic := func(params plugin.Signature) plugin.Signature {
 		if params["buffer"] == nil {
 			t.Fatal("buffer is nil")
 		}
@@ -44,9 +46,9 @@ func TestRunServer(t *testing.T) {
 		assert.Nil(t, params["error"])
 		return nil
 	}
-	hooksConfig.Add(OnIngressTraffic, 1, onIngressTraffic)
+	hooksConfig.Add(plugin.OnIngressTraffic, 1, onIngressTraffic)
 
-	onEgressTraffic := func(params Signature) Signature {
+	onEgressTraffic := func(params plugin.Signature) plugin.Signature {
 		if params["response"] == nil {
 			t.Fatal("response is nil")
 		}
@@ -61,10 +63,10 @@ func TestRunServer(t *testing.T) {
 		assert.Nil(t, params["error"])
 		return nil
 	}
-	hooksConfig.Add(OnEgressTraffic, 1, onEgressTraffic)
+	hooksConfig.Add(plugin.OnEgressTraffic, 1, onEgressTraffic)
 
 	// Create a connection pool
-	pool := NewEmptyPool(logger)
+	pool := pool.NewPool()
 	client1 := NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)
 	pool.Put(client1.ID, client1)
 	client2 := NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)

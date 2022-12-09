@@ -1,4 +1,4 @@
-package network
+package plugin
 
 import (
 	"testing"
@@ -17,8 +17,8 @@ func Test_HookConfig_Add(t *testing.T) {
 		return s
 	}
 	hooks.Add(OnNewLogger, 0, testFunc)
-	assert.NotNil(t, hooks.hooks[OnNewLogger][0])
-	assert.ObjectsAreEqual(testFunc, hooks.hooks[OnNewLogger][0])
+	assert.NotNil(t, hooks.Hooks()[OnNewLogger][0])
+	assert.ObjectsAreEqual(testFunc, hooks.Hooks()[OnNewLogger][0])
 }
 
 func Test_HookConfig_Add_Multiple_Hooks(t *testing.T) {
@@ -29,8 +29,8 @@ func Test_HookConfig_Add_Multiple_Hooks(t *testing.T) {
 	hooks.Add(OnNewLogger, 1, func(s Signature) Signature {
 		return s
 	})
-	assert.NotNil(t, hooks.hooks[OnNewLogger][0])
-	assert.NotNil(t, hooks.hooks[OnNewLogger][1])
+	assert.NotNil(t, hooks.Hooks()[OnNewLogger][0])
+	assert.NotNil(t, hooks.Hooks()[OnNewLogger][1])
 }
 
 func Test_HookConfig_Get(t *testing.T) {
@@ -59,7 +59,7 @@ func Test_verify(t *testing.T) {
 	returnVal := Signature{
 		"test": "test",
 	}
-	assert.True(t, verify(params, returnVal))
+	assert.True(t, Verify(params, returnVal))
 }
 
 func Test_verify_fail(t *testing.T) {
@@ -95,7 +95,7 @@ func Test_verify_fail(t *testing.T) {
 	}
 
 	for _, d := range data {
-		assert.False(t, verify(d[0], d[1]))
+		assert.False(t, Verify(d[0], d[1]))
 	}
 }
 
@@ -114,7 +114,8 @@ func Test_HookConfig_Run_PassDown(t *testing.T) {
 	// Although the first hook returns nil, and its Signature doesn't match the params,
 	// so its result (nil) is passed down to the next hook in chain (prio 2).
 	// Then the second hook runs and returns a Signature with a "test" key and value.
-	assert.NotNil(t, hooks.Run(OnNewLogger, Signature{"test": "test"}, PassDown))
+	assert.NotNil(
+		t, hooks.Run(OnNewLogger, Signature{"test": "test"}, PassDown))
 }
 
 func Test_HookConfig_Run_PassDown_2(t *testing.T) {
@@ -134,8 +135,11 @@ func Test_HookConfig_Run_PassDown_2(t *testing.T) {
 	// Although the first hook returns nil, and its Signature doesn't match the params,
 	// so its result (nil) is passed down to the next hook in chain (prio 2).
 	// Then the second hook runs and returns a Signature with a "test1" and "test2" key and value.
-	assert.NotNil(t, hooks.Run(
-		OnNewLogger, Signature{"test1": "test1", "test2": "test2"}, PassDown))
+	assert.NotNil(
+		t, hooks.Run(
+			OnNewLogger,
+			Signature{"test1": "test1", "test2": "test2"},
+			PassDown))
 }
 
 func Test_HookConfig_Run_Ignore(t *testing.T) {
@@ -188,5 +192,5 @@ func Test_HookConfig_Run_Remove(t *testing.T) {
 	// so its result is ignored. The failing hook is removed from the list and
 	// the execution continues with the next hook in the list.
 	assert.Nil(t, hooks.Run(OnNewLogger, nil, Remove))
-	assert.Equal(t, 1, len(hooks.hooks[OnNewLogger]))
+	assert.Equal(t, 1, len(hooks.Hooks()[OnNewLogger]))
 }
