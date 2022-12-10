@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 
+	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
 	"github.com/panjf2000/gnet/v2"
@@ -74,7 +75,7 @@ func (pr *ProxyImpl) Connect(gconn gnet.Conn) error {
 			)
 			pr.logger.Debug().Msgf("Reused the client %s by putting it back in the pool", client.ID)
 		} else {
-			return ErrPoolExhausted
+			return gerr.ErrPoolExhausted
 		}
 	} else {
 		// Get a client from the pool
@@ -88,7 +89,7 @@ func (pr *ProxyImpl) Connect(gconn gnet.Conn) error {
 		pr.busyConnections.Put(gconn, client)
 		pr.logger.Debug().Msgf("Client %s has been assigned to %s", client.ID, gconn.RemoteAddr().String())
 	} else {
-		return ErrClientNotConnected
+		return gerr.ErrClientNotConnected
 	}
 
 	pr.logger.Debug().Msgf("[C] There are %d clients in the pool", pr.availableConnections.Size())
@@ -132,7 +133,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 	if cl, ok := pr.busyConnections.Get(gconn).(*Client); ok {
 		client = cl
 	} else {
-		return ErrClientNotFound
+		return gerr.ErrClientNotFound
 	}
 
 	// buf contains the data from the client (<type>, length, query)
