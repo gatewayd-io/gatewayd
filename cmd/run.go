@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"os"
 	"os/signal"
 	"syscall"
@@ -10,12 +11,14 @@ import (
 	"github.com/gatewayd-io/gatewayd/network"
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
-	"github.com/knadh/koanf"
+	goplugin "github.com/hashicorp/go-plugin"
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/confmap"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/panjf2000/gnet/v2"
+	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 const (
@@ -23,8 +26,14 @@ const (
 )
 
 var (
-	configFile  string
-	hooksConfig = plugin.NewHookConfig()
+	globalConfigFile string
+	pluginConfigFile string
+)
+
+var (
+	hooksConfig    = plugin.NewHookConfig()
+	DefaultLogger  = logging.NewLogger(logging.LoggerConfig{Level: zerolog.DebugLevel})
+	pluginRegistry = plugin.NewRegistry(hooksConfig)
 )
 
 // runCmd represents the run command.
@@ -32,9 +41,25 @@ var runCmd = &cobra.Command{
 	Use:   "run",
 	Short: "Run a gatewayd instance",
 	Run: func(cmd *cobra.Command, args []string) {
+		// The plugins are loaded and hooks registered
+		// before the configuration is loaded.
+		hooksConfig.Logger = DefaultLogger
+
+		// Load the plugin configuration file
+		if f, err := cmd.Flags().GetString("plugin-config"); err == nil {
+			if err := pluginConfig.Load(file.Provider(f), yaml.Parser()); err != nil {
+				DefaultLogger.Fatal().Err(err).Msg("Failed to load plugin configuration")
+				os.Exit(1)
+			}
+		}
+
+		// Load plugins and register their hooks
+		pluginRegistry.LoadPlugins(pluginConfig)
+
 		if f, err := cmd.Flags().GetString("config"); err == nil {
 			if err := globalConfig.Load(file.Provider(f), yaml.Parser()); err != nil {
-				panic(err)
+				DefaultLogger.Fatal().Err(err).Msg("Failed to load configuration")
+				os.Exit(2)
 			}
 		}
 
@@ -43,39 +68,37 @@ var runCmd = &cobra.Command{
 
 		// The config will be passed to the hooks, and in turn to the plugins that
 		// register to this hook.
-		result := hooksConfig.Run(
+		currentGlobalConfig, _ := structpb.NewStruct(globalConfig.All())
+
+		updatedGlobalConfig, _ := hooksConfig.Run(
 			plugin.OnConfigLoaded,
-			plugin.Signature{"config": globalConfig.All()},
+			context.Background(),
+			currentGlobalConfig,
 			hooksConfig.Verification)
-		if result != nil {
-			var config map[string]interface{}
-			if cfg, ok := result["config"].(map[string]interface{}); ok {
-				config = cfg
-			}
 
-			if config != nil {
-				// Load the config from the map emitted by the hook
-				var hookEmittedConfig *koanf.Koanf
-				if err := hookEmittedConfig.Load(confmap.Provider(config, "."), nil); err != nil {
-					// Since the logger is not yet initialized, we can't log the error.
-					// So we panic. Same happens in the next if statement.
-					panic(err)
-				}
-
-				// Merge the config with the one loaded from the file (in memory).
-				// The changes won't be persisted to disk.
-				if err := globalConfig.Merge(hookEmittedConfig); err != nil {
-					panic(err)
-				}
+		if updatedGlobalConfig != nil && plugin.Verify(updatedGlobalConfig, currentGlobalConfig) {
+			// Merge the config with the one loaded from the file (in memory).
+			// The changes won't be persisted to disk.
+			if err := globalConfig.Load(
+				confmap.Provider(updatedGlobalConfig.AsMap(), "."), nil); err != nil {
+				DefaultLogger.Fatal().Err(err).Msg("Failed to merge configuration")
+				os.Exit(3)
 			}
 		}
 
 		// Create a new logger from the config
-		logger := logging.NewLogger(loggerConfig())
-		hooksConfig.Logger = logger
+		loggerCfg := loggerConfig()
+		logger := logging.NewLogger(loggerCfg)
+		// TODO: Use https://github.com/dcarbone/zadapters to adapt hclog to zerolog
 		// This is a notification hook, so we don't care about the result.
+		data, _ := structpb.NewStruct(map[string]interface{}{
+			"timeFormat": loggerCfg.TimeFormat,
+			"level":      loggerCfg.Level,
+			"output":     loggerCfg.Output,
+			"noColor":    loggerCfg.NoColor,
+		})
 		hooksConfig.Run(
-			plugin.OnNewLogger, plugin.Signature{"logger": logger}, hooksConfig.Verification)
+			plugin.OnNewLogger, context.Background(), data, hooksConfig.Verification)
 
 		// Create and initialize a pool of connections
 		pool := pool.NewPool()
@@ -90,16 +113,20 @@ var runCmd = &cobra.Command{
 				logger,
 			)
 
-			hooksConfig.Run(
-				plugin.OnNewClient,
-				plugin.Signature{
-					"client": client,
-				},
-				hooksConfig.Verification,
-			)
-
 			if client != nil {
-				pool.Put(client.ID, client)
+				clientCfg, _ := structpb.NewStruct(map[string]interface{}{
+					"id":                client.ID,
+					"network":           clientConfig.Network,
+					"address":           clientConfig.Address,
+					"receiveBufferSize": clientConfig.ReceiveBufferSize,
+				})
+
+				hooksConfig.Run(
+					plugin.OnNewClient, context.Background(), clientCfg, hooksConfig.Verification)
+
+				if client != nil {
+					pool.Put(client.ID, client)
+				}
 			}
 		}
 
@@ -113,15 +140,23 @@ var runCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		hooksConfig.Run(
-			plugin.OnNewPool, plugin.Signature{"pool": pool}, hooksConfig.Verification)
+		poolCfg, _ := structpb.NewStruct(map[string]interface{}{
+			"size": poolSize,
+		})
+
+		hooksConfig.Run(plugin.OnNewPool, context.Background(), poolCfg, hooksConfig.Verification)
 
 		// Create a prefork proxy with the pool of clients
 		elastic, reuseElasticClients, elasticClientConfig := proxyConfig()
 		proxy := network.NewProxy(
 			pool, hooksConfig, elastic, reuseElasticClients, elasticClientConfig, logger)
-		hooksConfig.Run(
-			plugin.OnNewProxy, plugin.Signature{"proxy": proxy}, hooksConfig.Verification)
+
+		proxyCfg, _ := structpb.NewStruct(map[string]interface{}{
+			"elastic":             elastic,
+			"reuseElasticClients": reuseElasticClients,
+			"clientConfig":        elasticClientConfig,
+		})
+		hooksConfig.Run(plugin.OnNewProxy, context.Background(), proxyCfg, hooksConfig.Verification)
 
 		// Create a server
 		serverConfig := serverConfig()
@@ -166,8 +201,28 @@ var runCmd = &cobra.Command{
 			logger,
 			hooksConfig,
 		)
+
+		serverCfg, _ := structpb.NewStruct(map[string]interface{}{
+			"network":          serverConfig.Network,
+			"address":          serverConfig.Address,
+			"softLimit":        serverConfig.SoftLimit,
+			"hardLimit":        serverConfig.HardLimit,
+			"tickInterval":     serverConfig.TickInterval,
+			"multiCore":        serverConfig.MultiCore,
+			"lockOSThread":     serverConfig.LockOSThread,
+			"enableTicker":     serverConfig.EnableTicker,
+			"loadBalancer":     serverConfig.LoadBalancer,
+			"readBufferCap":    serverConfig.ReadBufferCap,
+			"writeBufferCap":   serverConfig.WriteBufferCap,
+			"socketRecvBuffer": serverConfig.SocketRecvBuffer,
+			"socketSendBuffer": serverConfig.SocketSendBuffer,
+			"reuseAddress":     serverConfig.ReuseAddress,
+			"reusePort":        serverConfig.ReusePort,
+			"tcpKeepAlive":     serverConfig.TCPKeepAlive,
+			"tcpNoDelay":       serverConfig.TCPNoDelay,
+		})
 		hooksConfig.Run(
-			plugin.OnNewServer, plugin.Signature{"server": server}, hooksConfig.Verification)
+			plugin.OnNewServer, context.Background(), serverCfg, hooksConfig.Verification)
 
 		// Shutdown the server gracefully
 		var signals []os.Signal
@@ -187,10 +242,17 @@ var runCmd = &cobra.Command{
 				for _, s := range signals {
 					if sig != s {
 						// Notify the hooks that the server is shutting down
+						signalCfg, _ := structpb.NewStruct(map[string]interface{}{"signal": sig})
 						hooksConfig.Run(
-							plugin.OnSignal, plugin.Signature{"signal": sig}, hooksConfig.Verification)
+							plugin.OnSignal,
+							context.Background(),
+							signalCfg,
+							hooksConfig.Verification,
+						)
 
 						server.Shutdown()
+						pluginRegistry.Shutdown()
+						goplugin.CleanupClients()
 						os.Exit(0)
 					}
 				}
@@ -208,5 +270,7 @@ func init() {
 	rootCmd.AddCommand(runCmd)
 
 	runCmd.PersistentFlags().StringVarP(
-		&configFile, "config", "c", "./gatewayd.yaml", "config file (default is ./gatewayd.yaml)")
+		&globalConfigFile, "config", "c", "./gatewayd.yaml", "config file (default is ./gatewayd.yaml)")
+	runCmd.PersistentFlags().StringVarP(
+		&pluginConfigFile, "plugin-config", "p", "./gatewayd_plugins.yaml", "plugin config file (default is ./gatewayd_plugins.yaml)")
 }
