@@ -38,7 +38,7 @@ func Test_HookConfig_Get(t *testing.T) {
 	testFunc := func(s Signature) Signature {
 		return s
 	}
-	prio := Prio(0)
+	prio := Priority(0)
 	hooks.Add(OnNewLogger, prio, testFunc)
 	assert.NotNil(t, hooks.Get(OnNewLogger))
 	assert.ObjectsAreEqual(testFunc, hooks.Get(OnNewLogger)[prio])

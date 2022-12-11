@@ -32,7 +32,7 @@ func TestRunServer(t *testing.T) {
 
 	hooksConfig := plugin.NewHookConfig()
 
-	onIngressTraffic := func(params plugin.Signature) plugin.Signature {
+	onIngressTraffic := func(params &structpb.Struct) &structpb.Struct {
 		if params["buffer"] == nil {
 			t.Fatal("buffer is nil")
 		}
@@ -48,7 +48,7 @@ func TestRunServer(t *testing.T) {
 	}
 	hooksConfig.Add(plugin.OnIngressTraffic, 1, onIngressTraffic)
 
-	onEgressTraffic := func(params plugin.Signature) plugin.Signature {
+	onEgressTraffic := func(params &structpb.Struct) &structpb.Struct {
 		if params["response"] == nil {
 			t.Fatal("response is nil")
 		}
