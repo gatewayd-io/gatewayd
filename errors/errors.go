@@ -9,4 +9,5 @@ var (
 	ErrPoolExhausted       = errors.New("pool is exhausted")
 
 	ErrPluginNotFound = errors.New("plugin not found")
+	ErrPluginNotReady = errors.New("plugin is not ready")
 )
