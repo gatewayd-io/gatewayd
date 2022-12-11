@@ -2,247 +2,64 @@ syntax = "proto3";
 
 package plugin.v1;
 
-import "google/protobuf/empty.proto";
-import "google/protobuf/any.proto";
+import "google/protobuf/struct.proto";
 
-option go_package = "github.com/gatewayd-io/gatewayd/plugin/v1";
+option go_package = "github.com/gatewayd-io/gatewayd/plugin/shared/plugin/v1";
 
-enum Action {
-    ACTION_UNSPECIFIED = 0;
-    ACTION_KILL = 1;
-    ACTION_RESTART = 2;
-    ACTION_RELOAD = 3;
+service GatewayDPluginService {
+    // GetPluginConfig returns the plugin config upon registration
+    rpc GetPluginConfig (google.protobuf.Struct) returns (google.protobuf.Struct);
+
+    // OnConfigLoaded is called when the config is loaded from any config provider
+    rpc OnConfigLoaded (google.protobuf.Struct) returns (google.protobuf.Struct);
+    rpc OnNewLogger (google.protobuf.Struct) returns (google.protobuf.Struct);
+    rpc OnNewPool (google.protobuf.Struct) returns (google.protobuf.Struct);
+    rpc OnNewProxy (google.protobuf.Struct) returns (google.protobuf.Struct);
+    rpc OnNewServer (google.protobuf.Struct) returns (google.protobuf.Struct);
+    rpc OnSignal (google.protobuf.Struct) returns (google.protobuf.Struct);
+    rpc OnRun (google.protobuf.Struct) returns (google.protobuf.Struct);
+    rpc OnBooting (google.protobuf.Struct) returns (google.protobuf.Struct);
+    rpc OnBooted (google.protobuf.Struct) returns (google.protobuf.Struct);
+    rpc OnOpening (google.protobuf.Struct) returns (google.protobuf.Struct);
+    rpc OnOpened (google.protobuf.Struct) returns (google.protobuf.Struct);
+    rpc OnClosing (google.protobuf.Struct) returns (google.protobuf.Struct);
+    rpc OnClosed (google.protobuf.Struct) returns (google.protobuf.Struct);
+    rpc OnTraffic (google.protobuf.Struct) returns (google.protobuf.Struct);
+    rpc OnIngressTraffic (google.protobuf.Struct) returns (google.protobuf.Struct);
+    rpc OnEgressTraffic (google.protobuf.Struct) returns (google.protobuf.Struct);
+    rpc OnShutdown (google.protobuf.Struct) returns (google.protobuf.Struct);
+    rpc OnTick (google.protobuf.Struct) returns (google.protobuf.Struct);
+    rpc OnNewClient (google.protobuf.Struct) returns (google.protobuf.Struct);
 }
 
-message SemVer {
-    uint32 major = 1;
-    uint32 minor = 2;
-    uint32 patch = 3;
+message Version {
+    uint64 major = 1;
+    uint64 minor = 2;
+    uint64 patch = 3;
+    string pre = 4;
+	string metadata = 5;
+	string original = 6;
+}
+
+message PluginID {
+    string name = 1;
+    string version = 2;
+    string remote_url = 3;
+    string checksum = 4;
 }
 
 message PluginConfig {
-    string name = 1;
-    SemVer version = 2;
-    string description = 3;
-    string author = 4;
-    string license = 5;
-    string remote_url = 6;
-    string url = 7;
+    PluginID id = 1;
+    string description = 2;
+    string license = 4;
+    string project_url = 5;
+    repeated string authors = 3;
     // internal and external config options
-    map<string, string> config = 8;
+    map<string, string> config = 6;
     // hooks it attaches to
-    repeated string hooks = 9;
+    repeated string hooks = 7;
     // required plugins
-    map<string, string> requires = 10;
-    repeated string tags = 11;
-    repeated string categories = 12;
-}
-
-message PluginConfigRequest {
-    google.protobuf.Empty empty = 1;
-}
-
-message PluginConfigResponse {
-    PluginConfig config = 1;
-}
-
-// const (
-// 	OnConfigLoaded    HookType = "onConfigLoaded"
-// 	OnNewLogger       HookType = "onNewLogger"
-// 	OnNewPool         HookType = "onNewPool"
-// 	OnNewProxy        HookType = "onNewProxy"
-// 	OnNewServer       HookType = "onNewServer"
-// 	OnSignal          HookType = "onSignal"
-// 	OnRun             HookType = "onRun"
-// 	OnBooting         HookType = "onBooting"
-// 	OnBooted          HookType = "onBooted"
-// 	OnOpening         HookType = "onOpening"
-// 	OnOpened          HookType = "onOpened"
-// 	OnClosing         HookType = "onClosing"
-// 	OnClosed          HookType = "onClosed"
-// 	OnTraffic         HookType = "onTraffic"
-// 	OnIngressTraffic HookType = "onIngressTraffic"
-// 	OnEgressTraffic HookType = "onEgressTraffic"
-// 	OnShutdown        HookType = "onShutdown"
-// 	OnTick            HookType = "onTick"
-// 	OnNewClient       HookType = "onNewClient"
-// )
-
-message OnConfigLoadedRequest {
-    map<string, google.protobuf.Any> config = 1;
-}
-
-message OnConfigLoadedResponse {
-    map<string, google.protobuf.Any> config = 1;
-}
-
-// Logger request/response
-message OnNewLoggerRequest {
-    google.protobuf.Any logger = 1;
-}
-
-message OnNewLoggerResponse {
-    google.protobuf.Empty empty = 1;
-}
-
-message OnNewPoolRequest {
-    google.protobuf.Any pool = 1;
-}
-
-message OnNewPoolResponse {
-    google.protobuf.Empty empty = 1;
-}
-
-message OnNewProxyRequest {
-    google.protobuf.Any proxy = 1;
-}
-
-message OnNewProxyResponse {
-    google.protobuf.Empty empty = 1;
-}
-
-message OnNewServerRequest {
-    google.protobuf.Any server = 1;
-}
-
-message OnNewServerResponse {
-    google.protobuf.Empty empty = 1;
-}
-
-message OnSignalRequest {
-    string signal = 1;
-}
-
-message OnSignalResponse {
-    Action action = 1;
-}
-
-message OnRunRequest {
-    google.protobuf.Empty empty = 1;
-}
-
-message OnRunResponse {
-    google.protobuf.Empty empty = 1;
-}
-
-message OnBootingRequest {
-    google.protobuf.Empty empty = 1;
-}
-
-message OnBootingResponse {
-    google.protobuf.Empty empty = 1;
-}
-
-message OnBootedRequest {
-    google.protobuf.Empty empty = 1;
-}
-
-message OnBootedResponse {
-    google.protobuf.Empty empty = 1;
-}
-
-message OnOpeningRequest {
-    google.protobuf.Empty empty = 1;
-}
-
-message OnOpeningResponse {
-    google.protobuf.Empty empty = 1;
-}
-
-message OnOpenedRequest {
-    google.protobuf.Empty empty = 1;
-}
-
-message OnOpenedResponse {
-    google.protobuf.Empty empty = 1;
-}
-
-message OnClosingRequest {
-    google.protobuf.Empty empty = 1;
-}
-
-message OnClosingResponse {
-    google.protobuf.Empty empty = 1;
-}
-
-message OnClosedRequest {
-    google.protobuf.Empty empty = 1;
-}
-
-message OnClosedResponse {
-    google.protobuf.Empty empty = 1;
-}
-
-message OnTrafficRequest {
-    google.protobuf.Any traffic = 1;
-}
-
-message OnTrafficResponse {
-    google.protobuf.Empty empty = 1;
-}
-
-message OnIngressTrafficRequest {
-    google.protobuf.Any traffic = 1;
-}
-
-message OnIngressTrafficResponse {
-    google.protobuf.Empty empty = 1;
-}
-
-message OnEgressTrafficRequest {
-    google.protobuf.Any traffic = 1;
-}
-
-message OnEgressTrafficResponse {
-    google.protobuf.Empty empty = 1;
-}
-
-message OnShutdownRequest {
-    google.protobuf.Empty empty = 1;
-}
-
-message OnShutdownResponse {
-    google.protobuf.Empty empty = 1;
-}
-
-message OnTickRequest {
-    google.protobuf.Empty empty = 1;
-}
-
-message OnTickResponse {
-    google.protobuf.Empty empty = 1;
-}
-
-message OnNewClientRequest {
-    google.protobuf.Any client = 1;
-}
-
-message OnNewClientResponse {
-    google.protobuf.Empty empty = 1;
-}
-
-service GDPService {
-    // PluginConfig returns the plugin config for registration
-    rpc PluginConfig (PluginConfigRequest) returns (PluginConfigResponse);
-
-    // OnConfigLoaded is called when the config is loaded from any config provider
-    rpc OnConfigLoaded (OnConfigLoadedRequest) returns (OnConfigLoadedResponse);
-    rpc OnNewLogger (OnNewLoggerRequest) returns (OnNewLoggerResponse);
-    rpc OnNewPool (OnNewPoolRequest) returns (OnNewPoolResponse);
-    rpc OnNewProxy (OnNewProxyRequest) returns (OnNewProxyResponse);
-    rpc OnNewServer (OnNewServerRequest) returns (OnNewServerResponse);
-    rpc OnSignal (OnSignalRequest) returns (OnSignalResponse);
-    rpc OnRun (OnRunRequest) returns (OnRunResponse);
-    rpc OnBooting (OnBootingRequest) returns (OnBootingResponse);
-    rpc OnBooted (OnBootedRequest) returns (OnBootedResponse);
-    rpc OnOpening (OnOpeningRequest) returns (OnOpeningResponse);
-    rpc OnOpened (OnOpenedRequest) returns (OnOpenedResponse);
-    rpc OnClosing (OnClosingRequest) returns (OnClosingResponse);
-    rpc OnClosed (OnClosedRequest) returns (OnClosedResponse);
-    rpc OnTraffic (OnTrafficRequest) returns (OnTrafficResponse);
-    rpc OnIngressTraffic (OnIngressTrafficRequest) returns (OnIngressTrafficResponse);
-    rpc OnEgressTraffic (OnEgressTrafficRequest) returns (OnEgressTrafficResponse);
-    rpc OnShutdown (OnShutdownRequest) returns (OnShutdownResponse);
-    rpc OnTick (OnTickRequest) returns (OnTickResponse);
-    rpc OnNewClient (OnNewClientRequest) returns (OnNewClientResponse);
+    map<string, string> requires = 8;
+    repeated string tags = 9;
+    repeated string categories = 10;
 }
