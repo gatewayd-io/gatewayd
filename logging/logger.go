@@ -24,7 +24,11 @@ type LoggerConfig struct {
 
 func NewLogger(cfg LoggerConfig) zerolog.Logger {
 	// Create a new logger
-	consoleWriter := zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: cfg.TimeFormat}
+	consoleWriter := zerolog.ConsoleWriter{
+		Out:        os.Stdout,
+		TimeFormat: cfg.TimeFormat,
+		NoColor:    cfg.NoColor,
+	}
 
 	if cfg.Output == nil {
 		// Default to stdout
