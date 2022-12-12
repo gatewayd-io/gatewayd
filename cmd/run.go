@@ -68,21 +68,23 @@ var runCmd = &cobra.Command{
 
 		// The config will be passed to the hooks, and in turn to the plugins that
 		// register to this hook.
-		currentGlobalConfig, _ := structpb.NewStruct(globalConfig.All())
+		currentGlobalConfig, err := structpb.NewStruct(globalConfig.All())
+		if err != nil {
+			DefaultLogger.Error().Err(err).Msg("Failed to convert configuration to structpb")
+		} else {
+			updatedGlobalConfig, _ := hooksConfig.Run(
+				plugin.OnConfigLoaded,
+				context.Background(),
+				currentGlobalConfig,
+				hooksConfig.Verification)
 
-		updatedGlobalConfig, _ := hooksConfig.Run(
-			plugin.OnConfigLoaded,
-			context.Background(),
-			currentGlobalConfig,
-			hooksConfig.Verification)
-
-		if updatedGlobalConfig != nil && plugin.Verify(updatedGlobalConfig, currentGlobalConfig) {
-			// Merge the config with the one loaded from the file (in memory).
-			// The changes won't be persisted to disk.
-			if err := globalConfig.Load(
-				confmap.Provider(updatedGlobalConfig.AsMap(), "."), nil); err != nil {
-				DefaultLogger.Fatal().Err(err).Msg("Failed to merge configuration")
-				os.Exit(3)
+			if updatedGlobalConfig != nil && plugin.Verify(updatedGlobalConfig, currentGlobalConfig) {
+				// Merge the config with the one loaded from the file (in memory).
+				// The changes won't be persisted to disk.
+				if err := globalConfig.Load(
+					confmap.Provider(updatedGlobalConfig.AsMap(), "."), nil); err != nil {
+					DefaultLogger.Fatal().Err(err).Msg("Failed to merge configuration")
+				}
 			}
 		}
 
@@ -91,14 +93,20 @@ var runCmd = &cobra.Command{
 		logger := logging.NewLogger(loggerCfg)
 		// TODO: Use https://github.com/dcarbone/zadapters to adapt hclog to zerolog
 		// This is a notification hook, so we don't care about the result.
-		data, _ := structpb.NewStruct(map[string]interface{}{
+		data, err := structpb.NewStruct(map[string]interface{}{
 			"timeFormat": loggerCfg.TimeFormat,
 			"level":      loggerCfg.Level,
 			"output":     loggerCfg.Output,
 			"noColor":    loggerCfg.NoColor,
 		})
-		hooksConfig.Run(
-			plugin.OnNewLogger, context.Background(), data, hooksConfig.Verification)
+		if err != nil {
+			logger.Error().Err(err).Msg("Failed to convert logger config to structpb")
+		} else {
+			// TODO: Handle errors from the notification hooks
+			// TODO: Use a context with a timeout
+			hooksConfig.Run(
+				plugin.OnNewLogger, context.Background(), data, hooksConfig.Verification)
+		}
 
 		// Create and initialize a pool of connections
 		pool := pool.NewPool()
@@ -114,15 +122,19 @@ var runCmd = &cobra.Command{
 			)
 
 			if client != nil {
-				clientCfg, _ := structpb.NewStruct(map[string]interface{}{
+				clientCfg, err := structpb.NewStruct(map[string]interface{}{
 					"id":                client.ID,
 					"network":           clientConfig.Network,
 					"address":           clientConfig.Address,
 					"receiveBufferSize": clientConfig.ReceiveBufferSize,
 				})
+				if err != nil {
+					logger.Error().Err(err).Msg("Failed to convert client config to structpb")
+				} else {
+					hooksConfig.Run(
+						plugin.OnNewClient, context.Background(), clientCfg, hooksConfig.Verification)
 
-				hooksConfig.Run(
-					plugin.OnNewClient, context.Background(), clientCfg, hooksConfig.Verification)
+				}
 
 				if client != nil {
 					pool.Put(client.ID, client)
@@ -140,23 +152,32 @@ var runCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		poolCfg, _ := structpb.NewStruct(map[string]interface{}{
+		poolCfg, err := structpb.NewStruct(map[string]interface{}{
 			"size": poolSize,
 		})
-
-		hooksConfig.Run(plugin.OnNewPool, context.Background(), poolCfg, hooksConfig.Verification)
+		if err != nil {
+			logger.Error().Err(err).Msg("Failed to convert pool config to structpb")
+		} else {
+			hooksConfig.Run(
+				plugin.OnNewPool, context.Background(), poolCfg, hooksConfig.Verification)
+		}
 
 		// Create a prefork proxy with the pool of clients
 		elastic, reuseElasticClients, elasticClientConfig := proxyConfig()
 		proxy := network.NewProxy(
 			pool, hooksConfig, elastic, reuseElasticClients, elasticClientConfig, logger)
 
-		proxyCfg, _ := structpb.NewStruct(map[string]interface{}{
+		proxyCfg, err := structpb.NewStruct(map[string]interface{}{
 			"elastic":             elastic,
 			"reuseElasticClients": reuseElasticClients,
 			"clientConfig":        elasticClientConfig,
 		})
-		hooksConfig.Run(plugin.OnNewProxy, context.Background(), proxyCfg, hooksConfig.Verification)
+		if err != nil {
+			logger.Error().Err(err).Msg("Failed to convert proxy config to structpb")
+		} else {
+			hooksConfig.Run(
+				plugin.OnNewProxy, context.Background(), proxyCfg, hooksConfig.Verification)
+		}
 
 		// Create a server
 		serverConfig := serverConfig()
@@ -202,7 +223,7 @@ var runCmd = &cobra.Command{
 			hooksConfig,
 		)
 
-		serverCfg, _ := structpb.NewStruct(map[string]interface{}{
+		serverCfg, err := structpb.NewStruct(map[string]interface{}{
 			"network":          serverConfig.Network,
 			"address":          serverConfig.Address,
 			"softLimit":        serverConfig.SoftLimit,
@@ -221,9 +242,12 @@ var runCmd = &cobra.Command{
 			"tcpKeepAlive":     serverConfig.TCPKeepAlive,
 			"tcpNoDelay":       serverConfig.TCPNoDelay,
 		})
-		hooksConfig.Run(
-			plugin.OnNewServer, context.Background(), serverCfg, hooksConfig.Verification)
-
+		if err != nil {
+			logger.Error().Err(err).Msg("Failed to convert server config to structpb")
+		} else {
+			hooksConfig.Run(
+				plugin.OnNewServer, context.Background(), serverCfg, hooksConfig.Verification)
+		}
 		// Shutdown the server gracefully
 		var signals []os.Signal
 		signals = append(signals,
@@ -242,13 +266,18 @@ var runCmd = &cobra.Command{
 				for _, s := range signals {
 					if sig != s {
 						// Notify the hooks that the server is shutting down
-						signalCfg, _ := structpb.NewStruct(map[string]interface{}{"signal": sig})
-						hooksConfig.Run(
-							plugin.OnSignal,
-							context.Background(),
-							signalCfg,
-							hooksConfig.Verification,
-						)
+						signalCfg, err := structpb.NewStruct(map[string]interface{}{"signal": sig})
+						if err != nil {
+							logger.Error().Err(err).Msg(
+								"Failed to convert signal config to structpb")
+						} else {
+							hooksConfig.Run(
+								plugin.OnSignal,
+								context.Background(),
+								signalCfg,
+								hooksConfig.Verification,
+							)
+						}
 
 						server.Shutdown()
 						pluginRegistry.Shutdown()
