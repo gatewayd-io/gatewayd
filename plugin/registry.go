@@ -4,8 +4,6 @@ import (
 	"context"
 	"os/exec"
 
-	// testplugin "github.com/gatewayd-io/gatewayd-plugin-test/plugin"
-
 	plugin_v1 "github.com/gatewayd-io/gatewayd/plugin/v1"
 	"github.com/gatewayd-io/gatewayd/pool"
 	goplugin "github.com/hashicorp/go-plugin"
