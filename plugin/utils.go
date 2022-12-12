@@ -3,6 +3,7 @@ package plugin
 import (
 	"bufio"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -27,12 +28,12 @@ func sha256sum(filename string) (string, error) {
 
 	buf := make([]byte, 65536)
 	for {
-		switch n, err := bufio.NewReader(file).Read(buf); err {
-		case nil:
+		n, err := bufio.NewReader(file).Read(buf)
+		if err == nil {
 			hashAlgorithm.Write(buf[:n])
-		case io.EOF:
+		} else if errors.Is(err, io.EOF) {
 			return fmt.Sprintf("%x", hashAlgorithm.Sum(nil)), nil
-		default:
+		} else {
 			return "", err
 		}
 	}
