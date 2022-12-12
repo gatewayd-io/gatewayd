@@ -129,12 +129,10 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 		if sum, err := sha256sum(plugin.LocalPath); err != nil {
 			reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to calculate checksum")
 			continue
-		} else {
-			if sum != plugin.ID.Checksum {
-				reg.hooksConfig.Logger.Debug().Msgf(
-					"Checksum mismatch: %s != %s", sum, plugin.ID.Checksum)
-				continue
-			}
+		} else if sum != plugin.ID.Checksum {
+			reg.hooksConfig.Logger.Debug().Msgf(
+				"Checksum mismatch: %s != %s", sum, plugin.ID.Checksum)
+			continue
 		}
 
 		// Plugin priority is determined by the order in which it is listed in the config file
