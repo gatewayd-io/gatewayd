@@ -85,11 +85,11 @@ func (h *HookConfig) Get(hookType HookType) map[Priority]HookDef {
 	return h.hooks[hookType]
 }
 
-//nolint:funlen
+//nolint:funlen,golint
 func (h *HookConfig) Run(
-	hookType HookType,
 	ctx context.Context,
 	args *structpb.Struct,
+	hookType HookType,
 	verification Policy,
 	opts ...grpc.CallOption,
 ) (*structpb.Struct, error) {

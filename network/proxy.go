@@ -160,9 +160,9 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 		pr.logger.Error().Err(err).Msgf("Error creating ingress data: %v", err)
 	} else {
 		result, err := pr.hookConfig.Run(
-			plugin.OnIngressTraffic,
 			context.Background(),
 			ingressData,
+			plugin.OnIngressTraffic,
 			pr.hookConfig.Verification)
 		if err != nil {
 			pr.logger.Error().Err(err).Msgf("Error running hook: %v", err)
@@ -208,9 +208,9 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 	} else {
 
 		result, err := pr.hookConfig.Run(
-			plugin.OnEgressTraffic,
 			context.Background(),
 			egressData,
+			plugin.OnEgressTraffic,
 			pr.hookConfig.Verification)
 		if err != nil {
 			pr.logger.Error().Err(err).Msgf("Error running hook: %v", err)
