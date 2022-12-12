@@ -93,10 +93,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends postgresql-client
           psql -h ${PGHOST} -p ${PGPORT} -U ${PGUSER} -c "CREATE DATABASE gatewayd_test;"
-          psql -h ${PGHOST} -p ${PGPORT} -U ${PGUSER} -c "CREATE TABLE gatewayd_test.test_table (id serial PRIMARY KEY, name varchar(255));"
-          psql -h ${PGHOST} -p ${PGPORT} -U ${PGUSER} -c "INSERT INTO gatewayd_test.test_table (name) VALUES ('test');"
-          psql -h ${PGHOST} -p ${PGPORT} -U ${PGUSER} -c "SELECT * FROM gatewayd_test.test_table;" | grep test
+          psql -h ${PGHOST} -p ${PGPORT} -U ${PGUSER} -d ${DBNAME} -c "CREATE TABLE test_table (id serial PRIMARY KEY, name varchar(255));"
+          psql -h ${PGHOST} -p ${PGPORT} -U ${PGUSER} -d ${DBNAME} -c "INSERT INTO test_table (name) VALUES ('test');"
+          psql -h ${PGHOST} -p ${PGPORT} -U ${PGUSER} -d ${DBNAME} -c "SELECT * FROM test_table;" | grep test
         env:
+          DBNAME: gatewayd_test
           PGUSER: postgres
           PGPASSWORD: postgres
           PGHOST: localhost
