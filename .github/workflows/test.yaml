@@ -72,18 +72,14 @@ jobs:
           sed -i 's/localhost:5432/postgres:5432/g' gatewayd.yaml
           make build
           # Build test plugin
-          cd gatewayd-plugin-test
-          make build
+          cd gatewayd-plugin-test && make build && cp gatewayd-plugin-test ../
           export SHA256SUM=$(sha256sum gatewayd-plugin-test | awk '{print $1}')
-          cat <<EOF > gatewayd_plugins.yaml
+          cat <<EOF > ../gatewayd_plugins.yaml
           gatewayd-plugin-test:
             enabled: True
             localPath: ./gatewayd-plugin-test
             checksum: ${SHA256SUM}
           EOF
-          # Move test plugin to GatewayD root directory
-          mv gatewayd-plugin-test ..
-          mv gatewayd_plugins.yaml ..
 
       - name: Run GatewayD with test plugin 🚀
         run: |
