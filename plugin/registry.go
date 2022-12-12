@@ -189,7 +189,7 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 			&plugin.Hooks); err != nil {
 			reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to decode plugin hooks")
 		}
-		if err := mapstructure.Decode(metadata.Fields["config"].GetListValue().AsSlice(),
+		if err := mapstructure.Decode(metadata.Fields["config"].GetStructValue().AsMap(),
 			&plugin.Config); err != nil {
 			reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to decode plugin config")
 		}
