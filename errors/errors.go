@@ -11,3 +11,8 @@ var (
 	ErrPluginNotFound = errors.New("plugin not found")
 	ErrPluginNotReady = errors.New("plugin is not ready")
 )
+
+const (
+	FailedToLoadPluginConfig = 1
+	FailedToLoadGlobalConfig = 2
+)
