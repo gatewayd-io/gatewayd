@@ -152,6 +152,7 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 				Managed: true,
 				MinPort: DefaultMinPort,
 				MaxPort: DefaultMaxPort,
+				// TODO: Enable GRPC DialOptions
 				// GRPCDialOptions: []grpc.DialOption{
 				// 	grpc.WithInsecure(),
 				// },
