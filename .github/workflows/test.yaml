@@ -34,3 +34,69 @@ jobs:
       #   uses: shogo82148/actions-goveralls@v1
       #   with:
       #     path-to-profile: profile.cov
+
+  test-plugins:
+    name: Test GatewayD Plugins
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Checkout test plugin 🛎️
+        uses: actions/checkout@v3
+        with:
+          repository: gatewayd-plugin-test
+
+      - name: Install Go 🧑‍💻
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.18'
+
+      - name: Build test plugin 🏗️
+        run: |
+          # Build GatewayD
+          sed -i 's/localhost:5432/postgres:5432/g' gatewayd.yaml
+          make build
+          # Build test plugin
+          cd gatewayd-plugin-test
+          make build
+          export SHA256SUM=$(sha256sum gatewayd-plugin-test | awk '{print $1}')
+          cat <<EOF > gatewayd_plugins.yaml
+          gatewayd-plugin-test:
+            enabled: True
+            localPath: ./gatewayd-plugin-test
+            checksum: ${SHA256SUM}
+          EOF
+          # Move test plugin to GatewayD root directory
+          mv gatewayd-plugin-test ..
+          mv gatewayd_plugins.yaml ..
+
+      - name: Run GatewayD with test plugin 🚀
+        run: |
+          ./gatewayd run
+
+      - name: Run a test with PSQL 🧪
+        run: |
+          apt-get update
+          apt-get install --yes --no-install-recommends postgresql-client
+          psql -h ${PGHOST} -p ${PGPORT} -U ${PGUSER} -c "CREATE DATABASE gatewayd_test;"
+          psql -h ${PGHOST} -p ${PGPORT} -U ${PGUSER} -c "CREATE TABLE gatewayd_test.test_table (id serial PRIMARY KEY, name varchar(255));"
+          psql -h ${PGHOST} -p ${PGPORT} -U ${PGUSER} -c "INSERT INTO gatewayd_test.test_table (name) VALUES ('test');"
+          psql -h ${PGHOST} -p ${PGPORT} -U ${PGUSER} -c "SELECT * FROM gatewayd_test.test_table;" | grep test
+        env:
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGHOST: postgres
+          PGPORT: 15432
