@@ -144,9 +144,7 @@ var runCmd = &cobra.Command{
 					}
 				}
 
-				if client != nil {
-					pool.Put(client.ID, client)
-				}
+				pool.Put(client.ID, client)
 			}
 		}
 
