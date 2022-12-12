@@ -126,7 +126,7 @@ var runCmd = &cobra.Command{
 
 			if client != nil {
 				clientCfg, err := structpb.NewStruct(map[string]interface{}{
-					"id":                client.ID,
+					"id":                client.ID, //nolint:staticcheck
 					"network":           clientConfig.Network,
 					"address":           clientConfig.Address,
 					"receiveBufferSize": clientConfig.ReceiveBufferSize,
