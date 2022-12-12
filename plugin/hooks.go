@@ -13,10 +13,9 @@ import (
 type (
 	// Priority is the priority of a hook.
 	// Smaller values are executed first (higher priority).
-	Priority  uint
-	HookType  string
-	Signature map[string]interface{}
-	HookDef   func(
+	Priority uint
+	HookType string
+	HookDef  func(
 		context.Context, *structpb.Struct, ...grpc.CallOption) (*structpb.Struct, error)
 	Policy int
 )
