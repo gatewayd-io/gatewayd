@@ -7,7 +7,6 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-// Test_sha256sum tests the sha256sum function
 func Test_sha256sum(t *testing.T) {
 	checksum, err := sha256sum("../LICENSE")
 	assert.Nil(t, err)
@@ -17,13 +16,11 @@ func Test_sha256sum(t *testing.T) {
 	)
 }
 
-// Test_sha256sum_fail tests the sha256sum function with a file that does not exist
 func Test_sha256sum_fail(t *testing.T) {
 	_, err := sha256sum("not_a_file")
 	assert.NotNil(t, err)
 }
 
-// Test_Verify tests the Verify function
 func Test_Verify(t *testing.T) {
 	params, err := structpb.NewStruct(
 		map[string]interface{}{
@@ -42,7 +39,6 @@ func Test_Verify(t *testing.T) {
 	assert.True(t, Verify(params, returnVal))
 }
 
-// Test_Verify_fail tests the Verify function with different parameters
 func Test_Verify_fail(t *testing.T) {
 	data := [][]map[string]interface{}{
 		{
@@ -84,7 +80,6 @@ func Test_Verify_fail(t *testing.T) {
 	}
 }
 
-// Test_Verify_nil tests the Verify function with nil parameters
 func Test_Verify_nil(t *testing.T) {
 	assert.True(t, Verify(nil, nil))
 }

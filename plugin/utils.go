@@ -17,7 +17,7 @@ const bufferSize = 65536
 
 // sha256sum returns the sha256 checksum of a file.
 // Ref: https://github.com/codingsince1985/checksum
-// (a little copying is better than a little dependency)
+// A little copying is better than a little dependency.
 func sha256sum(filename string) (string, error) {
 	if info, err := os.Stat(filename); err != nil || info.IsDir() {
 		return "", err //nolint:wrapcheck

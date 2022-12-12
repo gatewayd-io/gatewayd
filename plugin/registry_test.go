@@ -15,21 +15,21 @@ func TestPluginRegistry(t *testing.T) {
 	assert.NotNil(t, reg.hooksConfig)
 	assert.Equal(t, 0, len(reg.List()))
 
-	id := Identifier{
+	ident := Identifier{
 		Name:      "test",
 		Version:   "1.0.0",
 		RemoteURL: "github.com/remote/test",
 	}
 	impl := &Impl{
-		ID: id,
+		ID: ident,
 	}
 	reg.Add(impl)
 	assert.Equal(t, 1, len(reg.List()))
 
-	instance := reg.Get(id)
+	instance := reg.Get(ident)
 	assert.Equal(t, instance, impl)
 
-	reg.Remove(id)
+	reg.Remove(ident)
 	assert.Equal(t, 0, len(reg.List()))
 
 	reg.Shutdown()
