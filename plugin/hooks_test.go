@@ -152,12 +152,11 @@ func Test_HookConfig_Run_PassDown(t *testing.T) {
 		args *structpb.Struct,
 		opts ...grpc.CallOption,
 	) (*structpb.Struct, error) {
-		args.Fields["test"] = &structpb.Value{
-			Kind: &structpb.Value_StringValue{
-				StringValue: "test",
-			},
-		}
-		return args, nil
+		output, err := structpb.NewStruct(map[string]interface{}{
+			"test": "test",
+		})
+		assert.Nil(t, err)
+		return output, nil
 	})
 
 	data, err := structpb.NewStruct(
@@ -169,7 +168,7 @@ func Test_HookConfig_Run_PassDown(t *testing.T) {
 	// Although the first hook returns nil, and its signature doesn't match the params,
 	// so its result (nil) is passed down to the next hook in chain (prio 2).
 	// Then the second hook runs and returns a signature with a "test" key and value.
-	result, err := hooks.Run(OnNewLogger, context.Background(), data, Ignore)
+	result, err := hooks.Run(OnNewLogger, context.Background(), data, PassDown)
 	assert.Nil(t, err)
 	assert.NotNil(t, result)
 }
