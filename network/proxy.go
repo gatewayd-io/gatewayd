@@ -144,7 +144,8 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 		pr.logger.Error().Err(err).Msgf("Error reading from client: %v", err)
 	}
 
-	ingressData, err := structpb.NewStruct(map[string]interface{}{
+	//nolint:nestif
+	if ingressData, err := structpb.NewStruct(map[string]interface{}{
 		"client": map[string]interface{}{
 			"local":  gconn.LocalAddr().String(),
 			"remote": gconn.RemoteAddr().String(),
@@ -155,8 +156,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 		},
 		"buffer": buf, // Will be converted to base64-encoded string
 		"error":  err,
-	})
-	if err != nil {
+	}); err != nil {
 		pr.logger.Error().Err(err).Msgf("Error creating ingress data: %v", err)
 	} else {
 		result, err := pr.hookConfig.Run(
@@ -191,7 +191,8 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 	// Receive the response from the server
 	size, response, err := client.Receive()
 
-	egressData, err := structpb.NewStruct(map[string]interface{}{
+	//nolint:nestif
+	if egressData, err := structpb.NewStruct(map[string]interface{}{
 		"client": map[string]interface{}{
 			"local":  gconn.LocalAddr().String(),
 			"remote": gconn.RemoteAddr().String(),
@@ -202,11 +203,9 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 		},
 		"response": response[:size], // Will be converted to base64-encoded string
 		"error":    err,
-	})
-	if err != nil {
+	}); err != nil {
 		pr.logger.Error().Err(err).Msgf("Error creating egress data: %v", err)
 	} else {
-
 		result, err := pr.hookConfig.Run(
 			context.Background(),
 			egressData,
