@@ -20,13 +20,11 @@ const (
 	PluginPriorityStart uint = 1000
 )
 
-var (
-	handshakeConfig = goplugin.HandshakeConfig{
-		ProtocolVersion:  1,
-		MagicCookieKey:   "GATEWAYD_PLUGIN",
-		MagicCookieValue: "5712b87aa5d7e9f9e9ab643e6603181c5b796015cb1c09d6f5ada882bf2a1872",
-	}
-)
+var handshakeConfig = goplugin.HandshakeConfig{
+	ProtocolVersion:  1,
+	MagicCookieKey:   "GATEWAYD_PLUGIN",
+	MagicCookieValue: "5712b87aa5d7e9f9e9ab643e6603181c5b796015cb1c09d6f5ada882bf2a1872",
+}
 
 type Registry interface {
 	Add(plugin *PluginImpl) bool
