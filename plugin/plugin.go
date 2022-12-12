@@ -52,7 +52,7 @@ func (p *Impl) Start() (net.Addr, error) {
 	var addr net.Addr
 	var err error
 	if addr, err = p.client.Start(); err != nil {
-		return nil, err
+		return nil, err //nolint:wrapcheck
 	}
 	return addr, nil
 }
@@ -64,12 +64,12 @@ func (p *Impl) Stop() {
 func (p *Impl) Dispense() (pluginV1.GatewayDPluginServiceClient, error) {
 	rpcClient, err := p.client.Client()
 	if err != nil {
-		return nil, err
+		return nil, err //nolint:wrapcheck
 	}
 
 	raw, err := rpcClient.Dispense(p.ID.Name)
 	if err != nil {
-		return nil, err
+		return nil, err //nolint:wrapcheck
 	}
 
 	if gatewaydPlugin, ok := raw.(pluginV1.GatewayDPluginServiceClient); ok {

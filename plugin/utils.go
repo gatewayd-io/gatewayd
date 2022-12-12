@@ -17,7 +17,7 @@ const bufferSize = 65536
 
 func sha256sum(filename string) (string, error) {
 	if info, err := os.Stat(filename); err != nil || info.IsDir() {
-		return "", err
+		return "", err //nolint:wrapcheck
 	}
 
 	file, err := os.Open(filename)
@@ -37,7 +37,7 @@ func sha256sum(filename string) (string, error) {
 		} else if errors.Is(err, io.EOF) {
 			return fmt.Sprintf("%x", hashAlgorithm.Sum(nil)), nil
 		} else {
-			return "", err
+			return "", err //nolint:wrapcheck
 		}
 	}
 }
