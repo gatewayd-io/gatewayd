@@ -15,6 +15,9 @@ import (
 
 const bufferSize = 65536
 
+// sha256sum returns the sha256 checksum of a file.
+// Ref: https://github.com/codingsince1985/checksum
+// A little copying is better than a little dependency.
 func sha256sum(filename string) (string, error) {
 	if info, err := os.Stat(filename); err != nil || info.IsDir() {
 		return "", err //nolint:wrapcheck
@@ -42,6 +45,7 @@ func sha256sum(filename string) (string, error) {
 	}
 }
 
+// Verify compares two structs and returns true if they are equal.
 func Verify(params, returnVal *structpb.Struct) bool {
 	return cmp.Equal(params.AsMap(), returnVal.AsMap(), cmp.Options{
 		cmpopts.SortMaps(func(a, b string) bool {
