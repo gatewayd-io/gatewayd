@@ -184,9 +184,18 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 		plugin.Description = metadata.Fields["description"].GetStringValue()
 		plugin.License = metadata.Fields["license"].GetStringValue()
 		plugin.ProjectURL = metadata.Fields["projectUrl"].GetStringValue()
-		mapstructure.Decode(metadata.Fields["authors"].GetListValue().AsSlice(), &plugin.Authors)
-		mapstructure.Decode(metadata.Fields["hooks"].GetListValue().AsSlice(), &plugin.Hooks)
-		mapstructure.Decode(metadata.Fields["config"].GetListValue().AsSlice(), &plugin.Config)
+		if err := mapstructure.Decode(metadata.Fields["authors"].GetListValue().AsSlice(),
+			&plugin.Authors); err != nil {
+			reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to decode plugin authors")
+		}
+		if err := mapstructure.Decode(metadata.Fields["hooks"].GetListValue().AsSlice(),
+			&plugin.Hooks); err != nil {
+			reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to decode plugin hooks")
+		}
+		if err := mapstructure.Decode(metadata.Fields["config"].GetListValue().AsSlice(),
+			&plugin.Config); err != nil {
+			reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to decode plugin config")
+		}
 
 		reg.Add(plugin)
 
