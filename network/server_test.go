@@ -1,6 +1,8 @@
 package network
 
 import (
+	"context"
+	"encoding/base64"
 	"sync"
 	"testing"
 
@@ -11,6 +13,8 @@ import (
 	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 //nolint:funlen
@@ -32,36 +36,56 @@ func TestRunServer(t *testing.T) {
 
 	hooksConfig := plugin.NewHookConfig()
 
-	onIngressTraffic := func(params plugin.Signature) plugin.Signature {
-		if params["buffer"] == nil {
+	onIngressTraffic := func(
+		ctx context.Context,
+		params *structpb.Struct,
+		opts ...grpc.CallOption,
+	) (*structpb.Struct, error) {
+		paramsMap := params.AsMap()
+		if paramsMap["buffer"] == nil {
 			t.Fatal("buffer is nil")
 		}
 
 		logger.Info().Msg("Ingress traffic")
-		if buf, ok := params["buffer"].([]byte); ok {
-			assert.Equal(t, CreatePgStartupPacket(), buf)
+		// Decode the buffer
+		// The buffer is []byte, but it is base64-encoded as a string
+		// via using the structpb.NewStruct function
+		if buf, ok := paramsMap["buffer"].(string); ok {
+			if buffer, err := base64.StdEncoding.DecodeString(buf); err == nil {
+				assert.Equal(t, CreatePgStartupPacket(), buffer)
+			} else {
+				t.Fatal(err)
+			}
 		} else {
 			t.Fatal("buffer is not a []byte")
 		}
-		assert.Nil(t, params["error"])
-		return nil
+		assert.Nil(t, paramsMap["error"])
+		return params, nil
 	}
 	hooksConfig.Add(plugin.OnIngressTraffic, 1, onIngressTraffic)
 
-	onEgressTraffic := func(params plugin.Signature) plugin.Signature {
-		if params["response"] == nil {
+	onEgressTraffic := func(
+		ctx context.Context,
+		params *structpb.Struct,
+		opts ...grpc.CallOption,
+	) (*structpb.Struct, error) {
+		paramsMap := params.AsMap()
+		if paramsMap["response"] == nil {
 			t.Fatal("response is nil")
 		}
 
 		logger.Info().Msg("Egress traffic")
-		if buf, ok := params["response"].([]byte); ok {
-			assert.Equal(
-				t, CreatePostgreSQLPacket('R', []byte{0x0, 0x0, 0x0, 0x3}), buf)
+		if buf, ok := paramsMap["response"].(string); ok {
+			if buffer, err := base64.StdEncoding.DecodeString(buf); err == nil {
+				assert.Equal(t, CreatePostgreSQLPacket('R', []byte{0x0, 0x0, 0x0, 0x3}), buffer)
+			} else {
+				t.Fatal(err)
+			}
 		} else {
 			t.Fatal("response is not a []byte")
 		}
-		assert.Nil(t, params["error"])
-		return nil
+		assert.Nil(t, paramsMap["error"])
+		return params, nil
 	}
 	hooksConfig.Add(plugin.OnEgressTraffic, 1, onEgressTraffic)
 

@@ -1,4 +1,4 @@
-package network
+package errors
 
 import "errors"
 
@@ -7,4 +7,12 @@ var (
 	ErrNetworkNotSupported = errors.New("network is not supported")
 	ErrClientNotConnected  = errors.New("client is not connected")
 	ErrPoolExhausted       = errors.New("pool is exhausted")
+
+	ErrPluginNotFound = errors.New("plugin not found")
+	ErrPluginNotReady = errors.New("plugin is not ready")
+)
+
+const (
+	FailedToLoadPluginConfig = 1
+	FailedToLoadGlobalConfig = 2
 )

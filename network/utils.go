@@ -7,6 +7,7 @@ import (
 	"net"
 	"syscall"
 
+	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/rs/zerolog"
 )
 
@@ -42,6 +43,6 @@ func Resolve(network, address string, logger zerolog.Logger) (string, error) {
 		return addr.String(), err
 	default:
 		logger.Error().Msgf("Network %s is not supported", network)
-		return "", ErrNetworkNotSupported
+		return "", gerr.ErrNetworkNotSupported
 	}
 }

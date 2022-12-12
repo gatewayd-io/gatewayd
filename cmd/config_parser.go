@@ -15,6 +15,9 @@ import (
 // Global koanf instance. Using "." as the key path delimiter.
 var globalConfig = koanf.New(".")
 
+// Plugin koanf instance. Using "." as the key path delimiter.
+var pluginConfig = koanf.New(".")
+
 func getPath(path string) string {
 	ref := globalConfig.String(path)
 	if globalConfig.Exists(path) && globalConfig.StringMap(ref) != nil {
