@@ -201,6 +201,7 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 	}
 }
 
+//nolint:funlen
 func (reg *RegistryImpl) RegisterHooks(id Identifier) {
 	pluginImpl := reg.Get(id)
 	reg.hooksConfig.Logger.Debug().Msgf("Registering hooks for plugin: %s", pluginImpl.ID.Name)
