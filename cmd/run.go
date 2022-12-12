@@ -96,8 +96,7 @@ var runCmd = &cobra.Command{
 		// This is a notification hook, so we don't care about the result.
 		data, err := structpb.NewStruct(map[string]interface{}{
 			"timeFormat": loggerCfg.TimeFormat,
-			"level":      loggerCfg.Level,
-			"output":     loggerCfg.Output,
+			"level":      loggerCfg.Level.String(),
 			"noColor":    loggerCfg.NoColor,
 		})
 		if err != nil {
