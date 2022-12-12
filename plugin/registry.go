@@ -87,6 +87,7 @@ func (reg *RegistryImpl) Shutdown() {
 	})
 }
 
+//nolint:funlen
 func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 	// Get top-level list of plugins
 	plugins := pluginConfig.MapKeys("")
