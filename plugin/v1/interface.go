@@ -7,7 +7,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-// HandshakeConfig must be used by all plugins to ensure that the plugin
+// Handshake must be used by all plugins to ensure that the plugin
 // and host are compatible.
 var Handshake = goplugin.HandshakeConfig{
 	ProtocolVersion:  1,
