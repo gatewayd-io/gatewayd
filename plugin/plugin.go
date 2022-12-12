@@ -49,11 +49,12 @@ type Impl struct {
 var _ Plugin = &Impl{}
 
 func (p *Impl) Start() (net.Addr, error) {
-	if addr, err := p.client.Start(); err != nil {
+	var addr net.Addr
+	var err error
+	if addr, err = p.client.Start(); err != nil {
 		return nil, err
-	} else {
-		return addr, nil
 	}
+	return addr, nil
 }
 
 func (p *Impl) Stop() {
