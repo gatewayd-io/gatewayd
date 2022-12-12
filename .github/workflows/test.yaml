@@ -74,7 +74,7 @@ jobs:
           # Build test plugin
           cd gatewayd-plugin-test && make build && cp gatewayd-plugin-test ../gdp-test && cd ..
           export SHA256SUM=$(sha256sum gdp-test | awk '{print $1}')
-          cat <<EOF > ../gatewayd_plugins.yaml
+          cat <<EOF > gatewayd_plugins.yaml
           gatewayd-plugin-test:
             enabled: True
             localPath: ./gdp-test
