@@ -10,7 +10,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// Creates hclog.Logger adapter from a zerolog log
+// NewHcLogAdapter creates a new hclog.Logger that wraps a zerolog.Logger.
 func NewHcLogAdapter(logger *zerolog.Logger, name string) hclog.Logger {
 	return &HcLogAdapter{logger, name, nil}
 }
@@ -22,45 +22,49 @@ type HcLogAdapter struct {
 	impliedArgs []interface{}
 }
 
-func (z HcLogAdapter) Log(level hclog.Level, msg string, args ...interface{}) {
+func (h HcLogAdapter) Log(level hclog.Level, msg string, args ...interface{}) {
 	switch level {
+	case hclog.Off:
+		return
 	case hclog.NoLevel:
 		return
 	case hclog.Trace:
-		z.Trace(msg, args...)
+		h.Trace(msg, args...)
 	case hclog.Debug:
-		z.Debug(msg, args...)
+		h.Debug(msg, args...)
 	case hclog.Info:
-		z.Info(msg, args...)
+		h.Info(msg, args...)
 	case hclog.Warn:
-		z.Warn(msg, args...)
+		h.Warn(msg, args...)
 	case hclog.Error:
-		z.Error(msg, args...)
+		h.Error(msg, args...)
 	}
 }
 
-func (z HcLogAdapter) Trace(msg string, args ...interface{}) {
-	z.logger.Trace().Fields(ToMap(args)).Msg(msg)
+func (h HcLogAdapter) Trace(msg string, args ...interface{}) {
+	h.logger.Trace().Fields(ToMap(args)).Msg(msg)
 }
 
-func (z HcLogAdapter) Debug(msg string, args ...interface{}) {
-	z.logger.Debug().Fields(ToMap(args)).Msg(msg)
+func (h HcLogAdapter) Debug(msg string, args ...interface{}) {
+	h.logger.Debug().Fields(ToMap(args)).Msg(msg)
 }
 
-func (z HcLogAdapter) Info(msg string, args ...interface{}) {
-	z.logger.Info().Fields(ToMap(args)).Msg(msg)
+func (h HcLogAdapter) Info(msg string, args ...interface{}) {
+	h.logger.Info().Fields(ToMap(args)).Msg(msg)
 }
 
-func (z HcLogAdapter) Warn(msg string, args ...interface{}) {
-	z.logger.Warn().Fields(ToMap(args)).Msg(msg)
+func (h HcLogAdapter) Warn(msg string, args ...interface{}) {
+	h.logger.Warn().Fields(ToMap(args)).Msg(msg)
 }
 
-func (z HcLogAdapter) Error(msg string, args ...interface{}) {
-	z.logger.Error().Fields(ToMap(args)).Msg(msg)
+func (h HcLogAdapter) Error(msg string, args ...interface{}) {
+	h.logger.Error().Fields(ToMap(args)).Msg(msg)
 }
 
-func (z HcLogAdapter) GetLevel() hclog.Level {
-	switch z.logger.GetLevel() {
+func (h HcLogAdapter) GetLevel() hclog.Level {
+	switch h.logger.GetLevel() {
+	case zerolog.Disabled:
+		return hclog.Off
 	case zerolog.NoLevel:
 		return hclog.NoLevel
 	case zerolog.TraceLevel:
@@ -72,6 +76,10 @@ func (z HcLogAdapter) GetLevel() hclog.Level {
 	case zerolog.WarnLevel:
 		return hclog.Warn
 	case zerolog.ErrorLevel:
+		return hclog.Error
+	case zerolog.FatalLevel:
+		return hclog.Error
+	case zerolog.PanicLevel:
 		return hclog.Error
 	}
 	return hclog.NoLevel
@@ -143,6 +151,8 @@ func (h HcLogAdapter) StandardWriter(opts *hclog.StandardLoggerOptions) io.Write
 
 func convertLevel(level hclog.Level) zerolog.Level {
 	switch level {
+	case hclog.Off:
+		return zerolog.Disabled
 	case hclog.NoLevel:
 		return zerolog.NoLevel
 	case hclog.Trace:
@@ -159,40 +169,40 @@ func convertLevel(level hclog.Level) zerolog.Level {
 	return zerolog.NoLevel
 }
 
-// Ref: https://github.com/nitrocode/cloudquery/blob/main/logging/keyvals/to_map.go
-func ToMap(kvs []interface{}) map[string]interface{} {
-	m := map[string]interface{}{}
+func ToMap(keyValues []interface{}) map[string]interface{} {
+	mapped := map[string]interface{}{}
 
-	if len(kvs) == 0 {
-		return m
+	if len(keyValues) == 0 {
+		return mapped
 	}
 
-	if len(kvs)%2 == 1 {
-		kvs = append(kvs, nil)
+	if len(keyValues)%2 == 1 {
+		keyValues = append(keyValues, nil)
 	}
 
-	for i := 0; i < len(kvs); i += 2 {
-		merge(m, kvs[i], kvs[i+1])
+	for i := 0; i < len(keyValues); i += 2 {
+		merge(mapped, keyValues[i], keyValues[i+1])
 	}
 
-	return m
+	return mapped
 }
 
-func merge(dst map[string]interface{}, k, v interface{}) {
-	var key string
+func merge(mapped map[string]interface{}, key, value interface{}) {
+	var casted string
 
-	switch x := k.(type) {
+	switch castedKey := key.(type) {
 	case string:
-		key = x
+		casted = castedKey
 	case fmt.Stringer:
-		key = safeString(x)
+		casted = safeString(castedKey)
 	default:
-		key = fmt.Sprint(x)
+		casted = fmt.Sprint(castedKey)
 	}
 
-	dst[key] = v
+	mapped[casted] = value
 }
 
+//nolint:nonamedreturns
 func safeString(str fmt.Stringer) (s string) {
 	defer func() {
 		if panicVal := recover(); panicVal != nil {
