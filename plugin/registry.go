@@ -4,6 +4,7 @@ import (
 	"context"
 	"os/exec"
 
+	"github.com/gatewayd-io/gatewayd/logging"
 	pluginV1 "github.com/gatewayd-io/gatewayd/plugin/v1"
 	"github.com/gatewayd-io/gatewayd/pool"
 	goplugin "github.com/hashicorp/go-plugin"
@@ -13,9 +14,10 @@ import (
 )
 
 const (
-	DefaultMinPort      uint = 50000
-	DefaultMaxPort      uint = 60000
-	PluginPriorityStart uint = 1000
+	DefaultMinPort      uint   = 50000
+	DefaultMaxPort      uint   = 60000
+	PluginPriorityStart uint   = 1000
+	LoggerName          string = "plugin"
 )
 
 var handshakeConfig = goplugin.HandshakeConfig{
@@ -140,6 +142,8 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 		// have a priority of 0 to 999, and user-defined plugins have a priority of 1000 or greater.
 		plugin.Priority = Priority(PluginPriorityStart + uint(priority))
 
+		logAdapter := logging.NewHcLogAdapter(&reg.hooksConfig.Logger, LoggerName)
+
 		plugin.client = goplugin.NewClient(
 			&goplugin.ClientConfig{
 				HandshakeConfig: handshakeConfig,
@@ -149,6 +153,7 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 					goplugin.ProtocolGRPC,
 				},
 				// SecureConfig: nil,
+				Logger:  logAdapter,
 				Managed: true,
 				MinPort: DefaultMinPort,
 				MaxPort: DefaultMaxPort,
