@@ -19,6 +19,7 @@ type LoggerConfig struct {
 	TimeFormat string
 	Level      zerolog.Level
 	NoColor    bool
+	StartupMsg bool
 	hook       OnNewLogger
 }
 
@@ -48,7 +49,9 @@ func NewLogger(cfg LoggerConfig) zerolog.Logger {
 		logger = logger.With().Timestamp().Logger()
 	}
 
-	logger.Debug().Msg("Created a new logger")
+	if cfg.StartupMsg {
+		logger.Debug().Msg("Created a new logger")
+	}
 
 	if cfg.hook != nil {
 		cfg.hook(Signature{"logger": logger})

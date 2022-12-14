@@ -51,7 +51,7 @@ func verificationPolicy() plugin.Policy {
 }
 
 func loggerConfig() logging.LoggerConfig {
-	cfg := logging.LoggerConfig{}
+	cfg := logging.LoggerConfig{StartupMsg: true}
 	switch globalConfig.String("loggers.logger.output") {
 	case "stdout":
 		cfg.Output = os.Stdout
