@@ -233,6 +233,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 		}
 	}
 
+	//nolint:gocritic
 	if err != nil && errors.Is(err, io.EOF) {
 		// The server has closed the connection
 		pr.logger.Error().Err(err).Msg("The client is not connected to the server anymore")
@@ -243,21 +244,19 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 		// Put the client in the busy connections pool, effectively replacing the old one
 		pr.busyConnections.Put(gconn, client)
 		return err
-	}
-
-	if err != nil {
+	} else if err != nil {
 		// Write the error to the client
 		_, err := gconn.Write(response[:size])
 		if err != nil {
 			pr.logger.Error().Err(err).Msgf("Error writing the error to client: %v", err)
 		}
 		return fmt.Errorf("error receiving data from server: %w", err)
-	}
-
-	// Write the response to the incoming connection
-	_, err = gconn.Write(response[:size])
-	if err != nil {
-		pr.logger.Error().Err(err).Msgf("Error writing to client: %v", err)
+	} else {
+		// Write the response to the incoming connection
+		_, err = gconn.Write(response[:size])
+		if err != nil {
+			pr.logger.Error().Err(err).Msgf("Error writing to client: %v", err)
+		}
 	}
 
 	return nil
