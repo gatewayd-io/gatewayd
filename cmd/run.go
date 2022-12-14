@@ -12,7 +12,6 @@ import (
 	"github.com/gatewayd-io/gatewayd/network"
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
-	goplugin "github.com/hashicorp/go-plugin"
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/confmap"
 	"github.com/knadh/koanf/providers/file"
@@ -60,6 +59,7 @@ var runCmd = &cobra.Command{
 		if f, err := cmd.Flags().GetString("config"); err == nil {
 			if err := globalConfig.Load(file.Provider(f), yaml.Parser()); err != nil {
 				DefaultLogger.Fatal().Err(err).Msg("Failed to load configuration")
+				pluginRegistry.Shutdown()
 				os.Exit(gerr.FailedToLoadGlobalConfig)
 			}
 		}
@@ -154,6 +154,7 @@ var runCmd = &cobra.Command{
 				"The pool size is incorrect, either because " +
 					"the clients cannot connect due to no network connectivity " +
 					"or the server is not running. exiting...")
+			pluginRegistry.Shutdown()
 			os.Exit(1)
 		}
 
@@ -297,7 +298,6 @@ var runCmd = &cobra.Command{
 
 						server.Shutdown()
 						pluginRegistry.Shutdown()
-						goplugin.CleanupClients()
 						os.Exit(0)
 					}
 				}
