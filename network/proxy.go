@@ -155,7 +155,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 			"remote": client.Conn.RemoteAddr().String(),
 		},
 		"buffer": buf, // Will be converted to base64-encoded string
-		"error":  err,
+		"error":  err.Error(),
 	}); err != nil {
 		pr.logger.Error().Err(err).Msgf("Error creating ingress data: %v", err)
 	} else {
@@ -172,8 +172,8 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 			if buffer, ok := result.AsMap()["buffer"].([]byte); ok {
 				buf = buffer
 			}
-			if err, ok := result.AsMap()["error"].(error); ok && err != nil {
-				pr.logger.Error().Err(err).Msg("Error in hook")
+			if err, ok := result.AsMap()["error"].(string); ok && err != "" {
+				pr.logger.Error().Err(errors.New(err)).Msg("Error in hook")
 			}
 		}
 	}
@@ -202,7 +202,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 			"remote": client.Conn.RemoteAddr().String(),
 		},
 		"response": response[:size], // Will be converted to base64-encoded string
-		"error":    err,
+		"error":    err.Error(),
 	}); err != nil {
 		pr.logger.Error().Err(err).Msgf("Error creating egress data: %v", err)
 	} else {
@@ -219,8 +219,8 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 			if resp, ok := result.AsMap()["response"].([]byte); ok {
 				response = resp
 			}
-			if err, ok := result.AsMap()["error"].(error); ok && err != nil {
-				pr.logger.Error().Err(err).Msg("Error in hook")
+			if err, ok := result.AsMap()["error"].(string); ok && err != "" {
+				pr.logger.Error().Err(errors.New(err)).Msg("Error in hook")
 			}
 		}
 	}
