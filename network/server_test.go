@@ -59,7 +59,7 @@ func TestRunServer(t *testing.T) {
 		} else {
 			t.Fatal("buffer is not a []byte")
 		}
-		assert.Nil(t, paramsMap["error"])
+		assert.Empty(t, paramsMap["error"])
 		return params, nil
 	}
 	hooksConfig.Add(plugin.OnIngressTraffic, 1, onIngressTraffic)
@@ -84,7 +84,7 @@ func TestRunServer(t *testing.T) {
 		} else {
 			t.Fatal("response is not a []byte")
 		}
-		assert.Nil(t, paramsMap["error"])
+		assert.Empty(t, paramsMap["error"])
 		return params, nil
 	}
 	hooksConfig.Add(plugin.OnEgressTraffic, 1, onEgressTraffic)
