@@ -172,8 +172,8 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 			if buffer, ok := result.AsMap()["buffer"].([]byte); ok {
 				buf = buffer
 			}
-			if err, ok := result.AsMap()["error"].(string); ok && err != "" {
-				pr.logger.Error().Err(errors.New(err)).Msg("Error in hook")
+			if errMsg, ok := result.AsMap()["error"].(string); ok && errMsg != "" {
+				pr.logger.Error().Msgf("Error in hook: %s", errMsg)
 			}
 		}
 	}
@@ -219,8 +219,8 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 			if resp, ok := result.AsMap()["response"].([]byte); ok {
 				response = resp
 			}
-			if err, ok := result.AsMap()["error"].(string); ok && err != "" {
-				pr.logger.Error().Err(errors.New(err)).Msg("Error in hook")
+			if errMsg, ok := result.AsMap()["error"].(string); ok && errMsg != "" {
+				pr.logger.Error().Msgf("Error in hook: %s", errMsg)
 			}
 		}
 	}
