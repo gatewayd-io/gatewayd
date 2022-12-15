@@ -73,13 +73,17 @@ var runCmd = &cobra.Command{
 		if err != nil {
 			DefaultLogger.Error().Err(err).Msg("Failed to convert configuration to structpb")
 		} else {
-			updatedGlobalConfig, _ := hooksConfig.Run(
+			updatedGlobalConfig, err := hooksConfig.Run(
 				context.Background(),
 				currentGlobalConfig,
 				plugin.OnConfigLoaded,
 				hooksConfig.Verification)
 
-			if updatedGlobalConfig != nil && plugin.Verify(updatedGlobalConfig, currentGlobalConfig) {
+			if err != nil {
+				DefaultLogger.Error().Err(err).Msg("Failed to run OnConfigLoaded hooks")
+			}
+
+			if updatedGlobalConfig != nil {
 				// Merge the config with the one loaded from the file (in memory).
 				// The changes won't be persisted to disk.
 				if err := globalConfig.Load(
