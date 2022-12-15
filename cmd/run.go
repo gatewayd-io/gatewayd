@@ -78,7 +78,6 @@ var runCmd = &cobra.Command{
 				currentGlobalConfig,
 				plugin.OnConfigLoaded,
 				hooksConfig.Verification)
-
 			if err != nil {
 				DefaultLogger.Error().Err(err).Msg("Failed to run OnConfigLoaded hooks")
 			}
