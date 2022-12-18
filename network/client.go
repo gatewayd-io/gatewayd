@@ -100,5 +100,4 @@ func (c *Client) Close() {
 	c.Conn = nil
 	c.Address = ""
 	c.Network = ""
-	c.ReceiveBufferSize = 0
 }
