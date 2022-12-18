@@ -17,6 +17,7 @@ const (
 	DefaultMinPort      uint   = 50000
 	DefaultMaxPort      uint   = 60000
 	PluginPriorityStart uint   = 1000
+	EmptyPoolCapacity   int    = 0
 	LoggerName          string = "plugin"
 )
 
@@ -44,11 +45,15 @@ type RegistryImpl struct {
 var _ Registry = &RegistryImpl{}
 
 func NewRegistry(hooksConfig *HookConfig) *RegistryImpl {
-	return &RegistryImpl{plugins: pool.NewPool(), hooksConfig: hooksConfig}
+	return &RegistryImpl{plugins: pool.NewPool(EmptyPoolCapacity), hooksConfig: hooksConfig}
 }
 
 func (reg *RegistryImpl) Add(plugin *Impl) bool {
-	_, loaded := reg.plugins.GetOrPut(plugin.ID, plugin)
+	_, loaded, err := reg.plugins.GetOrPut(plugin.ID, plugin)
+	if err != nil {
+		reg.hooksConfig.Logger.Error().Err(err).Msg("Failed to add plugin to registry")
+		return false
+	}
 	return loaded
 }
 
