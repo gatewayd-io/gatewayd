@@ -83,13 +83,12 @@ func (c *Client) Send(data []byte) (int, error) {
 
 func (c *Client) Receive() (int, []byte, error) {
 	buf := make([]byte, c.ReceiveBufferSize)
-	read, err := c.Read(buf)
-	if err != nil {
-		c.logger.Error().Err(err).Msgf("Couldn't receive data from the server: %s", err)
-		return 0, nil, fmt.Errorf("couldn't receive data from the server: %w", err)
+	received, err := c.Conn.Read(buf)
+	if err != nil && err != io.EOF {
+		c.logger.Error().Err(err).Msg("Couldn't receive data from the server")
+		return 0, nil, err
 	}
-	c.logger.Debug().Msgf("Received %d bytes from %s", read, c.Address)
-	return read, buf, nil
+	return received, buf, err
 }
 
 func (c *Client) Close() {
