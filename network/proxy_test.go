@@ -35,7 +35,8 @@ func TestNewProxy(t *testing.T) {
 	// Create a connection pool
 	pool := pool.NewPool(EmptyPoolCapacity)
 	client := NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)
-	pool.Put(client.ID, client)
+	err := pool.Put(client.ID, client)
+	assert.Nil(t, err)
 
 	// Create a proxy with a fixed buffer pool
 	proxy := NewProxy(pool, plugin.NewHookConfig(), false, false, nil, logger)

@@ -100,6 +100,7 @@ func (p *Impl) Cap() int {
 	return p.cap
 }
 
+//nolint:predeclared
 func NewPool(cap int) *Impl {
 	return &Impl{pool: sync.Map{}, cap: cap}
 }

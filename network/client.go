@@ -73,20 +73,20 @@ func NewClient(network, address string, receiveBufferSize int, logger zerolog.Lo
 }
 
 func (c *Client) Send(data []byte) (int, error) {
-	if sent, err := c.Conn.Write(data); err != nil {
+	sent, err := c.Conn.Write(data)
+	if err != nil {
 		c.logger.Error().Err(err).Msgf("Couldn't send data to the server: %s", err)
 		// TODO: Wrap the original error
 		return 0, gerr.ErrClientSendFailed
-	} else {
-		c.logger.Debug().Msgf("Sent %d bytes to %s", len(data), c.Address)
-		return sent, nil
 	}
+	c.logger.Debug().Msgf("Sent %d bytes to %s", len(data), c.Address)
+	return sent, nil
 }
 
 func (c *Client) Receive() (int, []byte, error) {
 	buf := make([]byte, c.ReceiveBufferSize)
 	received, err := c.Conn.Read(buf)
-	if err != nil && err != io.EOF {
+	if err != nil && errors.Is(err, io.EOF) {
 		c.logger.Error().Err(err).Msg("Couldn't receive data from the server")
 		return 0, nil, err
 	}
@@ -117,8 +117,7 @@ func (c *Client) IsConnected() bool {
 	}
 
 	buf := make([]byte, 0)
-	_, err := c.Read(buf)
-	if errors.Is(err, net.ErrClosed) || errors.Is(err, io.EOF) {
+	if _, err := c.Read(buf); errors.Is(err, net.ErrClosed) || errors.Is(err, io.EOF) {
 		c.logger.Debug().Msgf("Connection to %s is closed", c.Address)
 		c.Close()
 		return false
