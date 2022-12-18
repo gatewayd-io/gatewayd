@@ -21,7 +21,7 @@ const (
 	DefaultTickInterval = 5 * time.Second
 	DefaultPoolSize     = 10
 	MinimumPoolSize     = 2
-	DefaultBufferSize   = 4096
+	DefaultBufferSize   = 1 << 24 // 16777216 bytes
 )
 
 type Server struct {
