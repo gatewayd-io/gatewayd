@@ -2,10 +2,12 @@ package network
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"time"
 
+	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
@@ -113,6 +115,11 @@ func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 	}
 
 	if err := s.proxy.Connect(gconn); err != nil {
+		if !errors.Is(err, gerr.ErrPoolExhausted) {
+			// This should never happen
+			// TODO: Send error to client or retry connection
+			s.logger.Error().Err(err).Msg("Failed to connect to proxy")
+		}
 		return nil, gnet.Close
 	}
 
@@ -160,12 +167,14 @@ func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 		}
 	}
 
-	if err := s.proxy.Disconnect(gconn); err != nil {
-		s.logger.Error().Err(err).Msg("Failed to disconnect from the client")
-	}
-
+	// Shutdown the server if there are no more connections and the server is stopped
 	if uint64(s.engine.CountConnections()) == 0 && s.Status == Stopped {
 		return gnet.Shutdown
+	}
+
+	if err := s.proxy.Disconnect(gconn); err != nil {
+		s.logger.Error().Err(err).Msg("Failed to disconnect the server connection")
+		return gnet.Close
 	}
 
 	data = map[string]interface{}{
@@ -215,6 +224,8 @@ func (s *Server) OnTraffic(gconn gnet.Conn) gnet.Action {
 		// TODO: Close the connection *gracefully*
 		return gnet.Close
 	}
+	// Flush the connection to make sure all data is sent
+	gconn.Flush()
 
 	return gnet.None
 }

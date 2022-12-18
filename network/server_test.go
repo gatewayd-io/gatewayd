@@ -90,7 +90,7 @@ func TestRunServer(t *testing.T) {
 	hooksConfig.Add(plugin.OnEgressTraffic, 1, onEgressTraffic)
 
 	// Create a connection pool
-	pool := pool.NewPool()
+	pool := pool.NewPool(2)
 	client1 := NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)
 	pool.Put(client1.ID, client1)
 	client2 := NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)
@@ -140,8 +140,9 @@ func TestRunServer(t *testing.T) {
 				defer client.Close()
 
 				assert.NotNil(t, client)
-				err := client.Send(CreatePgStartupPacket())
+				sent, err := client.Send(CreatePgStartupPacket())
 				assert.Nil(t, err)
+				assert.Equal(t, len(CreatePgStartupPacket()), sent)
 
 				// The server should respond with a 'R' packet
 				size, data, err := client.Receive()
