@@ -301,12 +301,6 @@ func (pr *ProxyImpl) TryReconnect(client *Client) (*Client, error) {
 
 	if pr.IsExhausted() {
 		pr.logger.Error().Msg("No more available connections :: TryReconnect")
-		return client, gerr.ErrPoolExhausted
-	}
-
-	if !client.IsConnected() {
-		pr.logger.Error().Msg("Client is disconnected")
-		return client, gerr.ErrClientNotConnected
 	}
 
 	return client, nil
