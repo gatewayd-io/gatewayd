@@ -18,7 +18,6 @@ import (
 	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 const (
@@ -69,26 +68,21 @@ var runCmd = &cobra.Command{
 
 		// The config will be passed to the hooks, and in turn to the plugins that
 		// register to this hook.
-		currentGlobalConfig, err := structpb.NewStruct(globalConfig.All())
+		updatedGlobalConfig, err := hooksConfig.Run(
+			context.Background(),
+			globalConfig.All(),
+			plugin.OnConfigLoaded,
+			hooksConfig.Verification)
 		if err != nil {
-			DefaultLogger.Error().Err(err).Msg("Failed to convert configuration to structpb")
-		} else {
-			updatedGlobalConfig, err := hooksConfig.Run(
-				context.Background(),
-				currentGlobalConfig,
-				plugin.OnConfigLoaded,
-				hooksConfig.Verification)
-			if err != nil {
-				DefaultLogger.Error().Err(err).Msg("Failed to run OnConfigLoaded hooks")
-			}
+			DefaultLogger.Error().Err(err).Msg("Failed to run OnConfigLoaded hooks")
+		}
 
-			if updatedGlobalConfig != nil {
-				// Merge the config with the one loaded from the file (in memory).
-				// The changes won't be persisted to disk.
-				if err := globalConfig.Load(
-					confmap.Provider(updatedGlobalConfig.AsMap(), "."), nil); err != nil {
-					DefaultLogger.Fatal().Err(err).Msg("Failed to merge configuration")
-				}
+		if updatedGlobalConfig != nil {
+			// Merge the config with the one loaded from the file (in memory).
+			// The changes won't be persisted to disk.
+			if err := globalConfig.Load(
+				confmap.Provider(updatedGlobalConfig, "."), nil); err != nil {
+				DefaultLogger.Fatal().Err(err).Msg("Failed to merge configuration")
 			}
 		}
 
@@ -97,20 +91,16 @@ var runCmd = &cobra.Command{
 		logger := logging.NewLogger(loggerCfg)
 
 		// This is a notification hook, so we don't care about the result.
-		data, err := structpb.NewStruct(map[string]interface{}{
+		data := map[string]interface{}{
 			"timeFormat": loggerCfg.TimeFormat,
 			"level":      loggerCfg.Level.String(),
 			"noColor":    loggerCfg.NoColor,
-		})
+		}
+		// TODO: Use a context with a timeout
+		_, err = hooksConfig.Run(
+			context.Background(), data, plugin.OnNewLogger, hooksConfig.Verification)
 		if err != nil {
-			logger.Error().Err(err).Msg("Failed to convert logger config to structpb")
-		} else {
-			// TODO: Use a context with a timeout
-			_, err := hooksConfig.Run(
-				context.Background(), data, plugin.OnNewLogger, hooksConfig.Verification)
-			if err != nil {
-				logger.Error().Err(err).Msg("Failed to run OnNewLogger hooks")
-			}
+			logger.Error().Err(err).Msg("Failed to run OnNewLogger hooks")
 		}
 
 		// Create and initialize a pool of connections
@@ -127,23 +117,19 @@ var runCmd = &cobra.Command{
 			)
 
 			if client != nil {
-				clientCfg, err := structpb.NewStruct(map[string]interface{}{
+				clientCfg := map[string]interface{}{
 					"id":                client.ID,
 					"network":           clientConfig.Network,
 					"address":           clientConfig.Address,
 					"receiveBufferSize": clientConfig.ReceiveBufferSize,
-				})
+				}
+				_, err := hooksConfig.Run(
+					context.Background(),
+					clientCfg,
+					plugin.OnNewClient,
+					hooksConfig.Verification)
 				if err != nil {
-					logger.Error().Err(err).Msg("Failed to convert client config to structpb")
-				} else {
-					_, err := hooksConfig.Run(
-						context.Background(),
-						clientCfg,
-						plugin.OnNewClient,
-						hooksConfig.Verification)
-					if err != nil {
-						logger.Error().Err(err).Msg("Failed to run OnNewClient hooks")
-					}
+					logger.Error().Err(err).Msg("Failed to run OnNewClient hooks")
 				}
 
 				err = pool.Put(client.ID, client)
@@ -164,17 +150,13 @@ var runCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		poolCfg, err := structpb.NewStruct(map[string]interface{}{
-			"size": poolSize,
-		})
+		_, err = hooksConfig.Run(
+			context.Background(),
+			map[string]interface{}{"size": poolSize},
+			plugin.OnNewPool,
+			hooksConfig.Verification)
 		if err != nil {
-			logger.Error().Err(err).Msg("Failed to convert pool config to structpb")
-		} else {
-			_, err := hooksConfig.Run(
-				context.Background(), poolCfg, plugin.OnNewPool, hooksConfig.Verification)
-			if err != nil {
-				logger.Error().Err(err).Msg("Failed to run OnNewPool hooks")
-			}
+			logger.Error().Err(err).Msg("Failed to run OnNewPool hooks")
 		}
 
 		// Create a prefork proxy with the pool of clients
@@ -182,7 +164,7 @@ var runCmd = &cobra.Command{
 		proxy := network.NewProxy(
 			pool, hooksConfig, elastic, reuseElasticClients, elasticClientConfig, logger)
 
-		proxyCfg, err := structpb.NewStruct(map[string]interface{}{
+		proxyCfg := map[string]interface{}{
 			"elastic":             elastic,
 			"reuseElasticClients": reuseElasticClients,
 			"clientConfig": map[string]interface{}{
@@ -190,15 +172,11 @@ var runCmd = &cobra.Command{
 				"address":           elasticClientConfig.Address,
 				"receiveBufferSize": elasticClientConfig.ReceiveBufferSize,
 			},
-		})
+		}
+		_, err = hooksConfig.Run(
+			context.Background(), proxyCfg, plugin.OnNewProxy, hooksConfig.Verification)
 		if err != nil {
-			logger.Error().Err(err).Msg("Failed to convert proxy config to structpb")
-		} else {
-			_, err := hooksConfig.Run(
-				context.Background(), proxyCfg, plugin.OnNewProxy, hooksConfig.Verification)
-			if err != nil {
-				logger.Error().Err(err).Msg("Failed to run OnNewProxy hooks")
-			}
+			logger.Error().Err(err).Msg("Failed to run OnNewProxy hooks")
 		}
 
 		// Create a server
@@ -239,7 +217,7 @@ var runCmd = &cobra.Command{
 			hooksConfig,
 		)
 
-		serverCfg, err := structpb.NewStruct(map[string]interface{}{
+		serverCfg := map[string]interface{}{
 			"network":          serverConfig.Network,
 			"address":          serverConfig.Address,
 			"softLimit":        serverConfig.SoftLimit,
@@ -257,16 +235,13 @@ var runCmd = &cobra.Command{
 			"reusePort":        serverConfig.ReusePort,
 			"tcpKeepAlive":     serverConfig.TCPKeepAlive.Seconds(),
 			"tcpNoDelay":       int(serverConfig.TCPNoDelay),
-		})
-		if err != nil {
-			logger.Error().Err(err).Msg("Failed to convert server config to structpb")
-		} else {
-			_, err := hooksConfig.Run(
-				context.Background(), serverCfg, plugin.OnNewServer, hooksConfig.Verification)
-			if err != nil {
-				logger.Error().Err(err).Msg("Failed to run OnNewServer hooks")
-			}
 		}
+		_, err = hooksConfig.Run(
+			context.Background(), serverCfg, plugin.OnNewServer, hooksConfig.Verification)
+		if err != nil {
+			logger.Error().Err(err).Msg("Failed to run OnNewServer hooks")
+		}
+
 		// Shutdown the server gracefully
 		var signals []os.Signal
 		signals = append(signals,
@@ -285,21 +260,14 @@ var runCmd = &cobra.Command{
 				for _, s := range signals {
 					if sig != s {
 						// Notify the hooks that the server is shutting down
-						signalCfg, err := structpb.NewStruct(
-							map[string]interface{}{"signal": sig.String()})
+						_, err := hooksConfig.Run(
+							context.Background(),
+							map[string]interface{}{"signal": sig.String()},
+							plugin.OnSignal,
+							hooksConfig.Verification,
+						)
 						if err != nil {
-							logger.Error().Err(err).Msg(
-								"Failed to convert signal config to structpb")
-						} else {
-							_, err := hooksConfig.Run(
-								context.Background(),
-								signalCfg,
-								plugin.OnSignal,
-								hooksConfig.Verification,
-							)
-							if err != nil {
-								logger.Error().Err(err).Msg("Failed to run OnSignal hooks")
-							}
+							logger.Error().Err(err).Msg("Failed to run OnSignal hooks")
 						}
 
 						server.Shutdown()
