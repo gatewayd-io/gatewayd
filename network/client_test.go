@@ -65,8 +65,10 @@ func TestSend(t *testing.T) {
 	defer client.Close()
 
 	assert.NotNil(t, client)
-	err := client.Send(CreatePostgreSQLPacket('Q', []byte("select 1;")))
+	packet := CreatePostgreSQLPacket('Q', []byte("select 1;"))
+	sent, err := client.Send(packet)
 	assert.Nil(t, err)
+	assert.Equal(t, len(packet), sent)
 }
 
 func TestReceive(t *testing.T) {
@@ -94,8 +96,10 @@ func TestReceive(t *testing.T) {
 	defer client.Close()
 
 	assert.NotNil(t, client)
-	err := client.Send(CreatePgStartupPacket())
+	packet := CreatePgStartupPacket()
+	sent, err := client.Send(packet)
 	assert.Nil(t, err)
+	assert.Equal(t, len(packet), sent)
 
 	size, data, err := client.Receive()
 	msg := "\x00\x00\x00\x03"
@@ -136,5 +140,5 @@ func TestClose(t *testing.T) {
 	assert.Equal(t, "", client.Network)
 	assert.Equal(t, "", client.Address)
 	assert.Nil(t, client.Conn)
-	assert.Equal(t, 0, client.ReceiveBufferSize)
+	assert.Equal(t, DefaultBufferSize, client.ReceiveBufferSize)
 }

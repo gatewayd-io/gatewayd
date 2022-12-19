@@ -114,8 +114,8 @@ var runCmd = &cobra.Command{
 		}
 
 		// Create and initialize a pool of connections
-		pool := pool.NewPool()
 		poolSize, clientConfig := poolConfig()
+		pool := pool.NewPool(poolSize)
 
 		// Add clients to the pool
 		for i := 0; i < poolSize; i++ {
@@ -146,7 +146,10 @@ var runCmd = &cobra.Command{
 					}
 				}
 
-				pool.Put(client.ID, client)
+				err = pool.Put(client.ID, client)
+				if err != nil {
+					logger.Error().Err(err).Msg("Failed to add client to the pool")
+				}
 			}
 		}
 

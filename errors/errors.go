@@ -10,6 +10,13 @@ var (
 
 	ErrPluginNotFound = errors.New("plugin not found")
 	ErrPluginNotReady = errors.New("plugin is not ready")
+
+	ErrClientReceiveFailed = errors.New("couldn't receive data from the server")
+	ErrClientSendFailed    = errors.New("couldn't send data to the server")
+
+	ErrPutFailed = errors.New("failed to put in pool")
+
+	ErrCastFailed = errors.New("failed to cast")
 )
 
 const (

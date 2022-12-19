@@ -131,6 +131,10 @@ func proxyConfig() (bool, bool, *network.Client) {
 	address := globalConfig.String(ref + ".address")
 	receiveBufferSize := globalConfig.Int(ref + ".receiveBufferSize")
 
+	if receiveBufferSize <= 0 {
+		receiveBufferSize = network.DefaultBufferSize
+	}
+
 	return elastic, reuseElasticClients, &network.Client{
 		Network:           net,
 		Address:           address,
@@ -181,6 +185,26 @@ func getTCPNoDelay() gnet.TCPSocketOpt {
 }
 
 func serverConfig() *ServerConfig {
+	readBufferCap := globalConfig.Int("server.readBufferCap")
+	if readBufferCap <= 0 {
+		readBufferCap = network.DefaultBufferSize
+	}
+
+	writeBufferCap := globalConfig.Int("server.writeBufferCap")
+	if writeBufferCap <= 0 {
+		writeBufferCap = network.DefaultBufferSize
+	}
+
+	socketRecvBuffer := globalConfig.Int("server.socketRecvBuffer")
+	if socketRecvBuffer <= 0 {
+		socketRecvBuffer = network.DefaultBufferSize
+	}
+
+	socketSendBuffer := globalConfig.Int("server.socketSendBuffer")
+	if socketSendBuffer <= 0 {
+		socketSendBuffer = network.DefaultBufferSize
+	}
+
 	return &ServerConfig{
 		Network:          globalConfig.String("server.network"),
 		Address:          globalConfig.String("server.address"),
@@ -191,10 +215,10 @@ func serverConfig() *ServerConfig {
 		MultiCore:        globalConfig.Bool("server.multiCore"),
 		LockOSThread:     globalConfig.Bool("server.lockOSThread"),
 		LoadBalancer:     getLoadBalancer(globalConfig.String("server.loadBalancer")),
-		ReadBufferCap:    globalConfig.Int("server.readBufferCap"),
-		WriteBufferCap:   globalConfig.Int("server.writeBufferCap"),
-		SocketRecvBuffer: globalConfig.Int("server.socketRecvBuffer"),
-		SocketSendBuffer: globalConfig.Int("server.socketSendBuffer"),
+		ReadBufferCap:    readBufferCap,
+		WriteBufferCap:   writeBufferCap,
+		SocketRecvBuffer: socketRecvBuffer,
+		SocketSendBuffer: socketSendBuffer,
 		ReuseAddress:     globalConfig.Bool("server.reuseAddress"),
 		ReusePort:        globalConfig.Bool("server.reusePort"),
 		TCPKeepAlive:     globalConfig.Duration("server.tcpKeepAlive"),
