@@ -277,15 +277,6 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 		}
 	}
 
-	// If the database didn't respond, send an error message to the client
-	// TODO: Figure out how to handle this better
-	if received == 0 {
-		pr.logger.Warn().Msg("Received 0 bytes from database")
-		_, err := gconn.Write([]byte("No response from database"))
-		return err //nolint:wrapcheck
-	}
-
-	// Send the actual response to the client asynchronously
 	err = gconn.AsyncWrite(response[:received], func(gconn gnet.Conn, err error) error {
 		pr.logger.Debug().Fields(
 			map[string]interface{}{
