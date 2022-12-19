@@ -122,7 +122,7 @@ func (pr *ProxyImpl) Disconnect(gconn gnet.Conn) error {
 				// If the client is not in the pool, put it back
 				err = pr.availableConnections.Put(cl.ID, cl)
 				if err != nil {
-					return err
+					return err //nolint:wrapcheck
 				}
 			} else {
 				return gerr.ErrClientNotConnected
@@ -290,7 +290,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 	})
 	if err != nil {
 		pr.logger.Error().Err(err).Msgf("Error writing to client")
-		return err
+		return err //nolint:wrapcheck
 	}
 
 	return nil
