@@ -30,17 +30,26 @@ func GetID(network, address string, seed int, logger zerolog.Logger) string {
 	return hex.EncodeToString(hash.Sum(nil))
 }
 
-func Resolve(network, address string, logger zerolog.Logger) (string, error) {
+func Resolve(network, address string, logger zerolog.Logger) (string, *gerr.GatewayDError) {
 	switch network {
 	case "tcp", "tcp4", "tcp6":
 		addr, err := net.ResolveTCPAddr(network, address)
-		return addr.String(), err
+		if err == nil {
+			return addr.String(), nil
+		}
+		return "", gerr.ErrResolveFailed.Wrap(err)
 	case "udp", "udp4", "udp6":
 		addr, err := net.ResolveUDPAddr(network, address)
-		return addr.String(), err
+		if err == nil {
+			return addr.String(), nil
+		}
+		return "", gerr.ErrResolveFailed.Wrap(err)
 	case "unix", "unixgram", "unixpacket":
 		addr, err := net.ResolveUnixAddr(network, address)
-		return addr.String(), err
+		if err == nil {
+			return addr.String(), nil
+		}
+		return "", gerr.ErrResolveFailed.Wrap(err)
 	default:
 		logger.Error().Msgf("Network %s is not supported", network)
 		return "", gerr.ErrNetworkNotSupported

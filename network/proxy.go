@@ -16,10 +16,10 @@ const (
 )
 
 type Proxy interface {
-	Connect(gconn gnet.Conn) error
-	Disconnect(gconn gnet.Conn) error
-	PassThrough(gconn gnet.Conn) error
-	TryReconnect(cl *Client) (*Client, error)
+	Connect(gconn gnet.Conn) *gerr.GatewayDError
+	Disconnect(gconn gnet.Conn) *gerr.GatewayDError
+	PassThrough(gconn gnet.Conn) *gerr.GatewayDError
+	TryReconnect(cl *Client) (*Client, *gerr.GatewayDError)
 	Shutdown()
 	IsExhausted() bool
 }
@@ -55,7 +55,7 @@ func NewProxy(
 	}
 }
 
-func (pr *ProxyImpl) Connect(gconn gnet.Conn) error {
+func (pr *ProxyImpl) Connect(gconn gnet.Conn) *gerr.GatewayDError {
 	var clientID string
 	// Get the first available client from the pool
 	pr.availableConnections.ForEach(func(key, _ interface{}) bool {
@@ -95,7 +95,7 @@ func (pr *ProxyImpl) Connect(gconn gnet.Conn) error {
 
 	if err := pr.busyConnections.Put(gconn, client); err != nil {
 		// This should never happen
-		return gerr.ErrPutFailed
+		return err
 	}
 	pr.logger.Debug().Msgf(
 		"Client %s has been assigned to %s", client.ID, gconn.RemoteAddr().String())
@@ -108,7 +108,7 @@ func (pr *ProxyImpl) Connect(gconn gnet.Conn) error {
 	return nil
 }
 
-func (pr *ProxyImpl) Disconnect(gconn gnet.Conn) error {
+func (pr *ProxyImpl) Disconnect(gconn gnet.Conn) *gerr.GatewayDError {
 	client := pr.busyConnections.Pop(gconn)
 	//nolint:nestif
 	if client != nil {
@@ -146,7 +146,7 @@ func (pr *ProxyImpl) Disconnect(gconn gnet.Conn) error {
 }
 
 //nolint:funlen
-func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
+func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	// TODO: Handle bi-directional traffic
 	// Currently the passthrough is a one-way street from the client to the server, that is,
 	// the client can send data to the server and receive the response back, but the server
@@ -165,9 +165,9 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 	}
 
 	// buf contains the data from the client (<type>, length, query)
-	buf, err := gconn.Next(-1)
-	if err != nil {
-		pr.logger.Error().Err(err).Msgf("Error reading from client: %v", err)
+	buf, origErr := gconn.Next(-1)
+	if origErr != nil {
+		pr.logger.Error().Err(origErr).Msg("Error reading from client")
 	}
 	pr.logger.Debug().Fields(
 		map[string]interface{}{
@@ -192,8 +192,8 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 		"buffer": buf, // Will be converted to base64-encoded string
 		"error":  "",
 	}
-	if err != nil {
-		ingress["error"] = err.Error()
+	if origErr != nil {
+		ingress["error"] = origErr.Error()
 	}
 	maps.Copy(ingress, addresses)
 
@@ -203,7 +203,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 		plugin.OnIngressTraffic,
 		pr.hookConfig.Verification)
 	if err != nil {
-		pr.logger.Error().Err(err).Msgf("Error running hook: %v", err)
+		pr.logger.Error().Err(err).Msg("Error running hook")
 	}
 
 	if result != nil {
@@ -267,7 +267,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 		}
 	}
 
-	err = gconn.AsyncWrite(response[:received], func(gconn gnet.Conn, err error) error {
+	origErr = gconn.AsyncWrite(response[:received], func(gconn gnet.Conn, err error) error {
 		pr.logger.Debug().Fields(
 			map[string]interface{}{
 				"function": "Proxy.PassThrough",
@@ -278,15 +278,15 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 		).Msg("Sent data to client")
 		return err
 	})
-	if err != nil {
+	if origErr != nil {
 		pr.logger.Error().Err(err).Msgf("Error writing to client")
-		return err //nolint:wrapcheck
+		return gerr.ErrServerSendFailed.Wrap(err)
 	}
 
 	return nil
 }
 
-func (pr *ProxyImpl) TryReconnect(client *Client) (*Client, error) {
+func (pr *ProxyImpl) TryReconnect(client *Client) (*Client, *gerr.GatewayDError) {
 	// TODO: try retriable connection?
 
 	if pr.IsExhausted() {
