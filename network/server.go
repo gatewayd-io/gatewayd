@@ -12,7 +12,6 @@ import (
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type Status string
@@ -46,17 +45,13 @@ type Server struct {
 func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 	s.logger.Debug().Msg("GatewayD is booting...")
 
-	onBootingData, err := structpb.NewStruct(map[string]interface{}{
-		"status": string(s.Status),
-	})
+	_, err := s.hooksConfig.Run(
+		context.Background(),
+		map[string]interface{}{"status": string(s.Status)},
+		plugin.OnBooting,
+		s.hooksConfig.Verification)
 	if err != nil {
-		s.logger.Error().Err(err).Msg("Failed to create structpb")
-	} else {
-		_, err := s.hooksConfig.Run(
-			context.Background(), onBootingData, plugin.OnBooting, s.hooksConfig.Verification)
-		if err != nil {
-			s.logger.Error().Err(err).Msg("Failed to run OnBooting hook")
-		}
+		s.logger.Error().Err(err).Msg("Failed to run OnBooting hook")
 	}
 
 	s.engine = engine
@@ -64,17 +59,13 @@ func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 	// Set the status to running
 	s.Status = Running
 
-	onBootedData, err := structpb.NewStruct(map[string]interface{}{
-		"status": string(s.Status),
-	})
+	_, err = s.hooksConfig.Run(
+		context.Background(),
+		map[string]interface{}{"status": string(s.Status)},
+		plugin.OnBooted,
+		s.hooksConfig.Verification)
 	if err != nil {
-		s.logger.Error().Err(err).Msg("Failed to create structpb")
-	} else {
-		_, err := s.hooksConfig.Run(
-			context.Background(), onBootedData, plugin.OnBooted, s.hooksConfig.Verification)
-		if err != nil {
-			s.logger.Error().Err(err).Msg("Failed to run OnBooted hook")
-		}
+		s.logger.Error().Err(err).Msg("Failed to run OnBooted hook")
 	}
 
 	s.logger.Debug().Msg("GatewayD booted")
@@ -85,20 +76,16 @@ func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 	s.logger.Debug().Msgf("GatewayD is opening a connection from %s", gconn.RemoteAddr().String())
 
-	onOpeningData, err := structpb.NewStruct(map[string]interface{}{
+	onOpeningData := map[string]interface{}{
 		"client": map[string]interface{}{
 			"local":  gconn.LocalAddr().String(),
 			"remote": gconn.RemoteAddr().String(),
 		},
-	})
+	}
+	_, err := s.hooksConfig.Run(
+		context.Background(), onOpeningData, plugin.OnOpening, s.hooksConfig.Verification)
 	if err != nil {
-		s.logger.Error().Err(err).Msg("Failed to create structpb")
-	} else {
-		_, err := s.hooksConfig.Run(
-			context.Background(), onOpeningData, plugin.OnOpening, s.hooksConfig.Verification)
-		if err != nil {
-			s.logger.Error().Err(err).Msg("Failed to run OnOpening hook")
-		}
+		s.logger.Error().Err(err).Msg("Failed to run OnOpening hook")
 	}
 
 	if uint64(s.engine.CountConnections()) >= s.SoftLimit {
@@ -126,20 +113,16 @@ func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 		return nil, gnet.None
 	}
 
-	onOpenedData, err := structpb.NewStruct(map[string]interface{}{
+	onOpenedData := map[string]interface{}{
 		"client": map[string]interface{}{
 			"local":  gconn.LocalAddr().String(),
 			"remote": gconn.RemoteAddr().String(),
 		},
-	})
+	}
+	_, err = s.hooksConfig.Run(
+		context.Background(), onOpenedData, plugin.OnOpened, s.hooksConfig.Verification)
 	if err != nil {
-		s.logger.Error().Err(err).Msg("Failed to create structpb")
-	} else {
-		_, err := s.hooksConfig.Run(
-			context.Background(), onOpenedData, plugin.OnOpened, s.hooksConfig.Verification)
-		if err != nil {
-			s.logger.Error().Err(err).Msg("Failed to run OnOpened hook")
-		}
+		s.logger.Error().Err(err).Msg("Failed to run OnOpened hook")
 	}
 
 	return nil, gnet.None
@@ -158,16 +141,10 @@ func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 	if err != nil {
 		data["error"] = err.Error()
 	}
-
-	onClosingData, intErr := structpb.NewStruct(data)
-	if intErr != nil {
-		s.logger.Error().Err(intErr).Msg("Failed to create structpb")
-	} else {
-		_, err := s.hooksConfig.Run(
-			context.Background(), onClosingData, plugin.OnClosing, s.hooksConfig.Verification)
-		if err != nil {
-			s.logger.Error().Err(err).Msg("Failed to run OnClosing hook")
-		}
+	_, err = s.hooksConfig.Run(
+		context.Background(), data, plugin.OnClosing, s.hooksConfig.Verification)
+	if err != nil {
+		s.logger.Error().Err(err).Msg("Failed to run OnClosing hook")
 	}
 
 	// Shutdown the server if there are no more connections and the server is stopped
@@ -190,36 +167,26 @@ func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 	if err != nil {
 		data["error"] = err.Error()
 	}
-
-	onClosedData, intErr := structpb.NewStruct(data)
-	if intErr != nil {
-		s.logger.Error().Err(intErr).Msg("Failed to create structpb")
-	} else {
-		_, err := s.hooksConfig.Run(
-			context.Background(), onClosedData, plugin.OnClosed, s.hooksConfig.Verification)
-		if err != nil {
-			s.logger.Error().Err(err).Msg("Failed to run OnClosed hook")
-		}
+	_, err = s.hooksConfig.Run(
+		context.Background(), data, plugin.OnClosed, s.hooksConfig.Verification)
+	if err != nil {
+		s.logger.Error().Err(err).Msg("Failed to run OnClosed hook")
 	}
 
 	return gnet.Close
 }
 
 func (s *Server) OnTraffic(gconn gnet.Conn) gnet.Action {
-	onTrafficData, err := structpb.NewStruct(map[string]interface{}{
+	onTrafficData := map[string]interface{}{
 		"client": map[string]interface{}{
 			"local":  gconn.LocalAddr().String(),
 			"remote": gconn.RemoteAddr().String(),
 		},
-	})
+	}
+	_, err := s.hooksConfig.Run(
+		context.Background(), onTrafficData, plugin.OnTraffic, s.hooksConfig.Verification)
 	if err != nil {
-		s.logger.Error().Err(err).Msg("Failed to create structpb")
-	} else {
-		_, err := s.hooksConfig.Run(
-			context.Background(), onTrafficData, plugin.OnTraffic, s.hooksConfig.Verification)
-		if err != nil {
-			s.logger.Error().Err(err).Msg("Failed to run OnTraffic hook")
-		}
+		s.logger.Error().Err(err).Msg("Failed to run OnTraffic hook")
 	}
 
 	if err := s.proxy.PassThrough(gconn); err != nil {
@@ -245,17 +212,13 @@ func (s *Server) OnTraffic(gconn gnet.Conn) gnet.Action {
 func (s *Server) OnShutdown(engine gnet.Engine) {
 	s.logger.Debug().Msg("GatewayD is shutting down...")
 
-	onShutdownData, err := structpb.NewStruct(map[string]interface{}{
-		"connections": s.engine.CountConnections(),
-	})
+	_, err := s.hooksConfig.Run(
+		context.Background(),
+		map[string]interface{}{"connections": s.engine.CountConnections()},
+		plugin.OnShutdown,
+		s.hooksConfig.Verification)
 	if err != nil {
-		s.logger.Error().Err(err).Msg("Failed to create structpb")
-	} else {
-		_, err := s.hooksConfig.Run(
-			context.Background(), onShutdownData, plugin.OnShutdown, s.hooksConfig.Verification)
-		if err != nil {
-			s.logger.Error().Err(err).Msg("Failed to run OnShutdown hook")
-		}
+		s.logger.Error().Err(err).Msg("Failed to run OnShutdown hook")
 	}
 
 	s.proxy.Shutdown()
@@ -266,17 +229,13 @@ func (s *Server) OnTick() (time.Duration, gnet.Action) {
 	s.logger.Debug().Msg("GatewayD is ticking...")
 	s.logger.Info().Msgf("Active connections: %d", s.engine.CountConnections())
 
-	onTickData, err := structpb.NewStruct(map[string]interface{}{
-		"connections": s.engine.CountConnections(),
-	})
+	_, err := s.hooksConfig.Run(
+		context.Background(),
+		map[string]interface{}{"connections": s.engine.CountConnections()},
+		plugin.OnTick,
+		s.hooksConfig.Verification)
 	if err != nil {
-		s.logger.Error().Err(err).Msg("Failed to create structpb")
-	} else {
-		_, err := s.hooksConfig.Run(
-			context.Background(), onTickData, plugin.OnTick, s.hooksConfig.Verification)
-		if err != nil {
-			s.logger.Error().Err(err).Msg("Failed to run OnTick hook")
-		}
+		s.logger.Error().Err(err).Msg("Failed to run OnTick hook")
 	}
 
 	return s.TickInterval, gnet.None
@@ -292,27 +251,23 @@ func (s *Server) Run() error {
 	}
 
 	// Since gnet.Run is blocking, we need to run OnRun before it
-	//nolint:nestif
-	if onRunData, err := structpb.NewStruct(map[string]interface{}{
+	onRunData := map[string]interface{}{
 		"address": addr,
 		"error":   err,
-	}); err != nil {
-		s.logger.Error().Err(err).Msg("Failed to create structpb")
-	} else {
-		result, err := s.hooksConfig.Run(
-			context.Background(), onRunData, plugin.OnRun, s.hooksConfig.Verification)
-		if err != nil {
-			s.logger.Error().Err(err).Msg("Failed to run the hook")
+	}
+	result, err := s.hooksConfig.Run(
+		context.Background(), onRunData, plugin.OnRun, s.hooksConfig.Verification)
+	if err != nil {
+		s.logger.Error().Err(err).Msg("Failed to run the hook")
+	}
+
+	if result != nil {
+		if err, ok := result["error"].(error); ok && err != nil {
+			s.logger.Err(err).Msg("The hook returned an error")
 		}
 
-		if result != nil {
-			if err, ok := result.AsMap()["error"].(error); ok && err != nil {
-				s.logger.Err(err).Msg("The hook returned an error")
-			}
-
-			if address, ok := result.AsMap()["address"].(string); ok {
-				addr = address
-			}
+		if address, ok := result["address"].(string); ok {
+			addr = address
 		}
 	}
 
