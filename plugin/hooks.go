@@ -8,6 +8,8 @@ import (
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/structpb"
+
+	gerr "github.com/gatewayd-io/gatewayd/errors"
 )
 
 type (
@@ -88,14 +90,22 @@ func (h *HookConfig) Get(hookType HookType) map[Priority]HookDef {
 //nolint:funlen,contextcheck
 func (h *HookConfig) Run(
 	ctx context.Context,
-	args *structpb.Struct,
+	args map[string]interface{},
 	hookType HookType,
 	verification Policy,
 	opts ...grpc.CallOption,
-) (*structpb.Struct, error) {
-	// TODO: accept args as map[string]interface{} and convert to structpb.Struct
+) (map[string]interface{}, error) {
 	if ctx == nil {
 		ctx = context.Background()
+	}
+
+	var params *structpb.Struct
+	if args == nil {
+		params = &structpb.Struct{}
+	} else if casted, err := structpb.NewStruct(args); err == nil {
+		params = casted
+	} else {
+		return nil, gerr.ErrCastFailed
 	}
 
 	// Sort hooks by priority
@@ -116,7 +126,7 @@ func (h *HookConfig) Run(
 		var err error
 		if idx == 0 {
 			// TODO: Run hooks from the registry
-			result, err = h.hooks[hookType][prio](ctx, args, opts...)
+			result, err = h.hooks[hookType][prio](ctx, params, opts...)
 		} else {
 			// TODO: Run hooks from the registry
 			result, err = h.hooks[hookType][prio](ctx, returnVal, opts...)
@@ -126,7 +136,7 @@ func (h *HookConfig) Run(
 		// and that the hook does not return any unexpected values.
 		// If the verification mode is non-strict (permissive), let the plugin pass
 		// extra keys/values to the next plugin in chain.
-		if Verify(args, result) || verification == PassDown {
+		if Verify(params, result) || verification == PassDown {
 			// Update the last return value with the current result
 			returnVal = result
 			continue
@@ -146,7 +156,7 @@ func (h *HookConfig) Run(
 				panic(errMsg)
 			}
 			if idx == 0 {
-				returnVal = args
+				returnVal = params
 			}
 		// Abort execution of the plugins, log the error and return the result of the last hook.
 		case Abort:
@@ -160,7 +170,7 @@ func (h *HookConfig) Run(
 			if idx == 0 {
 				return args, err
 			}
-			return returnVal, err
+			return returnVal.AsMap(), err
 		// Remove the hook from the registry, log the error and execute the next hook.
 		case Remove:
 			errMsg := fmt.Sprintf(
@@ -172,7 +182,7 @@ func (h *HookConfig) Run(
 			}
 			removeList = append(removeList, prio)
 			if idx == 0 {
-				returnVal = args
+				returnVal = params
 			}
 		case PassDown:
 		default:
@@ -185,5 +195,5 @@ func (h *HookConfig) Run(
 		delete(h.hooks[hookType], prio)
 	}
 
-	return returnVal, nil
+	return returnVal.AsMap(), nil
 }
