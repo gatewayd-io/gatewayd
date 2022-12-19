@@ -45,6 +45,6 @@ func TestResolve(t *testing.T) {
 
 	logger := logging.NewLogger(cfg)
 	address, err := Resolve("udp", "localhost:53", logger)
-	assert.NoError(t, err)
+	assert.Nil(t, err)
 	assert.Equal(t, "127.0.0.1:53", address)
 }
