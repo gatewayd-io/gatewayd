@@ -4,6 +4,7 @@ import (
 	"context"
 	"os/exec"
 
+	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/logging"
 	pluginV1 "github.com/gatewayd-io/gatewayd/plugin/v1"
 	"github.com/gatewayd-io/gatewayd/pool"
@@ -182,9 +183,12 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 			reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to dispense plugin")
 			continue
 		} else {
-			if metadata, err = pluginV1.GetPluginConfig(context.Background(), &structpb.Struct{}); err != nil {
-				reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to get plugin metadata")
+			if md, origErr := pluginV1.GetPluginConfig(
+				context.Background(), &structpb.Struct{}); err != nil {
+				reg.hooksConfig.Logger.Debug().Err(origErr).Msg("Failed to get plugin metadata")
 				continue
+			} else {
+				metadata = md
 			}
 		}
 
@@ -223,7 +227,7 @@ func (reg *RegistryImpl) RegisterHooks(id Identifier) {
 	pluginImpl := reg.Get(id)
 	reg.hooksConfig.Logger.Debug().Msgf("Registering hooks for plugin: %s", pluginImpl.ID.Name)
 	var pluginV1 pluginV1.GatewayDPluginServiceClient
-	var err error
+	var err *gerr.GatewayDError
 	if pluginV1, err = pluginImpl.Dispense(); err != nil {
 		reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to dispense plugin")
 		return

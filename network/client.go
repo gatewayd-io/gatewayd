@@ -53,8 +53,9 @@ func NewClient(network, address string, receiveBufferSize int, logger zerolog.Lo
 	}
 
 	// Create a new connection
-	conn, err := net.Dial(client.Network, client.Address)
-	if err != nil {
+	conn, origErr := net.Dial(client.Network, client.Address)
+	if origErr != nil {
+		err := gerr.ErrClientConnectionFailed.Wrap(origErr)
 		logger.Error().Err(err).Msg("Failed to create a new connection")
 		return nil
 	}
@@ -72,25 +73,24 @@ func NewClient(network, address string, receiveBufferSize int, logger zerolog.Lo
 	return &client
 }
 
-func (c *Client) Send(data []byte) (int, error) {
+func (c *Client) Send(data []byte) (int, *gerr.GatewayDError) {
 	sent, err := c.Conn.Write(data)
 	if err != nil {
 		c.logger.Error().Err(err).Msgf("Couldn't send data to the server: %s", err)
-		// TODO: Wrap the original error
-		return 0, gerr.ErrClientSendFailed
+		return 0, gerr.ErrClientSendFailed.Wrap(err)
 	}
 	c.logger.Debug().Msgf("Sent %d bytes to %s", len(data), c.Address)
 	return sent, nil
 }
 
-func (c *Client) Receive() (int, []byte, error) {
+func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 	buf := make([]byte, c.ReceiveBufferSize)
 	received, err := c.Conn.Read(buf)
-	if err != nil && errors.Is(err, io.EOF) {
+	if err != nil {
 		c.logger.Error().Err(err).Msg("Couldn't receive data from the server")
-		return 0, nil, err //nolint:wrapcheck
+		return 0, nil, gerr.ErrClientReceiveFailed.Wrap(err)
 	}
-	return received, buf, err //nolint:wrapcheck
+	return received, buf, nil
 }
 
 func (c *Client) Close() {

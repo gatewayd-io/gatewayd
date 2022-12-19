@@ -2,7 +2,6 @@ package plugin
 
 import (
 	"context"
-	"fmt"
 	"sort"
 
 	gerr "github.com/gatewayd-io/gatewayd/errors"
@@ -93,7 +92,7 @@ func (h *HookConfig) Run(
 	hookType HookType,
 	verification Policy,
 	opts ...grpc.CallOption,
-) (map[string]interface{}, error) {
+) (map[string]interface{}, *gerr.GatewayDError) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -104,7 +103,7 @@ func (h *HookConfig) Run(
 	} else if casted, err := structpb.NewStruct(args); err == nil {
 		params = casted
 	} else {
-		return nil, gerr.ErrCastFailed
+		return nil, gerr.ErrCastFailed.Wrap(err)
 	}
 
 	// Sort hooks by priority
@@ -146,39 +145,35 @@ func (h *HookConfig) Run(
 		switch verification {
 		// Ignore the result of this plugin, log an error and execute the next hook.
 		case Ignore:
-			errMsg := fmt.Sprintf(
-				"Hook %s (Prio %d) returned invalid value, ignoring", hookType, prio)
-			// Logger is not available when loading configuration, so we can't log anything
-			if hookType != OnConfigLoaded {
-				h.Logger.Error().Msgf(errMsg)
-			} else {
-				panic(errMsg)
-			}
+			h.Logger.Error().Err(err).Fields(
+				map[string]interface{}{
+					"hookType": hookType,
+					"priority": prio,
+				},
+			).Msgf("Hook returned invalid value, ignoring")
 			if idx == 0 {
 				returnVal = params
 			}
 		// Abort execution of the plugins, log the error and return the result of the last hook.
 		case Abort:
-			errMsg := fmt.Sprintf(
-				"Hook %s (Prio %d) returned invalid value, aborting", hookType, prio)
-			if hookType != OnConfigLoaded {
-				h.Logger.Error().Msgf(errMsg)
-			} else {
-				panic(errMsg)
-			}
+			h.Logger.Error().Err(err).Fields(
+				map[string]interface{}{
+					"hookType": hookType,
+					"priority": prio,
+				},
+			).Msgf("Hook returned invalid value, aborting")
 			if idx == 0 {
-				return args, err
+				return args, nil
 			}
-			return returnVal.AsMap(), err
+			return returnVal.AsMap(), nil
 		// Remove the hook from the registry, log the error and execute the next hook.
 		case Remove:
-			errMsg := fmt.Sprintf(
-				"Hook %s (Prio %d) returned invalid value, removing", hookType, prio)
-			if hookType != OnConfigLoaded {
-				h.Logger.Error().Msgf(errMsg)
-			} else {
-				panic(errMsg)
-			}
+			h.Logger.Error().Err(err).Fields(
+				map[string]interface{}{
+					"hookType": hookType,
+					"priority": prio,
+				},
+			).Msgf("Hook returned invalid value, removing")
 			removeList = append(removeList, prio)
 			if idx == 0 {
 				returnVal = params
