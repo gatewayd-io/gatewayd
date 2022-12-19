@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"time"
 
@@ -115,12 +116,14 @@ func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 	}
 
 	if err := s.proxy.Connect(gconn); err != nil {
-		if !errors.Is(err, gerr.ErrPoolExhausted) {
+		if errors.Is(err, gerr.ErrPoolExhausted) {
+			return nil, gnet.Close
+		} else {
 			// This should never happen
 			// TODO: Send error to client or retry connection
 			s.logger.Error().Err(err).Msg("Failed to connect to proxy")
+			return nil, gnet.None
 		}
-		return nil, gnet.Close
 	}
 
 	onOpenedData, err := structpb.NewStruct(map[string]interface{}{
@@ -222,7 +225,16 @@ func (s *Server) OnTraffic(gconn gnet.Conn) gnet.Action {
 	if err := s.proxy.PassThrough(gconn); err != nil {
 		s.logger.Error().Err(err).Msg("Failed to pass through traffic")
 		// TODO: Close the connection *gracefully*
-		return gnet.Close
+		switch {
+		case errors.Is(err, gerr.ErrPoolExhausted):
+		case errors.Is(err, gerr.ErrCastFailed):
+		case errors.Is(err, gerr.ErrClientNotFound):
+		case errors.Is(err, gerr.ErrClientNotConnected):
+		case errors.Is(err, gerr.ErrClientSendFailed):
+		case errors.Is(err, gerr.ErrClientReceiveFailed):
+		case errors.Is(err, io.EOF):
+			return gnet.Close
+		}
 	}
 	// Flush the connection to make sure all data is sent
 	gconn.Flush()
