@@ -118,12 +118,12 @@ func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 	if err := s.proxy.Connect(gconn); err != nil {
 		if errors.Is(err, gerr.ErrPoolExhausted) {
 			return nil, gnet.Close
-		} else {
-			// This should never happen
-			// TODO: Send error to client or retry connection
-			s.logger.Error().Err(err).Msg("Failed to connect to proxy")
-			return nil, gnet.None
 		}
+
+		// This should never happen
+		// TODO: Send error to client or retry connection
+		s.logger.Error().Err(err).Msg("Failed to connect to proxy")
+		return nil, gnet.None
 	}
 
 	onOpenedData, err := structpb.NewStruct(map[string]interface{}{
