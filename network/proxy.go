@@ -164,14 +164,14 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 		return gerr.ErrCastFailed
 	}
 
-	// buf contains the data from the client (<type>, length, query)
-	buf, origErr := gconn.Next(-1)
+	// request contains the data from the client (<type>, length, query)
+	request, origErr := gconn.Next(-1)
 	if origErr != nil {
 		pr.logger.Error().Err(origErr).Msg("Error reading from client")
 	}
 	pr.logger.Debug().Fields(
 		map[string]interface{}{
-			"length": len(buf),
+			"length": len(request),
 			"local":  gconn.LocalAddr().String(),
 			"remote": gconn.RemoteAddr().String(),
 		},
@@ -189,8 +189,8 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	}
 
 	ingress := map[string]interface{}{
-		"buffer": buf, // Will be converted to base64-encoded string
-		"error":  "",
+		"request": request, // Will be converted to base64-encoded string
+		"error":   "",
 	}
 	if origErr != nil {
 		ingress["error"] = origErr.Error()
@@ -207,10 +207,10 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	}
 
 	if result != nil {
-		if buffer, ok := result["buffer"].([]byte); ok {
+		if req, ok := result["request"].([]byte); ok {
 			pr.logger.Debug().Msgf(
-				"Hook modified buffer from %d to %d bytes", len(buf), len(buffer))
-			buf = buffer
+				"Hook modified request from %d to %d bytes", len(request), len(req))
+			request = req
 		}
 		if errMsg, ok := result["error"].(string); ok && errMsg != "" {
 			pr.logger.Error().Msgf("Error in hook: %s", errMsg)
@@ -218,7 +218,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	}
 
 	// Send the query to the server
-	sent, err := client.Send(buf)
+	sent, err := client.Send(request)
 	if err != nil {
 		pr.logger.Error().Err(err).Msgf("Error sending data to database")
 	}
