@@ -208,6 +208,8 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 
 	if result != nil {
 		if buffer, ok := result["buffer"].([]byte); ok {
+			pr.logger.Debug().Msgf(
+				"Hook modified buffer from %d to %d bytes", len(buf), len(buffer))
 			buf = buffer
 		}
 		if errMsg, ok := result["error"].(string); ok && errMsg != "" {
@@ -260,6 +262,8 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 
 	if result != nil {
 		if resp, ok := result["response"].([]byte); ok {
+			pr.logger.Debug().Msgf(
+				"Hook modified response from %d to %d bytes", len(response), len(resp))
 			response = resp
 		}
 		if errMsg, ok := result["error"].(string); ok && errMsg != "" {
@@ -290,7 +294,7 @@ func (pr *ProxyImpl) TryReconnect(client *Client) (*Client, *gerr.GatewayDError)
 	// TODO: try retriable connection?
 
 	if pr.IsExhausted() {
-		pr.logger.Error().Msg("No more available connections :: TryReconnect")
+		pr.logger.Error().Msg("No more available connections")
 		return client, gerr.ErrPoolExhausted
 	}
 
