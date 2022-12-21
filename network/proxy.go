@@ -100,9 +100,9 @@ func (pr *ProxyImpl) Connect(gconn gnet.Conn) *gerr.GatewayDError {
 	pr.logger.Debug().Msgf(
 		"Client %s has been assigned to %s", client.ID, gconn.RemoteAddr().String())
 
-	pr.logger.Debug().Str("function", "Proxy.Connect").Msgf(
+	pr.logger.Debug().Str("function", "proxy.connect").Msgf(
 		"There are %d available clients", pr.availableConnections.Size())
-	pr.logger.Debug().Str("function", "Proxy.Connect").Msgf(
+	pr.logger.Debug().Str("function", "proxy.connect").Msgf(
 		"There are %d busy clients", pr.busyConnections.Size())
 
 	return nil
@@ -137,9 +137,9 @@ func (pr *ProxyImpl) Disconnect(gconn gnet.Conn) *gerr.GatewayDError {
 		return gerr.ErrClientNotFound
 	}
 
-	pr.logger.Debug().Str("function", "Proxy.Disconnect").Msgf(
+	pr.logger.Debug().Str("function", "proxy.disconnect").Msgf(
 		"There are %d available clients", pr.availableConnections.Size())
-	pr.logger.Debug().Str("function", "Proxy.Disconnect").Msgf(
+	pr.logger.Debug().Str("function", "proxy.disconnect").Msgf(
 		"There are %d busy clients", pr.busyConnections.Size())
 
 	return nil
@@ -224,7 +224,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	}
 	pr.logger.Debug().Fields(
 		map[string]interface{}{
-			"function": "Proxy.PassThrough",
+			"function": "proxy.passthrough",
 			"length":   sent,
 			"local":    client.Conn.LocalAddr().String(),
 			"remote":   client.Conn.RemoteAddr().String(),
@@ -235,7 +235,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	received, response, err := client.Receive()
 	pr.logger.Debug().Fields(
 		map[string]interface{}{
-			"function": "Proxy.PassThrough",
+			"function": "proxy.passthrough",
 			"length":   received,
 			"local":    client.Conn.LocalAddr().String(),
 			"remote":   client.Conn.RemoteAddr().String(),
@@ -274,7 +274,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	origErr = gconn.AsyncWrite(response[:received], func(gconn gnet.Conn, err error) error {
 		pr.logger.Debug().Fields(
 			map[string]interface{}{
-				"function": "Proxy.PassThrough",
+				"function": "proxy.passthrough",
 				"length":   received,
 				"local":    gconn.LocalAddr().String(),
 				"remote":   gconn.RemoteAddr().String(),
