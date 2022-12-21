@@ -42,22 +42,22 @@ func TestRunServer(t *testing.T) {
 		opts ...grpc.CallOption,
 	) (*structpb.Struct, error) {
 		paramsMap := params.AsMap()
-		if paramsMap["buffer"] == nil {
-			t.Fatal("buffer is nil")
+		if paramsMap["request"] == nil {
+			t.Fatal("request is nil")
 		}
 
 		logger.Info().Msg("Ingress traffic")
-		// Decode the buffer
-		// The buffer is []byte, but it is base64-encoded as a string
+		// Decode the request
+		// The request is []byte, but it is base64-encoded as a string
 		// via using the structpb.NewStruct function
-		if buf, ok := paramsMap["buffer"].(string); ok {
-			if buffer, err := base64.StdEncoding.DecodeString(buf); err == nil {
-				assert.Equal(t, CreatePgStartupPacket(), buffer)
+		if req, ok := paramsMap["request"].(string); ok {
+			if request, err := base64.StdEncoding.DecodeString(req); err == nil {
+				assert.Equal(t, CreatePgStartupPacket(), request)
 			} else {
 				t.Fatal(err)
 			}
 		} else {
-			t.Fatal("buffer is not a []byte")
+			t.Fatal("request is not a []byte")
 		}
 		assert.Empty(t, paramsMap["error"])
 		return params, nil
@@ -75,9 +75,9 @@ func TestRunServer(t *testing.T) {
 		}
 
 		logger.Info().Msg("Egress traffic")
-		if buf, ok := paramsMap["response"].(string); ok {
-			if buffer, err := base64.StdEncoding.DecodeString(buf); err == nil {
-				assert.Equal(t, CreatePostgreSQLPacket('R', []byte{0x0, 0x0, 0x0, 0x3}), buffer)
+		if resp, ok := paramsMap["response"].(string); ok {
+			if response, err := base64.StdEncoding.DecodeString(resp); err == nil {
+				assert.Equal(t, CreatePostgreSQLPacket('R', []byte{0x0, 0x0, 0x0, 0x3}), response)
 			} else {
 				t.Fatal(err)
 			}
