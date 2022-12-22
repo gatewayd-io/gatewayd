@@ -97,7 +97,9 @@ func NewClient(
 	} else {
 		client.SendDeadline = sendDeadline
 		if err := client.Conn.SetWriteDeadline(time.Now().Add(client.SendDeadline)); err != nil {
-			logger.Error().Err(err).Msg("Failed to set semd deadline")
+			logger.Error().Err(err).Msg("Failed to set send deadline")
+		} else {
+			logger.Debug().Msgf("Send deadline set to %s", client.SendDeadline)
 		}
 	}
 
