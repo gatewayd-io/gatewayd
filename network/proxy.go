@@ -75,6 +75,9 @@ func (pr *ProxyImpl) Connect(gconn gnet.Conn) *gerr.GatewayDError {
 				pr.ClientConfig.Network,
 				pr.ClientConfig.Address,
 				pr.ClientConfig.ReceiveBufferSize,
+				pr.ClientConfig.ReceiveChunkSize,
+				pr.ClientConfig.ReceiveDeadline,
+				pr.ClientConfig.SendDeadline,
 				pr.logger,
 			)
 			pr.logger.Debug().Msgf("Reused the client %s by putting it back in the pool", client.ID)

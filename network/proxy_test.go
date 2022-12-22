@@ -34,7 +34,14 @@ func TestNewProxy(t *testing.T) {
 
 	// Create a connection pool
 	pool := pool.NewPool(EmptyPoolCapacity)
-	client := NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)
+	client := NewClient(
+		"tcp",
+		"localhost:5432",
+		DefaultBufferSize,
+		DefaultChunkSize,
+		DefaultReceiveDeadline,
+		DefaultSendDeadline,
+		logger)
 	err := pool.Put(client.ID, client)
 	assert.Nil(t, err)
 
