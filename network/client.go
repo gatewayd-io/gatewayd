@@ -40,7 +40,8 @@ func NewClient(
 	network, address string,
 	receiveBufferSize int,
 	receiveChunkSize int,
-	logger zerolog.Logger) *Client {
+	logger zerolog.Logger,
+) *Client {
 	var client Client
 
 	client.logger = logger
