@@ -189,7 +189,6 @@ func (s *Server) OnTraffic(gconn gnet.Conn) gnet.Action {
 
 	if err := s.proxy.PassThrough(gconn); err != nil {
 		s.logger.Error().Err(err).Msg("Failed to pass through traffic")
-		// TODO: Close the connection *gracefully*
 		switch {
 		case errors.Is(err, gerr.ErrPoolExhausted):
 		case errors.Is(err, gerr.ErrCastFailed):
