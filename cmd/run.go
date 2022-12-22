@@ -113,6 +113,7 @@ var runCmd = &cobra.Command{
 				clientConfig.Network,
 				clientConfig.Address,
 				clientConfig.ReceiveBufferSize,
+				clientConfig.ReceiveChunkSize,
 				logger,
 			)
 
