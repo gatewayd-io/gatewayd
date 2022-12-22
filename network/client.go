@@ -8,7 +8,8 @@ import (
 )
 
 const (
-	DefaultSeed = 1000
+	DefaultSeed      = 1000
+	DefaultChunkSize = 4096
 )
 
 type ClientInterface interface {
@@ -91,13 +92,29 @@ func (c *Client) Send(data []byte) (int, *gerr.GatewayDError) {
 }
 
 func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
-	buf := make([]byte, c.ReceiveBufferSize)
-	received, err := c.Conn.Read(buf)
-	if err != nil {
-		c.logger.Error().Err(err).Msg("Couldn't receive data from the server")
-		return 0, nil, gerr.ErrClientReceiveFailed.Wrap(err)
+	var received int
+	buffer := make([]byte, 0, c.ReceiveBufferSize)
+	for {
+		smallBuf := make([]byte, DefaultChunkSize)
+		n, err := c.Conn.Read(smallBuf)
+		if n > 0 && err != nil {
+			received += n
+			buffer = append(buffer, smallBuf[:n]...)
+			c.logger.Error().Err(err).Msg("Couldn't receive data from the server")
+			return received, buffer, gerr.ErrClientReceiveFailed.Wrap(err)
+		} else if err != nil {
+			c.logger.Error().Err(err).Msg("Couldn't receive data from the server")
+			return received, buffer, gerr.ErrClientReceiveFailed.Wrap(err)
+		} else {
+			received += n
+			buffer = append(buffer, smallBuf[:n]...)
+		}
+
+		if n == 0 || n < DefaultChunkSize {
+			break
+		}
 	}
-	return received, buf, nil
+	return received, buffer, nil
 }
 
 func (c *Client) Close() {
