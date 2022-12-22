@@ -152,7 +152,14 @@ func TestRunServer(t *testing.T) {
 
 		for {
 			if server.IsRunning() {
-				client := NewClient("tcp", "127.0.0.1:15432", DefaultBufferSize, DefaultChunkSize, DefaultReceiveDeadline, DefaultSendDeadline, logger)
+				client := NewClient(
+					"tcp",
+					"127.0.0.1:15432",
+					DefaultBufferSize,
+					DefaultChunkSize,
+					DefaultReceiveDeadline,
+					DefaultSendDeadline,
+					logger)
 				defer client.Close()
 
 				assert.NotNil(t, client)
