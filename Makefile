@@ -4,6 +4,12 @@ build:
 run:
 	go mod tidy && go run main.go run
 
+clean:
+	go clean -testcache
+
+test:
+	go test -v ./...
+
 protolint:
 	buf lint
 
