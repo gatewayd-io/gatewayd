@@ -172,6 +172,7 @@ var runCmd = &cobra.Command{
 				"network":           elasticClientConfig.Network,
 				"address":           elasticClientConfig.Address,
 				"receiveBufferSize": elasticClientConfig.ReceiveBufferSize,
+				"receiveChunkSize":  elasticClientConfig.ReceiveChunkSize,
 			},
 		}
 		_, err = hooksConfig.Run(
