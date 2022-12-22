@@ -114,6 +114,8 @@ var runCmd = &cobra.Command{
 				clientConfig.Address,
 				clientConfig.ReceiveBufferSize,
 				clientConfig.ReceiveChunkSize,
+				clientConfig.ReceiveDeadline,
+				clientConfig.SendDeadline,
 				logger,
 			)
 
@@ -173,6 +175,8 @@ var runCmd = &cobra.Command{
 				"address":           elasticClientConfig.Address,
 				"receiveBufferSize": elasticClientConfig.ReceiveBufferSize,
 				"receiveChunkSize":  elasticClientConfig.ReceiveChunkSize,
+				"receiveDeadline":   elasticClientConfig.ReceiveDeadline.Seconds(),
+				"sendDeadline":      elasticClientConfig.SendDeadline.Seconds(),
 			},
 		}
 		_, err = hooksConfig.Run(
