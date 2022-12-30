@@ -2,6 +2,8 @@ package network
 
 import (
 	"context"
+	"errors"
+	"io"
 
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/plugin"
@@ -244,6 +246,30 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 			"remote":   client.Conn.RemoteAddr().String(),
 		},
 	).Msg("Received data from database")
+
+	// The connection to the server is closed, so we MUST reconnect,
+	// otherwise the client will be stuck.
+	if received == 0 && err != nil && errors.Is(err.Unwrap(), io.EOF) {
+		pr.logger.Debug().Fields(
+			map[string]interface{}{
+				"function": "proxy.passthrough",
+				"local":    client.Conn.LocalAddr().String(),
+				"remote":   client.Conn.RemoteAddr().String(),
+			}).Msgf("Client disconnected")
+
+		client.Close()
+		client = NewClient(
+			pr.ClientConfig.Network,
+			pr.ClientConfig.Address,
+			pr.ClientConfig.ReceiveBufferSize,
+			pr.ClientConfig.ReceiveChunkSize,
+			pr.ClientConfig.ReceiveDeadline,
+			pr.ClientConfig.SendDeadline,
+			pr.logger,
+		)
+		pr.busyConnections.Remove(gconn)
+		pr.busyConnections.Put(gconn, client)
+	}
 
 	egress := map[string]interface{}{
 		"response": response[:received], // Will be converted to base64-encoded string

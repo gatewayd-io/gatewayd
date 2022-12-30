@@ -196,7 +196,7 @@ func (s *Server) OnTraffic(gconn gnet.Conn) gnet.Action {
 		case errors.Is(err, gerr.ErrClientNotConnected):
 		case errors.Is(err, gerr.ErrClientSendFailed):
 		case errors.Is(err, gerr.ErrClientReceiveFailed):
-		case errors.Is(err, io.EOF):
+		case errors.Is(err.Unwrap(), io.EOF):
 			return gnet.Close
 		}
 	}
