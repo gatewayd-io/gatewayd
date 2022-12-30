@@ -150,7 +150,7 @@ func (h *HookConfig) Run(
 					"hookType": hookType,
 					"priority": prio,
 				},
-			).Msgf("Hook returned invalid value, ignoring")
+			).Msg("Hook returned invalid value, ignoring")
 			if idx == 0 {
 				returnVal = params
 			}
@@ -161,7 +161,7 @@ func (h *HookConfig) Run(
 					"hookType": hookType,
 					"priority": prio,
 				},
-			).Msgf("Hook returned invalid value, aborting")
+			).Msg("Hook returned invalid value, aborting")
 			if idx == 0 {
 				return args, nil
 			}
@@ -173,7 +173,7 @@ func (h *HookConfig) Run(
 					"hookType": hookType,
 					"priority": prio,
 				},
-			).Msgf("Hook returned invalid value, removing")
+			).Msg("Hook returned invalid value, removing")
 			removeList = append(removeList, prio)
 			if idx == 0 {
 				returnVal = params
