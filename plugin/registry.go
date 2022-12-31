@@ -22,12 +22,6 @@ const (
 	LoggerName          string = "plugin"
 )
 
-var handshakeConfig = goplugin.HandshakeConfig{
-	ProtocolVersion:  1,
-	MagicCookieKey:   "GATEWAYD_PLUGIN",
-	MagicCookieValue: "5712b87aa5d7e9f9e9ab643e6603181c5b796015cb1c09d6f5ada882bf2a1872",
-}
-
 type Registry interface {
 	Add(plugin *Impl) bool
 	Get(id Identifier) *Impl
@@ -45,10 +39,12 @@ type RegistryImpl struct {
 
 var _ Registry = &RegistryImpl{}
 
+// NewRegistry creates a new plugin registry.
 func NewRegistry(hooksConfig *HookConfig) *RegistryImpl {
 	return &RegistryImpl{plugins: pool.NewPool(EmptyPoolCapacity), hooksConfig: hooksConfig}
 }
 
+// Add adds a plugin to the registry.
 func (reg *RegistryImpl) Add(plugin *Impl) bool {
 	_, loaded, err := reg.plugins.GetOrPut(plugin.ID, plugin)
 	if err != nil {
@@ -58,6 +54,7 @@ func (reg *RegistryImpl) Add(plugin *Impl) bool {
 	return loaded
 }
 
+// Get returns a plugin from the registry.
 func (reg *RegistryImpl) Get(id Identifier) *Impl {
 	if plugin, ok := reg.plugins.Get(id).(*Impl); ok {
 		return plugin
@@ -66,6 +63,7 @@ func (reg *RegistryImpl) Get(id Identifier) *Impl {
 	return nil
 }
 
+// List returns a list of all plugins in the registry.
 func (reg *RegistryImpl) List() []Identifier {
 	var plugins []Identifier
 	reg.plugins.ForEach(func(key, _ interface{}) bool {
@@ -77,10 +75,12 @@ func (reg *RegistryImpl) List() []Identifier {
 	return plugins
 }
 
+// Remove removes a plugin from the registry.
 func (reg *RegistryImpl) Remove(id Identifier) {
 	reg.plugins.Remove(id)
 }
 
+// Shutdown shuts down all plugins in the registry.
 func (reg *RegistryImpl) Shutdown() {
 	reg.plugins.ForEach(func(key, value interface{}) bool {
 		if id, ok := key.(Identifier); ok {
@@ -94,15 +94,17 @@ func (reg *RegistryImpl) Shutdown() {
 	goplugin.CleanupClients()
 }
 
+// LoadPlugins loads plugins from the config file.
+//
 //nolint:funlen
 func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
-	// Get top-level list of plugins
+	// Get top-level list of plugins.
 	plugins := pluginConfig.MapKeys("")
 
 	// TODO: Append built-in plugins to the list of plugins
-	// Built-in plugins are plugins that are compiled and shipped with the gatewayd binary
+	// Built-in plugins are plugins that are compiled and shipped with the gatewayd binary.
 
-	// Add each plugin to the registry
+	// Add each plugin to the registry.
 	for priority, name := range plugins {
 		reg.hooksConfig.Logger.Debug().Msgf("Loading plugin: %s", name)
 		plugin := &Impl{
@@ -133,7 +135,7 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 			plugin.ID.Checksum = checksum
 		}
 
-		// Verify the checksum
+		// Verify the checksum.
 		// TODO: Load the plugin from a remote location if the checksum doesn't match
 		if sum, err := sha256sum(plugin.LocalPath); err != nil {
 			reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to calculate checksum")
@@ -153,7 +155,7 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 
 		plugin.client = goplugin.NewClient(
 			&goplugin.ClientConfig{
-				HandshakeConfig: handshakeConfig,
+				HandshakeConfig: pluginV1.Handshake,
 				Plugins:         pluginV1.GetPluginMap(plugin.ID.Name),
 				Cmd:             exec.Command(plugin.LocalPath), //nolint:gosec
 				AllowedProtocols: []goplugin.Protocol{
@@ -177,7 +179,7 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 			reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to start plugin")
 		}
 
-		// Load metadata from the plugin
+		// Load metadata from the plugin.
 		var metadata *structpb.Struct
 		if pluginV1, err := plugin.Dispense(); err != nil {
 			reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to dispense plugin")
@@ -222,6 +224,8 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 	}
 }
 
+// RegisterHooks registers the hooks for the given plugin.
+//
 //nolint:funlen
 func (reg *RegistryImpl) RegisterHooks(id Identifier) {
 	pluginImpl := reg.Get(id)

@@ -60,16 +60,19 @@ type HookConfig struct {
 	Verification Policy
 }
 
+// NewHookConfig returns a new HookConfig.
 func NewHookConfig() *HookConfig {
 	return &HookConfig{
 		hooks: map[HookType]map[Priority]HookDef{},
 	}
 }
 
+// Hooks returns the hooks.
 func (h *HookConfig) Hooks() map[HookType]map[Priority]HookDef {
 	return h.hooks
 }
 
+// Add adds a hook with a priority to the hooks map.
 func (h *HookConfig) Add(hookType HookType, prio Priority, hook HookDef) {
 	if len(h.hooks[hookType]) == 0 {
 		h.hooks[hookType] = map[Priority]HookDef{prio: hook}
@@ -81,10 +84,24 @@ func (h *HookConfig) Add(hookType HookType, prio Priority, hook HookDef) {
 	}
 }
 
+// Get returns the hooks of a specific type.
 func (h *HookConfig) Get(hookType HookType) map[Priority]HookDef {
 	return h.hooks[hookType]
 }
 
+// Run runs the hooks of a specific type. The result of the previous hook is passed
+// to the next hook as the argument, aka. chained. The context is passed to the
+// hooks as well to allow them to cancel the execution. The args are passed to the
+// first hook as the argument. The result of the first hook is passed to the second
+// hook, and so on. The result of the last hook is eventually returned. The verification
+// mode is used to determine how to handle errors. If the verification mode is set to
+// Abort, the execution is aborted on the first error. If the verification mode is set
+// to Remove, the hook is removed from the list of hooks on the first error. If the
+// verification mode is set to Ignore, the error is ignored and the execution continues.
+// If the verification mode is set to PassDown, the extra keys/values in the result
+// are passed down to the next hook. The verification mode is set to PassDown by default.
+// The opts are passed to the hooks as well to allow them to use the grpc.CallOption.
+//
 //nolint:funlen,contextcheck
 func (h *HookConfig) Run(
 	ctx context.Context,
@@ -106,7 +123,7 @@ func (h *HookConfig) Run(
 		return nil, gerr.ErrCastFailed.Wrap(err)
 	}
 
-	// Sort hooks by priority
+	// Sort hooks by priority.
 	priorities := make([]Priority, 0, len(h.hooks[hookType]))
 	for prio := range h.hooks[hookType] {
 		priorities = append(priorities, prio)
@@ -115,10 +132,10 @@ func (h *HookConfig) Run(
 		return priorities[i] < priorities[j]
 	})
 
-	// Run hooks, passing the result of the previous hook to the next one
+	// Run hooks, passing the result of the previous hook to the next one.
 	returnVal := &structpb.Struct{}
 	var removeList []Priority
-	// The signature of parameters and args MUST be the same for this to work
+	// The signature of parameters and args MUST be the same for this to work.
 	for idx, prio := range priorities {
 		var result *structpb.Struct
 		var err error
@@ -184,7 +201,7 @@ func (h *HookConfig) Run(
 		}
 	}
 
-	// Remove hooks that failed verification
+	// Remove hooks that failed verification.
 	for _, prio := range removeList {
 		delete(h.hooks[hookType], prio)
 	}

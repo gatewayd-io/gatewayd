@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TestPluginRegistry tests the PluginRegistry.
 func TestPluginRegistry(t *testing.T) {
 	hooksConfig := NewHookConfig()
 	assert.NotNil(t, hooksConfig)

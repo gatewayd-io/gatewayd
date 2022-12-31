@@ -15,12 +15,14 @@ var Handshake = goplugin.HandshakeConfig{
 	MagicCookieValue: "5712b87aa5d7e9f9e9ab643e6603181c5b796015cb1c09d6f5ada882bf2a1872",
 }
 
+// GetPluginMap returns the plugin map for the plugin.
 func GetPluginMap(pluginName string) map[string]goplugin.Plugin {
 	return map[string]goplugin.Plugin{
 		pluginName: &Plugin{},
 	}
 }
 
+// PluginMap is the map of plugins we can dispense.
 var PluginMap = map[string]goplugin.Plugin{
 	"gatewayd-plugin-test": &Plugin{},
 }
@@ -34,11 +36,13 @@ type Plugin struct {
 	}
 }
 
+// GRPCServer registers the plugin with the gRPC server.
 func (p *Plugin) GRPCServer(b *goplugin.GRPCBroker, s *grpc.Server) error {
 	RegisterGatewayDPluginServiceServer(s, &p.Impl)
 	return nil
 }
 
+// GRPCClient returns the plugin client.
 func (p *Plugin) GRPCClient(ctx context.Context, b *goplugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
 	return NewGatewayDPluginServiceClient(c), nil
 }
