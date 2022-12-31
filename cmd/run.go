@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -147,7 +148,8 @@ var runCmd = &cobra.Command{
 		}
 
 		// Verify that the pool is properly populated
-		logger.Info().Msgf("There are %d clients in the pool", pool.Size())
+		logger.Info().Str("count", fmt.Sprint(pool.Size())).Msg(
+			"There are clients available in the pool")
 		if pool.Size() != poolSize {
 			logger.Error().Msg(
 				"The pool size is incorrect, either because " +
