@@ -17,6 +17,8 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
+// TestRunServer tests an entire server run with a single client connection and hooks.
+//
 //nolint:funlen
 func TestRunServer(t *testing.T) {
 	postgres := embeddedpostgres.NewDatabase()
@@ -24,7 +26,7 @@ func TestRunServer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Create a logger
+	// Create a logger.
 	cfg := logging.LoggerConfig{
 		Output:     nil,
 		TimeFormat: zerolog.TimeFormatUnix,
@@ -47,9 +49,9 @@ func TestRunServer(t *testing.T) {
 		}
 
 		logger.Info().Msg("Ingress traffic")
-		// Decode the request
+		// Decode the request.
 		// The request is []byte, but it is base64-encoded as a string
-		// via using the structpb.NewStruct function
+		// via using the structpb.NewStruct function.
 		if req, ok := paramsMap["request"].(string); ok {
 			if request, err := base64.StdEncoding.DecodeString(req); err == nil {
 				assert.Equal(t, CreatePgStartupPacket(), request)
@@ -89,7 +91,7 @@ func TestRunServer(t *testing.T) {
 	}
 	hooksConfig.Add(plugin.OnEgressTraffic, 1, onEgressTraffic)
 
-	// Create a connection pool
+	// Create a connection pool.
 	pool := pool.NewPool(2)
 	client1 := NewClient(
 		"tcp",
@@ -112,14 +114,14 @@ func TestRunServer(t *testing.T) {
 	err = pool.Put(client2.ID, client2)
 	assert.Nil(t, err)
 
-	// Create a proxy with a fixed buffer pool
+	// Create a proxy with a fixed buffer pool.
 	proxy := NewProxy(pool, hooksConfig, false, false, &Client{
 		Network:           "tcp",
 		Address:           "localhost:5432",
 		ReceiveBufferSize: DefaultBufferSize,
 	}, logger)
 
-	// Create a server
+	// Create a server.
 	server := NewServer(
 		"tcp",
 		"127.0.0.1:15432",
@@ -167,10 +169,10 @@ func TestRunServer(t *testing.T) {
 				assert.Nil(t, err)
 				assert.Equal(t, len(CreatePgStartupPacket()), sent)
 
-				// The server should respond with a 'R' packet
+				// The server should respond with a 'R' packet.
 				size, data, err := client.Receive()
 				msg := []byte{0x0, 0x0, 0x0, 0x3}
-				// This includes the message type, length and the message itself
+				// This includes the message type, length and the message itself.
 				assert.Equal(t, 9, size)
 				assert.Equal(t, len(data[:size]), size)
 				assert.Nil(t, err)
@@ -178,10 +180,10 @@ func TestRunServer(t *testing.T) {
 				assert.Equal(t, 8, packetSize)
 				assert.NotEmpty(t, data[:size])
 				assert.Equal(t, msg, data[5:size])
-				// AuthenticationOk
+				// AuthenticationOk.
 				assert.Equal(t, uint8(0x52), data[0])
 
-				// Clean up
+				// Clean up.
 				server.Shutdown()
 				assert.NoError(t, postgres.Stop())
 				return

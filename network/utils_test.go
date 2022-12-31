@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TestGetRlimit tests the GetRLimit function.
 func TestGetRlimit(t *testing.T) {
 	cfg := logging.LoggerConfig{
 		Output:     nil,
@@ -22,6 +23,7 @@ func TestGetRlimit(t *testing.T) {
 	assert.Greater(t, rlimit.Max, uint64(1))
 }
 
+// TestGetID tests the GetID function.
 func TestGetID(t *testing.T) {
 	cfg := logging.LoggerConfig{
 		Output:     nil,
@@ -35,6 +37,7 @@ func TestGetID(t *testing.T) {
 	assert.Equal(t, "0cf47ee4e436ecb40dbd1d2d9a47179d1f6d98e2ea18d6fbd1cdfa85d3cec94f", id)
 }
 
+// TestResolve tests the Resolve function.
 func TestResolve(t *testing.T) {
 	cfg := logging.LoggerConfig{
 		Output:     nil,

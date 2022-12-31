@@ -10,6 +10,7 @@ type WriteBuffer struct {
 	msgStart int
 }
 
+// writeStartupMsg writes a PostgreSQL startup message to the buffer.
 func writeStartupMsg(buf *WriteBuffer, user, database, appName string) {
 	// Write startup message header
 	buf.msgStart = len(buf.Bytes)
@@ -32,11 +33,13 @@ func writeStartupMsg(buf *WriteBuffer, user, database, appName string) {
 		buf.Bytes[buf.msgStart:], uint32(len(buf.Bytes)-buf.msgStart))
 }
 
+// WriteString writes a null-terminated string to the buffer.
 func (buf *WriteBuffer) WriteString(s string) {
 	buf.Bytes = append(buf.Bytes, s...)
 	buf.Bytes = append(buf.Bytes, 0)
 }
 
+// CreatePostgreSQLPacket creates a PostgreSQL packet.
 func CreatePostgreSQLPacket(typ byte, msg []byte) []byte {
 	packet := make([]byte, 1+4+len(msg))
 
@@ -49,6 +52,7 @@ func CreatePostgreSQLPacket(typ byte, msg []byte) []byte {
 	return packet
 }
 
+// CreatePgStartupPacket creates a PostgreSQL startup packet.
 func CreatePgStartupPacket() []byte {
 	buf := &WriteBuffer{}
 	writeStartupMsg(buf, "postgres", "postgres", "gatewayd")

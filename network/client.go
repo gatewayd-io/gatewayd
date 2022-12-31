@@ -40,6 +40,8 @@ var _ ClientInterface = &Client{}
 
 // TODO: implement a better connection management algorithm
 
+// NewClient creates a new client.
+//
 //nolint:funlen
 func NewClient(
 	network, address string,
@@ -51,19 +53,19 @@ func NewClient(
 
 	client.logger = logger
 
-	// Try to resolve the address and log an error if it can't be resolved
+	// Try to resolve the address and log an error if it can't be resolved.
 	addr, err := Resolve(network, address, logger)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to resolve address")
 	}
 
-	// Create a resolved client
+	// Create a resolved client.
 	client = Client{
 		Network: network,
 		Address: addr,
 	}
 
-	// Fall back to the original network and address if the address can't be resolved
+	// Fall back to the original network and address if the address can't be resolved.
 	if client.Address == "" || client.Network == "" {
 		client = Client{
 			Network: network,
@@ -71,7 +73,7 @@ func NewClient(
 		}
 	}
 
-	// Create a new connection
+	// Create a new connection.
 	conn, origErr := net.Dial(client.Network, client.Address)
 	if origErr != nil {
 		err := gerr.ErrClientConnectionFailed.Wrap(origErr)
@@ -81,6 +83,7 @@ func NewClient(
 
 	client.Conn = conn
 
+	// Set the receive deadline (timeout).
 	if receiveDeadline <= 0 {
 		client.ReceiveDeadline = DefaultReceiveDeadline
 	} else {
@@ -92,6 +95,7 @@ func NewClient(
 		}
 	}
 
+	// Set the send deadline (timeout).
 	if sendDeadline <= 0 {
 		client.SendDeadline = DefaultSendDeadline
 	} else {
@@ -103,12 +107,15 @@ func NewClient(
 		}
 	}
 
+	// Set the receive buffer size. This is the maximum size of the buffer.
 	if receiveBufferSize <= 0 {
 		client.ReceiveBufferSize = DefaultBufferSize
 	} else {
 		client.ReceiveBufferSize = receiveBufferSize
 	}
 
+	// Set the receive chunk size. This is the size of the buffer that is read from the connection
+	// in chunks.
 	if receiveChunkSize <= 0 {
 		client.ReceiveChunkSize = DefaultChunkSize
 	} else {
@@ -121,6 +128,7 @@ func NewClient(
 	return &client
 }
 
+// Send sends data to the server.
 func (c *Client) Send(data []byte) (int, *gerr.GatewayDError) {
 	sent, err := c.Conn.Write(data)
 	if err != nil {
@@ -131,9 +139,11 @@ func (c *Client) Send(data []byte) (int, *gerr.GatewayDError) {
 	return sent, nil
 }
 
+// Receive receives data from the server.
 func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 	var received int
 	buffer := make([]byte, 0, c.ReceiveBufferSize)
+	// Read the data in chunks.
 	for {
 		smallBuf := make([]byte, c.ReceiveChunkSize)
 		read, err := c.Conn.Read(smallBuf)
@@ -158,6 +168,7 @@ func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 	return received, buffer, nil
 }
 
+// Close closes the connection to the server.
 func (c *Client) Close() {
 	c.logger.Debug().Msgf("Closing connection to %s", c.Address)
 	if c.Conn != nil {
@@ -169,6 +180,7 @@ func (c *Client) Close() {
 	c.Network = ""
 }
 
+// IsConnected checks if the client is still connected to the server.
 func (c *Client) IsConnected() bool {
 	if c == nil {
 		c.logger.Debug().Str(

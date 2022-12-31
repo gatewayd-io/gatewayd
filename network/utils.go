@@ -11,6 +11,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// GetRLimit returns the current system soft and hard limits for the number of open files.
 func GetRLimit(logger zerolog.Logger) syscall.Rlimit {
 	var limits syscall.Rlimit
 	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &limits); err != nil { //nolint:nosnakecase
@@ -21,6 +22,7 @@ func GetRLimit(logger zerolog.Logger) syscall.Rlimit {
 	return limits
 }
 
+// GetID returns a unique ID (hash) for a network connection.
 func GetID(network, address string, seed int, logger zerolog.Logger) string {
 	hash := sha256.New()
 	_, err := hash.Write([]byte(fmt.Sprintf("%s://%s%d", network, address, seed)))
@@ -30,6 +32,7 @@ func GetID(network, address string, seed int, logger zerolog.Logger) string {
 	return hex.EncodeToString(hash.Sum(nil))
 }
 
+// Resolve resolves a network address.
 func Resolve(network, address string, logger zerolog.Logger) (string, *gerr.GatewayDError) {
 	switch network {
 	case "tcp", "tcp4", "tcp6":

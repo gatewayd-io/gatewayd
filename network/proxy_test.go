@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TestNewProxy tests the creation of a new proxy with a fixed connection pool.
 func TestNewProxy(t *testing.T) {
 	postgres := embeddedpostgres.NewDatabase()
 	if err := postgres.Start(); err != nil {
@@ -60,6 +61,7 @@ func TestNewProxy(t *testing.T) {
 	proxy.availableConnections.Clear()
 }
 
+// TestNewProxyElastic tests the creation of a new proxy with an elastic connection pool.
 func TestNewProxyElastic(t *testing.T) {
 	cfg := logging.LoggerConfig{
 		Output:     nil,
