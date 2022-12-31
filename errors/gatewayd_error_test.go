@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TestNewGatewayDError tests the creation of a new GatewayDError.
 func TestNewGatewayDError(t *testing.T) {
 	err := NewGatewayDError(ErrCodeUnknown, "test", nil)
 	assert.NotNil(t, err)
