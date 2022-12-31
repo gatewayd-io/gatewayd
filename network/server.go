@@ -3,6 +3,7 @@ package network
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"time"
@@ -80,7 +81,8 @@ func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 // OnOpen is called when a new connection is opened. It calls the OnOpening and OnOpened hooks.
 // It also checks if the server is at the soft or hard limit and closes the connection if it is.
 func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
-	s.logger.Debug().Msgf("GatewayD is opening a connection from %s", gconn.RemoteAddr().String())
+	s.logger.Debug().Str("from", gconn.RemoteAddr().String()).Msg(
+		"GatewayD is opening a connection")
 
 	// Run the OnOpening hooks.
 	onOpeningData := map[string]interface{}{
@@ -143,7 +145,8 @@ func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 // It also recycles the connection back to the available connection pool, unless the pool
 // is elastic and reuse is disabled.
 func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
-	s.logger.Debug().Msgf("GatewayD is closing a connection from %s", gconn.RemoteAddr().String())
+	s.logger.Debug().Str("from", gconn.RemoteAddr().String()).Msg(
+		"GatewayD is closing a connection")
 
 	// Run the OnClosing hooks.
 	data := map[string]interface{}{
@@ -257,7 +260,8 @@ func (s *Server) OnShutdown(engine gnet.Engine) {
 // OnTick is called every TickInterval. It calls the OnTick hooks.
 func (s *Server) OnTick() (time.Duration, gnet.Action) {
 	s.logger.Debug().Msg("GatewayD is ticking...")
-	s.logger.Info().Msgf("Active connections: %d", s.engine.CountConnections())
+	s.logger.Info().Str("count", fmt.Sprint(s.engine.CountConnections())).Msg(
+		"Active client connections")
 
 	// Run the OnTick hooks.
 	_, err := s.hooksConfig.Run(
@@ -276,7 +280,7 @@ func (s *Server) OnTick() (time.Duration, gnet.Action) {
 
 // Run starts the server and blocks until the server is stopped. It calls the OnRun hooks.
 func (s *Server) Run() error {
-	s.logger.Info().Msgf("GatewayD is running with PID %d", os.Getpid())
+	s.logger.Info().Str("pid", fmt.Sprint(os.Getpid())).Msg("GatewayD is running")
 
 	// Try to resolve the address and log an error if it can't be resolved
 	addr, err := Resolve(s.Network, s.Address, s.logger)
@@ -298,7 +302,7 @@ func (s *Server) Run() error {
 
 	if result != nil {
 		if errMsg, ok := result["error"].(string); ok && errMsg != "" {
-			s.logger.Error().Msgf("Error in hook: %s", errMsg)
+			s.logger.Error().Str("error", errMsg).Msg("Error in hook")
 		}
 
 		if address, ok := result["address"].(string); ok {
@@ -359,11 +363,12 @@ func NewServer(
 
 	if addr != "" {
 		server.Address = addr
-		logger.Debug().Msgf("Resolved address to %s", addr)
-		logger.Info().Msgf("GatewayD is listening on %s", addr)
+		logger.Debug().Str("address", addr).Msg("Resolved address")
+		logger.Info().Str("address", addr).Msg("GatewayD is listening")
 	} else {
 		logger.Error().Msg("Failed to resolve address")
-		logger.Warn().Msgf("GatewayD is listening on %s (unresolved address)", server.Address)
+		logger.Warn().Str("address", server.Address).Msg(
+			"GatewayD is listening on an unresolved address")
 	}
 
 	// Get the current limits.
@@ -375,7 +380,7 @@ func NewServer(
 		logger.Debug().Msg("Soft limit is not set, using the current system soft limit")
 	} else {
 		server.SoftLimit = softLimit
-		logger.Debug().Msgf("Soft limit is set to %d", softLimit)
+		logger.Debug().Str("value", fmt.Sprint(softLimit)).Msg("Set soft limit")
 	}
 
 	if hardLimit == 0 {
@@ -383,7 +388,7 @@ func NewServer(
 		logger.Debug().Msg("Hard limit is not set, using the current system hard limit")
 	} else {
 		server.HardLimit = hardLimit
-		logger.Debug().Msgf("Hard limit is set to %d", hardLimit)
+		logger.Debug().Str("value", fmt.Sprint(hardLimit)).Msg("Set hard limit")
 	}
 
 	if tickInterval == 0 {

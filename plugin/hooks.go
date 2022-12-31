@@ -78,7 +78,12 @@ func (h *HookConfig) Add(hookType HookType, prio Priority, hook HookDef) {
 		h.hooks[hookType] = map[Priority]HookDef{prio: hook}
 	} else {
 		if _, ok := h.hooks[hookType][prio]; ok {
-			h.Logger.Warn().Msgf("Hook %s replaced with priority %d.", hookType, prio)
+			h.Logger.Warn().Fields(
+				map[string]interface{}{
+					"hookType": hookType,
+					"priority": prio,
+				},
+			).Msg("Hook is replaced")
 		}
 		h.hooks[hookType][prio] = hook
 	}

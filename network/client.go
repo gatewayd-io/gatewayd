@@ -1,6 +1,7 @@
 package network
 
 import (
+	"fmt"
 	"net"
 	"time"
 
@@ -91,7 +92,8 @@ func NewClient(
 		if err := client.Conn.SetReadDeadline(time.Now().Add(client.ReceiveDeadline)); err != nil {
 			logger.Error().Err(err).Msg("Failed to set receive deadline")
 		} else {
-			logger.Debug().Msgf("Receive deadline set to %s", client.ReceiveDeadline)
+			logger.Debug().Str("duration", fmt.Sprint(client.ReceiveDeadline.Seconds())).Msg(
+				"Set receive deadline")
 		}
 	}
 
@@ -103,7 +105,8 @@ func NewClient(
 		if err := client.Conn.SetWriteDeadline(time.Now().Add(client.SendDeadline)); err != nil {
 			logger.Error().Err(err).Msg("Failed to set send deadline")
 		} else {
-			logger.Debug().Msgf("Send deadline set to %s", client.SendDeadline)
+			logger.Debug().Str("duration", fmt.Sprint(client.SendDeadline)).Msg(
+				"Set send deadline")
 		}
 	}
 
@@ -122,7 +125,7 @@ func NewClient(
 		client.ReceiveChunkSize = receiveChunkSize
 	}
 
-	logger.Debug().Msgf("New client created: %s", client.Address)
+	logger.Debug().Str("address", client.Address).Msg("New client created")
 	client.ID = GetID(conn.LocalAddr().Network(), conn.LocalAddr().String(), DefaultSeed, logger)
 
 	return &client
@@ -132,10 +135,15 @@ func NewClient(
 func (c *Client) Send(data []byte) (int, *gerr.GatewayDError) {
 	sent, err := c.Conn.Write(data)
 	if err != nil {
-		c.logger.Error().Err(err).Msgf("Couldn't send data to the server: %s", err)
+		c.logger.Error().Err(err).Msg("Couldn't send data to the server")
 		return 0, gerr.ErrClientSendFailed.Wrap(err)
 	}
-	c.logger.Debug().Msgf("Sent %d bytes to %s", len(data), c.Address)
+	c.logger.Debug().Fields(
+		map[string]interface{}{
+			"length":  sent,
+			"address": c.Address,
+		},
+	).Msg("Sent data to server")
 	return sent, nil
 }
 
@@ -170,7 +178,7 @@ func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 
 // Close closes the connection to the server.
 func (c *Client) Close() {
-	c.logger.Debug().Msgf("Closing connection to %s", c.Address)
+	c.logger.Debug().Str("address", c.Address).Msg("Closing connection to server")
 	if c.Conn != nil {
 		c.Conn.Close()
 	}
@@ -183,21 +191,29 @@ func (c *Client) Close() {
 // IsConnected checks if the client is still connected to the server.
 func (c *Client) IsConnected() bool {
 	if c == nil {
-		c.logger.Debug().Str(
-			"reason", "client is nil").Msgf("Connection to %s is closed", c.Address)
+		c.logger.Debug().Fields(
+			map[string]interface{}{
+				"address": c.Address,
+				"reason":  "client is nil",
+			}).Msg("Connection to server is closed")
 		return false
 	}
 
 	if c != nil && c.Conn == nil || c.ID == "" {
-		c.logger.Debug().Str(
-			"reason", "connection is nil or invalid",
-		).Msgf("Connection to %s is closed", c.Address)
+		c.logger.Debug().Fields(
+			map[string]interface{}{
+				"address": c.Address,
+				"reason":  "connection is nil or invalid",
+			}).Msg("Connection to server is closed")
 		return false
 	}
 
 	if n, err := c.Read([]byte{}); n == 0 && err != nil {
-		c.logger.Debug().Str(
-			"reason", "read 0 bytes").Msgf("Connection to %s is closed, ", c.Address)
+		c.logger.Debug().Fields(
+			map[string]interface{}{
+				"address": c.Address,
+				"reason":  "read 0 bytes",
+			}).Msg("Connection to server is closed")
 		return false
 	}
 

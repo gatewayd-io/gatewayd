@@ -17,8 +17,8 @@ func GetRLimit(logger zerolog.Logger) syscall.Rlimit {
 	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &limits); err != nil { //nolint:nosnakecase
 		logger.Error().Err(err).Msg("Failed to get rlimit")
 	}
-	logger.Debug().Msgf("Current system soft limit: %d", limits.Cur)
-	logger.Debug().Msgf("Current system hard limit: %d", limits.Max)
+	logger.Debug().Str("value", fmt.Sprint(limits.Cur)).Msg("Current system soft limit")
+	logger.Debug().Str("value", fmt.Sprint(limits.Max)).Msg("Current system hard limit")
 	return limits
 }
 
@@ -54,7 +54,7 @@ func Resolve(network, address string, logger zerolog.Logger) (string, *gerr.Gate
 		}
 		return "", gerr.ErrResolveFailed.Wrap(err)
 	default:
-		logger.Error().Msgf("Network %s is not supported", network)
+		logger.Error().Str("network", network).Msg("Network is not supported")
 		return "", gerr.ErrNetworkNotSupported
 	}
 }
