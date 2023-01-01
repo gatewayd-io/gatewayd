@@ -38,6 +38,8 @@ func TestNewClient(t *testing.T) {
 		DefaultChunkSize,
 		DefaultReceiveDeadline,
 		DefaultSendDeadline,
+		false,
+		DefaultTCPKeepAlivePeriod,
 		logger)
 	defer client.Close()
 
@@ -77,6 +79,8 @@ func TestSend(t *testing.T) {
 		DefaultChunkSize,
 		DefaultReceiveDeadline,
 		DefaultSendDeadline,
+		false,
+		DefaultTCPKeepAlivePeriod,
 		logger)
 	defer client.Close()
 
@@ -116,6 +120,8 @@ func TestReceive(t *testing.T) {
 		DefaultChunkSize,
 		DefaultReceiveDeadline,
 		DefaultSendDeadline,
+		false,
+		DefaultTCPKeepAlivePeriod,
 		logger)
 	defer client.Close()
 
@@ -165,6 +171,8 @@ func TestClose(t *testing.T) {
 		DefaultChunkSize,
 		DefaultReceiveDeadline,
 		DefaultSendDeadline,
+		false,
+		DefaultTCPKeepAlivePeriod,
 		logger)
 	assert.NotNil(t, client)
 	client.Close()
