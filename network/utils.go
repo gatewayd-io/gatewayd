@@ -102,6 +102,8 @@ func extractFieldValue(result map[string]interface{}, fieldName string) ([]byte,
 	var data []byte
 	var err string
 	var conversionErr error
+
+	//nolint:nestif
 	if result != nil {
 		if fieldValue, ok := result[fieldName].(string); ok {
 			if base64Decoded, err := base64.StdEncoding.DecodeString(fieldValue); err == nil {
