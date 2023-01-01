@@ -95,6 +95,9 @@ var runCmd = &cobra.Command{
 		loggerCfg := loggerConfig()
 		logger := logging.NewLogger(loggerCfg)
 
+		// Replace the default logger with the new one from the config
+		hooksConfig.Logger = logger
+
 		// This is a notification hook, so we don't care about the result.
 		data := map[string]interface{}{
 			"timeFormat": loggerCfg.TimeFormat,
