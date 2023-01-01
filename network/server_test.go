@@ -140,15 +140,20 @@ func TestRunServer(t *testing.T) {
 	var waitGroup sync.WaitGroup
 	waitGroup.Add(2)
 
-	go func(t *testing.T, server *Server) {
+	go func(t *testing.T, waitGroup *sync.WaitGroup, server *Server) {
 		t.Helper()
 		defer waitGroup.Done()
 
 		err := server.Run()
 		assert.Nil(t, err)
-	}(t, server)
+	}(t, &waitGroup, server)
 
-	go func(t *testing.T, server *Server) {
+	go func(t *testing.T,
+		waitGroup *sync.WaitGroup,
+		server *Server,
+		logger zerolog.Logger,
+		postgres *embeddedpostgres.EmbeddedPostgres,
+	) {
 		t.Helper()
 		defer waitGroup.Done()
 
@@ -189,7 +194,7 @@ func TestRunServer(t *testing.T) {
 				return
 			}
 		}
-	}(t, server)
+	}(t, &waitGroup, server, logger, postgres)
 
 	waitGroup.Wait()
 }
