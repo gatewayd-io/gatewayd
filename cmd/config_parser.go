@@ -121,14 +121,18 @@ func poolConfig() (int, *network.Client) {
 	receiveChunkSize := globalConfig.Int(ref + ".receiveChunkSize")
 	receiveDeadline := globalConfig.Duration(ref + ".receiveDeadline")
 	sendDeadline := globalConfig.Duration(ref + ".sendDeadline")
+	tcpKeepAlive := globalConfig.Bool(ref + ".tcpKeepAlive")
+	tcpKeepAlivePeriod := globalConfig.Duration(ref + ".tcpKeepAlivePeriod")
 
 	return poolSize, &network.Client{
-		Network:           net,
-		Address:           address,
-		ReceiveBufferSize: receiveBufferSize,
-		ReceiveChunkSize:  receiveChunkSize,
-		ReceiveDeadline:   receiveDeadline,
-		SendDeadline:      sendDeadline,
+		Network:            net,
+		Address:            address,
+		TCPKeepAlive:       tcpKeepAlive,
+		TCPKeepAlivePeriod: tcpKeepAlivePeriod,
+		ReceiveBufferSize:  receiveBufferSize,
+		ReceiveChunkSize:   receiveChunkSize,
+		ReceiveDeadline:    receiveDeadline,
+		SendDeadline:       sendDeadline,
 	}
 }
 
@@ -141,15 +145,33 @@ func proxyConfig() (bool, bool, *network.Client) {
 	net := globalConfig.String(ref + ".network")
 	address := globalConfig.String(ref + ".address")
 	receiveBufferSize := globalConfig.Int(ref + ".receiveBufferSize")
+	receiveChunkSize := globalConfig.Int(ref + ".receiveChunkSize")
+	receiveDeadline := globalConfig.Duration(ref + ".receiveDeadline")
+	sendDeadline := globalConfig.Duration(ref + ".sendDeadline")
+	tcpKeepAlive := globalConfig.Bool(ref + ".tcpKeepAlive")
+	tcpKeepAlivePeriod := globalConfig.Duration(ref + ".tcpKeepAlivePeriod")
 
 	if receiveBufferSize <= 0 {
 		receiveBufferSize = network.DefaultBufferSize
 	}
 
+	if receiveChunkSize <= 0 {
+		receiveChunkSize = network.DefaultChunkSize
+	}
+
+	if tcpKeepAlive && tcpKeepAlivePeriod <= 0 {
+		tcpKeepAlivePeriod = network.DefaultTCPKeepAlivePeriod
+	}
+
 	return elastic, reuseElasticClients, &network.Client{
-		Network:           net,
-		Address:           address,
-		ReceiveBufferSize: receiveBufferSize,
+		Network:            net,
+		Address:            address,
+		TCPKeepAlive:       tcpKeepAlive,
+		TCPKeepAlivePeriod: tcpKeepAlivePeriod,
+		ReceiveBufferSize:  receiveBufferSize,
+		ReceiveChunkSize:   receiveChunkSize,
+		ReceiveDeadline:    receiveDeadline,
+		SendDeadline:       sendDeadline,
 	}
 }
 
