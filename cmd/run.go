@@ -124,6 +124,8 @@ var runCmd = &cobra.Command{
 				clientConfig.ReceiveChunkSize,
 				clientConfig.ReceiveDeadline,
 				clientConfig.SendDeadline,
+				clientConfig.TCPKeepAlive,
+				clientConfig.TCPKeepAlivePeriod,
 				logger,
 			)
 
