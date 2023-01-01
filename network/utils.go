@@ -2,12 +2,14 @@ package network
 
 import (
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"net"
 	"syscall"
 
 	gerr "github.com/gatewayd-io/gatewayd/errors"
+	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
 )
 
@@ -57,4 +59,62 @@ func Resolve(network, address string, logger zerolog.Logger) (string, *gerr.Gate
 		logger.Error().Str("network", network).Msg("Network is not supported")
 		return "", gerr.ErrNetworkNotSupported
 	}
+}
+
+// trafficData creates the ingress/egress map for the OnIngressTraffic/OnEgresTraffic hooks.
+func trafficData(
+	gconn gnet.Conn,
+	client *Client,
+	fieldName string,
+	fieldValue []byte,
+	err interface{},
+) map[string]interface{} {
+	data := map[string]interface{}{
+		"client": map[string]interface{}{
+			"local":  gconn.LocalAddr().String(),
+			"remote": gconn.RemoteAddr().String(),
+		},
+		"server": map[string]interface{}{
+			"local":  client.Conn.LocalAddr().String(),
+			"remote": client.Conn.RemoteAddr().String(),
+		},
+		fieldName: fieldValue, // Will be converted to base64-encoded string.
+		"error":   "",
+	}
+
+	if err != nil {
+		switch typedErr := err.(type) {
+		case *gerr.GatewayDError:
+		case error:
+			data["error"] = typedErr.Error()
+		case string:
+			data["error"] = typedErr
+		default:
+			data["error"] = fmt.Sprintf("%v", err)
+		}
+	}
+
+	return data
+}
+
+// extractFieldValue extracts the given field name and error message from the result of the hook.
+func extractFieldValue(result map[string]interface{}, fieldName string) ([]byte, string, error) {
+	var data []byte
+	var err string
+	var conversionErr error
+
+	//nolint:nestif
+	if result != nil {
+		if fieldValue, ok := result[fieldName].(string); ok {
+			if base64Decoded, err := base64.StdEncoding.DecodeString(fieldValue); err == nil {
+				data = base64Decoded
+			} else {
+				conversionErr = err
+			}
+		}
+		if errMsg, ok := result["error"].(string); ok && errMsg != "" {
+			err = errMsg
+		}
+	}
+	return data, err, conversionErr
 }
