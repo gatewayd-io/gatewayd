@@ -10,7 +10,6 @@ import (
 	"github.com/gatewayd-io/gatewayd/pool"
 	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
-	"golang.org/x/exp/maps"
 )
 
 const (
@@ -213,32 +212,10 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 		},
 	).Msg("Received data from client")
 
-	// Create addresses map for the hooks.
-	addresses := map[string]interface{}{
-		"client": map[string]interface{}{
-			"local":  gconn.LocalAddr().String(),
-			"remote": gconn.RemoteAddr().String(),
-		},
-		"server": map[string]interface{}{
-			"local":  client.Conn.LocalAddr().String(),
-			"remote": client.Conn.RemoteAddr().String(),
-		},
-	}
-
-	// Create the ingress map for the OnIngressTraffic hooks.
-	ingress := map[string]interface{}{
-		"request": request, // Will be converted to base64-encoded string.
-		"error":   "",
-	}
-	if origErr != nil {
-		ingress["error"] = origErr.Error()
-	}
-	maps.Copy(ingress, addresses)
-
 	// Run the OnIngressTraffic hooks.
 	result, err := pr.hookConfig.Run(
 		context.Background(),
-		ingress,
+		trafficData(gconn, client, "request", request, origErr),
 		plugin.OnIngressTraffic,
 		pr.hookConfig.Verification)
 	if err != nil {
@@ -313,20 +290,10 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 		}
 	}
 
-	// Create the egress map for the OnEgressTraffic hooks.
-	egress := map[string]interface{}{
-		"response": response[:received], // Will be converted to base64-encoded string
-		"error":    "",
-	}
-	if err != nil {
-		egress["error"] = err.Error()
-	}
-	maps.Copy(egress, addresses)
-
 	// Run the OnEgressTraffic hooks.
 	result, err = pr.hookConfig.Run(
 		context.Background(),
-		egress,
+		trafficData(gconn, client, "response", response[:received], err),
 		plugin.OnEgressTraffic,
 		pr.hookConfig.Verification)
 	if err != nil {
