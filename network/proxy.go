@@ -85,6 +85,8 @@ func (pr *ProxyImpl) Connect(gconn gnet.Conn) *gerr.GatewayDError {
 				pr.ClientConfig.ReceiveChunkSize,
 				pr.ClientConfig.ReceiveDeadline,
 				pr.ClientConfig.SendDeadline,
+				pr.ClientConfig.TCPKeepAlive,
+				pr.ClientConfig.TCPKeepAlivePeriod,
 				pr.logger,
 			)
 			pr.logger.Debug().Str("id", client.ID[:7]).Msg("Reused the client connection")
@@ -276,6 +278,8 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 			pr.ClientConfig.ReceiveChunkSize,
 			pr.ClientConfig.ReceiveDeadline,
 			pr.ClientConfig.SendDeadline,
+			pr.ClientConfig.TCPKeepAlive,
+			pr.ClientConfig.TCPKeepAlivePeriod,
 			pr.logger,
 		)
 		pr.busyConnections.Remove(gconn)
