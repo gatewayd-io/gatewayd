@@ -220,13 +220,13 @@ func (s *Server) OnTraffic(gconn gnet.Conn) gnet.Action {
 	if err := s.proxy.PassThrough(gconn); err != nil {
 		s.logger.Error().Err(err).Msg("Failed to pass through traffic")
 		switch {
-		case errors.Is(err, gerr.ErrPoolExhausted):
-		case errors.Is(err, gerr.ErrCastFailed):
-		case errors.Is(err, gerr.ErrClientNotFound):
-		case errors.Is(err, gerr.ErrClientNotConnected):
-		case errors.Is(err, gerr.ErrClientSendFailed):
-		case errors.Is(err, gerr.ErrClientReceiveFailed):
-		case errors.Is(err.Unwrap(), io.EOF):
+		case errors.Is(err, gerr.ErrPoolExhausted),
+			errors.Is(err, gerr.ErrCastFailed),
+			errors.Is(err, gerr.ErrClientNotFound),
+			errors.Is(err, gerr.ErrClientNotConnected),
+			errors.Is(err, gerr.ErrClientSendFailed),
+			errors.Is(err, gerr.ErrClientReceiveFailed),
+			errors.Is(err.Unwrap(), io.EOF):
 			return gnet.Close
 		}
 	}
