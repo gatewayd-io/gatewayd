@@ -4,7 +4,9 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"io"
 	"net"
 	"syscall"
 
@@ -117,4 +119,18 @@ func extractFieldValue(result map[string]interface{}, fieldName string) ([]byte,
 		}
 	}
 	return data, err, conversionErr
+}
+
+func IsConnTimedOut(err *gerr.GatewayDError) bool {
+	if err != nil && err.Unwrap() != nil {
+		var netErr net.Error
+		if ok := errors.As(err.Unwrap(), &netErr); ok && netErr.Timeout() {
+			return true
+		}
+	}
+	return false
+}
+
+func IsConnClosed(received int, err *gerr.GatewayDError) bool {
+	return received == 0 && err != nil && err.Unwrap() != nil && errors.Is(err.Unwrap(), io.EOF)
 }
