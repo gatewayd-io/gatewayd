@@ -123,7 +123,8 @@ func extractFieldValue(result map[string]interface{}, fieldName string) ([]byte,
 
 func IsConnTimedOut(err *gerr.GatewayDError) bool {
 	if err != nil && err.Unwrap() != nil {
-		if neterr, ok := err.Unwrap().(net.Error); ok && neterr.Timeout() {
+		var netErr net.Error
+		if ok := errors.As(err.Unwrap(), &netErr); ok && netErr.Timeout() {
 			return true
 		}
 	}
