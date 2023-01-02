@@ -2,8 +2,6 @@ package network
 
 import (
 	"context"
-	"errors"
-	"io"
 
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/plugin"
@@ -287,6 +285,17 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 			// This should never happen
 			return err
 		}
+	}
+
+	// If the response is empty, don't send anything, instead just close the ingress connection.
+	if received == 0 {
+		pr.logger.Debug().Fields(
+			map[string]interface{}{
+				"function": "proxy.passthrough",
+				"local":    client.Conn.LocalAddr().String(),
+				"remote":   client.Conn.RemoteAddr().String(),
+			}).Msg("No data to send to client")
+		return err
 	}
 
 	// Run the OnEgressTraffic hooks.
