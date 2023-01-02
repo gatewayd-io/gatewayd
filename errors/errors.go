@@ -2,6 +2,7 @@ package errors
 
 const (
 	ErrCodeUnknown ErrCode = iota
+	ErrCodeNilContext
 	ErrCodeClientNotFound
 	ErrCodeClientNotConnected
 	ErrCodeClientConnectionFailed
@@ -30,6 +31,8 @@ const (
 var (
 	ErrClientNotFound = NewGatewayDError(
 		ErrCodeClientNotFound, "client not found", nil)
+	ErrNilContext = NewGatewayDError(
+		ErrCodeNilContext, "context is nil", nil)
 	ErrClientNotConnected = NewGatewayDError(
 		ErrCodeClientNotConnected, "client is not connected", nil)
 	ErrClientConnectionFailed = NewGatewayDError(
