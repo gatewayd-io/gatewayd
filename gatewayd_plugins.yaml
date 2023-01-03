@@ -17,4 +17,4 @@ gatewayd-plugin-test:
     - MAGIC_COOKIE_KEY=GATEWAYD_PLUGIN
     - MAGIC_COOKIE_VALUE=5712b87aa5d7e9f9e9ab643e6603181c5b796015cb1c09d6f5ada882bf2a1872
   # Checksum hash to verify the binary before loading
-  checksum: 1ce8c55e574491871b86f783000e7cfb82f7253b1d3a33a73dffee5fb8af97fe
+  checksum: 006e19bcfd1951e077746143590934470e8b1d67a3904036603013e150fcb708
