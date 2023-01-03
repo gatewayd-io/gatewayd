@@ -34,6 +34,7 @@ type Impl struct {
 	ProjectURL  string
 	LocalPath   string
 	Args        []string
+	Env         []string
 	Enabled     bool
 	// internal and external config options
 	Config map[string]string
