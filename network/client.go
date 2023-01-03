@@ -175,12 +175,12 @@ func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 	buffer := make([]byte, 0, c.ReceiveBufferSize)
 	// Read the data in chunks.
 	for {
-		smallBuf := make([]byte, c.ReceiveChunkSize)
-		read, err := c.Conn.Read(smallBuf)
+		chunk := make([]byte, c.ReceiveChunkSize)
+		read, err := c.Conn.Read(chunk)
 		switch {
 		case read > 0 && err != nil:
 			received += read
-			buffer = append(buffer, smallBuf[:read]...)
+			buffer = append(buffer, chunk[:read]...)
 			c.logger.Error().Err(err).Msg("Couldn't receive data from the server")
 			return received, buffer, gerr.ErrClientReceiveFailed.Wrap(err)
 		case err != nil:
@@ -188,7 +188,7 @@ func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 			return received, buffer, gerr.ErrClientReceiveFailed.Wrap(err)
 		default:
 			received += read
-			buffer = append(buffer, smallBuf[:read]...)
+			buffer = append(buffer, chunk[:read]...)
 		}
 
 		if read == 0 || read < c.ReceiveChunkSize {
