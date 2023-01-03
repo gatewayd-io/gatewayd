@@ -1,4 +1,5 @@
 gatewayd-plugin-test:
   enabled: True
   localPath: ../gatewayd-plugin-test/gatewayd-plugin-test
-  checksum: ca3f75467f022bf0049fb26c604348bb96f97863a5c526ca2808e21daa8c2694
+  args: ["--log-level", "info"]
+  checksum: a20e3a1529f4460ad24416a055d599f6f55f42ead836345a4bf0a17d056abb45
