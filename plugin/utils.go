@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/google/go-cmp/cmp"
@@ -54,4 +55,14 @@ func Verify(params, returnVal *structpb.Struct) bool {
 		}),
 		cmpopts.EquateEmpty(),
 	})
+}
+
+// NewCommand returns a command with the given arguments and environment variables.
+func NewCommand(cmd string, args []string, env []string) *exec.Cmd {
+	command := exec.Command(cmd, args...)
+	command.Env = os.Environ()
+	if env != nil {
+		command.Env = append(command.Env, env...)
+	}
+	return command
 }
