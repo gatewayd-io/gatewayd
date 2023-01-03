@@ -129,6 +129,10 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 			plugin.LocalPath = localPath
 		}
 
+		if args := pluginConfig.Strings(name + ".args"); len(args) > 0 {
+			plugin.Args = args
+		}
+
 		if checksum, ok := pluginConfig.Get(name + ".checksum").(string); !ok || checksum == "" {
 			reg.hooksConfig.Logger.Debug().Str("name", name).Msg(
 				"Checksum of plugin doesn't exist or is not set")
@@ -163,7 +167,7 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 			&goplugin.ClientConfig{
 				HandshakeConfig: pluginV1.Handshake,
 				Plugins:         pluginV1.GetPluginMap(plugin.ID.Name),
-				Cmd:             exec.Command(plugin.LocalPath), //nolint:gosec
+				Cmd:             exec.Command(plugin.LocalPath, plugin.Args...), //nolint:gosec
 				AllowedProtocols: []goplugin.Protocol{
 					goplugin.ProtocolGRPC,
 				},
