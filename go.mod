@@ -3,6 +3,7 @@ module github.com/gatewayd-io/gatewayd
 go 1.19
 
 require (
+	github.com/Masterminds/semver/v3 v3.2.0
 	github.com/fergusstrange/embedded-postgres v1.19.0
 	github.com/google/go-cmp v0.5.9
 	github.com/hashicorp/go-hclog v1.4.0

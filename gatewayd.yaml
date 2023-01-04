@@ -65,6 +65,3 @@ server:
   reusePort: True
   tcpKeepAlive: 3s # duration
   tcpNoDelay: True
-
-plugins:
-  verificationPolicy: "passdown"

@@ -3,6 +3,7 @@ package plugin
 import (
 	"context"
 
+	semver "github.com/Masterminds/semver/v3"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/logging"
 	pluginV1 "github.com/gatewayd-io/gatewayd/plugin/v1"
@@ -13,6 +14,8 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
+type CompatPolicy uint
+
 const (
 	DefaultMinPort      uint   = 50000
 	DefaultMaxPort      uint   = 60000
@@ -21,10 +24,16 @@ const (
 	LoggerName          string = "plugin"
 )
 
+const (
+	Strict CompatPolicy = iota
+	Loose
+)
+
 type Registry interface {
 	Add(plugin *Impl) bool
 	Get(id Identifier) *Impl
 	List() []Identifier
+	Exists(name, version, remoteURL string) bool
 	Remove(id Identifier)
 	Shutdown()
 	LoadPlugins(pluginConfig *koanf.Koanf)
@@ -32,8 +41,9 @@ type Registry interface {
 }
 
 type RegistryImpl struct {
-	plugins     pool.Pool
-	hooksConfig *HookConfig
+	plugins      pool.Pool
+	hooksConfig  *HookConfig
+	CompatPolicy CompatPolicy
 }
 
 var _ Registry = &RegistryImpl{}
@@ -74,6 +84,40 @@ func (reg *RegistryImpl) List() []Identifier {
 	return plugins
 }
 
+// Exists checks if a plugin exists in the registry.
+func (reg *RegistryImpl) Exists(name, version, remoteURL string) bool {
+	for _, plugin := range reg.List() {
+		if plugin.Name == name && plugin.RemoteURL == remoteURL {
+			// Parse the supplied version and the version in the registry.
+			suppliedVer, err := semver.NewVersion(version)
+			if err != nil {
+				reg.hooksConfig.Logger.Error().Err(err).Msg(
+					"Failed to parse supplied plugin version")
+				return false
+			}
+
+			registryVer, err := semver.NewVersion(plugin.Version)
+			if err != nil {
+				reg.hooksConfig.Logger.Error().Err(err).Msg(
+					"Failed to parse plugin version in registry")
+				return false
+			}
+
+			// Check if the version of the plugin is less than or equal to
+			// the version in the registry.
+			if suppliedVer.LessThan(registryVer) || suppliedVer.Equal(registryVer) {
+				return true
+			}
+
+			reg.hooksConfig.Logger.Debug().Str("name", name).Str("version", version).Msg(
+				"Supplied plugin version is greater than the version in registry")
+			return false
+		}
+	}
+
+	return false
+}
+
 // Remove removes a plugin from the registry.
 func (reg *RegistryImpl) Remove(id Identifier) {
 	reg.plugins.Remove(id)
@@ -105,6 +149,11 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 
 	// Add each plugin to the registry.
 	for priority, name := range plugins {
+		// Skip the top-level "plugins" key.
+		if name == "plugins" {
+			continue
+		}
+
 		reg.hooksConfig.Logger.Debug().Str("name", name).Msg("Loading plugin")
 		plugin := &Impl{
 			ID: Identifier{
@@ -209,24 +258,62 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 			}
 		}
 
+		// Retrieve plugin requirements.
+		if err := mapstructure.Decode(metadata.Fields["requires"].GetListValue().AsSlice(),
+			&plugin.Requires); err != nil {
+			reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to decode plugin requirements")
+		}
+
+		// Too many requirements or not enough plugins loaded.
+		if len(plugin.Requires) > reg.plugins.Size() {
+			reg.hooksConfig.Logger.Debug().Msg(
+				"The plugin has too many requirements, " +
+					"and not enough of them exist in the registry, so it won't work properly")
+		}
+
+		// Check if the plugin requirements are met.
+		for _, req := range plugin.Requires {
+			if !reg.Exists(req.Name, req.Version, req.RemoteURL) {
+				reg.hooksConfig.Logger.Debug().Fields(
+					map[string]interface{}{
+						"name":        plugin.ID.Name,
+						"requirement": req.Name,
+					},
+				).Msg("The plugin requirement is not met, so it won't work properly")
+				if reg.CompatPolicy == Strict {
+					reg.hooksConfig.Logger.Debug().Str("name", plugin.ID.Name).Msg(
+						"Registry is in strict compatibility mode, so the plugin won't be loaded")
+					plugin.Stop() // Stop the plugin.
+					continue
+				} else {
+					reg.hooksConfig.Logger.Debug().Fields(
+						map[string]interface{}{
+							"name":        plugin.ID.Name,
+							"requirement": req.Name,
+						},
+					).Msg("Registry is in loose compatibility mode, " +
+						"so the plugin will be loaded anyway")
+				}
+			}
+		}
+
 		plugin.ID.RemoteURL = metadata.Fields["id"].GetStructValue().Fields["remoteUrl"].GetStringValue()
 		plugin.ID.Version = metadata.Fields["id"].GetStructValue().Fields["version"].GetStringValue()
 		plugin.Description = metadata.Fields["description"].GetStringValue()
 		plugin.License = metadata.Fields["license"].GetStringValue()
 		plugin.ProjectURL = metadata.Fields["projectUrl"].GetStringValue()
-		if err := mapstructure.Decode(metadata.Fields["requires"].GetListValue().AsSlice(),
-			&plugin.Requires); err != nil {
-			reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to decode plugin requirements")
-		}
+		// Retrieve authors.
 		if err := mapstructure.Decode(metadata.Fields["authors"].GetListValue().AsSlice(),
 			&plugin.Authors); err != nil {
 			reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to decode plugin authors")
 		}
+		// Retrieve hooks.
 		if err := mapstructure.Decode(metadata.Fields["hooks"].GetListValue().AsSlice(),
 			&plugin.Hooks); err != nil {
 			reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to decode plugin hooks")
 		}
 
+		// Retrieve plugin config.
 		plugin.Config = make(map[string]string)
 		for key, value := range metadata.Fields["config"].GetStructValue().AsMap() {
 			if val, ok := value.(string); ok {
