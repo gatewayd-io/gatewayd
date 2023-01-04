@@ -136,10 +136,10 @@ var runCmd = &cobra.Command{
 					"address":            clientConfig.Address,
 					"receiveBufferSize":  clientConfig.ReceiveBufferSize,
 					"receiveChunkSize":   clientConfig.ReceiveChunkSize,
-					"receiveDeadline":    clientConfig.ReceiveDeadline,
-					"sendDeadline":       clientConfig.SendDeadline,
+					"receiveDeadline":    clientConfig.ReceiveDeadline.Seconds(),
+					"sendDeadline":       clientConfig.SendDeadline.Seconds(),
 					"tcpKeepAlive":       clientConfig.TCPKeepAlive,
-					"tcpKeepAlivePeriod": clientConfig.TCPKeepAlivePeriod,
+					"tcpKeepAlivePeriod": clientConfig.TCPKeepAlivePeriod.Seconds(),
 				}
 				_, err := hooksConfig.Run(
 					context.Background(),
