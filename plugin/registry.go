@@ -209,11 +209,13 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 			}
 		}
 
+		// Retrieve plugin requirements.
 		if err := mapstructure.Decode(metadata.Fields["requires"].GetListValue().AsSlice(),
 			&plugin.Requires); err != nil {
 			reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to decode plugin requirements")
 		}
 
+		// Check if the plugin requirements are met.
 		for _, req := range plugin.Requires {
 			if reg.Get(req) == nil {
 				reg.hooksConfig.Logger.Debug().Str("name", plugin.ID.Name).Msg(
@@ -226,15 +228,18 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 		plugin.Description = metadata.Fields["description"].GetStringValue()
 		plugin.License = metadata.Fields["license"].GetStringValue()
 		plugin.ProjectURL = metadata.Fields["projectUrl"].GetStringValue()
+		// Retrieve authors.
 		if err := mapstructure.Decode(metadata.Fields["authors"].GetListValue().AsSlice(),
 			&plugin.Authors); err != nil {
 			reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to decode plugin authors")
 		}
+		// Retrieve hooks.
 		if err := mapstructure.Decode(metadata.Fields["hooks"].GetListValue().AsSlice(),
 			&plugin.Hooks); err != nil {
 			reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to decode plugin hooks")
 		}
 
+		// Retrieve plugin config.
 		plugin.Config = make(map[string]string)
 		for key, value := range metadata.Fields["config"].GetStructValue().AsMap() {
 			if val, ok := value.(string); ok {
