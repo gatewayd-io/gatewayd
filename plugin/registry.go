@@ -209,15 +209,23 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 			}
 		}
 
+		if err := mapstructure.Decode(metadata.Fields["requires"].GetListValue().AsSlice(),
+			&plugin.Requires); err != nil {
+			reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to decode plugin requirements")
+		}
+
+		for _, req := range plugin.Requires {
+			if reg.Get(req) == nil {
+				reg.hooksConfig.Logger.Debug().Str("name", plugin.ID.Name).Msg(
+					"The plugin requirement is not met, so it won't work properly")
+			}
+		}
+
 		plugin.ID.RemoteURL = metadata.Fields["id"].GetStructValue().Fields["remoteUrl"].GetStringValue()
 		plugin.ID.Version = metadata.Fields["id"].GetStructValue().Fields["version"].GetStringValue()
 		plugin.Description = metadata.Fields["description"].GetStringValue()
 		plugin.License = metadata.Fields["license"].GetStringValue()
 		plugin.ProjectURL = metadata.Fields["projectUrl"].GetStringValue()
-		if err := mapstructure.Decode(metadata.Fields["requires"].GetListValue().AsSlice(),
-			&plugin.Requires); err != nil {
-			reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to decode plugin requirements")
-		}
 		if err := mapstructure.Decode(metadata.Fields["authors"].GetListValue().AsSlice(),
 			&plugin.Authors); err != nil {
 			reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to decode plugin authors")
