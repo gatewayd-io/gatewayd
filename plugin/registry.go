@@ -274,17 +274,25 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 		// Check if the plugin requirements are met.
 		for _, req := range plugin.Requires {
 			if !reg.Exists(req.Name, req.Version, req.RemoteURL) {
-				reg.hooksConfig.Logger.Debug().Str("name", plugin.ID.Name).Msg(
-					"The plugin requirement is not met, so it won't work properly")
+				reg.hooksConfig.Logger.Debug().Fields(
+					map[string]interface{}{
+						"name":        plugin.ID.Name,
+						"requirement": req.Name,
+					},
+				).Msg("The plugin requirement is not met, so it won't work properly")
 				if reg.CompatPolicy == Strict {
 					reg.hooksConfig.Logger.Debug().Str("name", plugin.ID.Name).Msg(
 						"Registry is in strict compatibility mode, so the plugin won't be loaded")
 					plugin.Stop() // Stop the plugin.
 					continue
 				} else {
-					reg.hooksConfig.Logger.Debug().Str("name", plugin.ID.Name).Msg(
-						"Registry is in loose compatibility mode, " +
-							"so the plugin will be loaded anyway")
+					reg.hooksConfig.Logger.Debug().Fields(
+						map[string]interface{}{
+							"name":        plugin.ID.Name,
+							"requirement": req.Name,
+						},
+					).Msg("Registry is in loose compatibility mode, " +
+						"so the plugin will be loaded anyway")
 				}
 			}
 		}
