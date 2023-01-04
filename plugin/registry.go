@@ -105,7 +105,6 @@ func (reg *RegistryImpl) Exists(name, version, remoteUrl string) bool {
 				return false
 			}
 		}
-		return false
 	}
 
 	return false
