@@ -68,7 +68,7 @@ var runCmd = &cobra.Command{
 			}
 		}
 
-		// Get hooks signature verification policy
+		// Get hooks signature verification policy.
 		hooksConfig.Verification = verificationPolicy()
 
 		// The config will be passed to the hooks, and in turn to the plugins that
@@ -91,11 +91,11 @@ var runCmd = &cobra.Command{
 			}
 		}
 
-		// Create a new logger from the config
+		// Create a new logger from the config.
 		loggerCfg := loggerConfig()
 		logger := logging.NewLogger(loggerCfg)
 
-		// Replace the default logger with the new one from the config
+		// Replace the default logger with the new one from the config.
 		hooksConfig.Logger = logger
 
 		// This is a notification hook, so we don't care about the result.
@@ -111,7 +111,7 @@ var runCmd = &cobra.Command{
 			logger.Error().Err(err).Msg("Failed to run OnNewLogger hooks")
 		}
 
-		// Create and initialize a pool of connections
+		// Create and initialize a pool of connections.
 		poolSize, clientConfig := poolConfig()
 		pool := pool.NewPool(poolSize)
 
@@ -178,7 +178,7 @@ var runCmd = &cobra.Command{
 			logger.Error().Err(err).Msg("Failed to run OnNewPool hooks")
 		}
 
-		// Create a prefork proxy with the pool of clients
+		// Create a prefork proxy with the pool of clients.
 		elastic, reuseElasticClients, elasticClientConfig := proxyConfig()
 		proxy := network.NewProxy(
 			pool, hooksConfig, elastic, reuseElasticClients, elasticClientConfig, logger)
@@ -266,7 +266,7 @@ var runCmd = &cobra.Command{
 			logger.Error().Err(err).Msg("Failed to run OnNewServer hooks")
 		}
 
-		// Shutdown the server gracefully
+		// Shutdown the server gracefully.
 		var signals []os.Signal
 		signals = append(signals,
 			os.Interrupt,
@@ -283,7 +283,7 @@ var runCmd = &cobra.Command{
 			for sig := range signalsCh {
 				for _, s := range signals {
 					if sig != s {
-						// Notify the hooks that the server is shutting down
+						// Notify the hooks that the server is shutting down.
 						_, err := hooksConfig.Run(
 							context.Background(),
 							map[string]interface{}{"signal": sig.String()},
@@ -302,7 +302,7 @@ var runCmd = &cobra.Command{
 			}
 		}(hooksConfig)
 
-		// Run the server
+		// Run the server.
 		if err := server.Run(); err != nil {
 			logger.Error().Err(err).Msg("Failed to start server")
 		}
