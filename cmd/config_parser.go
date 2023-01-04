@@ -38,7 +38,7 @@ func getPath(path string) string {
 
 // verificationPolicy returns the hook verification policy from plugin config file.
 func verificationPolicy() plugin.Policy {
-	vPolicy := globalConfig.String("plugins.verificationPolicy")
+	vPolicy := pluginConfig.String("plugins.verificationPolicy")
 	verificationPolicy := plugin.PassDown // default
 	switch vPolicy {
 	case "ignore":
