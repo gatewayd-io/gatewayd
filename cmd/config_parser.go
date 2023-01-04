@@ -53,7 +53,7 @@ func verificationPolicy() plugin.Policy {
 }
 
 // pluginCompatPolicy returns the plugin compatibility policy from plugin config file.
-func pluginCompatPolicy() plugin.PluginCompatPolicy {
+func pluginCompatPolicy() plugin.CompatPolicy {
 	vPolicy := pluginConfig.String("plugins.compatibilityPolicy")
 	compatPolicy := plugin.Strict // default
 	switch vPolicy {
