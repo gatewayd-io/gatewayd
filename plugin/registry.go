@@ -14,12 +14,19 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
+type PluginCompatPolicy uint
+
 const (
 	DefaultMinPort      uint   = 50000
 	DefaultMaxPort      uint   = 60000
 	PluginPriorityStart uint   = 1000
 	EmptyPoolCapacity   int    = 0
 	LoggerName          string = "plugin"
+)
+
+const (
+	Strict PluginCompatPolicy = iota
+	Loose
 )
 
 type Registry interface {
@@ -34,8 +41,9 @@ type Registry interface {
 }
 
 type RegistryImpl struct {
-	plugins     pool.Pool
-	hooksConfig *HookConfig
+	plugins      pool.Pool
+	hooksConfig  *HookConfig
+	CompatPolicy PluginCompatPolicy
 }
 
 var _ Registry = &RegistryImpl{}
@@ -263,6 +271,16 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 			if !reg.Exists(req.Name, req.Version, req.RemoteURL) {
 				reg.hooksConfig.Logger.Debug().Str("name", plugin.ID.Name).Msg(
 					"The plugin requirement is not met, so it won't work properly")
+				if reg.CompatPolicy == Strict {
+					reg.hooksConfig.Logger.Debug().Str("name", plugin.ID.Name).Msg(
+						"Registry is in strict compatibility mode, so the plugin won't be loaded")
+					plugin.Stop() // Stop the plugin.
+					continue
+				} else {
+					reg.hooksConfig.Logger.Debug().Str("name", plugin.ID.Name).Msg(
+						"Registry is in loose compatibility mode, " +
+							"so the plugin will be loaded anyway")
+				}
 			}
 		}
 
