@@ -237,10 +237,13 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 			}
 		}
 
+		reg.hooksConfig.Logger.Trace().Msgf("Plugin metadata: %+v", plugin)
+
 		reg.Add(plugin)
+		reg.hooksConfig.Logger.Debug().Str("name", plugin.ID.Name).Msg("Plugin metadata loaded")
 
 		reg.RegisterHooks(plugin.ID)
-		reg.hooksConfig.Logger.Debug().Str("name", plugin.ID.Name).Msg("Plugin metadata loaded")
+		reg.hooksConfig.Logger.Debug().Str("name", plugin.ID.Name).Msg("Plugin hooks registered")
 	}
 }
 
