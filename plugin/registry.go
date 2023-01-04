@@ -3,6 +3,7 @@ package plugin
 import (
 	"context"
 
+	semver "github.com/Masterminds/semver/v3"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/logging"
 	pluginV1 "github.com/gatewayd-io/gatewayd/plugin/v1"
@@ -25,6 +26,7 @@ type Registry interface {
 	Add(plugin *Impl) bool
 	Get(id Identifier) *Impl
 	List() []Identifier
+	Exists(name, version, remoteUrl string) bool
 	Remove(id Identifier)
 	Shutdown()
 	LoadPlugins(pluginConfig *koanf.Koanf)
@@ -72,6 +74,41 @@ func (reg *RegistryImpl) List() []Identifier {
 		return true
 	})
 	return plugins
+}
+
+// Exists checks if a plugin exists in the registry.
+func (reg *RegistryImpl) Exists(name, version, remoteUrl string) bool {
+	for _, plugin := range reg.List() {
+		if plugin.Name == name && plugin.RemoteURL == remoteUrl {
+			// Parse the supplied version and the version in the registry.
+			suppliedVer, err := semver.NewVersion(version)
+			if err != nil {
+				reg.hooksConfig.Logger.Error().Err(err).Msg(
+					"Failed to parse supplied plugin version")
+				return false
+			}
+
+			registryVer, err := semver.NewVersion(plugin.Version)
+			if err != nil {
+				reg.hooksConfig.Logger.Error().Err(err).Msg(
+					"Failed to parse plugin version in registry")
+				return false
+			}
+
+			// Check if the version of the plugin is less than or equal to
+			// the version in the registry.
+			if suppliedVer.LessThan(registryVer) || suppliedVer.Equal(registryVer) {
+				return true
+			} else {
+				reg.hooksConfig.Logger.Debug().Str("name", name).Str("version", version).Msg(
+					"Supplied plugin version is greater than the version in registry")
+				return false
+			}
+		}
+		return false
+	}
+
+	return false
 }
 
 // Remove removes a plugin from the registry.
@@ -215,9 +252,16 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 			reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to decode plugin requirements")
 		}
 
+		// Too many requirements or not enough plugins loaded.
+		if len(plugin.Requires) > reg.plugins.Size() {
+			reg.hooksConfig.Logger.Debug().Msg(
+				"The plugin has too many requirements, " +
+					"and not enough of them exist in the registry, so it won't work properly")
+		}
+
 		// Check if the plugin requirements are met.
 		for _, req := range plugin.Requires {
-			if reg.Get(req) == nil {
+			if !reg.Exists(req.Name, req.Version, req.RemoteURL) {
 				reg.hooksConfig.Logger.Debug().Str("name", plugin.ID.Name).Msg(
 					"The plugin requirement is not met, so it won't work properly")
 			}
