@@ -214,6 +214,10 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 		plugin.Description = metadata.Fields["description"].GetStringValue()
 		plugin.License = metadata.Fields["license"].GetStringValue()
 		plugin.ProjectURL = metadata.Fields["projectUrl"].GetStringValue()
+		if err := mapstructure.Decode(metadata.Fields["requires"].GetListValue().AsSlice(),
+			&plugin.Requires); err != nil {
+			reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to decode plugin requirements")
+		}
 		if err := mapstructure.Decode(metadata.Fields["authors"].GetListValue().AsSlice(),
 			&plugin.Authors); err != nil {
 			reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to decode plugin authors")
