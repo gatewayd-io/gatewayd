@@ -57,7 +57,10 @@ var runCmd = &cobra.Command{
 			}
 		}
 
-		// Load plugins and register their hooks
+		// Set the plugin compatibility policy.
+		pluginRegistry.CompatPolicy = pluginCompatPolicy()
+
+		// Load plugins and register their hooks.
 		pluginRegistry.LoadPlugins(pluginConfig)
 
 		if f, err := cmd.Flags().GetString("config"); err == nil {
