@@ -3,7 +3,7 @@ package network
 import (
 	"context"
 	"encoding/base64"
-	"sync"
+	"errors"
 	"testing"
 
 	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
@@ -21,9 +21,11 @@ import (
 //
 //nolint:funlen
 func TestRunServer(t *testing.T) {
+	errs := make(chan error)
+
 	postgres := embeddedpostgres.NewDatabase()
 	if err := postgres.Start(); err != nil {
-		t.Fatal(err)
+		errs <- err
 	}
 
 	// Create a logger.
@@ -45,7 +47,7 @@ func TestRunServer(t *testing.T) {
 	) (*structpb.Struct, error) {
 		paramsMap := params.AsMap()
 		if paramsMap["request"] == nil {
-			t.Fatal("request is nil")
+			errs <- errors.New("request is nil") //nolint:goerr113
 		}
 
 		logger.Info().Msg("Ingress traffic")
@@ -56,10 +58,10 @@ func TestRunServer(t *testing.T) {
 			if request, err := base64.StdEncoding.DecodeString(req); err == nil {
 				assert.Equal(t, CreatePgStartupPacket(), request)
 			} else {
-				t.Fatal(err)
+				errs <- err
 			}
 		} else {
-			t.Fatal("request is not a []byte")
+			errs <- errors.New("request is not a []byte") //nolint:goerr113
 		}
 		assert.Empty(t, paramsMap["error"])
 		return params, nil
@@ -73,7 +75,7 @@ func TestRunServer(t *testing.T) {
 	) (*structpb.Struct, error) {
 		paramsMap := params.AsMap()
 		if paramsMap["response"] == nil {
-			t.Fatal("response is nil")
+			errs <- errors.New("response is nil") //nolint:goerr113
 		}
 
 		logger.Info().Msg("Egress traffic")
@@ -81,10 +83,10 @@ func TestRunServer(t *testing.T) {
 			if response, err := base64.StdEncoding.DecodeString(resp); err == nil {
 				assert.Equal(t, CreatePostgreSQLPacket('R', []byte{0x0, 0x0, 0x0, 0x3}), response)
 			} else {
-				t.Fatal(err)
+				errs <- err
 			}
 		} else {
-			t.Fatal("response is not a []byte")
+			errs <- errors.New("response is not a []byte") //nolint:goerr113
 		}
 		assert.Empty(t, paramsMap["error"])
 		return params, nil
@@ -133,7 +135,9 @@ func TestRunServer(t *testing.T) {
 		0,
 		DefaultTickInterval,
 		[]gnet.Option{
-			gnet.WithMulticore(true),
+			gnet.WithMulticore(false),
+			gnet.WithReuseAddr(true),
+			gnet.WithReusePort(true),
 		},
 		proxy,
 		logger,
@@ -141,26 +145,15 @@ func TestRunServer(t *testing.T) {
 	)
 	assert.NotNil(t, server)
 
-	var waitGroup sync.WaitGroup
-	waitGroup.Add(2)
+	go func(server *Server, errs chan error) {
+		if err := server.Run(); err != nil {
+			errs <- err
+		}
+		close(errs)
+	}(server, errs)
 
-	go func(t *testing.T, waitGroup *sync.WaitGroup, server *Server) {
-		t.Helper()
-		defer waitGroup.Done()
-
-		err := server.Run()
-		assert.Nil(t, err)
-	}(t, &waitGroup, server)
-
-	go func(t *testing.T,
-		waitGroup *sync.WaitGroup,
-		server *Server,
-		logger zerolog.Logger,
-		postgres *embeddedpostgres.EmbeddedPostgres,
-	) {
-		t.Helper()
-		defer waitGroup.Done()
-
+	//nolint:thelper
+	go func(t *testing.T, server *Server, errs chan error) {
 		for {
 			if server.IsRunning() {
 				client := NewClient(
@@ -173,7 +166,6 @@ func TestRunServer(t *testing.T) {
 					false,
 					DefaultTCPKeepAlivePeriod,
 					logger)
-				defer client.Close()
 
 				assert.NotNil(t, client)
 				sent, err := client.Send(CreatePgStartupPacket())
@@ -196,11 +188,17 @@ func TestRunServer(t *testing.T) {
 
 				// Clean up.
 				server.Shutdown()
-				assert.NoError(t, postgres.Stop())
-				return
+				client.Close()
+				if pgErr := postgres.Stop(); pgErr != nil {
+					errs <- err
+				}
 			}
 		}
-	}(t, &waitGroup, server, logger, postgres)
+	}(t, server, errs)
 
-	waitGroup.Wait()
+	for err := range errs {
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
 }
