@@ -108,46 +108,9 @@ func loggerConfig() logging.LoggerConfig {
 	return cfg
 }
 
-// serverConfig returns the pool config from config file.
-func poolConfig() (int, *network.Client) {
-	poolSize := globalConfig.Int("pool.size")
-	if poolSize == 0 {
-		poolSize = network.DefaultPoolSize
-	}
-
-	// Minimum pool size is 2.
-	if poolSize < network.MinimumPoolSize {
-		poolSize = network.MinimumPoolSize
-	}
-
-	ref := getPath("pool.client")
-	net := globalConfig.String(ref + ".network")
-	address := globalConfig.String(ref + ".address")
-	receiveBufferSize := globalConfig.Int(ref + ".receiveBufferSize")
-	receiveChunkSize := globalConfig.Int(ref + ".receiveChunkSize")
-	receiveDeadline := globalConfig.Duration(ref + ".receiveDeadline")
-	sendDeadline := globalConfig.Duration(ref + ".sendDeadline")
-	tcpKeepAlive := globalConfig.Bool(ref + ".tcpKeepAlive")
-	tcpKeepAlivePeriod := globalConfig.Duration(ref + ".tcpKeepAlivePeriod")
-
-	return poolSize, &network.Client{
-		Network:            net,
-		Address:            address,
-		TCPKeepAlive:       tcpKeepAlive,
-		TCPKeepAlivePeriod: tcpKeepAlivePeriod,
-		ReceiveBufferSize:  receiveBufferSize,
-		ReceiveChunkSize:   receiveChunkSize,
-		ReceiveDeadline:    receiveDeadline,
-		SendDeadline:       sendDeadline,
-	}
-}
-
-// proxyConfig returns the proxy config from config file.
-func proxyConfig() (bool, bool, *network.Client) {
-	elastic := globalConfig.Bool("proxy.elastic")
-	reuseElasticClients := globalConfig.Bool("proxy.reuseElasticClients")
-
-	ref := getPath("pool.client")
+// clientConfig returns the client config from config file.
+func clientConfig(path string) *network.Client {
+	ref := getPath(path)
 	net := globalConfig.String(ref + ".network")
 	address := globalConfig.String(ref + ".address")
 	receiveBufferSize := globalConfig.Int(ref + ".receiveBufferSize")
@@ -169,7 +132,7 @@ func proxyConfig() (bool, bool, *network.Client) {
 		tcpKeepAlivePeriod = network.DefaultTCPKeepAlivePeriod
 	}
 
-	return elastic, reuseElasticClients, &network.Client{
+	return &network.Client{
 		Network:            net,
 		Address:            address,
 		TCPKeepAlive:       tcpKeepAlive,
@@ -179,6 +142,29 @@ func proxyConfig() (bool, bool, *network.Client) {
 		ReceiveDeadline:    receiveDeadline,
 		SendDeadline:       sendDeadline,
 	}
+}
+
+// serverConfig returns the pool config from config file.
+func poolConfig() (int, *network.Client) {
+	poolSize := globalConfig.Int("pool.size")
+	if poolSize == 0 {
+		poolSize = network.DefaultPoolSize
+	}
+
+	// Minimum pool size is 2.
+	if poolSize < network.MinimumPoolSize {
+		poolSize = network.MinimumPoolSize
+	}
+
+	return poolSize, clientConfig("pool.client")
+}
+
+// proxyConfig returns the proxy config from config file.
+func proxyConfig() (bool, bool, *network.Client) {
+	elastic := globalConfig.Bool("proxy.elastic")
+	reuseElasticClients := globalConfig.Bool("proxy.reuseElasticClients")
+
+	return elastic, reuseElasticClients, clientConfig("pool.client")
 }
 
 type ServerConfig struct {
