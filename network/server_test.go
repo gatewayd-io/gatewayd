@@ -47,7 +47,7 @@ func TestRunServer(t *testing.T) {
 	) (*structpb.Struct, error) {
 		paramsMap := params.AsMap()
 		if paramsMap["request"] == nil {
-			errs <- errors.New("request is nil")
+			errs <- errors.New("request is nil") //nolint:goerr113
 		}
 
 		logger.Info().Msg("Ingress traffic")
@@ -61,7 +61,7 @@ func TestRunServer(t *testing.T) {
 				errs <- err
 			}
 		} else {
-			errs <- errors.New("request is not a []byte")
+			errs <- errors.New("request is not a []byte") //nolint:goerr113
 		}
 		assert.Empty(t, paramsMap["error"])
 		return params, nil
@@ -75,7 +75,7 @@ func TestRunServer(t *testing.T) {
 	) (*structpb.Struct, error) {
 		paramsMap := params.AsMap()
 		if paramsMap["response"] == nil {
-			errs <- errors.New("response is nil")
+			errs <- errors.New("response is nil") //nolint:goerr113
 		}
 
 		logger.Info().Msg("Egress traffic")
@@ -86,7 +86,7 @@ func TestRunServer(t *testing.T) {
 				errs <- err
 			}
 		} else {
-			errs <- errors.New("response is not a []byte")
+			errs <- errors.New("response is not a []byte") //nolint:goerr113
 		}
 		assert.Empty(t, paramsMap["error"])
 		return params, nil
@@ -145,13 +145,14 @@ func TestRunServer(t *testing.T) {
 	)
 	assert.NotNil(t, server)
 
-	go func(t *testing.T, server *Server, errs chan error) {
+	go func(server *Server, errs chan error) {
 		if err := server.Run(); err != nil {
 			errs <- err
 		}
 		close(errs)
-	}(t, server, errs)
+	}(server, errs)
 
+	//nolint:thelper
 	go func(t *testing.T, server *Server, errs chan error) {
 		for {
 			if server.IsRunning() {
