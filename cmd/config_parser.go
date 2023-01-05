@@ -28,14 +28,6 @@ func getPath(path string) string {
 	return path
 }
 
-// func resolvePath(path string) map[string]string {
-// 	ref := getPath(path)
-// 	if ref != path {
-// 		return konfig.StringMap(ref)
-// 	}
-// 	return nil
-// }
-
 // verificationPolicy returns the hook verification policy from plugin config file.
 func verificationPolicy() plugin.Policy {
 	vPolicy := pluginConfig.String("plugins.verificationPolicy")
