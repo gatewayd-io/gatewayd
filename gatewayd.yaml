@@ -1,7 +1,6 @@
 # Gatewayd config
 # This file is used to configure the gatewayd daemon.
 
-# Loggers config
 loggers:
   default:
     output: "console" # stdout, stderr, file or console
@@ -22,14 +21,12 @@ clients:
     # receiveDeadline: 0ms # duration, 0ms/0s means no deadline
     # sendDeadline: 0ms # duration, 0ms/0s means no deadline
 
-# Pool config
-pool:
+pools:
   default:
     size: 10
     # Database configs for the connection pool
     client: clients.default
 
-# Proxy config
 proxy:
   default:
     # Use the logger config passed here
