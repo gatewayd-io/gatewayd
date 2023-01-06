@@ -15,13 +15,6 @@ import (
 	"github.com/rs/zerolog"
 )
 
-type Status string
-
-const (
-	Running Status = "running"
-	Stopped Status = "stopped"
-)
-
 type Server struct {
 	gnet.BuiltinEventEngine
 	engine      gnet.Engine
@@ -34,7 +27,7 @@ type Server struct {
 	Options      []gnet.Option
 	SoftLimit    uint64
 	HardLimit    uint64
-	Status       Status
+	Status       config.Status
 	TickInterval time.Duration
 }
 
@@ -47,7 +40,7 @@ func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 	// Run the OnBooting hooks.
 	_, err := s.hooksConfig.Run(
 		context.Background(),
-		map[string]interface{}{"status": string(s.Status)},
+		map[string]interface{}{"status": fmt.Sprint(s.Status)},
 		plugin.OnBooting,
 		s.hooksConfig.Verification)
 	if err != nil {
@@ -57,12 +50,12 @@ func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 	s.engine = engine
 
 	// Set the server status to running.
-	s.Status = Running
+	s.Status = config.Running
 
 	// Run the OnBooted hooks.
 	_, err = s.hooksConfig.Run(
 		context.Background(),
-		map[string]interface{}{"status": string(s.Status)},
+		map[string]interface{}{"status": fmt.Sprint(s.Status)},
 		plugin.OnBooted,
 		s.hooksConfig.Verification)
 	if err != nil {
@@ -163,7 +156,7 @@ func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 
 	// Shutdown the server if there are no more connections and the server is stopped.
 	// This is used to shutdown the server gracefully.
-	if uint64(s.engine.CountConnections()) == 0 && s.Status == Stopped {
+	if uint64(s.engine.CountConnections()) == 0 && s.Status == config.Stopped {
 		return gnet.Shutdown
 	}
 
@@ -250,7 +243,7 @@ func (s *Server) OnShutdown(engine gnet.Engine) {
 	s.proxy.Shutdown()
 
 	// Set the server status to stopped. This is used to shutdown the server gracefully in OnClose.
-	s.Status = Stopped
+	s.Status = config.Stopped
 }
 
 // OnTick is called every TickInterval. It calls the OnTick hooks.
@@ -322,12 +315,12 @@ func (s *Server) Shutdown() {
 	s.proxy.Shutdown()
 
 	// Set the server status to stopped. This is used to shutdown the server gracefully in OnClose.
-	s.Status = Stopped
+	s.Status = config.Stopped
 }
 
 // IsRunning returns true if the server is running.
 func (s *Server) IsRunning() bool {
-	return s.Status == Running
+	return s.Status == config.Running
 }
 
 // NewServer creates a new server.
@@ -348,7 +341,7 @@ func NewServer(
 		Address:      address,
 		Options:      options,
 		TickInterval: tickInterval,
-		Status:       Stopped,
+		Status:       config.Stopped,
 	}
 
 	// Try to resolve the address and log an error if it can't be resolved.

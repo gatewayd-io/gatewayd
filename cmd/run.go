@@ -60,6 +60,11 @@ var runCmd = &cobra.Command{
 				os.Exit(gerr.FailedToLoadPluginConfig)
 			}
 		}
+
+		// Load environment variables for the global configuration.
+		config.LoadEnvVars(pluginConfig)
+
+		// Unmarshal the plugin configuration for easier access.
 		var pConfig config.PluginConfig
 		if err := pluginConfig.Unmarshal("", &pConfig); err != nil {
 			DefaultLogger.Fatal().Err(err).Msg("Failed to unmarshal plugin configuration")
@@ -84,9 +89,13 @@ var runCmd = &cobra.Command{
 			}
 		}
 
+		// Load environment variables for the global configuration.
+		config.LoadEnvVars(globalConfig)
+
 		// Get hooks signature verification policy.
 		hooksConfig.Verification = pConfig.GetVerificationPolicy()
 
+		// Unmarshal the global configuration for easier access.
 		var gConfig config.GlobalConfig
 		if err := globalConfig.Unmarshal("", &gConfig); err != nil {
 			DefaultLogger.Fatal().Err(err).Msg("Failed to unmarshal global configuration")
@@ -94,8 +103,8 @@ var runCmd = &cobra.Command{
 			os.Exit(gerr.FailedToLoadGlobalConfig)
 		}
 
-		// The config will be passed to the hooks, and in turn to the plugins that
-		// register to this hook.
+		// The config will be passed to the plugins that register to the "OnConfigLoaded" hook.
+		// The plugins can modify the config and return it.
 		updatedGlobalConfig, err := hooksConfig.Run(
 			context.Background(),
 			globalConfig.All(),
@@ -105,6 +114,9 @@ var runCmd = &cobra.Command{
 			DefaultLogger.Error().Err(err).Msg("Failed to run OnConfigLoaded hooks")
 		}
 
+		// If the config was modified by the plugins, merge it with the one loaded from the file.
+		// Only global configuration is merged, which means that plugins cannot modify the plugin
+		// configurations.
 		if updatedGlobalConfig != nil {
 			// Merge the config with the one loaded from the file (in memory).
 			// The changes won't be persisted to disk.
