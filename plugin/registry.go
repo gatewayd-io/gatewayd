@@ -4,29 +4,14 @@ import (
 	"context"
 
 	semver "github.com/Masterminds/semver/v3"
+	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/logging"
 	pluginV1 "github.com/gatewayd-io/gatewayd/plugin/v1"
 	"github.com/gatewayd-io/gatewayd/pool"
 	goplugin "github.com/hashicorp/go-plugin"
-	"github.com/knadh/koanf"
 	"github.com/mitchellh/mapstructure"
 	"google.golang.org/protobuf/types/known/structpb"
-)
-
-type CompatPolicy uint
-
-const (
-	DefaultMinPort      uint   = 50000
-	DefaultMaxPort      uint   = 60000
-	PluginPriorityStart uint   = 1000
-	EmptyPoolCapacity   int    = 0
-	LoggerName          string = "plugin"
-)
-
-const (
-	Strict CompatPolicy = iota
-	Loose
 )
 
 type Registry interface {
@@ -36,21 +21,21 @@ type Registry interface {
 	Exists(name, version, remoteURL string) bool
 	Remove(id Identifier)
 	Shutdown()
-	LoadPlugins(pluginConfig *koanf.Koanf)
+	LoadPlugins(plugins []config.Plugin)
 	RegisterHooks(id Identifier)
 }
 
 type RegistryImpl struct {
 	plugins      pool.Pool
 	hooksConfig  *HookConfig
-	CompatPolicy CompatPolicy
+	CompatPolicy config.CompatPolicy
 }
 
 var _ Registry = &RegistryImpl{}
 
 // NewRegistry creates a new plugin registry.
 func NewRegistry(hooksConfig *HookConfig) *RegistryImpl {
-	return &RegistryImpl{plugins: pool.NewPool(EmptyPoolCapacity), hooksConfig: hooksConfig}
+	return &RegistryImpl{plugins: pool.NewPool(config.EmptyPoolCapacity), hooksConfig: hooksConfig}
 }
 
 // Add adds a plugin to the registry.
@@ -140,46 +125,46 @@ func (reg *RegistryImpl) Shutdown() {
 // LoadPlugins loads plugins from the config file.
 //
 //nolint:funlen
-func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
-	// Get top-level list of plugins.
-	plugins := pluginConfig.MapKeys("")
-
+func (reg *RegistryImpl) LoadPlugins(plugins []config.Plugin) {
 	// TODO: Append built-in plugins to the list of plugins
 	// Built-in plugins are plugins that are compiled and shipped with the gatewayd binary.
 
 	// Add each plugin to the registry.
-	for priority, name := range plugins {
+	for priority, pCfg := range plugins {
 		// Skip the top-level "plugins" key.
-		if name == "plugins" {
+		if pCfg.Name == "plugins" {
 			continue
 		}
 
-		reg.hooksConfig.Logger.Debug().Str("name", name).Msg("Loading plugin")
+		reg.hooksConfig.Logger.Debug().Str("name", pCfg.Name).Msg("Loading plugin")
 		plugin := &Impl{
 			ID: Identifier{
-				Name: name,
+				Name:     pCfg.Name,
+				Checksum: pCfg.Checksum,
 			},
+			Enabled:   pCfg.Enabled,
+			LocalPath: pCfg.LocalPath,
+			Args:      pCfg.Args,
+			Env:       pCfg.Env,
 		}
 
 		// Is the plugin enabled?
-		plugin.Enabled = pluginConfig.Bool(name + ".enabled")
+		plugin.Enabled = pCfg.Enabled
 		if !plugin.Enabled {
-			reg.hooksConfig.Logger.Debug().Str("name", name).Msg("Plugin is disabled")
+			reg.hooksConfig.Logger.Debug().Str("name", plugin.ID.Name).Msg("Plugin is disabled")
 			continue
 		}
 
 		// File path of the plugin on disk.
-		plugin.LocalPath = pluginConfig.String(name + ".localPath")
 		if plugin.LocalPath == "" {
-			reg.hooksConfig.Logger.Debug().Str("name", name).Msg(
+			reg.hooksConfig.Logger.Debug().Str("name", plugin.ID.Name).Msg(
 				"Local file of the plugin doesn't exist or is not set")
 			continue
 		}
 
 		// Checksum of the plugin.
-		plugin.ID.Checksum = pluginConfig.String(name + ".checksum")
 		if plugin.ID.Checksum == "" {
-			reg.hooksConfig.Logger.Debug().Str("name", name).Msg(
+			reg.hooksConfig.Logger.Debug().Str("name", plugin.ID.Name).Msg(
 				"Checksum of plugin doesn't exist or is not set")
 			continue
 		}
@@ -199,23 +184,13 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 			continue
 		}
 
-		// Commandline arguments to pass to the plugin.
-		if args := pluginConfig.Strings(name + ".args"); len(args) > 0 {
-			plugin.Args = args
-		}
-
-		// Custom environment variables to pass to the plugin.
-		if env := pluginConfig.Strings(name + ".env"); len(env) > 0 {
-			plugin.Env = append(plugin.Env, env...)
-		}
-
 		// Plugin priority is determined by the order in which the plugin is listed
 		// in the config file. Built-in plugins are loaded first, followed by user-defined
 		// plugins. Built-in plugins have a priority of 0 to 999, and user-defined plugins
 		// have a priority of 1000 or greater.
-		plugin.Priority = Priority(PluginPriorityStart + uint(priority))
+		plugin.Priority = Priority(config.PluginPriorityStart + uint(priority))
 
-		logAdapter := logging.NewHcLogAdapter(&reg.hooksConfig.Logger, LoggerName)
+		logAdapter := logging.NewHcLogAdapter(&reg.hooksConfig.Logger, config.LoggerName)
 
 		plugin.client = goplugin.NewClient(
 			&goplugin.ClientConfig{
@@ -228,8 +203,8 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 				// SecureConfig: nil,
 				Logger:  logAdapter,
 				Managed: true,
-				MinPort: DefaultMinPort,
-				MaxPort: DefaultMaxPort,
+				MinPort: config.DefaultMinPort,
+				MaxPort: config.DefaultMaxPort,
 				// TODO: Enable GRPC DialOptions
 				// GRPCDialOptions: []grpc.DialOption{
 				// 	grpc.WithInsecure(),
@@ -280,7 +255,7 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 						"requirement": req.Name,
 					},
 				).Msg("The plugin requirement is not met, so it won't work properly")
-				if reg.CompatPolicy == Strict {
+				if reg.CompatPolicy == config.Strict {
 					reg.hooksConfig.Logger.Debug().Str("name", plugin.ID.Name).Msg(
 						"Registry is in strict compatibility mode, so the plugin won't be loaded")
 					plugin.Stop() // Stop the plugin.

@@ -9,13 +9,12 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"google.golang.org/protobuf/types/known/structpb"
 )
-
-const bufferSize = 65536
 
 // sha256sum returns the sha256 checksum of a file.
 // Ref: https://github.com/codingsince1985/checksum
@@ -33,7 +32,7 @@ func sha256sum(filename string) (string, *gerr.GatewayDError) {
 
 	hashAlgorithm := sha256.New()
 
-	buf := make([]byte, bufferSize)
+	buf := make([]byte, config.ChecksumBufferSize)
 	for {
 		n, err := bufio.NewReader(file).Read(buf)
 		//nolint:gocritic

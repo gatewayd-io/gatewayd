@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
+	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
@@ -30,7 +31,7 @@ func TestRunServer(t *testing.T) {
 
 	// Create a logger.
 	cfg := logging.LoggerConfig{
-		Output:     nil,
+		Output:     config.Console,
 		TimeFormat: zerolog.TimeFormatUnix,
 		Level:      zerolog.DebugLevel,
 		NoColor:    true,
@@ -93,39 +94,28 @@ func TestRunServer(t *testing.T) {
 	}
 	hooksConfig.Add(plugin.OnEgressTraffic, 1, onEgressTraffic)
 
+	clientConfig := config.Client{
+		Network:            "tcp",
+		Address:            "localhost:5432",
+		ReceiveBufferSize:  config.DefaultBufferSize,
+		ReceiveChunkSize:   config.DefaultChunkSize,
+		ReceiveDeadline:    config.DefaultReceiveDeadline,
+		SendDeadline:       config.DefaultSendDeadline,
+		TCPKeepAlive:       false,
+		TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
+	}
+
 	// Create a connection pool.
 	pool := pool.NewPool(2)
-	client1 := NewClient(
-		"tcp",
-		"localhost:5432",
-		DefaultBufferSize,
-		DefaultChunkSize,
-		DefaultReceiveDeadline,
-		DefaultSendDeadline,
-		false,
-		DefaultTCPKeepAlivePeriod,
-		logger)
+	client1 := NewClient(&clientConfig, logger)
 	err := pool.Put(client1.ID, client1)
 	assert.Nil(t, err)
-	client2 := NewClient(
-		"tcp",
-		"localhost:5432",
-		DefaultBufferSize,
-		DefaultChunkSize,
-		DefaultReceiveDeadline,
-		DefaultSendDeadline,
-		false,
-		DefaultTCPKeepAlivePeriod,
-		logger)
+	client2 := NewClient(&clientConfig, logger)
 	err = pool.Put(client2.ID, client2)
 	assert.Nil(t, err)
 
 	// Create a proxy with a fixed buffer pool.
-	proxy := NewProxy(pool, hooksConfig, false, false, &Client{
-		Network:           "tcp",
-		Address:           "localhost:5432",
-		ReceiveBufferSize: DefaultBufferSize,
-	}, logger)
+	proxy := NewProxy(pool, hooksConfig, false, false, &clientConfig, logger)
 
 	// Create a server.
 	server := NewServer(
@@ -133,7 +123,7 @@ func TestRunServer(t *testing.T) {
 		"127.0.0.1:15432",
 		0,
 		0,
-		DefaultTickInterval,
+		config.DefaultTickInterval,
 		[]gnet.Option{
 			gnet.WithMulticore(false),
 			gnet.WithReuseAddr(true),
@@ -157,14 +147,16 @@ func TestRunServer(t *testing.T) {
 		for {
 			if server.IsRunning() {
 				client := NewClient(
-					"tcp",
-					"127.0.0.1:15432",
-					DefaultBufferSize,
-					DefaultChunkSize,
-					DefaultReceiveDeadline,
-					DefaultSendDeadline,
-					false,
-					DefaultTCPKeepAlivePeriod,
+					&config.Client{
+						Network:            "tcp",
+						Address:            "127.0.0.1:15432",
+						ReceiveBufferSize:  config.DefaultBufferSize,
+						ReceiveChunkSize:   config.DefaultChunkSize,
+						ReceiveDeadline:    config.DefaultReceiveDeadline,
+						SendDeadline:       config.DefaultSendDeadline,
+						TCPKeepAlive:       false,
+						TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
+					},
 					logger)
 
 				assert.NotNil(t, client)
@@ -172,7 +164,7 @@ func TestRunServer(t *testing.T) {
 				assert.Nil(t, err)
 				assert.Equal(t, len(CreatePgStartupPacket()), sent)
 
-				// The server should respond with a 'R' packet.
+				// The server should respond with an 'R' packet.
 				size, data, err := client.Receive()
 				msg := []byte{0x0, 0x0, 0x0, 0x3}
 				// This includes the message type, length and the message itself.

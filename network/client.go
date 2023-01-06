@@ -5,16 +5,9 @@ import (
 	"net"
 	"time"
 
+	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/rs/zerolog"
-)
-
-const (
-	DefaultSeed               = 1000
-	DefaultChunkSize          = 4096
-	DefaultReceiveDeadline    = 0 // 0 means no deadline (timeout)
-	DefaultSendDeadline       = 0
-	DefaultTCPKeepAlivePeriod = 30 * time.Second
 )
 
 type ClientInterface interface {
@@ -47,34 +40,32 @@ var _ ClientInterface = &Client{}
 // NewClient creates a new client.
 //
 //nolint:funlen
-func NewClient(
-	network, address string,
-	receiveBufferSize, receiveChunkSize int,
-	receiveDeadline, sendDeadline time.Duration,
-	tcpKeepAlive bool, tcpKeepAlivePeriod time.Duration,
-	logger zerolog.Logger,
-) *Client {
+func NewClient(clientConfig *config.Client, logger zerolog.Logger) *Client {
 	var client Client
+
+	if clientConfig == nil {
+		return nil
+	}
 
 	client.logger = logger
 
 	// Try to resolve the address and log an error if it can't be resolved.
-	addr, err := Resolve(network, address, logger)
+	addr, err := Resolve(clientConfig.Network, clientConfig.Address, logger)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to resolve address")
 	}
 
 	// Create a resolved client.
 	client = Client{
-		Network: network,
+		Network: clientConfig.Network,
 		Address: addr,
 	}
 
 	// Fall back to the original network and address if the address can't be resolved.
 	if client.Address == "" || client.Network == "" {
 		client = Client{
-			Network: network,
-			Address: address,
+			Network: clientConfig.Network,
+			Address: clientConfig.Address,
 		}
 	}
 
@@ -89,11 +80,11 @@ func NewClient(
 	client.Conn = conn
 
 	// Set the TCP keep alive.
-	client.TCPKeepAlive = tcpKeepAlive
-	if tcpKeepAlivePeriod <= 0 {
-		client.TCPKeepAlivePeriod = DefaultTCPKeepAlivePeriod
+	client.TCPKeepAlive = clientConfig.TCPKeepAlive
+	if clientConfig.TCPKeepAlivePeriod <= 0 {
+		client.TCPKeepAlivePeriod = config.DefaultTCPKeepAlivePeriod
 	} else {
-		client.TCPKeepAlivePeriod = tcpKeepAlivePeriod
+		client.TCPKeepAlivePeriod = clientConfig.TCPKeepAlivePeriod
 	}
 
 	if c, ok := client.Conn.(*net.TCPConn); ok {
@@ -107,10 +98,10 @@ func NewClient(
 	}
 
 	// Set the receive deadline (timeout).
-	if receiveDeadline <= 0 {
-		client.ReceiveDeadline = DefaultReceiveDeadline
+	if clientConfig.ReceiveDeadline <= 0 {
+		client.ReceiveDeadline = config.DefaultReceiveDeadline
 	} else {
-		client.ReceiveDeadline = receiveDeadline
+		client.ReceiveDeadline = clientConfig.ReceiveDeadline
 		if err := client.Conn.SetReadDeadline(time.Now().Add(client.ReceiveDeadline)); err != nil {
 			logger.Error().Err(err).Msg("Failed to set receive deadline")
 		} else {
@@ -120,10 +111,10 @@ func NewClient(
 	}
 
 	// Set the send deadline (timeout).
-	if sendDeadline <= 0 {
-		client.SendDeadline = DefaultSendDeadline
+	if clientConfig.SendDeadline <= 0 {
+		client.SendDeadline = config.DefaultSendDeadline
 	} else {
-		client.SendDeadline = sendDeadline
+		client.SendDeadline = clientConfig.SendDeadline
 		if err := client.Conn.SetWriteDeadline(time.Now().Add(client.SendDeadline)); err != nil {
 			logger.Error().Err(err).Msg("Failed to set send deadline")
 		} else {
@@ -133,22 +124,23 @@ func NewClient(
 	}
 
 	// Set the receive buffer size. This is the maximum size of the buffer.
-	if receiveBufferSize <= 0 {
-		client.ReceiveBufferSize = DefaultBufferSize
+	if clientConfig.ReceiveBufferSize <= 0 {
+		client.ReceiveBufferSize = config.DefaultBufferSize
 	} else {
-		client.ReceiveBufferSize = receiveBufferSize
+		client.ReceiveBufferSize = clientConfig.ReceiveBufferSize
 	}
 
 	// Set the receive chunk size. This is the size of the buffer that is read from the connection
 	// in chunks.
-	if receiveChunkSize <= 0 {
-		client.ReceiveChunkSize = DefaultChunkSize
+	if clientConfig.ReceiveChunkSize <= 0 {
+		client.ReceiveChunkSize = config.DefaultChunkSize
 	} else {
-		client.ReceiveChunkSize = receiveChunkSize
+		client.ReceiveChunkSize = clientConfig.ReceiveChunkSize
 	}
 
 	logger.Debug().Str("address", client.Address).Msg("New client created")
-	client.ID = GetID(conn.LocalAddr().Network(), conn.LocalAddr().String(), DefaultSeed, logger)
+	client.ID = GetID(
+		conn.LocalAddr().Network(), conn.LocalAddr().String(), config.DefaultSeed, logger)
 
 	return &client
 }

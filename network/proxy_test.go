@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
+	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
@@ -25,7 +26,7 @@ func TestNewProxy(t *testing.T) {
 	}()
 
 	cfg := logging.LoggerConfig{
-		Output:     nil,
+		Output:     config.Console,
 		TimeFormat: zerolog.TimeFormatUnix,
 		Level:      zerolog.DebugLevel,
 		NoColor:    true,
@@ -34,16 +35,18 @@ func TestNewProxy(t *testing.T) {
 	logger := logging.NewLogger(cfg)
 
 	// Create a connection pool
-	pool := pool.NewPool(EmptyPoolCapacity)
+	pool := pool.NewPool(config.EmptyPoolCapacity)
 	client := NewClient(
-		"tcp",
-		"localhost:5432",
-		DefaultBufferSize,
-		DefaultChunkSize,
-		DefaultReceiveDeadline,
-		DefaultSendDeadline,
-		false,
-		DefaultTCPKeepAlivePeriod,
+		&config.Client{
+			Network:            "tcp",
+			Address:            "localhost:5432",
+			ReceiveBufferSize:  config.DefaultBufferSize,
+			ReceiveChunkSize:   config.DefaultChunkSize,
+			ReceiveDeadline:    config.DefaultReceiveDeadline,
+			SendDeadline:       config.DefaultSendDeadline,
+			TCPKeepAlive:       false,
+			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
+		},
 		logger)
 	err := pool.Put(client.ID, client)
 	assert.Nil(t, err)
@@ -66,7 +69,7 @@ func TestNewProxy(t *testing.T) {
 // TestNewProxyElastic tests the creation of a new proxy with an elastic connection pool.
 func TestNewProxyElastic(t *testing.T) {
 	cfg := logging.LoggerConfig{
-		Output:     nil,
+		Output:     config.Console,
 		TimeFormat: zerolog.TimeFormatUnix,
 		Level:      zerolog.DebugLevel,
 		NoColor:    true,
@@ -75,13 +78,18 @@ func TestNewProxyElastic(t *testing.T) {
 	logger := logging.NewLogger(cfg)
 
 	// Create a connection pool
-	pool := pool.NewPool(EmptyPoolCapacity)
+	pool := pool.NewPool(config.EmptyPoolCapacity)
 
 	// Create a proxy with an elastic buffer pool
-	proxy := NewProxy(pool, plugin.NewHookConfig(), true, false, &Client{
-		Network:           "tcp",
-		Address:           "localhost:5432",
-		ReceiveBufferSize: DefaultBufferSize,
+	proxy := NewProxy(pool, plugin.NewHookConfig(), true, false, &config.Client{
+		Network:            "tcp",
+		Address:            "localhost:5432",
+		ReceiveBufferSize:  config.DefaultBufferSize,
+		ReceiveChunkSize:   config.DefaultChunkSize,
+		ReceiveDeadline:    config.DefaultReceiveDeadline,
+		SendDeadline:       config.DefaultSendDeadline,
+		TCPKeepAlive:       false,
+		TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 	}, logger)
 
 	assert.NotNil(t, proxy)
@@ -91,7 +99,7 @@ func TestNewProxyElastic(t *testing.T) {
 	assert.Equal(t, false, proxy.ReuseElasticClients)
 	assert.Equal(t, "tcp", proxy.ClientConfig.Network)
 	assert.Equal(t, "localhost:5432", proxy.ClientConfig.Address)
-	assert.Equal(t, DefaultBufferSize, proxy.ClientConfig.ReceiveBufferSize)
+	assert.Equal(t, config.DefaultBufferSize, proxy.ClientConfig.ReceiveBufferSize)
 
 	proxy.availableConnections.Clear()
 }
