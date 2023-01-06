@@ -12,6 +12,8 @@ jobs:
   test:
     name: Test GatewayD
     runs-on: ubuntu-latest
+    # Timeout after 3 minutes, to avoid hanging tests
+    timeout-minutes: 3
     steps:
       - name: Checkout 🛎️
         uses: actions/checkout@v3
