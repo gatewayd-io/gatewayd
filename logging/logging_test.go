@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 )
@@ -14,12 +15,13 @@ func TestNewLogger(t *testing.T) {
 	var buffer bytes.Buffer
 	logger := NewLogger(
 		LoggerConfig{
-			Output:     &buffer,
+			Output:     config.Buffer, // This is only used for testing.
 			Level:      zerolog.DebugLevel,
 			TimeFormat: zerolog.TimeFormatUnix,
 			StartupMsg: true,
 			NoColor:    true,
 		},
+		&buffer,
 	)
 	assert.NotNil(t, logger)
 
