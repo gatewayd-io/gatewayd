@@ -5,7 +5,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// verificationPolicy returns the hook verification policy from plugin config file.
+// GetVerificationPolicy returns the hook verification policy from plugin config file.
 func (p PluginConfig) GetVerificationPolicy() Policy {
 	// vPolicy := pluginConfig.String("plugins.verificationPolicy")
 	verificationPolicy := PassDown // default
@@ -21,7 +21,7 @@ func (p PluginConfig) GetVerificationPolicy() Policy {
 	return verificationPolicy
 }
 
-// pluginCompatPolicy returns the plugin compatibility policy from plugin config file.
+// GetPluginCompatPolicy returns the plugin compatibility policy from plugin config file.
 func (p PluginConfig) GetPluginCompatPolicy() CompatPolicy {
 	// vPolicy := pluginConfig.String("plugins.compatibilityPolicy")
 	compatPolicy := Strict // default
@@ -35,7 +35,7 @@ func (p PluginConfig) GetPluginCompatPolicy() CompatPolicy {
 	return compatPolicy
 }
 
-// loadBalancer returns the load balancing algorithm to use.
+// GetLoadBalancer returns the load balancing algorithm to use.
 func (s Server) GetLoadBalancer() gnet.LoadBalancing {
 	loadBalancer := map[string]gnet.LoadBalancing{
 		"roundrobin":       gnet.RoundRobin,
@@ -50,7 +50,7 @@ func (s Server) GetLoadBalancer() gnet.LoadBalancing {
 	return gnet.RoundRobin
 }
 
-// tcpNoDelay returns the TCP no delay option from config file.
+// GetTCPNoDelay returns the TCP no delay option from config file.
 func (s Server) GetTCPNoDelay() gnet.TCPSocketOpt {
 	if s.TCPNoDelay {
 		return gnet.TCPNoDelay
@@ -73,7 +73,7 @@ func (p Pool) GetSize() int {
 	return p.Size
 }
 
-// output returns the logger output from config file.
+// GetOutput returns the logger output from config file.
 func (l Logger) GetOutput() LogOutput {
 	switch l.Output {
 	case "file":
@@ -87,7 +87,7 @@ func (l Logger) GetOutput() LogOutput {
 	}
 }
 
-// timeFormat returns the logger time format from config file.
+// GetTimeFormat returns the logger time format from config file.
 func (l Logger) GetTimeFormat() string {
 	switch l.TimeFormat {
 	case "unixms":
@@ -103,7 +103,7 @@ func (l Logger) GetTimeFormat() string {
 	}
 }
 
-// level returns the logger level from config file.
+// GetLevel returns the logger level from config file.
 func (l Logger) GetLevel() zerolog.Level {
 	switch l.Level {
 	case "debug":

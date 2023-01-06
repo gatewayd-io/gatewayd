@@ -11,11 +11,13 @@ type (
 	LogOutput    uint
 )
 
+// Status is the status of the server.
 const (
 	Running Status = iota
 	Stopped
 )
 
+// Policy is the policy for hook verification.
 const (
 	// Non-strict (permissive) mode.
 	PassDown Policy = iota // Pass down the extra keys/values in result to the next plugins
@@ -25,11 +27,13 @@ const (
 	Remove // Remove the hook from the list on error and continue
 )
 
+// CompatPolicy is the compatibility policy for plugins.
 const (
 	Strict CompatPolicy = iota
 	Loose
 )
 
+// LogOutput is the output type for the logger.
 const (
 	Console LogOutput = iota
 	Stdout
