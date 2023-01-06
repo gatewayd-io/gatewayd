@@ -3,8 +3,8 @@
 
 # Loggers config
 loggers:
-  logger:
-    output: "null" # stdout or file or console
+  default:
+    output: "console" # stdout, stderr, file or console
     # Implementing file output
     # file : ./logs/gatewayd.log
     level: "debug" # panic, fatal, error, warn, info, debug, trace
@@ -12,7 +12,7 @@ loggers:
     timeFormat: "unix"
 
 clients:
-  client1:
+  default:
     network: tcp
     address: localhost:5432
     # tcpKeepAlive: True
@@ -24,24 +24,23 @@ clients:
 
 # Pool config
 pool:
-  # Use the logger config passed here
-  # i.e. don't assume it's the same as the logger config above
-  logger: loggers.logger
-  size: 10
-  # Database configs for the connection pool
-  client: clients.client1
+  default:
+    size: 10
+    # Database configs for the connection pool
+    client: clients.default
 
 # Proxy config
 proxy:
-  # Use the logger config passed here
-  # i.e. don't assume it's the same as the logger config above
-  logger: loggers.logger
-    # Use the pool config passed here
-  # i.e. don't assume it's the same as the pool config above
-  pool: pool
-  elastic: False
-  reuseElasticClients: False
-  elasticClient: clients.client1
+  default:
+    # Use the logger config passed here
+    # i.e. don't assume it's the same as the logger config above
+    logger: loggers.default
+      # Use the pool config passed here
+    # i.e. don't assume it's the same as the pool config above
+    pool: pool
+    elastic: False
+    reuseElasticClients: False
+    elasticClient: clients.default
 
 server:
   network: tcp
@@ -49,8 +48,8 @@ server:
   # softLimit: 0
   # hardLimit: 0
 
-  logger: loggers.logger
-  proxy: proxy
+  logger: loggers.default
+  proxy: proxy.default
 
   enableTicker: False
   tickInterval: 5s # duration

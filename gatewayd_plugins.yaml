@@ -1,26 +1,26 @@
 # Plugin configuration file for GatewayD
 
-plugins:
-  # Possible values: "passdown" (default), "ignore", "abort" and "remove"
-  verificationPolicy: "passdown"
-  # Possible values: "strict" (default) and "loose"
-  compatibilityPolicy: "strict"
+# Possible values: "passdown" (default), "ignore", "abort" and "remove"
+verificationPolicy: "passdown"
+# Possible values: "strict" (default) and "loose"
+compatibilityPolicy: "strict"
 
-# Plugin name
-gatewayd-plugin-test:
-  # whether to enable or disable the plugin on the next run
-  enabled: True
-  # path to the plugin's binary file
-  localPath: ../gatewayd-plugin-test/gatewayd-plugin-test
-  # Pass cmdline args to the plugin
-  args: ["--log-level", "info"]
-  # Pass environment variables to the plugin
-  # System-wide environment variables are passed to the plugin normally
-  # and they can be accessed via os.Environ().
-  # Defining any environment variables below will override system-wide environment variables.
-  env:
-    # The below environment variables are used by the plugin loader to verify the plugin's identity.
-    - MAGIC_COOKIE_KEY=GATEWAYD_PLUGIN
-    - MAGIC_COOKIE_VALUE=5712b87aa5d7e9f9e9ab643e6603181c5b796015cb1c09d6f5ada882bf2a1872
-  # Checksum hash to verify the binary before loading
-  checksum: 9eba62b8d50610493a376a512dd0bb42430c415b3ad966484d8f4c0bc6ed91b4
+plugins:
+  # Plugin name
+  - name: gatewayd-plugin-test
+    # whether to enable or disable the plugin on the next run
+    enabled: True
+    # path to the plugin's binary file
+    localPath: ../gatewayd-plugin-test/gatewayd-plugin-test
+    # Pass cmdline args to the plugin
+    args: ["--log-level", "info"]
+    # Pass environment variables to the plugin
+    # System-wide environment variables are passed to the plugin normally
+    # and they can be accessed via os.Environ().
+    # Defining any environment variables below will override system-wide environment variables.
+    env:
+      # The below environment variables are used by the plugin loader to verify the plugin's identity.
+      - MAGIC_COOKIE_KEY=GATEWAYD_PLUGIN
+      - MAGIC_COOKIE_VALUE=5712b87aa5d7e9f9e9ab643e6603181c5b796015cb1c09d6f5ada882bf2a1872
+    # Checksum hash to verify the binary before loading
+    checksum: 911cbab556bd3b14b60c088d786ae7c3ecf0a2aa2958406c3214ea64073cde36
