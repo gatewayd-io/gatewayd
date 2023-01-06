@@ -13,7 +13,7 @@ import (
 // TestNewLogger tests the creation of a new logger.
 func TestNewLogger(t *testing.T) {
 	var buffer bytes.Buffer
-	logger := NewLogger(
+	logger := NewLoggerWithBuffer(
 		LoggerConfig{
 			Output:     config.Buffer, // This is only used for testing.
 			Level:      zerolog.DebugLevel,
