@@ -2,10 +2,12 @@ package config
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/knadh/koanf"
 	"github.com/knadh/koanf/providers/confmap"
+	"github.com/knadh/koanf/providers/env"
 )
 
 // // getPath returns the path to the referenced config value.
@@ -155,5 +157,15 @@ func LoadPluginConfigDefaults(cfg *koanf.Koanf) {
 
 	if err := cfg.Load(defaultValues, nil); err != nil {
 		panic(fmt.Errorf("failed to load default plugin configuration: %w", err))
+	}
+}
+
+// LoadEnvVars loads the environment variables into the configuration with the
+// given prefix, "GATEWAYD_".
+func LoadEnvVars(cfg *koanf.Koanf) {
+	if err := cfg.Load(env.Provider(EnvPrefix, ".", func(env string) string {
+		return strings.ReplaceAll(strings.ToLower(strings.TrimPrefix(env, EnvPrefix)), "_", ".")
+	}), nil); err != nil {
+		panic(fmt.Errorf("failed to load environment variables: %w", err))
 	}
 }
