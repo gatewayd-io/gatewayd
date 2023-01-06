@@ -152,10 +152,8 @@ func (h *HookConfig) Run(
 		var result *structpb.Struct
 		var err error
 		if idx == 0 {
-			// TODO: Run hooks from the registry
 			result, err = h.hooks[hookType][prio](inheritedCtx, params, opts...)
 		} else {
-			// TODO: Run hooks from the registry
 			result, err = h.hooks[hookType][prio](inheritedCtx, returnVal, opts...)
 		}
 
