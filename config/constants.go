@@ -66,9 +66,12 @@ const (
 	MinimumPoolSize   = 2
 
 	// Server constants.
-	DefaultTickInterval = 5 * time.Second
-	DefaultBufferSize   = 1 << 24 // 16777216 bytes
-	DefaultTCPKeepAlive = 3 * time.Second
+	DefaultListenNetwork = "tcp"
+	DefaultListenAddress = "0.0.0.0:15432"
+	DefaultTickInterval  = 5 * time.Second
+	DefaultBufferSize    = 1 << 24 // 16777216 bytes
+	DefaultTCPKeepAlive  = 3 * time.Second
+	DefaultLoadBalancer  = "roundrobin"
 
 	// Utility constants.
 	DefaultSeed        = 1000
