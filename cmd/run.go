@@ -6,23 +6,20 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
+	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/gatewayd-io/gatewayd/network"
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
+	"github.com/knadh/koanf"
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/confmap"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
-)
-
-const (
-	DefaultTCPKeepAlive = 3 * time.Second
 )
 
 var (
@@ -38,6 +35,10 @@ var (
 			NoColor: true,
 		})
 	pluginRegistry = plugin.NewRegistry(hooksConfig)
+	// Global koanf instance. Using "." as the key path delimiter.
+	globalConfig = koanf.New(".")
+	// Plugin koanf instance. Using "." as the key path delimiter.
+	pluginConfig = koanf.New(".")
 )
 
 // runCmd represents the run command.
@@ -49,20 +50,32 @@ var runCmd = &cobra.Command{
 		// before the configuration is loaded.
 		hooksConfig.Logger = DefaultLogger
 
-		// Load the plugin configuration file
+		// Load default plugin configuration.
+		config.LoadPluginConfigDefaults(pluginConfig)
+
+		// Load the plugin configuration file.
 		if f, err := cmd.Flags().GetString("plugin-config"); err == nil {
 			if err := pluginConfig.Load(file.Provider(f), yaml.Parser()); err != nil {
 				DefaultLogger.Fatal().Err(err).Msg("Failed to load plugin configuration")
 				os.Exit(gerr.FailedToLoadPluginConfig)
 			}
 		}
+		var pConfig config.PluginConfig
+		if err := pluginConfig.Unmarshal("", &pConfig); err != nil {
+			DefaultLogger.Fatal().Err(err).Msg("Failed to unmarshal plugin configuration")
+			os.Exit(gerr.FailedToLoadPluginConfig)
+		}
 
 		// Set the plugin compatibility policy.
-		pluginRegistry.CompatPolicy = pluginCompatPolicy()
+		pluginRegistry.CompatPolicy = pConfig.GetPluginCompatPolicy()
 
 		// Load plugins and register their hooks.
-		pluginRegistry.LoadPlugins(pluginConfig)
+		pluginRegistry.LoadPlugins(pConfig.Plugins)
 
+		// Load default global configuration.
+		config.LoadGlobalConfigDefaults(globalConfig)
+
+		// Load the global configuration file.
 		if f, err := cmd.Flags().GetString("config"); err == nil {
 			if err := globalConfig.Load(file.Provider(f), yaml.Parser()); err != nil {
 				DefaultLogger.Fatal().Err(err).Msg("Failed to load configuration")
@@ -72,7 +85,14 @@ var runCmd = &cobra.Command{
 		}
 
 		// Get hooks signature verification policy.
-		hooksConfig.Verification = verificationPolicy()
+		hooksConfig.Verification = pConfig.GetVerificationPolicy()
+
+		var gConfig config.GlobalConfig
+		if err := globalConfig.Unmarshal("", &gConfig); err != nil {
+			DefaultLogger.Fatal().Err(err).Msg("Failed to unmarshal global configuration")
+			pluginRegistry.Shutdown()
+			os.Exit(gerr.FailedToLoadGlobalConfig)
+		}
 
 		// The config will be passed to the hooks, and in turn to the plugins that
 		// register to this hook.
@@ -93,19 +113,32 @@ var runCmd = &cobra.Command{
 				DefaultLogger.Fatal().Err(err).Msg("Failed to merge configuration")
 			}
 		}
+		if err := globalConfig.Unmarshal("", &gConfig); err != nil {
+			DefaultLogger.Fatal().Err(err).Msg("Failed to unmarshal updated global configuration")
+			pluginRegistry.Shutdown()
+			os.Exit(gerr.FailedToLoadGlobalConfig)
+		}
 
 		// Create a new logger from the config.
-		loggerCfg := loggerConfig()
-		logger := logging.NewLogger(loggerCfg)
+		loggerCfg := gConfig.Loggers[config.Default]
+		logger := logging.NewLogger(logging.LoggerConfig{
+			Output:     loggerCfg.GetOutput(),
+			Level:      loggerCfg.GetLevel(),
+			TimeFormat: loggerCfg.GetTimeFormat(),
+			NoColor:    loggerCfg.NoColor,
+			FileName:   loggerCfg.FileName,
+		})
 
 		// Replace the default logger with the new one from the config.
 		hooksConfig.Logger = logger
 
 		// This is a notification hook, so we don't care about the result.
 		data := map[string]interface{}{
+			"output":     loggerCfg.Output,
+			"level":      loggerCfg.Level,
 			"timeFormat": loggerCfg.TimeFormat,
-			"level":      loggerCfg.Level.String(),
 			"noColor":    loggerCfg.NoColor,
+			"fileName":   loggerCfg.FileName,
 		}
 		// TODO: Use a context with a timeout
 		_, err = hooksConfig.Run(
@@ -115,34 +148,27 @@ var runCmd = &cobra.Command{
 		}
 
 		// Create and initialize a pool of connections.
-		poolSize, clientConfig := poolConfig()
+		poolSize := gConfig.Pools[config.Default].GetSize()
 		pool := pool.NewPool(poolSize)
+
+		// Get client config from the config file.
+		clientConfig := gConfig.Clients[config.Default]
 
 		// Add clients to the pool
 		for i := 0; i < poolSize; i++ {
-			client := network.NewClient(
-				clientConfig.Network,
-				clientConfig.Address,
-				clientConfig.ReceiveBufferSize,
-				clientConfig.ReceiveChunkSize,
-				clientConfig.ReceiveDeadline,
-				clientConfig.SendDeadline,
-				clientConfig.TCPKeepAlive,
-				clientConfig.TCPKeepAlivePeriod,
-				logger,
-			)
+			client := network.NewClient(&clientConfig, logger)
 
 			if client != nil {
 				clientCfg := map[string]interface{}{
 					"id":                 client.ID,
-					"network":            clientConfig.Network,
-					"address":            clientConfig.Address,
-					"receiveBufferSize":  clientConfig.ReceiveBufferSize,
-					"receiveChunkSize":   clientConfig.ReceiveChunkSize,
-					"receiveDeadline":    clientConfig.ReceiveDeadline.Seconds(),
-					"sendDeadline":       clientConfig.SendDeadline.Seconds(),
-					"tcpKeepAlive":       clientConfig.TCPKeepAlive,
-					"tcpKeepAlivePeriod": clientConfig.TCPKeepAlivePeriod.Seconds(),
+					"network":            client.Network,
+					"address":            client.Address,
+					"receiveBufferSize":  client.ReceiveBufferSize,
+					"receiveChunkSize":   client.ReceiveChunkSize,
+					"receiveDeadline":    client.ReceiveDeadline.Seconds(),
+					"sendDeadline":       client.SendDeadline.Seconds(),
+					"tcpKeepAlive":       client.TCPKeepAlive,
+					"tcpKeepAlivePeriod": client.TCPKeepAlivePeriod.Seconds(),
 				}
 				_, err := hooksConfig.Run(
 					context.Background(),
@@ -182,22 +208,23 @@ var runCmd = &cobra.Command{
 		}
 
 		// Create a prefork proxy with the pool of clients.
-		elastic, reuseElasticClients, elasticClientConfig := proxyConfig()
+		elastic := gConfig.Proxy[config.Default].Elastic
+		reuseElasticClients := gConfig.Proxy[config.Default].ReuseElasticClients
 		proxy := network.NewProxy(
-			pool, hooksConfig, elastic, reuseElasticClients, elasticClientConfig, logger)
+			pool, hooksConfig, elastic, reuseElasticClients, &clientConfig, logger)
 
 		proxyCfg := map[string]interface{}{
 			"elastic":             elastic,
 			"reuseElasticClients": reuseElasticClients,
 			"clientConfig": map[string]interface{}{
-				"network":            elasticClientConfig.Network,
-				"address":            elasticClientConfig.Address,
-				"receiveBufferSize":  elasticClientConfig.ReceiveBufferSize,
-				"receiveChunkSize":   elasticClientConfig.ReceiveChunkSize,
-				"receiveDeadline":    elasticClientConfig.ReceiveDeadline.Seconds(),
-				"sendDeadline":       elasticClientConfig.SendDeadline.Seconds(),
-				"tcpKeepAlive":       elasticClientConfig.TCPKeepAlive,
-				"tcpKeepAlivePeriod": elasticClientConfig.TCPKeepAlivePeriod.Seconds(),
+				"network":            clientConfig.Network,
+				"address":            clientConfig.Address,
+				"receiveBufferSize":  clientConfig.ReceiveBufferSize,
+				"receiveChunkSize":   clientConfig.ReceiveChunkSize,
+				"receiveDeadline":    clientConfig.ReceiveDeadline.Seconds(),
+				"sendDeadline":       clientConfig.SendDeadline.Seconds(),
+				"tcpKeepAlive":       clientConfig.TCPKeepAlive,
+				"tcpKeepAlivePeriod": clientConfig.TCPKeepAlivePeriod.Seconds(),
 			},
 		}
 		_, err = hooksConfig.Run(
@@ -207,37 +234,36 @@ var runCmd = &cobra.Command{
 		}
 
 		// Create a server
-		serverConfig := serverConfig()
 		server := network.NewServer(
-			serverConfig.Network,
-			serverConfig.Address,
-			serverConfig.SoftLimit,
-			serverConfig.HardLimit,
-			serverConfig.TickInterval,
+			gConfig.Server.Network,
+			gConfig.Server.Address,
+			gConfig.Server.SoftLimit,
+			gConfig.Server.HardLimit,
+			gConfig.Server.TickInterval,
 			[]gnet.Option{
 				// Scheduling options
-				gnet.WithMulticore(serverConfig.MultiCore),
-				gnet.WithLockOSThread(serverConfig.LockOSThread),
+				gnet.WithMulticore(gConfig.Server.MultiCore),
+				gnet.WithLockOSThread(gConfig.Server.LockOSThread),
 				// NumEventLoop overrides Multicore option.
 				// gnet.WithNumEventLoop(1),
 
 				// Can be used to send keepalive messages to the client.
-				gnet.WithTicker(serverConfig.EnableTicker),
+				gnet.WithTicker(gConfig.Server.EnableTicker),
 
 				// Internal event-loop load balancing options
-				gnet.WithLoadBalancing(serverConfig.LoadBalancer),
+				gnet.WithLoadBalancing(gConfig.Server.GetLoadBalancer()),
 
 				// Buffer options
-				gnet.WithReadBufferCap(serverConfig.ReadBufferCap),
-				gnet.WithWriteBufferCap(serverConfig.WriteBufferCap),
-				gnet.WithSocketRecvBuffer(serverConfig.SocketRecvBuffer),
-				gnet.WithSocketSendBuffer(serverConfig.SocketSendBuffer),
+				gnet.WithReadBufferCap(gConfig.Server.ReadBufferCap),
+				gnet.WithWriteBufferCap(gConfig.Server.WriteBufferCap),
+				gnet.WithSocketRecvBuffer(gConfig.Server.SocketRecvBuffer),
+				gnet.WithSocketSendBuffer(gConfig.Server.SocketSendBuffer),
 
 				// TCP options
-				gnet.WithReuseAddr(serverConfig.ReuseAddress),
-				gnet.WithReusePort(serverConfig.ReusePort),
-				gnet.WithTCPKeepAlive(serverConfig.TCPKeepAlive),
-				gnet.WithTCPNoDelay(serverConfig.TCPNoDelay),
+				gnet.WithReuseAddr(gConfig.Server.ReuseAddress),
+				gnet.WithReusePort(gConfig.Server.ReusePort),
+				gnet.WithTCPKeepAlive(gConfig.Server.TCPKeepAlive),
+				gnet.WithTCPNoDelay(gConfig.Server.GetTCPNoDelay()),
 			},
 			proxy,
 			logger,
@@ -245,23 +271,23 @@ var runCmd = &cobra.Command{
 		)
 
 		serverCfg := map[string]interface{}{
-			"network":          serverConfig.Network,
-			"address":          serverConfig.Address,
-			"softLimit":        serverConfig.SoftLimit,
-			"hardLimit":        serverConfig.HardLimit,
-			"tickInterval":     serverConfig.TickInterval.Seconds(),
-			"multiCore":        serverConfig.MultiCore,
-			"lockOSThread":     serverConfig.LockOSThread,
-			"enableTicker":     serverConfig.EnableTicker,
-			"loadBalancer":     int(serverConfig.LoadBalancer),
-			"readBufferCap":    serverConfig.ReadBufferCap,
-			"writeBufferCap":   serverConfig.WriteBufferCap,
-			"socketRecvBuffer": serverConfig.SocketRecvBuffer,
-			"socketSendBuffer": serverConfig.SocketSendBuffer,
-			"reuseAddress":     serverConfig.ReuseAddress,
-			"reusePort":        serverConfig.ReusePort,
-			"tcpKeepAlive":     serverConfig.TCPKeepAlive.Seconds(),
-			"tcpNoDelay":       int(serverConfig.TCPNoDelay),
+			"network":          gConfig.Server.Network,
+			"address":          gConfig.Server.Address,
+			"softLimit":        gConfig.Server.SoftLimit,
+			"hardLimit":        gConfig.Server.HardLimit,
+			"tickInterval":     gConfig.Server.TickInterval.Seconds(),
+			"multiCore":        gConfig.Server.MultiCore,
+			"lockOSThread":     gConfig.Server.LockOSThread,
+			"enableTicker":     gConfig.Server.EnableTicker,
+			"loadBalancer":     gConfig.Server.LoadBalancer,
+			"readBufferCap":    gConfig.Server.ReadBufferCap,
+			"writeBufferCap":   gConfig.Server.WriteBufferCap,
+			"socketRecvBuffer": gConfig.Server.SocketRecvBuffer,
+			"socketSendBuffer": gConfig.Server.SocketSendBuffer,
+			"reuseAddress":     gConfig.Server.ReuseAddress,
+			"reusePort":        gConfig.Server.ReusePort,
+			"tcpKeepAlive":     gConfig.Server.TCPKeepAlive.Seconds(),
+			"tcpNoDelay":       gConfig.Server.TCPNoDelay,
 		}
 		_, err = hooksConfig.Run(
 			context.Background(), serverCfg, plugin.OnNewServer, hooksConfig.Verification)
