@@ -40,7 +40,7 @@ func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 	// Run the OnBooting hooks.
 	_, err := s.hooksConfig.Run(
 		context.Background(),
-		map[string]interface{}{"status": s.Status},
+		map[string]interface{}{"status": fmt.Sprint(s.Status)},
 		plugin.OnBooting,
 		s.hooksConfig.Verification)
 	if err != nil {
@@ -55,7 +55,7 @@ func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 	// Run the OnBooted hooks.
 	_, err = s.hooksConfig.Run(
 		context.Background(),
-		map[string]interface{}{"status": s.Status},
+		map[string]interface{}{"status": fmt.Sprint(s.Status)},
 		plugin.OnBooted,
 		s.hooksConfig.Verification)
 	if err != nil {
