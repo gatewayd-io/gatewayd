@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
+	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
@@ -23,7 +24,7 @@ func TestNewClient(t *testing.T) {
 	}()
 
 	cfg := logging.LoggerConfig{
-		Output:     nil,
+		Output:     config.Console,
 		TimeFormat: zerolog.TimeFormatUnix,
 		Level:      zerolog.DebugLevel,
 		NoColor:    true,
@@ -32,20 +33,22 @@ func TestNewClient(t *testing.T) {
 	logger := logging.NewLogger(cfg)
 
 	client := NewClient(
-		"tcp",
-		"localhost:5432",
-		DefaultBufferSize,
-		DefaultChunkSize,
-		DefaultReceiveDeadline,
-		DefaultSendDeadline,
-		false,
-		DefaultTCPKeepAlivePeriod,
+		&config.Client{
+			Network:            "tcp",
+			Address:            "localhost:5432",
+			ReceiveBufferSize:  config.DefaultBufferSize,
+			ReceiveChunkSize:   config.DefaultChunkSize,
+			ReceiveDeadline:    config.DefaultReceiveDeadline,
+			SendDeadline:       config.DefaultSendDeadline,
+			TCPKeepAlive:       false,
+			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
+		},
 		logger)
 	defer client.Close()
 
 	assert.Equal(t, "tcp", client.Network)
 	assert.Equal(t, "127.0.0.1:5432", client.Address)
-	assert.Equal(t, DefaultBufferSize, client.ReceiveBufferSize)
+	assert.Equal(t, config.DefaultBufferSize, client.ReceiveBufferSize)
 	assert.NotEmpty(t, client.ID)
 	assert.NotNil(t, client.Conn)
 }
@@ -64,7 +67,7 @@ func TestSend(t *testing.T) {
 	}()
 
 	cfg := logging.LoggerConfig{
-		Output:     nil,
+		Output:     config.Console,
 		TimeFormat: zerolog.TimeFormatUnix,
 		Level:      zerolog.DebugLevel,
 		NoColor:    true,
@@ -73,14 +76,16 @@ func TestSend(t *testing.T) {
 	logger := logging.NewLogger(cfg)
 
 	client := NewClient(
-		"tcp",
-		"localhost:5432",
-		DefaultBufferSize,
-		DefaultChunkSize,
-		DefaultReceiveDeadline,
-		DefaultSendDeadline,
-		false,
-		DefaultTCPKeepAlivePeriod,
+		&config.Client{
+			Network:            "tcp",
+			Address:            "localhost:5432",
+			ReceiveBufferSize:  config.DefaultBufferSize,
+			ReceiveChunkSize:   config.DefaultChunkSize,
+			ReceiveDeadline:    config.DefaultReceiveDeadline,
+			SendDeadline:       config.DefaultSendDeadline,
+			TCPKeepAlive:       false,
+			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
+		},
 		logger)
 	defer client.Close()
 
@@ -105,7 +110,7 @@ func TestReceive(t *testing.T) {
 	}()
 
 	cfg := logging.LoggerConfig{
-		Output:     nil,
+		Output:     config.Console,
 		TimeFormat: zerolog.TimeFormatUnix,
 		Level:      zerolog.DebugLevel,
 		NoColor:    true,
@@ -114,14 +119,16 @@ func TestReceive(t *testing.T) {
 	logger := logging.NewLogger(cfg)
 
 	client := NewClient(
-		"tcp",
-		"localhost:5432",
-		DefaultBufferSize,
-		DefaultChunkSize,
-		DefaultReceiveDeadline,
-		DefaultSendDeadline,
-		false,
-		DefaultTCPKeepAlivePeriod,
+		&config.Client{
+			Network:            "tcp",
+			Address:            "localhost:5432",
+			ReceiveBufferSize:  config.DefaultBufferSize,
+			ReceiveChunkSize:   config.DefaultChunkSize,
+			ReceiveDeadline:    config.DefaultReceiveDeadline,
+			SendDeadline:       config.DefaultSendDeadline,
+			TCPKeepAlive:       false,
+			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
+		},
 		logger)
 	defer client.Close()
 
@@ -156,7 +163,7 @@ func TestClose(t *testing.T) {
 	}()
 
 	cfg := logging.LoggerConfig{
-		Output:     nil,
+		Output:     config.Console,
 		TimeFormat: zerolog.TimeFormatUnix,
 		Level:      zerolog.DebugLevel,
 		NoColor:    true,
@@ -165,14 +172,16 @@ func TestClose(t *testing.T) {
 	logger := logging.NewLogger(cfg)
 
 	client := NewClient(
-		"tcp",
-		"localhost:5432",
-		DefaultBufferSize,
-		DefaultChunkSize,
-		DefaultReceiveDeadline,
-		DefaultSendDeadline,
-		false,
-		DefaultTCPKeepAlivePeriod,
+		&config.Client{
+			Network:            "tcp",
+			Address:            "localhost:5432",
+			ReceiveBufferSize:  config.DefaultBufferSize,
+			ReceiveChunkSize:   config.DefaultChunkSize,
+			ReceiveDeadline:    config.DefaultReceiveDeadline,
+			SendDeadline:       config.DefaultSendDeadline,
+			TCPKeepAlive:       false,
+			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
+		},
 		logger)
 	assert.NotNil(t, client)
 	client.Close()
@@ -180,5 +189,5 @@ func TestClose(t *testing.T) {
 	assert.Equal(t, "", client.Network)
 	assert.Equal(t, "", client.Address)
 	assert.Nil(t, client.Conn)
-	assert.Equal(t, DefaultBufferSize, client.ReceiveBufferSize)
+	assert.Equal(t, config.DefaultBufferSize, client.ReceiveBufferSize)
 }
