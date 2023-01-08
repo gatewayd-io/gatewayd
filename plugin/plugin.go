@@ -8,7 +8,7 @@ import (
 	goplugin "github.com/hashicorp/go-plugin"
 )
 
-type Plugin interface {
+type IPlugin interface {
 	Start() (net.Addr, error)
 	Stop()
 	Dispense() (pluginV1.GatewayDPluginServiceClient, *gerr.GatewayDError)
@@ -21,7 +21,7 @@ type Identifier struct {
 	Checksum  string
 }
 
-type Impl struct {
+type Plugin struct {
 	goplugin.NetRPCUnsupportedPlugin
 	pluginV1.GatewayDPluginServiceServer
 
@@ -48,10 +48,10 @@ type Impl struct {
 	Categories []string
 }
 
-var _ Plugin = &Impl{}
+var _ IPlugin = &Plugin{}
 
 // Start starts the plugin.
-func (p *Impl) Start() (net.Addr, error) {
+func (p *Plugin) Start() (net.Addr, error) {
 	var addr net.Addr
 	var err error
 	if addr, err = p.client.Start(); err != nil {
@@ -61,12 +61,12 @@ func (p *Impl) Start() (net.Addr, error) {
 }
 
 // Stop kills the plugin.
-func (p *Impl) Stop() {
+func (p *Plugin) Stop() {
 	p.client.Kill()
 }
 
 // Dispense returns the plugin client.
-func (p *Impl) Dispense() (pluginV1.GatewayDPluginServiceClient, *gerr.GatewayDError) {
+func (p *Plugin) Dispense() (pluginV1.GatewayDPluginServiceClient, *gerr.GatewayDError) {
 	rpcClient, err := p.client.Client()
 	if err != nil {
 		return nil, gerr.ErrFailedToGetRPCClient.Wrap(err)
