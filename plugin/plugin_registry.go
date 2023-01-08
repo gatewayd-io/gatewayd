@@ -35,7 +35,10 @@ var _ IPluginRegistry = &PluginRegistry{}
 
 // NewRegistry creates a new plugin registry.
 func NewRegistry(hooksConfig *HookConfig) *PluginRegistry {
-	return &PluginRegistry{plugins: pool.NewPool(config.EmptyPoolCapacity), hooksConfig: hooksConfig}
+	return &PluginRegistry{
+		plugins:     pool.NewPool(config.EmptyPoolCapacity),
+		hooksConfig: hooksConfig,
+	}
 }
 
 // Add adds a plugin to the registry.
