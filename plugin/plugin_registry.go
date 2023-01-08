@@ -7,6 +7,7 @@ import (
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/logging"
+	"github.com/gatewayd-io/gatewayd/plugin/hook"
 	pluginV1 "github.com/gatewayd-io/gatewayd/plugin/v1"
 	"github.com/gatewayd-io/gatewayd/pool"
 	goplugin "github.com/hashicorp/go-plugin"
@@ -191,7 +192,7 @@ func (reg *PluginRegistry) LoadPlugins(plugins []config.Plugin) {
 		// in the config file. Built-in plugins are loaded first, followed by user-defined
 		// plugins. Built-in plugins have a priority of 0 to 999, and user-defined plugins
 		// have a priority of 1000 or greater.
-		plugin.Priority = Priority(config.PluginPriorityStart + uint(priority))
+		plugin.Priority = hook.Priority(config.PluginPriorityStart + uint(priority))
 
 		logAdapter := logging.NewHcLogAdapter(&reg.hooksConfig.Logger, config.LoggerName)
 
@@ -326,9 +327,9 @@ func (reg *PluginRegistry) RegisterHooks(id Identifier) {
 		return
 	}
 
-	for _, hook := range pluginImpl.Hooks {
-		var hookFunc HookDef
-		switch hook {
+	for _, hookType := range pluginImpl.Hooks {
+		var hookFunc hook.HookDef
+		switch hookType {
 		case OnConfigLoaded:
 			hookFunc = pluginV1.OnConfigLoaded
 		case OnNewLogger:
@@ -368,10 +369,10 @@ func (reg *PluginRegistry) RegisterHooks(id Identifier) {
 		case OnNewClient:
 			hookFunc = pluginV1.OnNewClient
 		default:
-			reg.hooksConfig.Logger.Warn().Str("hook", string(hook)).Msg("Unknown hook type")
+			reg.hooksConfig.Logger.Warn().Str("hook", string(hookType)).Msg("Unknown hook type")
 			continue
 		}
-		reg.hooksConfig.Logger.Debug().Str("hook", string(hook)).Msg("Registering hook")
-		reg.hooksConfig.Add(hook, pluginImpl.Priority, hookFunc)
+		reg.hooksConfig.Logger.Debug().Str("hook", string(hookType)).Msg("Registering hook")
+		reg.hooksConfig.Add(hookType, pluginImpl.Priority, hookFunc)
 	}
 }

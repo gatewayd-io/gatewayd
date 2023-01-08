@@ -6,47 +6,39 @@ import (
 
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
+	"github.com/gatewayd-io/gatewayd/plugin/hook"
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-type (
-	// Priority is the priority of a hook.
-	// Smaller values are executed first (higher priority).
-	Priority uint
-	HookType string
-	HookDef  func(
-		context.Context, *structpb.Struct, ...grpc.CallOption) (*structpb.Struct, error)
-)
-
 const (
 	// Run command hooks (cmd/run.go).
-	OnConfigLoaded HookType = "onConfigLoaded"
-	OnNewLogger    HookType = "onNewLogger"
-	OnNewPool      HookType = "onNewPool"
-	OnNewProxy     HookType = "onNewProxy"
-	OnNewServer    HookType = "onNewServer"
-	OnSignal       HookType = "onSignal"
+	OnConfigLoaded hook.HookType = "onConfigLoaded"
+	OnNewLogger    hook.HookType = "onNewLogger"
+	OnNewPool      hook.HookType = "onNewPool"
+	OnNewProxy     hook.HookType = "onNewProxy"
+	OnNewServer    hook.HookType = "onNewServer"
+	OnSignal       hook.HookType = "onSignal"
 	// Server hooks (network/server.go).
-	OnRun            HookType = "onRun"
-	OnBooting        HookType = "onBooting"
-	OnBooted         HookType = "onBooted"
-	OnOpening        HookType = "onOpening"
-	OnOpened         HookType = "onOpened"
-	OnClosing        HookType = "onClosing"
-	OnClosed         HookType = "onClosed"
-	OnTraffic        HookType = "onTraffic"
-	OnIngressTraffic HookType = "onIngressTraffic"
-	OnEgressTraffic  HookType = "onEgressTraffic"
-	OnShutdown       HookType = "onShutdown"
-	OnTick           HookType = "onTick"
+	OnRun            hook.HookType = "onRun"
+	OnBooting        hook.HookType = "onBooting"
+	OnBooted         hook.HookType = "onBooted"
+	OnOpening        hook.HookType = "onOpening"
+	OnOpened         hook.HookType = "onOpened"
+	OnClosing        hook.HookType = "onClosing"
+	OnClosed         hook.HookType = "onClosed"
+	OnTraffic        hook.HookType = "onTraffic"
+	OnIngressTraffic hook.HookType = "onIngressTraffic"
+	OnEgressTraffic  hook.HookType = "onEgressTraffic"
+	OnShutdown       hook.HookType = "onShutdown"
+	OnTick           hook.HookType = "onTick"
 	// Pool hooks (network/pool.go).
-	OnNewClient HookType = "onNewClient"
+	OnNewClient hook.HookType = "onNewClient"
 )
 
 type HookConfig struct {
-	hooks        map[HookType]map[Priority]HookDef
+	hooks        map[hook.HookType]map[hook.Priority]hook.HookDef
 	Logger       zerolog.Logger
 	Verification config.Policy
 }
@@ -54,19 +46,19 @@ type HookConfig struct {
 // NewHookConfig returns a new HookConfig.
 func NewHookConfig() *HookConfig {
 	return &HookConfig{
-		hooks: map[HookType]map[Priority]HookDef{},
+		hooks: map[hook.HookType]map[hook.Priority]hook.HookDef{},
 	}
 }
 
 // Hooks returns the hooks.
-func (h *HookConfig) Hooks() map[HookType]map[Priority]HookDef {
+func (h *HookConfig) Hooks() map[hook.HookType]map[hook.Priority]hook.HookDef {
 	return h.hooks
 }
 
 // Add adds a hook with a priority to the hooks map.
-func (h *HookConfig) Add(hookType HookType, prio Priority, hook HookDef) {
+func (h *HookConfig) Add(hookType hook.HookType, prio hook.Priority, hookFunc hook.HookDef) {
 	if len(h.hooks[hookType]) == 0 {
-		h.hooks[hookType] = map[Priority]HookDef{prio: hook}
+		h.hooks[hookType] = map[hook.Priority]hook.HookDef{prio: hookFunc}
 	} else {
 		if _, ok := h.hooks[hookType][prio]; ok {
 			h.Logger.Warn().Fields(
@@ -76,12 +68,12 @@ func (h *HookConfig) Add(hookType HookType, prio Priority, hook HookDef) {
 				},
 			).Msg("Hook is replaced")
 		}
-		h.hooks[hookType][prio] = hook
+		h.hooks[hookType][prio] = hookFunc
 	}
 }
 
 // Get returns the hooks of a specific type.
-func (h *HookConfig) Get(hookType HookType) map[Priority]HookDef {
+func (h *HookConfig) Get(hookType hook.HookType) map[hook.Priority]hook.HookDef {
 	return h.hooks[hookType]
 }
 
@@ -102,7 +94,7 @@ func (h *HookConfig) Get(hookType HookType) map[Priority]HookDef {
 func (h *HookConfig) Run(
 	ctx context.Context,
 	args map[string]interface{},
-	hookType HookType,
+	hookType hook.HookType,
 	verification config.Policy,
 	opts ...grpc.CallOption,
 ) (map[string]interface{}, *gerr.GatewayDError) {
@@ -128,7 +120,7 @@ func (h *HookConfig) Run(
 	}
 
 	// Sort hooks by priority.
-	priorities := make([]Priority, 0, len(h.hooks[hookType]))
+	priorities := make([]hook.Priority, 0, len(h.hooks[hookType]))
 	for prio := range h.hooks[hookType] {
 		priorities = append(priorities, prio)
 	}
@@ -138,7 +130,7 @@ func (h *HookConfig) Run(
 
 	// Run hooks, passing the result of the previous hook to the next one.
 	returnVal := &structpb.Struct{}
-	var removeList []Priority
+	var removeList []hook.Priority
 	// The signature of parameters and args MUST be the same for this to work.
 	for idx, prio := range priorities {
 		var result *structpb.Struct
