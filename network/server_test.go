@@ -9,7 +9,7 @@ import (
 	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
 	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/gatewayd-io/gatewayd/logging"
-	"github.com/gatewayd-io/gatewayd/plugin"
+	"github.com/gatewayd-io/gatewayd/plugin/hook"
 	"github.com/gatewayd-io/gatewayd/pool"
 	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
@@ -39,7 +39,7 @@ func TestRunServer(t *testing.T) {
 
 	logger := logging.NewLogger(cfg)
 
-	hooksConfig := plugin.NewHookConfig()
+	hooksConfig := hook.NewHookConfig()
 
 	onIngressTraffic := func(
 		ctx context.Context,
@@ -67,7 +67,7 @@ func TestRunServer(t *testing.T) {
 		assert.Empty(t, paramsMap["error"])
 		return params, nil
 	}
-	hooksConfig.Add(plugin.OnIngressTraffic, 1, onIngressTraffic)
+	hooksConfig.Add(hook.OnIngressTraffic, 1, onIngressTraffic)
 
 	onEgressTraffic := func(
 		ctx context.Context,
@@ -92,7 +92,7 @@ func TestRunServer(t *testing.T) {
 		assert.Empty(t, paramsMap["error"])
 		return params, nil
 	}
-	hooksConfig.Add(plugin.OnEgressTraffic, 1, onEgressTraffic)
+	hooksConfig.Add(hook.OnEgressTraffic, 1, onEgressTraffic)
 
 	clientConfig := config.Client{
 		Network:            "tcp",

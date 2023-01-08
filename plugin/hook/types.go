@@ -14,5 +14,4 @@ type (
 	HookType string
 	HookDef  func(
 		context.Context, *structpb.Struct, ...grpc.CallOption) (*structpb.Struct, error)
-	Component string
 )

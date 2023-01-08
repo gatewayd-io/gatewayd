@@ -1,4 +1,4 @@
-package plugin
+package utils
 
 import (
 	"bufio"
@@ -17,10 +17,10 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-// sha256sum returns the sha256 checksum of a file.
+// SHA256SUM returns the sha256 checksum of a file.
 // Ref: https://github.com/codingsince1985/checksum
 // A little copying is better than a little dependency.
-func sha256sum(filename string) (string, *gerr.GatewayDError) {
+func SHA256SUM(filename string) (string, *gerr.GatewayDError) {
 	if info, err := os.Stat(filename); err != nil || info.IsDir() {
 		return "", gerr.ErrFileNotFound.Wrap(err)
 	}
