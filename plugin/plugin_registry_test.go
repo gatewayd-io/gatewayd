@@ -21,7 +21,7 @@ func TestPluginRegistry(t *testing.T) {
 		Version:   "1.0.0",
 		RemoteURL: "github.com/remote/test",
 	}
-	impl := &Impl{
+	impl := &Plugin{
 		ID: ident,
 	}
 	reg.Add(impl)

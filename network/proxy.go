@@ -11,7 +11,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-type Proxy interface {
+type IProxy interface {
 	Connect(gconn gnet.Conn) *gerr.GatewayDError
 	Disconnect(gconn gnet.Conn) *gerr.GatewayDError
 	PassThrough(gconn gnet.Conn) *gerr.GatewayDError
@@ -20,9 +20,9 @@ type Proxy interface {
 	Shutdown()
 }
 
-type ProxyImpl struct {
-	availableConnections pool.Pool
-	busyConnections      pool.Pool
+type Proxy struct {
+	availableConnections pool.IPool
+	busyConnections      pool.IPool
 	logger               zerolog.Logger
 	hookConfig           *plugin.HookConfig
 
@@ -33,15 +33,15 @@ type ProxyImpl struct {
 	ClientConfig *config.Client
 }
 
-var _ Proxy = &ProxyImpl{}
+var _ IProxy = &Proxy{}
 
 // NewProxy creates a new proxy.
 func NewProxy(
-	p pool.Pool, hookConfig *plugin.HookConfig,
+	p pool.IPool, hookConfig *plugin.HookConfig,
 	elastic, reuseElasticClients bool,
 	clientConfig *config.Client, logger zerolog.Logger,
-) *ProxyImpl {
-	return &ProxyImpl{
+) *Proxy {
+	return &Proxy{
 		availableConnections: p,
 		busyConnections:      pool.NewPool(config.EmptyPoolCapacity),
 		logger:               logger,
@@ -55,7 +55,7 @@ func NewProxy(
 // Connect maps a server connection from the available connection pool to a incoming connection.
 // It returns an error if the pool is exhausted. If the pool is elastic, it creates a new client
 // and maps it to the incoming connection.
-func (pr *ProxyImpl) Connect(gconn gnet.Conn) *gerr.GatewayDError {
+func (pr *Proxy) Connect(gconn gnet.Conn) *gerr.GatewayDError {
 	var clientID string
 	// Get the first available client from the pool.
 	pr.availableConnections.ForEach(func(key, _ interface{}) bool {
@@ -119,7 +119,7 @@ func (pr *ProxyImpl) Connect(gconn gnet.Conn) *gerr.GatewayDError {
 
 // Disconnect removes the client from the busy connection pool and tries to recycle
 // the server connection.
-func (pr *ProxyImpl) Disconnect(gconn gnet.Conn) *gerr.GatewayDError {
+func (pr *Proxy) Disconnect(gconn gnet.Conn) *gerr.GatewayDError {
 	client := pr.busyConnections.Pop(gconn)
 	//nolint:nestif
 	if client != nil {
@@ -165,7 +165,7 @@ func (pr *ProxyImpl) Disconnect(gconn gnet.Conn) *gerr.GatewayDError {
 // PassThrough sends the data from the client to the server and vice versa.
 //
 //nolint:funlen
-func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
+func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	// TODO: Handle bi-directional traffic
 	// Currently the passthrough is a one-way street from the client to the server, that is,
 	// the client can send data to the server and receive the response back, but the server
@@ -316,7 +316,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 }
 
 // IsHealty checks if the pool is exhausted or the client is disconnected.
-func (pr *ProxyImpl) IsHealty(client *Client) (*Client, *gerr.GatewayDError) {
+func (pr *Proxy) IsHealty(client *Client) (*Client, *gerr.GatewayDError) {
 	if pr.IsExhausted() {
 		pr.logger.Error().Msg("No more available connections")
 		return client, gerr.ErrPoolExhausted
@@ -330,7 +330,7 @@ func (pr *ProxyImpl) IsHealty(client *Client) (*Client, *gerr.GatewayDError) {
 }
 
 // IsExhausted checks if the available connection pool is exhausted.
-func (pr *ProxyImpl) IsExhausted() bool {
+func (pr *Proxy) IsExhausted() bool {
 	if pr.Elastic {
 		return false
 	}
@@ -339,7 +339,7 @@ func (pr *ProxyImpl) IsExhausted() bool {
 }
 
 // Shutdown closes all connections and clears the connection pools.
-func (pr *ProxyImpl) Shutdown() {
+func (pr *Proxy) Shutdown() {
 	pr.availableConnections.ForEach(func(key, value interface{}) bool {
 		if cl, ok := value.(*Client); ok {
 			cl.Close()

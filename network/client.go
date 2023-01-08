@@ -10,7 +10,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-type ClientInterface interface {
+type IClient interface {
 	Send(data []byte) (int, *gerr.GatewayDError)
 	Receive() (int, []byte, *gerr.GatewayDError)
 	Close()
@@ -33,7 +33,7 @@ type Client struct {
 	Address            string
 }
 
-var _ ClientInterface = &Client{}
+var _ IClient = &Client{}
 
 // TODO: implement a better connection management algorithm
 
