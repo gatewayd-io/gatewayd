@@ -21,8 +21,8 @@ type IProxy interface {
 }
 
 type Proxy struct {
-	availableConnections pool.Pool
-	busyConnections      pool.Pool
+	availableConnections pool.IPool
+	busyConnections      pool.IPool
 	logger               zerolog.Logger
 	hookConfig           *plugin.HookConfig
 
@@ -37,7 +37,7 @@ var _ IProxy = &Proxy{}
 
 // NewProxy creates a new proxy.
 func NewProxy(
-	p pool.Pool, hookConfig *plugin.HookConfig,
+	p pool.IPool, hookConfig *plugin.HookConfig,
 	elastic, reuseElasticClients bool,
 	clientConfig *config.Client, logger zerolog.Logger,
 ) *Proxy {
