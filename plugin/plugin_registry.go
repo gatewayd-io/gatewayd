@@ -29,14 +29,14 @@ type IPluginRegistry interface {
 
 type PluginRegistry struct { //nolint:golint,revive
 	plugins      pool.IPool
-	hooksConfig  *hook.HookConfig
+	hooksConfig  *hook.Config
 	CompatPolicy config.CompatPolicy
 }
 
 var _ IPluginRegistry = &PluginRegistry{}
 
 // NewRegistry creates a new plugin registry.
-func NewRegistry(hooksConfig *hook.HookConfig) *PluginRegistry {
+func NewRegistry(hooksConfig *hook.Config) *PluginRegistry {
 	return &PluginRegistry{
 		plugins:     pool.NewPool(config.EmptyPoolCapacity),
 		hooksConfig: hooksConfig,
