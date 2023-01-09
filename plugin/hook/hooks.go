@@ -14,31 +14,31 @@ import (
 
 const (
 	// Run command hooks (cmd/run.go).
-	OnConfigLoaded HookType = "onConfigLoaded"
-	OnNewLogger    HookType = "onNewLogger"
-	OnNewPool      HookType = "onNewPool"
-	OnNewProxy     HookType = "onNewProxy"
-	OnNewServer    HookType = "onNewServer"
-	OnSignal       HookType = "onSignal"
+	OnConfigLoaded Type = "onConfigLoaded"
+	OnNewLogger    Type = "onNewLogger"
+	OnNewPool      Type = "onNewPool"
+	OnNewProxy     Type = "onNewProxy"
+	OnNewServer    Type = "onNewServer"
+	OnSignal       Type = "onSignal"
 	// Server hooks (network/server.go).
-	OnRun            HookType = "onRun"
-	OnBooting        HookType = "onBooting"
-	OnBooted         HookType = "onBooted"
-	OnOpening        HookType = "onOpening"
-	OnOpened         HookType = "onOpened"
-	OnClosing        HookType = "onClosing"
-	OnClosed         HookType = "onClosed"
-	OnTraffic        HookType = "onTraffic"
-	OnIngressTraffic HookType = "onIngressTraffic"
-	OnEgressTraffic  HookType = "onEgressTraffic"
-	OnShutdown       HookType = "onShutdown"
-	OnTick           HookType = "onTick"
+	OnRun            Type = "onRun"
+	OnBooting        Type = "onBooting"
+	OnBooted         Type = "onBooted"
+	OnOpening        Type = "onOpening"
+	OnOpened         Type = "onOpened"
+	OnClosing        Type = "onClosing"
+	OnClosed         Type = "onClosed"
+	OnTraffic        Type = "onTraffic"
+	OnIngressTraffic Type = "onIngressTraffic"
+	OnEgressTraffic  Type = "onEgressTraffic"
+	OnShutdown       Type = "onShutdown"
+	OnTick           Type = "onTick"
 	// Pool hooks (network/pool.go).
-	OnNewClient HookType = "onNewClient"
+	OnNewClient Type = "onNewClient"
 )
 
 type Config struct {
-	hooks        map[HookType]map[Priority]HookDef
+	hooks        map[Type]map[Priority]HookDef
 	Logger       zerolog.Logger
 	Verification config.Policy
 }
@@ -46,17 +46,17 @@ type Config struct {
 // NewHookConfig returns a new Config.
 func NewHookConfig() *Config {
 	return &Config{
-		hooks: map[HookType]map[Priority]HookDef{},
+		hooks: map[Type]map[Priority]HookDef{},
 	}
 }
 
 // Hooks returns the hooks.
-func (h *Config) Hooks() map[HookType]map[Priority]HookDef {
+func (h *Config) Hooks() map[Type]map[Priority]HookDef {
 	return h.hooks
 }
 
 // Add adds a hook with a priority to the hooks map.
-func (h *Config) Add(hookType HookType, prio Priority, hookFunc HookDef) {
+func (h *Config) Add(hookType Type, prio Priority, hookFunc HookDef) {
 	if len(h.hooks[hookType]) == 0 {
 		h.hooks[hookType] = map[Priority]HookDef{prio: hookFunc}
 	} else {
@@ -73,7 +73,7 @@ func (h *Config) Add(hookType HookType, prio Priority, hookFunc HookDef) {
 }
 
 // Get returns the hooks of a specific type.
-func (h *Config) Get(hookType HookType) map[Priority]HookDef {
+func (h *Config) Get(hookType Type) map[Priority]HookDef {
 	return h.hooks[hookType]
 }
 
@@ -94,7 +94,7 @@ func (h *Config) Get(hookType HookType) map[Priority]HookDef {
 func (h *Config) Run(
 	ctx context.Context,
 	args map[string]interface{},
-	hookType HookType,
+	hookType Type,
 	verification config.Policy,
 	opts ...grpc.CallOption,
 ) (map[string]interface{}, *gerr.GatewayDError) {
