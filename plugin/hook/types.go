@@ -10,8 +10,8 @@ import (
 type (
 	// Priority is the priority of a hook.
 	// Smaller values are executed first (higher priority).
-	Priority uint
-	Type     string
-	HookDef  func(
+	Priority     uint
+	Type         string
+	FunctionType func(
 		context.Context, *structpb.Struct, ...grpc.CallOption) (*structpb.Struct, error)
 )
