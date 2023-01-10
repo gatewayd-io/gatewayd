@@ -67,8 +67,7 @@ func Resolve(network, address string, logger zerolog.Logger) (string, *gerr.Gate
 func trafficData(
 	gconn gnet.Conn,
 	client *Client,
-	fieldName string,
-	fieldValue []byte,
+	fields []Field,
 	err interface{},
 ) map[string]interface{} {
 	data := map[string]interface{}{
@@ -80,8 +79,12 @@ func trafficData(
 			"local":  client.Conn.LocalAddr().String(),
 			"remote": client.Conn.RemoteAddr().String(),
 		},
-		fieldName: fieldValue, // Will be converted to base64-encoded string.
-		"error":   "",
+		"error": "",
+	}
+
+	for _, field := range fields {
+		// field.Value will be converted to base64-encoded string.
+		data[field.Name] = field.Value
 	}
 
 	if err != nil {
