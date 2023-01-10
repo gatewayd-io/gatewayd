@@ -7,7 +7,7 @@ loggers:
     # Implementing file output
     # file : ./logs/gatewayd.log
     level: "debug" # panic, fatal, error, warn, info, debug, trace
-    noColor: True
+    noColor: False
     timeFormat: "unix"
 
 clients:
