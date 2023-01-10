@@ -2,7 +2,6 @@ package network
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
@@ -165,7 +164,9 @@ func (pr *Proxy) Disconnect(gconn gnet.Conn) *gerr.GatewayDError {
 
 // PassThrough sends the data from the client to the server and vice versa.
 //
-//nolint:funlen
+// TODO: refactor this mess! My eye burns even looking at it.
+//
+//nolint:funlen,maintidx
 func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	// TODO: Handle bi-directional traffic
 	// Currently the passthrough is a one-way street from the client to the server, that is,
@@ -200,6 +201,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 			},
 		).Msg("Received data from client")
 
+		//nolint:wrapcheck
 		return request, err
 	}
 
@@ -263,7 +265,6 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	// shouldTerminate is a function that retrieves the terminate field from the hook result.
 	// Only the OnTrafficFromClient hook will terminate the connection.
 	shouldTerminate := func(result map[string]interface{}) bool {
-		fmt.Println("result", result)
 		// If the hook wants to terminate the connection, do it.
 		if result != nil {
 			if terminate, ok := result["terminate"].(bool); ok && terminate {
@@ -279,6 +280,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	// from the hook result.
 	getPluginModifiedRequest := func(result map[string]interface{}) []byte {
 		// If the hook modified the request, use the modified request.
+		//nolint:gocritic
 		if modRequest, errMsg, convErr := extractFieldValue(result, "request"); errMsg != "" {
 			pr.logger.Error().Str("error", errMsg).Msg("Error in hook")
 		} else if convErr != nil {
@@ -294,6 +296,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	// from the hook result.
 	getPluginModifiedResponse := func(result map[string]interface{}) ([]byte, int) {
 		// If the hook returns a response, use it instead of the original response.
+		//nolint:gocritic
 		if modResponse, errMsg, convErr := extractFieldValue(result, "response"); errMsg != "" {
 			pr.logger.Error().Str("error", errMsg).Msg("Error in hook")
 		} else if convErr != nil {
@@ -321,9 +324,8 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	if shouldTerminate(result) {
 		if modResponse, modReceived := getPluginModifiedResponse(result); modResponse != nil {
 			return sendTrafficToClient(modResponse, modReceived)
-		} else {
-			return gerr.ErrHookTerminatedConnection.Wrap(err)
 		}
+		return gerr.ErrHookTerminatedConnection
 	}
 	// If the hook modified the request, use the modified request.
 	if modRequest := getPluginModifiedRequest(result); modRequest != nil {
@@ -331,12 +333,12 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	}
 
 	// Send the request to the server.
-	sendTrafficToServer(request)
+	_, err = sendTrafficToServer(request)
 
 	// Run the OnTrafficToServer hooks.
 	_, err = pr.hookConfig.Run(
 		context.Background(),
-		trafficData(gconn, client, "request", request, origErr),
+		trafficData(gconn, client, "request", request, err.Unwrap().Error()),
 		hook.OnTrafficToServer,
 		pr.hookConfig.Verification)
 	if err != nil {
