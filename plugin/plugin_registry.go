@@ -359,10 +359,14 @@ func (reg *PluginRegistry) RegisterHooks(id Identifier) {
 			hookFunc = pluginV1.OnClosed
 		case hook.OnTraffic:
 			hookFunc = pluginV1.OnTraffic
-		case hook.OnIngressTraffic:
-			hookFunc = pluginV1.OnIngressTraffic
-		case hook.OnEgressTraffic:
-			hookFunc = pluginV1.OnEgressTraffic
+		case hook.OnTrafficFromClient:
+			hookFunc = pluginV1.OnTrafficFromClient
+		case hook.OnTrafficToServer:
+			hookFunc = pluginV1.OnTrafficToServer
+		case hook.OnTrafficFromServer:
+			hookFunc = pluginV1.OnTrafficFromServer
+		case hook.OnTrafficToClient:
+			hookFunc = pluginV1.OnTrafficToClient
 		case hook.OnShutdown:
 			hookFunc = pluginV1.OnShutdown
 		case hook.OnTick:
@@ -370,7 +374,8 @@ func (reg *PluginRegistry) RegisterHooks(id Identifier) {
 		case hook.OnNewClient:
 			hookFunc = pluginV1.OnNewClient
 		default:
-			reg.hooksConfig.Logger.Warn().Str("hook", string(hookType)).Msg("Unknown hook type")
+			reg.hooksConfig.Logger.Warn().Str("hook", string(hookType)).Msg(
+				"Unknown hook, skipping")
 			continue
 		}
 		reg.hooksConfig.Logger.Debug().Str("hook", string(hookType)).Msg("Registering hook")
