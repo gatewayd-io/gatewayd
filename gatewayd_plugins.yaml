@@ -9,7 +9,7 @@ plugins:
   # Plugin name
   - name: gatewayd-plugin-test
     # whether to enable or disable the plugin on the next run
-    enabled: True
+    enabled: False
     # path to the plugin's binary file
     localPath: ../gatewayd-plugin-test/gatewayd-plugin-test
     # Pass cmdline args to the plugin
