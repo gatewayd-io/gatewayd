@@ -10,7 +10,7 @@ import (
 
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
-	"github.com/gatewayd-io/gatewayd/plugin"
+	"github.com/gatewayd-io/gatewayd/plugin/hook"
 	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
 )
@@ -20,7 +20,7 @@ type Server struct {
 	engine      gnet.Engine
 	proxy       IProxy
 	logger      zerolog.Logger
-	hooksConfig *plugin.HookConfig
+	hooksConfig *hook.Config
 
 	Network      string // tcp/udp/unix
 	Address      string
@@ -41,7 +41,7 @@ func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 	_, err := s.hooksConfig.Run(
 		context.Background(),
 		map[string]interface{}{"status": fmt.Sprint(s.Status)},
-		plugin.OnBooting,
+		hook.OnBooting,
 		s.hooksConfig.Verification)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to run OnBooting hook")
@@ -56,7 +56,7 @@ func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 	_, err = s.hooksConfig.Run(
 		context.Background(),
 		map[string]interface{}{"status": fmt.Sprint(s.Status)},
-		plugin.OnBooted,
+		hook.OnBooted,
 		s.hooksConfig.Verification)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to run OnBooted hook")
@@ -81,7 +81,7 @@ func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 		},
 	}
 	_, err := s.hooksConfig.Run(
-		context.Background(), onOpeningData, plugin.OnOpening, s.hooksConfig.Verification)
+		context.Background(), onOpeningData, hook.OnOpening, s.hooksConfig.Verification)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to run OnOpening hook")
 	}
@@ -122,7 +122,7 @@ func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 		},
 	}
 	_, err = s.hooksConfig.Run(
-		context.Background(), onOpenedData, plugin.OnOpened, s.hooksConfig.Verification)
+		context.Background(), onOpenedData, hook.OnOpened, s.hooksConfig.Verification)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to run OnOpened hook")
 	}
@@ -149,7 +149,7 @@ func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 		data["error"] = err.Error()
 	}
 	_, gatewaydErr := s.hooksConfig.Run(
-		context.Background(), data, plugin.OnClosing, s.hooksConfig.Verification)
+		context.Background(), data, hook.OnClosing, s.hooksConfig.Verification)
 	if gatewaydErr != nil {
 		s.logger.Error().Err(gatewaydErr).Msg("Failed to run OnClosing hook")
 	}
@@ -180,7 +180,7 @@ func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 		data["error"] = err.Error()
 	}
 	_, gatewaydErr = s.hooksConfig.Run(
-		context.Background(), data, plugin.OnClosed, s.hooksConfig.Verification)
+		context.Background(), data, hook.OnClosed, s.hooksConfig.Verification)
 	if gatewaydErr != nil {
 		s.logger.Error().Err(gatewaydErr).Msg("Failed to run OnClosed hook")
 	}
@@ -199,7 +199,7 @@ func (s *Server) OnTraffic(gconn gnet.Conn) gnet.Action {
 		},
 	}
 	_, err := s.hooksConfig.Run(
-		context.Background(), onTrafficData, plugin.OnTraffic, s.hooksConfig.Verification)
+		context.Background(), onTrafficData, hook.OnTraffic, s.hooksConfig.Verification)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to run OnTraffic hook")
 	}
@@ -215,6 +215,7 @@ func (s *Server) OnTraffic(gconn gnet.Conn) gnet.Action {
 			errors.Is(err, gerr.ErrClientNotConnected),
 			errors.Is(err, gerr.ErrClientSendFailed),
 			errors.Is(err, gerr.ErrClientReceiveFailed),
+			errors.Is(err, gerr.ErrHookTerminatedConnection),
 			errors.Is(err.Unwrap(), io.EOF):
 			return gnet.Close
 		}
@@ -233,7 +234,7 @@ func (s *Server) OnShutdown(engine gnet.Engine) {
 	_, err := s.hooksConfig.Run(
 		context.Background(),
 		map[string]interface{}{"connections": s.engine.CountConnections()},
-		plugin.OnShutdown,
+		hook.OnShutdown,
 		s.hooksConfig.Verification)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to run OnShutdown hook")
@@ -256,7 +257,7 @@ func (s *Server) OnTick() (time.Duration, gnet.Action) {
 	_, err := s.hooksConfig.Run(
 		context.Background(),
 		map[string]interface{}{"connections": s.engine.CountConnections()},
-		plugin.OnTick,
+		hook.OnTick,
 		s.hooksConfig.Verification)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to run OnTick hook")
@@ -284,7 +285,7 @@ func (s *Server) Run() error {
 		onRunData["error"] = err.OriginalError.Error()
 	}
 	result, err := s.hooksConfig.Run(
-		context.Background(), onRunData, plugin.OnRun, s.hooksConfig.Verification)
+		context.Background(), onRunData, hook.OnRun, s.hooksConfig.Verification)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to run the hook")
 	}
@@ -333,7 +334,7 @@ func NewServer(
 	options []gnet.Option,
 	proxy IProxy,
 	logger zerolog.Logger,
-	hooksConfig *plugin.HookConfig,
+	hooksConfig *hook.Config,
 ) *Server {
 	// Create the server.
 	server := Server{

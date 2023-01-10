@@ -1,4 +1,4 @@
-package plugin
+package hook
 
 import (
 	"context"
@@ -87,7 +87,7 @@ func Test_HookConfig_Run(t *testing.T) {
 // Test_HookConfig_Run_PassDown tests the Run function with the PassDown option.
 func Test_HookConfig_Run_PassDown(t *testing.T) {
 	hooks := NewHookConfig()
-	// The result of the hook will be nil and will be passed down to the next hook.
+	// The result of the hook will be nil and will be passed down to the next
 	hooks.Add(OnNewLogger, 0, func(
 		ctx context.Context,
 		args *structpb.Struct,
@@ -123,7 +123,7 @@ func Test_HookConfig_Run_PassDown(t *testing.T) {
 // Test_HookConfig_Run_PassDown_2 tests the Run function with the PassDown option.
 func Test_HookConfig_Run_PassDown_2(t *testing.T) {
 	hooks := NewHookConfig()
-	// The result of the hook will be nil and will be passed down to the next hook.
+	// The result of the hook will be nil and will be passed down to the next
 	hooks.Add(OnNewLogger, 0, func(
 		ctx context.Context,
 		args *structpb.Struct,
@@ -220,7 +220,7 @@ func Test_HookConfig_Run_Abort(t *testing.T) {
 		assert.Nil(t, err)
 		return output, nil
 	})
-	// The first hook returns nil, and it aborts the execution of the rest of the hook.
+	// The first hook returns nil, and it aborts the execution of the rest of the
 	result, err := hooks.Run(
 		context.Background(), map[string]interface{}{}, OnNewLogger, config.Abort)
 	assert.Nil(t, err)

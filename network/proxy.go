@@ -5,7 +5,7 @@ import (
 
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
-	"github.com/gatewayd-io/gatewayd/plugin"
+	"github.com/gatewayd-io/gatewayd/plugin/hook"
 	"github.com/gatewayd-io/gatewayd/pool"
 	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
@@ -24,7 +24,7 @@ type Proxy struct {
 	availableConnections pool.IPool
 	busyConnections      pool.IPool
 	logger               zerolog.Logger
-	hookConfig           *plugin.HookConfig
+	hookConfig           *hook.Config
 
 	Elastic             bool
 	ReuseElasticClients bool
@@ -37,7 +37,7 @@ var _ IProxy = &Proxy{}
 
 // NewProxy creates a new proxy.
 func NewProxy(
-	p pool.IPool, hookConfig *plugin.HookConfig,
+	p pool.IPool, hookConfig *hook.Config,
 	elastic, reuseElasticClients bool,
 	clientConfig *config.Client, logger zerolog.Logger,
 ) *Proxy {
@@ -164,13 +164,15 @@ func (pr *Proxy) Disconnect(gconn gnet.Conn) *gerr.GatewayDError {
 
 // PassThrough sends the data from the client to the server and vice versa.
 //
-//nolint:funlen
+// TODO: refactor this mess! My eye burns even looking at it.
+//
+//nolint:funlen,maintidx
 func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	// TODO: Handle bi-directional traffic
 	// Currently the passthrough is a one-way street from the client to the server, that is,
 	// the client can send data to the server and receive the response back, but the server
 	// cannot take initiative and send data to the client. So, there should be another event-loop
-	// that listens for data from the server and sends it to the client
+	// that listens for data from the server and sends it to the client.
 
 	var client *Client
 	if pr.busyConnections.Get(gconn) == nil {
@@ -184,64 +186,167 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 		return gerr.ErrCastFailed
 	}
 
-	// request contains the data from the client.
-	request, origErr := gconn.Next(-1)
-	if origErr != nil {
-		pr.logger.Error().Err(origErr).Msg("Error reading from client")
-	}
-	pr.logger.Debug().Fields(
-		map[string]interface{}{
-			"length": len(request),
-			"local":  gconn.LocalAddr().String(),
-			"remote": gconn.RemoteAddr().String(),
-		},
-	).Msg("Received data from client")
+	// receiveTrafficFromClient is a function that receives data from the client.
+	receiveTrafficFromClient := func() ([]byte, error) {
+		// request contains the data from the client.
+		request, err := gconn.Next(-1)
+		if err != nil {
+			pr.logger.Error().Err(err).Msg("Error reading from client")
+		}
+		pr.logger.Debug().Fields(
+			map[string]interface{}{
+				"length": len(request),
+				"local":  gconn.LocalAddr().String(),
+				"remote": gconn.RemoteAddr().String(),
+			},
+		).Msg("Received data from client")
 
-	// Run the OnIngressTraffic hooks.
+		//nolint:wrapcheck
+		return request, err
+	}
+
+	// sendTrafficToServer is a function that sends data to the server.
+	sendTrafficToServer := func(request []byte) (int, *gerr.GatewayDError) {
+		// Send the request to the server.
+		sent, err := client.Send(request)
+		if err != nil {
+			pr.logger.Error().Err(err).Msg("Error sending request to database")
+		}
+		pr.logger.Debug().Fields(
+			map[string]interface{}{
+				"function": "proxy.passthrough",
+				"length":   sent,
+				"local":    client.Conn.LocalAddr().String(),
+				"remote":   client.Conn.RemoteAddr().String(),
+			},
+		).Msg("Sent data to database")
+
+		return sent, err
+	}
+
+	// receiveTrafficFromServer is a function that receives data from the server.
+	receiveTrafficFromServer := func() (int, []byte, *gerr.GatewayDError) {
+		// Receive the response from the server.
+		received, response, err := client.Receive()
+		pr.logger.Debug().Fields(
+			map[string]interface{}{
+				"function": "proxy.passthrough",
+				"length":   received,
+				"local":    client.Conn.LocalAddr().String(),
+				"remote":   client.Conn.RemoteAddr().String(),
+			},
+		).Msg("Received data from database")
+
+		return received, response, err
+	}
+
+	// sendTrafficToClient is a function that sends data to the client.
+	sendTrafficToClient := func(response []byte, received int) *gerr.GatewayDError {
+		// Send the response to the client async.
+		origErr := gconn.AsyncWrite(response[:received], func(gconn gnet.Conn, err error) error {
+			pr.logger.Debug().Fields(
+				map[string]interface{}{
+					"function": "proxy.passthrough",
+					"length":   received,
+					"local":    gconn.LocalAddr().String(),
+					"remote":   gconn.RemoteAddr().String(),
+				},
+			).Msg("Sent data to client")
+			return err
+		})
+		if origErr != nil {
+			pr.logger.Error().Err(origErr).Msg("Error writing to client")
+			return gerr.ErrServerSendFailed.Wrap(origErr)
+		}
+
+		return nil
+	}
+
+	// shouldTerminate is a function that retrieves the terminate field from the hook result.
+	// Only the OnTrafficFromClient hook will terminate the connection.
+	shouldTerminate := func(result map[string]interface{}) bool {
+		// If the hook wants to terminate the connection, do it.
+		if result != nil {
+			if terminate, ok := result["terminate"].(bool); ok && terminate {
+				pr.logger.Debug().Str("function", "proxy.passthrough").Msg("Terminating connection")
+				return true
+			}
+		}
+
+		return false
+	}
+
+	// getPluginModifiedRequest is a function that retrieves the modified request
+	// from the hook result.
+	getPluginModifiedRequest := func(result map[string]interface{}) []byte {
+		// If the hook modified the request, use the modified request.
+		//nolint:gocritic
+		if modRequest, errMsg, convErr := extractFieldValue(result, "request"); errMsg != "" {
+			pr.logger.Error().Str("error", errMsg).Msg("Error in hook")
+		} else if convErr != nil {
+			pr.logger.Error().Err(convErr).Msg("Error in data conversion")
+		} else if modRequest != nil {
+			return modRequest
+		}
+
+		return nil
+	}
+
+	// getPluginModifiedResponse is a function that retrieves the modified response
+	// from the hook result.
+	getPluginModifiedResponse := func(result map[string]interface{}) ([]byte, int) {
+		// If the hook returns a response, use it instead of the original response.
+		//nolint:gocritic
+		if modResponse, errMsg, convErr := extractFieldValue(result, "response"); errMsg != "" {
+			pr.logger.Error().Str("error", errMsg).Msg("Error in hook")
+		} else if convErr != nil {
+			pr.logger.Error().Err(convErr).Msg("Error in data conversion")
+		} else if modResponse != nil {
+			return modResponse, len(modResponse)
+		}
+
+		return nil, 0
+	}
+
+	// Receive the request from the client.
+	request, origErr := receiveTrafficFromClient()
+
+	// Run the OnTrafficFromClient hooks.
 	result, err := pr.hookConfig.Run(
 		context.Background(),
 		trafficData(gconn, client, "request", request, origErr),
-		plugin.OnIngressTraffic,
+		hook.OnTrafficFromClient,
 		pr.hookConfig.Verification)
 	if err != nil {
 		pr.logger.Error().Err(err).Msg("Error running hook")
 	}
+	// If the hook wants to terminate the connection, do it.
+	if shouldTerminate(result) {
+		if modResponse, modReceived := getPluginModifiedResponse(result); modResponse != nil {
+			return sendTrafficToClient(modResponse, modReceived)
+		}
+		return gerr.ErrHookTerminatedConnection
+	}
 	// If the hook modified the request, use the modified request.
-	modRequest, errMsg, convErr := extractFieldValue(result, "request")
-	if errMsg != "" {
-		pr.logger.Error().Str("error", errMsg).Msg("Error in hook")
-	}
-	if convErr != nil {
-		pr.logger.Error().Err(convErr).Msg("Error in data conversion")
-	}
-	if modRequest != nil {
+	if modRequest := getPluginModifiedRequest(result); modRequest != nil {
 		request = modRequest
 	}
 
 	// Send the request to the server.
-	sent, err := client.Send(request)
+	_, err = sendTrafficToServer(request)
+
+	// Run the OnTrafficToServer hooks.
+	_, err = pr.hookConfig.Run(
+		context.Background(),
+		trafficData(gconn, client, "request", request, err),
+		hook.OnTrafficToServer,
+		pr.hookConfig.Verification)
 	if err != nil {
-		pr.logger.Error().Err(err).Msg("Error sending request to database")
+		pr.logger.Error().Err(err).Msg("Error running hook")
 	}
-	pr.logger.Debug().Fields(
-		map[string]interface{}{
-			"function": "proxy.passthrough",
-			"length":   sent,
-			"local":    client.Conn.LocalAddr().String(),
-			"remote":   client.Conn.RemoteAddr().String(),
-		},
-	).Msg("Sent data to database")
 
 	// Receive the response from the server.
-	received, response, err := client.Receive()
-	pr.logger.Debug().Fields(
-		map[string]interface{}{
-			"function": "proxy.passthrough",
-			"length":   received,
-			"local":    client.Conn.LocalAddr().String(),
-			"remote":   client.Conn.RemoteAddr().String(),
-		},
-	).Msg("Received data from database")
+	received, response, err := receiveTrafficFromServer()
 
 	// The connection to the server is closed, so we MUST reconnect,
 	// otherwise the client will be stuck.
@@ -273,46 +378,23 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 		return err
 	}
 
-	// Run the OnEgressTraffic hooks.
+	// Run the OnTrafficFromServer hooks.
 	result, err = pr.hookConfig.Run(
 		context.Background(),
 		trafficData(gconn, client, "response", response[:received], err),
-		plugin.OnEgressTraffic,
+		hook.OnTrafficFromServer,
 		pr.hookConfig.Verification)
 	if err != nil {
 		pr.logger.Error().Err(err).Msg("Error running hook")
 	}
-	// If the hook returns a response, use it instead of the original response.
-	modResponse, errMsg, convErr := extractFieldValue(result, "response")
-	if errMsg != "" {
-		pr.logger.Error().Str("error", errMsg).Msg("Error in hook")
-	}
-	if convErr != nil {
-		pr.logger.Error().Err(convErr).Msg("Error in data conversion")
-	}
-	if modResponse != nil {
+	// If the hook modified the response, use the modified response.
+	if modResponse, modReceived := getPluginModifiedResponse(result); modResponse != nil {
 		response = modResponse
-		received = len(modResponse)
+		received = modReceived
 	}
 
-	// Send the response to the client async.
-	origErr = gconn.AsyncWrite(response[:received], func(gconn gnet.Conn, err error) error {
-		pr.logger.Debug().Fields(
-			map[string]interface{}{
-				"function": "proxy.passthrough",
-				"length":   received,
-				"local":    gconn.LocalAddr().String(),
-				"remote":   gconn.RemoteAddr().String(),
-			},
-		).Msg("Sent data to client")
-		return err
-	})
-	if origErr != nil {
-		pr.logger.Error().Err(err).Msg("Error writing to client")
-		return gerr.ErrServerSendFailed.Wrap(err)
-	}
-
-	return nil
+	// Send the response to the client.
+	return sendTrafficToClient(response, received)
 }
 
 // IsHealty checks if the pool is exhausted or the client is disconnected.

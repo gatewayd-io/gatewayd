@@ -40,8 +40,10 @@ type GatewayDPluginServiceClient interface {
 	OnClosing(ctx context.Context, in *structpb.Struct, opts ...grpc.CallOption) (*structpb.Struct, error)
 	OnClosed(ctx context.Context, in *structpb.Struct, opts ...grpc.CallOption) (*structpb.Struct, error)
 	OnTraffic(ctx context.Context, in *structpb.Struct, opts ...grpc.CallOption) (*structpb.Struct, error)
-	OnIngressTraffic(ctx context.Context, in *structpb.Struct, opts ...grpc.CallOption) (*structpb.Struct, error)
-	OnEgressTraffic(ctx context.Context, in *structpb.Struct, opts ...grpc.CallOption) (*structpb.Struct, error)
+	OnTrafficFromClient(ctx context.Context, in *structpb.Struct, opts ...grpc.CallOption) (*structpb.Struct, error)
+	OnTrafficToServer(ctx context.Context, in *structpb.Struct, opts ...grpc.CallOption) (*structpb.Struct, error)
+	OnTrafficFromServer(ctx context.Context, in *structpb.Struct, opts ...grpc.CallOption) (*structpb.Struct, error)
+	OnTrafficToClient(ctx context.Context, in *structpb.Struct, opts ...grpc.CallOption) (*structpb.Struct, error)
 	OnShutdown(ctx context.Context, in *structpb.Struct, opts ...grpc.CallOption) (*structpb.Struct, error)
 	OnTick(ctx context.Context, in *structpb.Struct, opts ...grpc.CallOption) (*structpb.Struct, error)
 	OnNewClient(ctx context.Context, in *structpb.Struct, opts ...grpc.CallOption) (*structpb.Struct, error)
@@ -190,18 +192,36 @@ func (c *gatewayDPluginServiceClient) OnTraffic(ctx context.Context, in *structp
 	return out, nil
 }
 
-func (c *gatewayDPluginServiceClient) OnIngressTraffic(ctx context.Context, in *structpb.Struct, opts ...grpc.CallOption) (*structpb.Struct, error) {
+func (c *gatewayDPluginServiceClient) OnTrafficFromClient(ctx context.Context, in *structpb.Struct, opts ...grpc.CallOption) (*structpb.Struct, error) {
 	out := new(structpb.Struct)
-	err := c.cc.Invoke(ctx, "/plugin.v1.GatewayDPluginService/OnIngressTraffic", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/plugin.v1.GatewayDPluginService/OnTrafficFromClient", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *gatewayDPluginServiceClient) OnEgressTraffic(ctx context.Context, in *structpb.Struct, opts ...grpc.CallOption) (*structpb.Struct, error) {
+func (c *gatewayDPluginServiceClient) OnTrafficToServer(ctx context.Context, in *structpb.Struct, opts ...grpc.CallOption) (*structpb.Struct, error) {
 	out := new(structpb.Struct)
-	err := c.cc.Invoke(ctx, "/plugin.v1.GatewayDPluginService/OnEgressTraffic", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/plugin.v1.GatewayDPluginService/OnTrafficToServer", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *gatewayDPluginServiceClient) OnTrafficFromServer(ctx context.Context, in *structpb.Struct, opts ...grpc.CallOption) (*structpb.Struct, error) {
+	out := new(structpb.Struct)
+	err := c.cc.Invoke(ctx, "/plugin.v1.GatewayDPluginService/OnTrafficFromServer", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *gatewayDPluginServiceClient) OnTrafficToClient(ctx context.Context, in *structpb.Struct, opts ...grpc.CallOption) (*structpb.Struct, error) {
+	out := new(structpb.Struct)
+	err := c.cc.Invoke(ctx, "/plugin.v1.GatewayDPluginService/OnTrafficToClient", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -256,8 +276,10 @@ type GatewayDPluginServiceServer interface {
 	OnClosing(context.Context, *structpb.Struct) (*structpb.Struct, error)
 	OnClosed(context.Context, *structpb.Struct) (*structpb.Struct, error)
 	OnTraffic(context.Context, *structpb.Struct) (*structpb.Struct, error)
-	OnIngressTraffic(context.Context, *structpb.Struct) (*structpb.Struct, error)
-	OnEgressTraffic(context.Context, *structpb.Struct) (*structpb.Struct, error)
+	OnTrafficFromClient(context.Context, *structpb.Struct) (*structpb.Struct, error)
+	OnTrafficToServer(context.Context, *structpb.Struct) (*structpb.Struct, error)
+	OnTrafficFromServer(context.Context, *structpb.Struct) (*structpb.Struct, error)
+	OnTrafficToClient(context.Context, *structpb.Struct) (*structpb.Struct, error)
 	OnShutdown(context.Context, *structpb.Struct) (*structpb.Struct, error)
 	OnTick(context.Context, *structpb.Struct) (*structpb.Struct, error)
 	OnNewClient(context.Context, *structpb.Struct) (*structpb.Struct, error)
@@ -313,11 +335,17 @@ func (UnimplementedGatewayDPluginServiceServer) OnClosed(context.Context, *struc
 func (UnimplementedGatewayDPluginServiceServer) OnTraffic(context.Context, *structpb.Struct) (*structpb.Struct, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method OnTraffic not implemented")
 }
-func (UnimplementedGatewayDPluginServiceServer) OnIngressTraffic(context.Context, *structpb.Struct) (*structpb.Struct, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method OnIngressTraffic not implemented")
+func (UnimplementedGatewayDPluginServiceServer) OnTrafficFromClient(context.Context, *structpb.Struct) (*structpb.Struct, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method OnTrafficFromClient not implemented")
 }
-func (UnimplementedGatewayDPluginServiceServer) OnEgressTraffic(context.Context, *structpb.Struct) (*structpb.Struct, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method OnEgressTraffic not implemented")
+func (UnimplementedGatewayDPluginServiceServer) OnTrafficToServer(context.Context, *structpb.Struct) (*structpb.Struct, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method OnTrafficToServer not implemented")
+}
+func (UnimplementedGatewayDPluginServiceServer) OnTrafficFromServer(context.Context, *structpb.Struct) (*structpb.Struct, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method OnTrafficFromServer not implemented")
+}
+func (UnimplementedGatewayDPluginServiceServer) OnTrafficToClient(context.Context, *structpb.Struct) (*structpb.Struct, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method OnTrafficToClient not implemented")
 }
 func (UnimplementedGatewayDPluginServiceServer) OnShutdown(context.Context, *structpb.Struct) (*structpb.Struct, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method OnShutdown not implemented")
@@ -611,38 +639,74 @@ func _GatewayDPluginService_OnTraffic_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
-func _GatewayDPluginService_OnIngressTraffic_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _GatewayDPluginService_OnTrafficFromClient_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(structpb.Struct)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(GatewayDPluginServiceServer).OnIngressTraffic(ctx, in)
+		return srv.(GatewayDPluginServiceServer).OnTrafficFromClient(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/plugin.v1.GatewayDPluginService/OnIngressTraffic",
+		FullMethod: "/plugin.v1.GatewayDPluginService/OnTrafficFromClient",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GatewayDPluginServiceServer).OnIngressTraffic(ctx, req.(*structpb.Struct))
+		return srv.(GatewayDPluginServiceServer).OnTrafficFromClient(ctx, req.(*structpb.Struct))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _GatewayDPluginService_OnEgressTraffic_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _GatewayDPluginService_OnTrafficToServer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(structpb.Struct)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(GatewayDPluginServiceServer).OnEgressTraffic(ctx, in)
+		return srv.(GatewayDPluginServiceServer).OnTrafficToServer(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/plugin.v1.GatewayDPluginService/OnEgressTraffic",
+		FullMethod: "/plugin.v1.GatewayDPluginService/OnTrafficToServer",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GatewayDPluginServiceServer).OnEgressTraffic(ctx, req.(*structpb.Struct))
+		return srv.(GatewayDPluginServiceServer).OnTrafficToServer(ctx, req.(*structpb.Struct))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GatewayDPluginService_OnTrafficFromServer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(structpb.Struct)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GatewayDPluginServiceServer).OnTrafficFromServer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/plugin.v1.GatewayDPluginService/OnTrafficFromServer",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GatewayDPluginServiceServer).OnTrafficFromServer(ctx, req.(*structpb.Struct))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GatewayDPluginService_OnTrafficToClient_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(structpb.Struct)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GatewayDPluginServiceServer).OnTrafficToClient(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/plugin.v1.GatewayDPluginService/OnTrafficToClient",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GatewayDPluginServiceServer).OnTrafficToClient(ctx, req.(*structpb.Struct))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -769,12 +833,20 @@ var GatewayDPluginService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _GatewayDPluginService_OnTraffic_Handler,
 		},
 		{
-			MethodName: "OnIngressTraffic",
-			Handler:    _GatewayDPluginService_OnIngressTraffic_Handler,
+			MethodName: "OnTrafficFromClient",
+			Handler:    _GatewayDPluginService_OnTrafficFromClient_Handler,
 		},
 		{
-			MethodName: "OnEgressTraffic",
-			Handler:    _GatewayDPluginService_OnEgressTraffic_Handler,
+			MethodName: "OnTrafficToServer",
+			Handler:    _GatewayDPluginService_OnTrafficToServer_Handler,
+		},
+		{
+			MethodName: "OnTrafficFromServer",
+			Handler:    _GatewayDPluginService_OnTrafficFromServer_Handler,
+		},
+		{
+			MethodName: "OnTrafficToClient",
+			Handler:    _GatewayDPluginService_OnTrafficToClient_Handler,
 		},
 		{
 			MethodName: "OnShutdown",

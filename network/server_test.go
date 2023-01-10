@@ -9,7 +9,7 @@ import (
 	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
 	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/gatewayd-io/gatewayd/logging"
-	"github.com/gatewayd-io/gatewayd/plugin"
+	"github.com/gatewayd-io/gatewayd/plugin/hook"
 	"github.com/gatewayd-io/gatewayd/pool"
 	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
@@ -39,9 +39,9 @@ func TestRunServer(t *testing.T) {
 
 	logger := logging.NewLogger(cfg)
 
-	hooksConfig := plugin.NewHookConfig()
+	hooksConfig := hook.NewHookConfig()
 
-	onIngressTraffic := func(
+	onTrafficFromClient := func(
 		ctx context.Context,
 		params *structpb.Struct,
 		opts ...grpc.CallOption,
@@ -67,9 +67,9 @@ func TestRunServer(t *testing.T) {
 		assert.Empty(t, paramsMap["error"])
 		return params, nil
 	}
-	hooksConfig.Add(plugin.OnIngressTraffic, 1, onIngressTraffic)
+	hooksConfig.Add(hook.OnTrafficFromClient, 1, onTrafficFromClient)
 
-	onEgressTraffic := func(
+	onTrafficFromServer := func(
 		ctx context.Context,
 		params *structpb.Struct,
 		opts ...grpc.CallOption,
@@ -92,7 +92,7 @@ func TestRunServer(t *testing.T) {
 		assert.Empty(t, paramsMap["error"])
 		return params, nil
 	}
-	hooksConfig.Add(plugin.OnEgressTraffic, 1, onEgressTraffic)
+	hooksConfig.Add(hook.OnTrafficFromServer, 1, onTrafficFromServer)
 
 	clientConfig := config.Client{
 		Network:            "tcp",
