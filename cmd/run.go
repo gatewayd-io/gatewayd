@@ -167,7 +167,7 @@ var runCmd = &cobra.Command{
 		// Get client config from the config file.
 		clientConfig := gConfig.Clients[config.Default]
 
-		// Add clients to the pool
+		// Add clients to the pool.
 		for i := 0; i < poolSize; i++ {
 			client := network.NewClient(&clientConfig, logger)
 
@@ -178,10 +178,10 @@ var runCmd = &cobra.Command{
 					"address":            client.Address,
 					"receiveBufferSize":  client.ReceiveBufferSize,
 					"receiveChunkSize":   client.ReceiveChunkSize,
-					"receiveDeadline":    client.ReceiveDeadline.Seconds(),
-					"sendDeadline":       client.SendDeadline.Seconds(),
+					"receiveDeadline":    client.ReceiveDeadline.String(),
+					"sendDeadline":       client.SendDeadline.String(),
 					"tcpKeepAlive":       client.TCPKeepAlive,
-					"tcpKeepAlivePeriod": client.TCPKeepAlivePeriod.Seconds(),
+					"tcpKeepAlivePeriod": client.TCPKeepAlivePeriod.String(),
 				}
 				_, err := hooksConfig.Run(
 					context.Background(),
@@ -243,10 +243,10 @@ var runCmd = &cobra.Command{
 				"address":            clientConfig.Address,
 				"receiveBufferSize":  clientConfig.ReceiveBufferSize,
 				"receiveChunkSize":   clientConfig.ReceiveChunkSize,
-				"receiveDeadline":    clientConfig.ReceiveDeadline.Seconds(),
-				"sendDeadline":       clientConfig.SendDeadline.Seconds(),
+				"receiveDeadline":    clientConfig.ReceiveDeadline.String(),
+				"sendDeadline":       clientConfig.SendDeadline.String(),
 				"tcpKeepAlive":       clientConfig.TCPKeepAlive,
-				"tcpKeepAlivePeriod": clientConfig.TCPKeepAlivePeriod.Seconds(),
+				"tcpKeepAlivePeriod": clientConfig.TCPKeepAlivePeriod.String(),
 			},
 		}
 		_, err = hooksConfig.Run(
@@ -297,7 +297,7 @@ var runCmd = &cobra.Command{
 			"address":          gConfig.Server.Address,
 			"softLimit":        gConfig.Server.SoftLimit,
 			"hardLimit":        gConfig.Server.HardLimit,
-			"tickInterval":     gConfig.Server.TickInterval.Seconds(),
+			"tickInterval":     gConfig.Server.TickInterval.String(),
 			"multiCore":        gConfig.Server.MultiCore,
 			"lockOSThread":     gConfig.Server.LockOSThread,
 			"enableTicker":     gConfig.Server.EnableTicker,
@@ -308,7 +308,7 @@ var runCmd = &cobra.Command{
 			"socketSendBuffer": gConfig.Server.SocketSendBuffer,
 			"reuseAddress":     gConfig.Server.ReuseAddress,
 			"reusePort":        gConfig.Server.ReusePort,
-			"tcpKeepAlive":     gConfig.Server.TCPKeepAlive.Seconds(),
+			"tcpKeepAlive":     gConfig.Server.TCPKeepAlive.String(),
 			"tcpNoDelay":       gConfig.Server.TCPNoDelay,
 		}
 		_, err = hooksConfig.Run(

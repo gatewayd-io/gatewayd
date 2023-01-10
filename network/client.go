@@ -82,7 +82,11 @@ func NewClient(clientConfig *config.Client, logger zerolog.Logger) *Client {
 	// Set the TCP keep alive.
 	client.TCPKeepAlive = clientConfig.TCPKeepAlive
 	if clientConfig.TCPKeepAlivePeriod <= 0 {
-		client.TCPKeepAlivePeriod = config.DefaultTCPKeepAlivePeriod
+		if keepAlive, err := time.ParseDuration(config.DefaultTCPKeepAlivePeriod); err == nil {
+			client.TCPKeepAlivePeriod = keepAlive
+		} else {
+			logger.Error().Err(err).Msg("Failed to parse TCP keep alive period")
+		}
 	} else {
 		client.TCPKeepAlivePeriod = clientConfig.TCPKeepAlivePeriod
 	}
@@ -105,7 +109,7 @@ func NewClient(clientConfig *config.Client, logger zerolog.Logger) *Client {
 		if err := client.Conn.SetReadDeadline(time.Now().Add(client.ReceiveDeadline)); err != nil {
 			logger.Error().Err(err).Msg("Failed to set receive deadline")
 		} else {
-			logger.Debug().Str("duration", fmt.Sprint(client.ReceiveDeadline.Seconds())).Msg(
+			logger.Debug().Str("duration", fmt.Sprint(client.ReceiveDeadline.String())).Msg(
 				"Set receive deadline")
 		}
 	}

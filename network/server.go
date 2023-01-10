@@ -382,8 +382,12 @@ func NewServer(
 	}
 
 	if tickInterval == 0 {
-		server.TickInterval = config.DefaultTickInterval
-		logger.Debug().Msg("Tick interval is not set, using the default value")
+		if tickInterval, err := time.ParseDuration(config.DefaultTickInterval); err == nil {
+			server.TickInterval = tickInterval
+			logger.Debug().Msg("Tick interval is not set, using the default value")
+		} else {
+			logger.Error().Err(err).Msg("Failed to parse the default tick interval")
+		}
 	} else {
 		server.TickInterval = tickInterval
 	}
