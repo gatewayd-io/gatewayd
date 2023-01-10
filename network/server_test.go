@@ -41,7 +41,7 @@ func TestRunServer(t *testing.T) {
 
 	hooksConfig := hook.NewHookConfig()
 
-	onIngressTraffic := func(
+	onTrafficFromClient := func(
 		ctx context.Context,
 		params *structpb.Struct,
 		opts ...grpc.CallOption,
@@ -67,9 +67,9 @@ func TestRunServer(t *testing.T) {
 		assert.Empty(t, paramsMap["error"])
 		return params, nil
 	}
-	hooksConfig.Add(hook.OnIngressTraffic, 1, onIngressTraffic)
+	hooksConfig.Add(hook.OnTrafficFromClient, 1, onTrafficFromClient)
 
-	onEgressTraffic := func(
+	onTrafficFromServer := func(
 		ctx context.Context,
 		params *structpb.Struct,
 		opts ...grpc.CallOption,
@@ -92,7 +92,7 @@ func TestRunServer(t *testing.T) {
 		assert.Empty(t, paramsMap["error"])
 		return params, nil
 	}
-	hooksConfig.Add(hook.OnEgressTraffic, 1, onEgressTraffic)
+	hooksConfig.Add(hook.OnTrafficFromServer, 1, onTrafficFromServer)
 
 	clientConfig := config.Client{
 		Network:            "tcp",
