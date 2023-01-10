@@ -427,7 +427,33 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	// TODO: Implement OnTrafficToClient hooks.
 
 	// Send the response to the client.
-	return sendTrafficToClient(response, received)
+	errVerdict := sendTrafficToClient(response, received)
+
+	// Run the OnTrafficToClient hooks.
+	_, err = pr.hookConfig.Run(
+		context.Background(),
+		trafficData(
+			gconn,
+			client,
+			[]Field{
+				{
+					Name:  "request",
+					Value: request,
+				},
+				{
+					Name:  "response",
+					Value: response[:received],
+				},
+			},
+			err,
+		),
+		hook.OnTrafficToClient,
+		pr.hookConfig.Verification)
+	if err != nil {
+		pr.logger.Error().Err(err).Msg("Error running hook")
+	}
+
+	return errVerdict
 }
 
 // IsHealty checks if the pool is exhausted or the client is disconnected.
