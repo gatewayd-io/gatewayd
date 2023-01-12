@@ -40,8 +40,6 @@ type Proxy struct {
 var _ IProxy = &Proxy{}
 
 // NewProxy creates a new proxy.
-//
-//nolint:funlen
 func NewProxy(
 	connPool pool.IPool, hookConfig *hook.Config,
 	elastic, reuseElasticClients bool,
@@ -60,11 +58,7 @@ func NewProxy(
 	}
 
 	if proxy.HealthCheckPeriod == 0 {
-		if healthCheck, err := time.ParseDuration(config.DefaultHealthCheckPeriod); err == nil {
-			proxy.HealthCheckPeriod = healthCheck
-		} else {
-			logger.Error().Err(err).Msg("Failed to parse the health check period")
-		}
+		proxy.HealthCheckPeriod = config.DefaultHealthCheckPeriod
 	} else {
 		proxy.HealthCheckPeriod = healthCheckPeriod
 	}
