@@ -109,7 +109,7 @@ func LoadGlobalConfigDefaults(cfg *koanf.Koanf) {
 			"default": map[string]interface{}{
 				"receiveBufferSize":  DefaultBufferSize,
 				"receiveChunkSize":   DefaultChunkSize,
-				"tcpKeepAlivePeriod": DefaultTCPKeepAlivePeriod,
+				"tcpKeepAlivePeriod": DefaultTCPKeepAlivePeriod.String(),
 			},
 		},
 		"pools": map[string]interface{}{
@@ -121,6 +121,7 @@ func LoadGlobalConfigDefaults(cfg *koanf.Koanf) {
 			"default": map[string]interface{}{
 				"elastic":             false,
 				"reuseElasticClients": false,
+				"healthCheckPeriod":   DefaultHealthCheckPeriod.String(),
 			},
 		},
 		"server": map[string]interface{}{
