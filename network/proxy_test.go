@@ -2,7 +2,6 @@ package network
 
 import (
 	"testing"
-	"time"
 
 	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
 	"github.com/gatewayd-io/gatewayd/config"
@@ -11,7 +10,6 @@ import (
 	"github.com/gatewayd-io/gatewayd/pool"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // TestNewProxy tests the creation of a new proxy with a fixed connection pool.
@@ -39,9 +37,6 @@ func TestNewProxy(t *testing.T) {
 	// Create a connection pool
 	pool := pool.NewPool(config.EmptyPoolCapacity)
 
-	keepAlive, err := time.ParseDuration(config.DefaultTCPKeepAlivePeriod)
-	require.NoError(t, err)
-
 	client := NewClient(
 		&config.Client{
 			Network:            "tcp",
@@ -51,17 +46,15 @@ func TestNewProxy(t *testing.T) {
 			ReceiveDeadline:    config.DefaultReceiveDeadline,
 			SendDeadline:       config.DefaultSendDeadline,
 			TCPKeepAlive:       false,
-			TCPKeepAlivePeriod: keepAlive,
+			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 		},
 		logger)
-	err = pool.Put(client.ID, client)
+	err := pool.Put(client.ID, client)
 	assert.Nil(t, err)
 
-	healthCheck, err := time.ParseDuration(config.DefaultHealthCheckPeriod)
-	require.NoError(t, err)
-
 	// Create a proxy with a fixed buffer pool
-	proxy := NewProxy(pool, hook.NewHookConfig(), false, false, healthCheck, nil, logger)
+	proxy := NewProxy(
+		pool, hook.NewHookConfig(), false, false, config.DefaultHealthCheckPeriod, nil, logger)
 
 	assert.NotNil(t, proxy)
 	assert.Equal(t, 0, proxy.busyConnections.Size(), "Proxy should have no connected clients")
@@ -89,14 +82,8 @@ func TestNewProxyElastic(t *testing.T) {
 	// Create a connection pool
 	pool := pool.NewPool(config.EmptyPoolCapacity)
 
-	healthCheck, err := time.ParseDuration(config.DefaultHealthCheckPeriod)
-	require.NoError(t, err)
-
-	keepAlive, err := time.ParseDuration(config.DefaultTCPKeepAlivePeriod)
-	require.NoError(t, err)
-
 	// Create a proxy with an elastic buffer pool
-	proxy := NewProxy(pool, hook.NewHookConfig(), true, false, healthCheck,
+	proxy := NewProxy(pool, hook.NewHookConfig(), true, false, config.DefaultHealthCheckPeriod,
 		&config.Client{
 			Network:            "tcp",
 			Address:            "localhost:5432",
@@ -105,7 +92,7 @@ func TestNewProxyElastic(t *testing.T) {
 			ReceiveDeadline:    config.DefaultReceiveDeadline,
 			SendDeadline:       config.DefaultSendDeadline,
 			TCPKeepAlive:       false,
-			TCPKeepAlivePeriod: keepAlive,
+			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 		}, logger)
 
 	assert.NotNil(t, proxy)

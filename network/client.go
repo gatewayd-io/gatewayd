@@ -82,11 +82,7 @@ func NewClient(clientConfig *config.Client, logger zerolog.Logger) *Client {
 	// Set the TCP keep alive.
 	client.TCPKeepAlive = clientConfig.TCPKeepAlive
 	if clientConfig.TCPKeepAlivePeriod <= 0 {
-		if keepAlive, err := time.ParseDuration(config.DefaultTCPKeepAlivePeriod); err == nil {
-			client.TCPKeepAlivePeriod = keepAlive
-		} else {
-			logger.Error().Err(err).Msg("Failed to parse TCP keep alive period")
-		}
+		client.TCPKeepAlivePeriod = config.DefaultTCPKeepAlivePeriod
 	} else {
 		client.TCPKeepAlivePeriod = clientConfig.TCPKeepAlivePeriod
 	}
