@@ -24,17 +24,13 @@ import (
 )
 
 var (
-	globalConfigFile string
-	pluginConfigFile string
-)
-
-var (
 	hooksConfig   = hook.NewHookConfig()
 	DefaultLogger = logging.NewLogger(
 		logging.LoggerConfig{
-			Level:   zerolog.DebugLevel,
+			Level:   zerolog.InfoLevel, // Default log level
 			NoColor: true,
-		})
+		},
+	)
 	pluginRegistry = plugin.NewRegistry(hooksConfig)
 	// Global koanf instance. Using "." as the key path delimiter.
 	globalConfig = koanf.New(".")
@@ -363,12 +359,10 @@ var runCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(runCmd)
 
-	runCmd.PersistentFlags().StringVarP(
-		&globalConfigFile,
+	runCmd.Flags().StringP(
 		"config", "c", "./gatewayd.yaml",
 		"config file (default is ./gatewayd.yaml)")
-	runCmd.PersistentFlags().StringVarP(
-		&pluginConfigFile,
+	runCmd.Flags().StringP(
 		"plugin-config", "p", "./gatewayd_plugins.yaml",
 		"plugin config file (default is ./gatewayd_plugins.yaml)")
 }
