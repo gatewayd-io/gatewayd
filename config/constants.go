@@ -1,5 +1,7 @@
 package config
 
+import "time"
+
 type (
 	Status       uint
 	Policy       uint
@@ -59,20 +61,20 @@ const (
 	DefaultChunkSize          = 4096
 	DefaultReceiveDeadline    = 0 // 0 means no deadline (timeout)
 	DefaultSendDeadline       = 0
-	DefaultTCPKeepAlivePeriod = "30s"
+	DefaultTCPKeepAlivePeriod = 30 * time.Second
 
 	// Pool constants.
 	EmptyPoolCapacity        = 0
 	DefaultPoolSize          = 10
 	MinimumPoolSize          = 2
-	DefaultHealthCheckPeriod = "60s" // This must match PostgreSQL authentication timeout.
+	DefaultHealthCheckPeriod = 60 * time.Second // This must match PostgreSQL authentication timeout.
 
 	// Server constants.
 	DefaultListenNetwork = "tcp"
 	DefaultListenAddress = "0.0.0.0:15432"
-	DefaultTickInterval  = "5s"
+	DefaultTickInterval  = 5 * time.Second
 	DefaultBufferSize    = 1 << 24 // 16777216 bytes
-	DefaultTCPKeepAlive  = "3s"
+	DefaultTCPKeepAlive  = 3 * time.Second
 	DefaultLoadBalancer  = "roundrobin"
 
 	// Utility constants.
