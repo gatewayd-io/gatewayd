@@ -32,9 +32,10 @@ var (
 	hooksConfig   = hook.NewHookConfig()
 	DefaultLogger = logging.NewLogger(
 		logging.LoggerConfig{
-			Level:   zerolog.DebugLevel,
+			Level:   zerolog.InfoLevel, // Default log level
 			NoColor: true,
-		})
+		},
+	)
 	pluginRegistry = plugin.NewRegistry(hooksConfig)
 	// Global koanf instance. Using "." as the key path delimiter.
 	globalConfig = koanf.New(".")
