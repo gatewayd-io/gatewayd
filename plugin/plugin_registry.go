@@ -29,17 +29,17 @@ type IPluginRegistry interface {
 
 type PluginRegistry struct { //nolint:golint,revive
 	plugins      pool.IPool
-	hooksConfig  *hook.Config
+	hookRegistry *hook.Registry
 	CompatPolicy config.CompatPolicy
 }
 
 var _ IPluginRegistry = &PluginRegistry{}
 
 // NewRegistry creates a new plugin registry.
-func NewRegistry(hooksConfig *hook.Config) *PluginRegistry {
+func NewRegistry(hookRegistry *hook.Registry) *PluginRegistry {
 	return &PluginRegistry{
-		plugins:     pool.NewPool(config.EmptyPoolCapacity),
-		hooksConfig: hooksConfig,
+		plugins:      pool.NewPool(config.EmptyPoolCapacity),
+		hookRegistry: hookRegistry,
 	}
 }
 
@@ -47,7 +47,7 @@ func NewRegistry(hooksConfig *hook.Config) *PluginRegistry {
 func (reg *PluginRegistry) Add(plugin *Plugin) bool {
 	_, loaded, err := reg.plugins.GetOrPut(plugin.ID, plugin)
 	if err != nil {
-		reg.hooksConfig.Logger.Error().Err(err).Msg("Failed to add plugin to registry")
+		reg.hookRegistry.Logger.Error().Err(err).Msg("Failed to add plugin to registry")
 		return false
 	}
 	return loaded
@@ -81,14 +81,14 @@ func (reg *PluginRegistry) Exists(name, version, remoteURL string) bool {
 			// Parse the supplied version and the version in the registry.
 			suppliedVer, err := semver.NewVersion(version)
 			if err != nil {
-				reg.hooksConfig.Logger.Error().Err(err).Msg(
+				reg.hookRegistry.Logger.Error().Err(err).Msg(
 					"Failed to parse supplied plugin version")
 				return false
 			}
 
 			registryVer, err := semver.NewVersion(plugin.Version)
 			if err != nil {
-				reg.hooksConfig.Logger.Error().Err(err).Msg(
+				reg.hookRegistry.Logger.Error().Err(err).Msg(
 					"Failed to parse plugin version in registry")
 				return false
 			}
@@ -99,7 +99,7 @@ func (reg *PluginRegistry) Exists(name, version, remoteURL string) bool {
 				return true
 			}
 
-			reg.hooksConfig.Logger.Debug().Str("name", name).Str("version", version).Msg(
+			reg.hookRegistry.Logger.Debug().Str("name", name).Str("version", version).Msg(
 				"Supplied plugin version is greater than the version in registry")
 			return false
 		}
@@ -141,7 +141,7 @@ func (reg *PluginRegistry) LoadPlugins(plugins []config.Plugin) {
 			continue
 		}
 
-		reg.hooksConfig.Logger.Debug().Str("name", pCfg.Name).Msg("Loading plugin")
+		reg.hookRegistry.Logger.Debug().Str("name", pCfg.Name).Msg("Loading plugin")
 		plugin := &Plugin{
 			ID: Identifier{
 				Name:     pCfg.Name,
@@ -156,20 +156,20 @@ func (reg *PluginRegistry) LoadPlugins(plugins []config.Plugin) {
 		// Is the plugin enabled?
 		plugin.Enabled = pCfg.Enabled
 		if !plugin.Enabled {
-			reg.hooksConfig.Logger.Debug().Str("name", plugin.ID.Name).Msg("Plugin is disabled")
+			reg.hookRegistry.Logger.Debug().Str("name", plugin.ID.Name).Msg("Plugin is disabled")
 			continue
 		}
 
 		// File path of the plugin on disk.
 		if plugin.LocalPath == "" {
-			reg.hooksConfig.Logger.Debug().Str("name", plugin.ID.Name).Msg(
+			reg.hookRegistry.Logger.Debug().Str("name", plugin.ID.Name).Msg(
 				"Local file of the plugin doesn't exist or is not set")
 			continue
 		}
 
 		// Checksum of the plugin.
 		if plugin.ID.Checksum == "" {
-			reg.hooksConfig.Logger.Debug().Str("name", plugin.ID.Name).Msg(
+			reg.hookRegistry.Logger.Debug().Str("name", plugin.ID.Name).Msg(
 				"Checksum of plugin doesn't exist or is not set")
 			continue
 		}
@@ -177,11 +177,11 @@ func (reg *PluginRegistry) LoadPlugins(plugins []config.Plugin) {
 		// Verify the checksum.
 		// TODO: Load the plugin from a remote location if the checksum didn't match?
 		if sum, err := utils.SHA256SUM(plugin.LocalPath); err != nil {
-			reg.hooksConfig.Logger.Debug().Str("name", plugin.ID.Name).Err(err).Msg(
+			reg.hookRegistry.Logger.Debug().Str("name", plugin.ID.Name).Err(err).Msg(
 				"Failed to calculate checksum")
 			continue
 		} else if sum != plugin.ID.Checksum {
-			reg.hooksConfig.Logger.Debug().Fields(
+			reg.hookRegistry.Logger.Debug().Fields(
 				map[string]interface{}{
 					"calculated": sum,
 					"expected":   plugin.ID.Checksum,
@@ -197,7 +197,7 @@ func (reg *PluginRegistry) LoadPlugins(plugins []config.Plugin) {
 		// have a priority of 1000 or greater.
 		plugin.Priority = hook.Priority(config.PluginPriorityStart + uint(priority))
 
-		logAdapter := logging.NewHcLogAdapter(&reg.hooksConfig.Logger, config.LoggerName)
+		logAdapter := logging.NewHcLogAdapter(&reg.hookRegistry.Logger, config.LoggerName)
 
 		plugin.client = goplugin.NewClient(
 			&goplugin.ClientConfig{
@@ -220,22 +220,22 @@ func (reg *PluginRegistry) LoadPlugins(plugins []config.Plugin) {
 			},
 		)
 
-		reg.hooksConfig.Logger.Debug().Str("name", plugin.ID.Name).Msg("Plugin loaded")
+		reg.hookRegistry.Logger.Debug().Str("name", plugin.ID.Name).Msg("Plugin loaded")
 		if _, err := plugin.Start(); err != nil {
-			reg.hooksConfig.Logger.Debug().Str("name", plugin.ID.Name).Err(err).Msg(
+			reg.hookRegistry.Logger.Debug().Str("name", plugin.ID.Name).Err(err).Msg(
 				"Failed to start plugin")
 		}
 
 		// Load metadata from the plugin.
 		var metadata *structpb.Struct
 		if pluginV1, err := plugin.Dispense(); err != nil {
-			reg.hooksConfig.Logger.Debug().Str("name", plugin.ID.Name).Err(err).Msg(
+			reg.hookRegistry.Logger.Debug().Str("name", plugin.ID.Name).Err(err).Msg(
 				"Failed to dispense plugin")
 			continue
 		} else {
 			if meta, origErr := pluginV1.GetPluginConfig(
 				context.Background(), &structpb.Struct{}); err != nil {
-				reg.hooksConfig.Logger.Debug().Str("name", plugin.ID.Name).Err(origErr).Msg(
+				reg.hookRegistry.Logger.Debug().Str("name", plugin.ID.Name).Err(origErr).Msg(
 					"Failed to get plugin metadata")
 				continue
 			} else {
@@ -246,12 +246,12 @@ func (reg *PluginRegistry) LoadPlugins(plugins []config.Plugin) {
 		// Retrieve plugin requirements.
 		if err := mapstructure.Decode(metadata.Fields["requires"].GetListValue().AsSlice(),
 			&plugin.Requires); err != nil {
-			reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to decode plugin requirements")
+			reg.hookRegistry.Logger.Debug().Err(err).Msg("Failed to decode plugin requirements")
 		}
 
 		// Too many requirements or not enough plugins loaded.
 		if len(plugin.Requires) > reg.plugins.Size() {
-			reg.hooksConfig.Logger.Debug().Msg(
+			reg.hookRegistry.Logger.Debug().Msg(
 				"The plugin has too many requirements, " +
 					"and not enough of them exist in the registry, so it won't work properly")
 		}
@@ -259,19 +259,19 @@ func (reg *PluginRegistry) LoadPlugins(plugins []config.Plugin) {
 		// Check if the plugin requirements are met.
 		for _, req := range plugin.Requires {
 			if !reg.Exists(req.Name, req.Version, req.RemoteURL) {
-				reg.hooksConfig.Logger.Debug().Fields(
+				reg.hookRegistry.Logger.Debug().Fields(
 					map[string]interface{}{
 						"name":        plugin.ID.Name,
 						"requirement": req.Name,
 					},
 				).Msg("The plugin requirement is not met, so it won't work properly")
 				if reg.CompatPolicy == config.Strict {
-					reg.hooksConfig.Logger.Debug().Str("name", plugin.ID.Name).Msg(
+					reg.hookRegistry.Logger.Debug().Str("name", plugin.ID.Name).Msg(
 						"Registry is in strict compatibility mode, so the plugin won't be loaded")
 					plugin.Stop() // Stop the plugin.
 					continue
 				} else {
-					reg.hooksConfig.Logger.Debug().Fields(
+					reg.hookRegistry.Logger.Debug().Fields(
 						map[string]interface{}{
 							"name":        plugin.ID.Name,
 							"requirement": req.Name,
@@ -290,12 +290,12 @@ func (reg *PluginRegistry) LoadPlugins(plugins []config.Plugin) {
 		// Retrieve authors.
 		if err := mapstructure.Decode(metadata.Fields["authors"].GetListValue().AsSlice(),
 			&plugin.Authors); err != nil {
-			reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to decode plugin authors")
+			reg.hookRegistry.Logger.Debug().Err(err).Msg("Failed to decode plugin authors")
 		}
 		// Retrieve hooks.
 		if err := mapstructure.Decode(metadata.Fields["hooks"].GetListValue().AsSlice(),
 			&plugin.Hooks); err != nil {
-			reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to decode plugin hooks")
+			reg.hookRegistry.Logger.Debug().Err(err).Msg("Failed to decode plugin hooks")
 		}
 
 		// Retrieve plugin config.
@@ -304,18 +304,18 @@ func (reg *PluginRegistry) LoadPlugins(plugins []config.Plugin) {
 			if val, ok := value.(string); ok {
 				plugin.Config[key] = val
 			} else {
-				reg.hooksConfig.Logger.Debug().Str("key", key).Msg(
+				reg.hookRegistry.Logger.Debug().Str("key", key).Msg(
 					"Failed to decode plugin config")
 			}
 		}
 
-		reg.hooksConfig.Logger.Trace().Msgf("Plugin metadata: %+v", plugin)
+		reg.hookRegistry.Logger.Trace().Msgf("Plugin metadata: %+v", plugin)
 
 		reg.Add(plugin)
-		reg.hooksConfig.Logger.Debug().Str("name", plugin.ID.Name).Msg("Plugin metadata loaded")
+		reg.hookRegistry.Logger.Debug().Str("name", plugin.ID.Name).Msg("Plugin metadata loaded")
 
 		reg.RegisterHooks(plugin.ID)
-		reg.hooksConfig.Logger.Debug().Str("name", plugin.ID.Name).Msg("Plugin hooks registered")
+		reg.hookRegistry.Logger.Debug().Str("name", plugin.ID.Name).Msg("Plugin hooks registered")
 	}
 }
 
@@ -324,12 +324,12 @@ func (reg *PluginRegistry) LoadPlugins(plugins []config.Plugin) {
 //nolint:funlen
 func (reg *PluginRegistry) RegisterHooks(id Identifier) {
 	pluginImpl := reg.Get(id)
-	reg.hooksConfig.Logger.Debug().Str("name", pluginImpl.ID.Name).Msg(
+	reg.hookRegistry.Logger.Debug().Str("name", pluginImpl.ID.Name).Msg(
 		"Registering hooks for plugin")
 	var pluginV1 pluginV1.GatewayDPluginServiceClient
 	var err *gerr.GatewayDError
 	if pluginV1, err = pluginImpl.Dispense(); err != nil {
-		reg.hooksConfig.Logger.Debug().Str("name", pluginImpl.ID.Name).Err(err).Msg(
+		reg.hookRegistry.Logger.Debug().Str("name", pluginImpl.ID.Name).Err(err).Msg(
 			"Failed to dispense plugin")
 		return
 	}
@@ -380,7 +380,7 @@ func (reg *PluginRegistry) RegisterHooks(id Identifier) {
 		case hook.OnNewClient:
 			hookFunc = pluginV1.OnNewClient
 		default:
-			reg.hooksConfig.Logger.Warn().Fields(map[string]interface{}{
+			reg.hookRegistry.Logger.Warn().Fields(map[string]interface{}{
 				"hook":     string(hookType),
 				"priority": pluginImpl.Priority,
 				"name":     pluginImpl.ID.Name,
@@ -388,11 +388,11 @@ func (reg *PluginRegistry) RegisterHooks(id Identifier) {
 				"Unknown hook, skipping")
 			continue
 		}
-		reg.hooksConfig.Logger.Debug().Fields(map[string]interface{}{
+		reg.hookRegistry.Logger.Debug().Fields(map[string]interface{}{
 			"hook":     string(hookType),
 			"priority": pluginImpl.Priority,
 			"name":     pluginImpl.ID.Name,
 		}).Msg("Registering hook")
-		reg.hooksConfig.Add(hookType, pluginImpl.Priority, hookFunc)
+		reg.hookRegistry.Add(hookType, pluginImpl.Priority, hookFunc)
 	}
 }

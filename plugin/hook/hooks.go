@@ -12,26 +12,27 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-type Config struct {
-	hooks        map[Type]map[Priority]FunctionType
+type Registry struct {
+	hooks map[Type]map[Priority]FunctionType
+
 	Logger       zerolog.Logger
 	Verification config.Policy
 }
 
-// NewHookConfig returns a new Config.
-func NewHookConfig() *Config {
-	return &Config{
+// NewRegistry returns a new Config.
+func NewRegistry() *Registry {
+	return &Registry{
 		hooks: map[Type]map[Priority]FunctionType{},
 	}
 }
 
 // Hooks returns the hooks.
-func (h *Config) Hooks() map[Type]map[Priority]FunctionType {
+func (h *Registry) Hooks() map[Type]map[Priority]FunctionType {
 	return h.hooks
 }
 
 // Add adds a hook with a priority to the hooks map.
-func (h *Config) Add(hookType Type, prio Priority, hookFunc FunctionType) {
+func (h *Registry) Add(hookType Type, prio Priority, hookFunc FunctionType) {
 	if len(h.hooks[hookType]) == 0 {
 		h.hooks[hookType] = map[Priority]FunctionType{prio: hookFunc}
 	} else {
@@ -48,7 +49,7 @@ func (h *Config) Add(hookType Type, prio Priority, hookFunc FunctionType) {
 }
 
 // Get returns the hooks of a specific type.
-func (h *Config) Get(hookType Type) map[Priority]FunctionType {
+func (h *Registry) Get(hookType Type) map[Priority]FunctionType {
 	return h.hooks[hookType]
 }
 
@@ -66,7 +67,7 @@ func (h *Config) Get(hookType Type) map[Priority]FunctionType {
 // The opts are passed to the hooks as well to allow them to use the grpc.CallOption.
 //
 //nolint:funlen
-func (h *Config) Run(
+func (h *Registry) Run(
 	ctx context.Context,
 	args map[string]interface{},
 	hookType Type,

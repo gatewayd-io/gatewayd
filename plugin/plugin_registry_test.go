@@ -9,12 +9,12 @@ import (
 
 // TestPluginRegistry tests the PluginRegistry.
 func TestPluginRegistry(t *testing.T) {
-	hooksConfig := hook.NewHookConfig()
-	assert.NotNil(t, hooksConfig)
-	reg := NewRegistry(hooksConfig)
+	hookRegistry := hook.NewRegistry()
+	assert.NotNil(t, hookRegistry)
+	reg := NewRegistry(hookRegistry)
 	assert.NotNil(t, reg)
 	assert.NotNil(t, reg.plugins)
-	assert.NotNil(t, reg.hooksConfig)
+	assert.NotNil(t, reg.hookRegistry)
 	assert.Equal(t, 0, len(reg.List()))
 
 	ident := Identifier{
