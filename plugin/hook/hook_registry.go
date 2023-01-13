@@ -13,20 +13,20 @@ import (
 )
 
 type IRegistry interface {
-	Hooks() map[Type]map[Priority]Method
-	Add(hookType Type, prio Priority, hookFunc Method)
-	Get(hookType Type) map[Priority]Method
+	Hooks() map[string]map[Priority]Method
+	Add(hookType string, prio Priority, hookFunc Method)
+	Get(hookType string) map[Priority]Method
 	Run(
 		ctx context.Context,
 		args map[string]interface{},
-		hookType Type,
+		hookType string,
 		verification config.Policy,
 		opts ...grpc.CallOption,
 	) (map[string]interface{}, *gerr.GatewayDError)
 }
 
 type Registry struct {
-	hooks map[Type]map[Priority]Method
+	hooks map[string]map[Priority]Method
 
 	Logger       zerolog.Logger
 	Verification config.Policy
@@ -37,17 +37,17 @@ var _ IRegistry = &Registry{}
 // NewRegistry returns a new Config.
 func NewRegistry() *Registry {
 	return &Registry{
-		hooks: map[Type]map[Priority]Method{},
+		hooks: map[string]map[Priority]Method{},
 	}
 }
 
 // Hooks returns the hooks.
-func (h *Registry) Hooks() map[Type]map[Priority]Method {
+func (h *Registry) Hooks() map[string]map[Priority]Method {
 	return h.hooks
 }
 
 // Add adds a hook with a priority to the hooks map.
-func (h *Registry) Add(hookType Type, prio Priority, hookFunc Method) {
+func (h *Registry) Add(hookType string, prio Priority, hookFunc Method) {
 	if len(h.hooks[hookType]) == 0 {
 		h.hooks[hookType] = map[Priority]Method{prio: hookFunc}
 	} else {
@@ -64,7 +64,7 @@ func (h *Registry) Add(hookType Type, prio Priority, hookFunc Method) {
 }
 
 // Get returns the hooks of a specific type.
-func (h *Registry) Get(hookType Type) map[Priority]Method {
+func (h *Registry) Get(hookType string) map[Priority]Method {
 	return h.hooks[hookType]
 }
 
@@ -85,7 +85,7 @@ func (h *Registry) Get(hookType Type) map[Priority]Method {
 func (h *Registry) Run(
 	ctx context.Context,
 	args map[string]interface{},
-	hookType Type,
+	hookType string,
 	verification config.Policy,
 	opts ...grpc.CallOption,
 ) (map[string]interface{}, *gerr.GatewayDError) {
