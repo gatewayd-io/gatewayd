@@ -19,8 +19,8 @@ func (p PluginConfig) GetVerificationPolicy() VerificationPolicy {
 	}
 }
 
-// GetPluginCompatPolicy returns the plugin compatibility policy from plugin config file.
-func (p PluginConfig) GetPluginCompatPolicy() CompatPolicy {
+// GetPluginCompatibilityPolicy returns the plugin compatibility policy from plugin config file.
+func (p PluginConfig) GetPluginCompatibilityPolicy() CompatibilityPolicy {
 	switch p.CompatibilityPolicy {
 	case "strict":
 		return Strict

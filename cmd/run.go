@@ -64,7 +64,7 @@ var runCmd = &cobra.Command{
 		}
 
 		// Set the plugin compatibility policy.
-		pluginRegistry.CompatPolicy = pConfig.GetPluginCompatPolicy()
+		pluginRegistry.CompatibilityPolicy = pConfig.GetPluginCompatibilityPolicy()
 
 		// Load plugins and register their hooks.
 		pluginRegistry.LoadPlugins(pConfig.Plugins)

@@ -3,10 +3,10 @@ package config
 import "time"
 
 type (
-	Status             uint
-	VerificationPolicy uint
-	CompatPolicy       uint
-	LogOutput          uint
+	Status              uint
+	VerificationPolicy  uint
+	CompatibilityPolicy uint
+	LogOutput           uint
 )
 
 // Status is the status of the server.
@@ -25,10 +25,10 @@ const (
 	Remove // Remove the hook from the list on error and continue
 )
 
-// CompatPolicy is the compatibility policy for plugins.
+// CompatibilityPolicy is the compatibility policy for plugins.
 const (
-	Strict CompatPolicy = iota
-	Loose
+	Strict CompatibilityPolicy = iota // Expect all required plugins to be loaded and present
+	Loose                             // Load the plugin, even if the requirements are not met
 )
 
 // LogOutput is the output type for the logger.

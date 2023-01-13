@@ -45,25 +45,25 @@ type Registry struct {
 	plugins pool.IPool
 	hooks   map[string]map[Priority]Method
 
-	Logger       zerolog.Logger
-	CompatPolicy config.CompatPolicy
-	Verification config.VerificationPolicy
+	Logger              zerolog.Logger
+	CompatibilityPolicy config.CompatibilityPolicy
+	Verification        config.VerificationPolicy
 }
 
 var _ IRegistry = &Registry{}
 
 // NewRegistry creates a new plugin registry.
 func NewRegistry(
-	compatPolicy config.CompatPolicy,
+	compatibilityPolicy config.CompatibilityPolicy,
 	verification config.VerificationPolicy,
 	logger zerolog.Logger,
 ) *Registry {
 	return &Registry{
-		plugins:      pool.NewPool(config.EmptyPoolCapacity),
-		hooks:        map[string]map[Priority]Method{},
-		Logger:       logger,
-		CompatPolicy: compatPolicy,
-		Verification: verification,
+		plugins:             pool.NewPool(config.EmptyPoolCapacity),
+		hooks:               map[string]map[Priority]Method{},
+		Logger:              logger,
+		CompatibilityPolicy: compatibilityPolicy,
+		Verification:        verification,
 	}
 }
 
@@ -437,7 +437,7 @@ func (reg *Registry) LoadPlugins(plugins []config.Plugin) {
 						"requirement": req.Name,
 					},
 				).Msg("The plugin requirement is not met, so it won't work properly")
-				if reg.CompatPolicy == config.Strict {
+				if reg.CompatibilityPolicy == config.Strict {
 					reg.Logger.Debug().Str("name", plugin.ID.Name).Msg(
 						"Registry is in strict compatibility mode, so the plugin won't be loaded")
 					plugin.Stop() // Stop the plugin.
