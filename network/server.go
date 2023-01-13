@@ -20,7 +20,7 @@ type Server struct {
 	engine         gnet.Engine
 	proxy          IProxy
 	logger         zerolog.Logger
-	pluginRegistry *plugin.PluginRegistry
+	pluginRegistry *plugin.Registry
 
 	Network      string // tcp/udp/unix
 	Address      string
@@ -334,7 +334,7 @@ func NewServer(
 	options []gnet.Option,
 	proxy IProxy,
 	logger zerolog.Logger,
-	pluginRegistry *plugin.PluginRegistry,
+	pluginRegistry *plugin.Registry,
 ) *Server {
 	// Create the server.
 	server := Server{

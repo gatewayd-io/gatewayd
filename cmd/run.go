@@ -321,7 +321,7 @@ var runCmd = &cobra.Command{
 		)
 		signalsCh := make(chan os.Signal, 1)
 		signal.Notify(signalsCh, signals...)
-		go func(pluginRegistry *plugin.PluginRegistry) {
+		go func(pluginRegistry *plugin.Registry) {
 			for sig := range signalsCh {
 				for _, s := range signals {
 					if sig != s {
