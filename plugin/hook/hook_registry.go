@@ -12,12 +12,27 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
+type IRegistry interface {
+	Hooks() map[Type]map[Priority]Method
+	Add(hookType Type, prio Priority, hookFunc Method)
+	Get(hookType Type) map[Priority]Method
+	Run(
+		ctx context.Context,
+		args map[string]interface{},
+		hookType Type,
+		verification config.Policy,
+		opts ...grpc.CallOption,
+	) (map[string]interface{}, *gerr.GatewayDError)
+}
+
 type Registry struct {
 	hooks map[Type]map[Priority]Method
 
 	Logger       zerolog.Logger
 	Verification config.Policy
 }
+
+var _ IRegistry = &Registry{}
 
 // NewRegistry returns a new Config.
 func NewRegistry() *Registry {
