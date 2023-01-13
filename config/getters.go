@@ -6,7 +6,7 @@ import (
 )
 
 // GetVerificationPolicy returns the hook verification policy from plugin config file.
-func (p PluginConfig) GetVerificationPolicy() Policy {
+func (p PluginConfig) GetVerificationPolicy() VerificationPolicy {
 	switch p.VerificationPolicy {
 	case "ignore":
 		return Ignore
