@@ -6,7 +6,7 @@ import (
 	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
 	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/gatewayd-io/gatewayd/logging"
-	"github.com/gatewayd-io/gatewayd/plugin/hook"
+	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
@@ -53,8 +53,13 @@ func TestNewProxy(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Create a proxy with a fixed buffer pool
-	proxy := NewProxy(
-		pool, hook.NewRegistry(), false, false, config.DefaultHealthCheckPeriod, nil, logger)
+	proxy := NewProxy(pool,
+		plugin.NewRegistry(config.Loose, config.PassDown, logger),
+		false,
+		false,
+		config.DefaultHealthCheckPeriod,
+		nil,
+		logger)
 
 	assert.NotNil(t, proxy)
 	assert.Equal(t, 0, proxy.busyConnections.Size(), "Proxy should have no connected clients")
@@ -83,7 +88,11 @@ func TestNewProxyElastic(t *testing.T) {
 	pool := pool.NewPool(config.EmptyPoolCapacity)
 
 	// Create a proxy with an elastic buffer pool
-	proxy := NewProxy(pool, hook.NewRegistry(), true, false, config.DefaultHealthCheckPeriod,
+	proxy := NewProxy(pool,
+		plugin.NewRegistry(config.Loose, config.PassDown, logger),
+		true,
+		false,
+		config.DefaultHealthCheckPeriod,
 		&config.Client{
 			Network:            "tcp",
 			Address:            "localhost:5432",
@@ -93,7 +102,8 @@ func TestNewProxyElastic(t *testing.T) {
 			SendDeadline:       config.DefaultSendDeadline,
 			TCPKeepAlive:       false,
 			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
-		}, logger)
+		},
+		logger)
 
 	assert.NotNil(t, proxy)
 	assert.Equal(t, 0, proxy.busyConnections.Size())

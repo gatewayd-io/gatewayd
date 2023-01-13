@@ -4,7 +4,6 @@ import (
 	"net"
 
 	gerr "github.com/gatewayd-io/gatewayd/errors"
-	"github.com/gatewayd-io/gatewayd/plugin/hook"
 	pluginV1 "github.com/gatewayd-io/gatewayd/plugin/v1"
 	goplugin "github.com/hashicorp/go-plugin"
 )
@@ -41,7 +40,7 @@ type Plugin struct {
 	Config map[string]string
 	// hooks it attaches to
 	Hooks    []string
-	Priority hook.Priority
+	Priority Priority
 	// required plugins to be loaded before this one
 	// Built-in plugins are always loaded first
 	Requires   []Identifier
