@@ -14,7 +14,7 @@ import (
 
 type IRegistry interface {
 	Hooks() map[string]map[Priority]Method
-	Add(hookName string, priority Priority, hookFunc Method)
+	Add(hookName string, priority Priority, hookMethod Method)
 	Get(hookName string) map[Priority]Method
 	Run(
 		ctx context.Context,
@@ -47,9 +47,9 @@ func (h *Registry) Hooks() map[string]map[Priority]Method {
 }
 
 // Add adds a hook with a priority to the hooks map.
-func (h *Registry) Add(hookName string, priority Priority, hookFunc Method) {
+func (h *Registry) Add(hookName string, priority Priority, hookMethod Method) {
 	if len(h.hooks[hookName]) == 0 {
-		h.hooks[hookName] = map[Priority]Method{priority: hookFunc}
+		h.hooks[hookName] = map[Priority]Method{priority: hookMethod}
 	} else {
 		if _, ok := h.hooks[hookName][priority]; ok {
 			h.Logger.Warn().Fields(
@@ -59,7 +59,7 @@ func (h *Registry) Add(hookName string, priority Priority, hookFunc Method) {
 				},
 			).Msg("Hook is replaced")
 		}
-		h.hooks[hookName][priority] = hookFunc
+		h.hooks[hookName][priority] = hookMethod
 	}
 }
 
