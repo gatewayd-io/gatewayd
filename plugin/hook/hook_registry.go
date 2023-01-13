@@ -13,7 +13,7 @@ import (
 )
 
 type Registry struct {
-	hooks map[Type]map[Priority]FunctionType
+	hooks map[Type]map[Priority]Method
 
 	Logger       zerolog.Logger
 	Verification config.Policy
@@ -22,19 +22,19 @@ type Registry struct {
 // NewRegistry returns a new Config.
 func NewRegistry() *Registry {
 	return &Registry{
-		hooks: map[Type]map[Priority]FunctionType{},
+		hooks: map[Type]map[Priority]Method{},
 	}
 }
 
 // Hooks returns the hooks.
-func (h *Registry) Hooks() map[Type]map[Priority]FunctionType {
+func (h *Registry) Hooks() map[Type]map[Priority]Method {
 	return h.hooks
 }
 
 // Add adds a hook with a priority to the hooks map.
-func (h *Registry) Add(hookType Type, prio Priority, hookFunc FunctionType) {
+func (h *Registry) Add(hookType Type, prio Priority, hookFunc Method) {
 	if len(h.hooks[hookType]) == 0 {
-		h.hooks[hookType] = map[Priority]FunctionType{prio: hookFunc}
+		h.hooks[hookType] = map[Priority]Method{prio: hookFunc}
 	} else {
 		if _, ok := h.hooks[hookType][prio]; ok {
 			h.Logger.Warn().Fields(
@@ -49,7 +49,7 @@ func (h *Registry) Add(hookType Type, prio Priority, hookFunc FunctionType) {
 }
 
 // Get returns the hooks of a specific type.
-func (h *Registry) Get(hookType Type) map[Priority]FunctionType {
+func (h *Registry) Get(hookType Type) map[Priority]Method {
 	return h.hooks[hookType]
 }
 
