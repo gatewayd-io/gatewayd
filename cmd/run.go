@@ -204,7 +204,7 @@ var runCmd = &cobra.Command{
 					"the clients cannot connect due to no network connectivity " +
 					"or the server is not running. exiting...")
 			pluginRegistry.Shutdown()
-			os.Exit(1)
+			os.Exit(gerr.FailedToInitializePool)
 		}
 
 		_, err = hookRegistry.Run(
