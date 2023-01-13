@@ -9,7 +9,7 @@ import (
 	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
 	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/gatewayd-io/gatewayd/logging"
-	"github.com/gatewayd-io/gatewayd/plugin/hook"
+	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
 	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
@@ -39,7 +39,7 @@ func TestRunServer(t *testing.T) {
 
 	logger := logging.NewLogger(cfg)
 
-	hooksConfig := hook.NewHookConfig()
+	pluginRegistry := plugin.NewRegistry(config.Loose, config.PassDown, logger)
 
 	onTrafficFromClient := func(
 		ctx context.Context,
@@ -67,7 +67,7 @@ func TestRunServer(t *testing.T) {
 		assert.Empty(t, paramsMap["error"])
 		return params, nil
 	}
-	hooksConfig.Add(hook.OnTrafficFromClient, 1, onTrafficFromClient)
+	pluginRegistry.AddHook(plugin.OnTrafficFromClient, 1, onTrafficFromClient)
 
 	onTrafficFromServer := func(
 		ctx context.Context,
@@ -92,7 +92,7 @@ func TestRunServer(t *testing.T) {
 		assert.Empty(t, paramsMap["error"])
 		return params, nil
 	}
-	hooksConfig.Add(hook.OnTrafficFromServer, 1, onTrafficFromServer)
+	pluginRegistry.AddHook(plugin.OnTrafficFromServer, 1, onTrafficFromServer)
 
 	clientConfig := config.Client{
 		Network:            "tcp",
@@ -116,7 +116,7 @@ func TestRunServer(t *testing.T) {
 
 	// Create a proxy with a fixed buffer pool.
 	proxy := NewProxy(
-		pool, hooksConfig, false, false, config.DefaultHealthCheckPeriod, &clientConfig, logger)
+		pool, pluginRegistry, false, false, config.DefaultHealthCheckPeriod, &clientConfig, logger)
 
 	// Create a server.
 	server := NewServer(
@@ -132,7 +132,7 @@ func TestRunServer(t *testing.T) {
 		},
 		proxy,
 		logger,
-		hooksConfig,
+		pluginRegistry,
 	)
 	assert.NotNil(t, server)
 

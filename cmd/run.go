@@ -12,7 +12,6 @@ import (
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/gatewayd-io/gatewayd/network"
 	"github.com/gatewayd-io/gatewayd/plugin"
-	"github.com/gatewayd-io/gatewayd/plugin/hook"
 	"github.com/gatewayd-io/gatewayd/pool"
 	"github.com/knadh/koanf"
 	"github.com/knadh/koanf/parsers/yaml"
@@ -24,14 +23,14 @@ import (
 )
 
 var (
-	hooksConfig   = hook.NewHookConfig()
 	DefaultLogger = logging.NewLogger(
 		logging.LoggerConfig{
 			Level:   zerolog.InfoLevel, // Default log level
 			NoColor: true,
 		},
 	)
-	pluginRegistry = plugin.NewRegistry(hooksConfig)
+	// The plugins are loaded and hooks registered before the configuration is loaded.
+	pluginRegistry = plugin.NewRegistry(config.Loose, config.PassDown, DefaultLogger)
 	// Global koanf instance. Using "." as the key path delimiter.
 	globalConfig = koanf.New(".")
 	// Plugin koanf instance. Using "." as the key path delimiter.
@@ -43,10 +42,6 @@ var runCmd = &cobra.Command{
 	Use:   "run",
 	Short: "Run a gatewayd instance",
 	Run: func(cmd *cobra.Command, args []string) {
-		// The plugins are loaded and hooks registered
-		// before the configuration is loaded.
-		hooksConfig.Logger = DefaultLogger
-
 		// Load default plugin configuration.
 		config.LoadPluginConfigDefaults(pluginConfig)
 
@@ -90,7 +85,7 @@ var runCmd = &cobra.Command{
 		config.LoadEnvVars(globalConfig)
 
 		// Get hooks signature verification policy.
-		hooksConfig.Verification = pConfig.GetVerificationPolicy()
+		pluginRegistry.Verification = pConfig.GetVerificationPolicy()
 
 		// Unmarshal the global configuration for easier access.
 		var gConfig config.GlobalConfig
@@ -100,13 +95,13 @@ var runCmd = &cobra.Command{
 			os.Exit(gerr.FailedToLoadGlobalConfig)
 		}
 
-		// The config will be passed to the plugins that register to the "OnConfigLoaded" hook.
+		// The config will be passed to the plugins that register to the "OnConfigLoaded" plugin.
 		// The plugins can modify the config and return it.
-		updatedGlobalConfig, err := hooksConfig.Run(
+		updatedGlobalConfig, err := pluginRegistry.Run(
 			context.Background(),
 			globalConfig.All(),
-			hook.OnConfigLoaded,
-			hooksConfig.Verification)
+			plugin.OnConfigLoaded,
+			pluginRegistry.Verification)
 		if err != nil {
 			DefaultLogger.Error().Err(err).Msg("Failed to run OnConfigLoaded hooks")
 		}
@@ -139,7 +134,7 @@ var runCmd = &cobra.Command{
 		})
 
 		// Replace the default logger with the new one from the config.
-		hooksConfig.Logger = logger
+		pluginRegistry.Logger = logger
 
 		// This is a notification hook, so we don't care about the result.
 		data := map[string]interface{}{
@@ -150,8 +145,8 @@ var runCmd = &cobra.Command{
 			"fileName":   loggerCfg.FileName,
 		}
 		// TODO: Use a context with a timeout
-		_, err = hooksConfig.Run(
-			context.Background(), data, hook.OnNewLogger, hooksConfig.Verification)
+		_, err = pluginRegistry.Run(
+			context.Background(), data, plugin.OnNewLogger, pluginRegistry.Verification)
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to run OnNewLogger hooks")
 		}
@@ -179,11 +174,11 @@ var runCmd = &cobra.Command{
 					"tcpKeepAlive":       client.TCPKeepAlive,
 					"tcpKeepAlivePeriod": client.TCPKeepAlivePeriod.String(),
 				}
-				_, err := hooksConfig.Run(
+				_, err := pluginRegistry.Run(
 					context.Background(),
 					clientCfg,
-					hook.OnNewClient,
-					hooksConfig.Verification)
+					plugin.OnNewClient,
+					pluginRegistry.Verification)
 				if err != nil {
 					logger.Error().Err(err).Msg("Failed to run OnNewClient hooks")
 				}
@@ -204,14 +199,14 @@ var runCmd = &cobra.Command{
 					"the clients cannot connect due to no network connectivity " +
 					"or the server is not running. exiting...")
 			pluginRegistry.Shutdown()
-			os.Exit(1)
+			os.Exit(gerr.FailedToInitializePool)
 		}
 
-		_, err = hooksConfig.Run(
+		_, err = pluginRegistry.Run(
 			context.Background(),
 			map[string]interface{}{"size": poolSize},
-			hook.OnNewPool,
-			hooksConfig.Verification)
+			plugin.OnNewPool,
+			pluginRegistry.Verification)
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to run OnNewPool hooks")
 		}
@@ -222,7 +217,7 @@ var runCmd = &cobra.Command{
 		healthCheckPeriod := gConfig.Proxy[config.Default].HealthCheckPeriod
 		proxy := network.NewProxy(
 			pool,
-			hooksConfig,
+			pluginRegistry,
 			elastic,
 			reuseElasticClients,
 			healthCheckPeriod,
@@ -245,8 +240,8 @@ var runCmd = &cobra.Command{
 				"tcpKeepAlivePeriod": clientConfig.TCPKeepAlivePeriod.String(),
 			},
 		}
-		_, err = hooksConfig.Run(
-			context.Background(), proxyCfg, hook.OnNewProxy, hooksConfig.Verification)
+		_, err = pluginRegistry.Run(
+			context.Background(), proxyCfg, plugin.OnNewProxy, pluginRegistry.Verification)
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to run OnNewProxy hooks")
 		}
@@ -285,7 +280,7 @@ var runCmd = &cobra.Command{
 			},
 			proxy,
 			logger,
-			hooksConfig,
+			pluginRegistry,
 		)
 
 		serverCfg := map[string]interface{}{
@@ -307,8 +302,8 @@ var runCmd = &cobra.Command{
 			"tcpKeepAlive":     gConfig.Server.TCPKeepAlive.String(),
 			"tcpNoDelay":       gConfig.Server.TCPNoDelay,
 		}
-		_, err = hooksConfig.Run(
-			context.Background(), serverCfg, hook.OnNewServer, hooksConfig.Verification)
+		_, err = pluginRegistry.Run(
+			context.Background(), serverCfg, plugin.OnNewServer, pluginRegistry.Verification)
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to run OnNewServer hooks")
 		}
@@ -326,16 +321,16 @@ var runCmd = &cobra.Command{
 		)
 		signalsCh := make(chan os.Signal, 1)
 		signal.Notify(signalsCh, signals...)
-		go func(hooksConfig *hook.Config) {
+		go func(pluginRegistry *plugin.Registry) {
 			for sig := range signalsCh {
 				for _, s := range signals {
 					if sig != s {
 						// Notify the hooks that the server is shutting down.
-						_, err := hooksConfig.Run(
+						_, err := pluginRegistry.Run(
 							context.Background(),
 							map[string]interface{}{"signal": sig.String()},
-							hook.OnSignal,
-							hooksConfig.Verification,
+							plugin.OnSignal,
+							pluginRegistry.Verification,
 						)
 						if err != nil {
 							logger.Error().Err(err).Msg("Failed to run OnSignal hooks")
@@ -347,7 +342,7 @@ var runCmd = &cobra.Command{
 					}
 				}
 			}
-		}(hooksConfig)
+		}(pluginRegistry)
 
 		// Run the server.
 		if err := server.Run(); err != nil {
