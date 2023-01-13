@@ -381,7 +381,7 @@ func (reg *PluginRegistry) RegisterHooks(id Identifier) {
 			hookFunc = pluginV1.OnNewClient
 		default:
 			reg.hookRegistry.Logger.Warn().Fields(map[string]interface{}{
-				"hook":     string(hookType),
+				"hook":     hookType,
 				"priority": pluginImpl.Priority,
 				"name":     pluginImpl.ID.Name,
 			}).Msg(
@@ -389,7 +389,7 @@ func (reg *PluginRegistry) RegisterHooks(id Identifier) {
 			continue
 		}
 		reg.hookRegistry.Logger.Debug().Fields(map[string]interface{}{
-			"hook":     string(hookType),
+			"hook":     hookType,
 			"priority": pluginImpl.Priority,
 			"name":     pluginImpl.ID.Name,
 		}).Msg("Registering hook")
