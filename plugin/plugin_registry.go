@@ -8,7 +8,6 @@ import (
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/logging"
-	"github.com/gatewayd-io/gatewayd/plugin/utils"
 	pluginV1 "github.com/gatewayd-io/gatewayd/plugin/v1"
 	"github.com/gatewayd-io/gatewayd/pool"
 	goplugin "github.com/hashicorp/go-plugin"
@@ -202,7 +201,7 @@ func (reg *Registry) Run(
 	defer cancel()
 
 	// Cast custom fields to their primitive types, like time.Duration to float64.
-	args = utils.CastToPrimitiveTypes(args)
+	args = CastToPrimitiveTypes(args)
 
 	// Create structpb.Struct from args.
 	var params *structpb.Struct
@@ -240,7 +239,7 @@ func (reg *Registry) Run(
 		// and that the hook does not return any unexpected values.
 		// If the verification mode is non-strict (permissive), let the plugin pass
 		// extra keys/values to the next plugin in chain.
-		if utils.Verify(params, result) || verification == config.PassDown {
+		if Verify(params, result) || verification == config.PassDown {
 			// Update the last return value with the current result
 			returnVal = result
 			continue
@@ -347,7 +346,7 @@ func (reg *Registry) LoadPlugins(plugins []config.Plugin) {
 
 		// Verify the checksum.
 		// TODO: Load the plugin from a remote location if the checksum didn't match?
-		if sum, err := utils.SHA256SUM(plugin.LocalPath); err != nil {
+		if sum, err := SHA256SUM(plugin.LocalPath); err != nil {
 			reg.Logger.Debug().Str("name", plugin.ID.Name).Err(err).Msg(
 				"Failed to calculate checksum")
 			continue
@@ -374,7 +373,7 @@ func (reg *Registry) LoadPlugins(plugins []config.Plugin) {
 			&goplugin.ClientConfig{
 				HandshakeConfig: pluginV1.Handshake,
 				Plugins:         pluginV1.GetPluginMap(plugin.ID.Name),
-				Cmd:             utils.NewCommand(plugin.LocalPath, plugin.Args, plugin.Env),
+				Cmd:             NewCommand(plugin.LocalPath, plugin.Args, plugin.Env),
 				AllowedProtocols: []goplugin.Protocol{
 					goplugin.ProtocolGRPC,
 				},
