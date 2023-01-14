@@ -562,6 +562,7 @@ func (reg *Registry) RegisterHooks(id Identifier) {
 					"priority": pluginImpl.Priority,
 					"name":     pluginImpl.ID.Name,
 				}).Msg("Unknown hook, skipping")
+			case config.Accept: // fallthrough
 			default:
 				// Default is to accept custom hooks.
 				reg.Logger.Warn().Fields(map[string]interface{}{
