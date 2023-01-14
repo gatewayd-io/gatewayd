@@ -22,7 +22,7 @@ func NewPluginRegistry(t *testing.T) *Registry {
 		NoColor:    true,
 	}
 	logger := logging.NewLogger(cfg)
-	reg := NewRegistry(config.Loose, config.PassDown, logger)
+	reg := NewRegistry(config.Loose, config.PassDown, config.Accept, logger)
 	return reg
 }
 
@@ -94,6 +94,7 @@ func Test_PluginRegistry_AddHook_Multiple(t *testing.T) {
 // Test_HookRegistry_Run tests the Run function.
 func Test_PluginRegistry_Run(t *testing.T) {
 	reg := NewPluginRegistry(t)
+	reg.Verification = config.Ignore
 	reg.AddHook(OnNewLogger, 0, func(
 		ctx context.Context,
 		args *structpb.Struct,
@@ -101,8 +102,7 @@ func Test_PluginRegistry_Run(t *testing.T) {
 	) (*structpb.Struct, error) {
 		return args, nil
 	})
-	result, err := reg.Run(
-		context.Background(), map[string]interface{}{}, OnNewLogger, config.Ignore)
+	result, err := reg.Run(context.Background(), map[string]interface{}{}, OnNewLogger)
 	assert.NotNil(t, result)
 	assert.Nil(t, err)
 }
@@ -110,6 +110,7 @@ func Test_PluginRegistry_Run(t *testing.T) {
 // Test_HookRegistry_Run_PassDown tests the Run function with the PassDown option.
 func Test_PluginRegistry_Run_PassDown(t *testing.T) {
 	reg := NewPluginRegistry(t)
+	reg.Verification = config.PassDown
 	// The result of the hook will be nil and will be passed down to the next
 	reg.AddHook(OnNewLogger, 0, func(
 		ctx context.Context,
@@ -137,8 +138,7 @@ func Test_PluginRegistry_Run_PassDown(t *testing.T) {
 	result, err := reg.Run(
 		context.Background(),
 		map[string]interface{}{"test": "test"},
-		OnNewLogger,
-		config.PassDown)
+		OnNewLogger)
 	assert.Nil(t, err)
 	assert.NotNil(t, result)
 }
@@ -146,6 +146,7 @@ func Test_PluginRegistry_Run_PassDown(t *testing.T) {
 // Test_HookRegistry_Run_PassDown_2 tests the Run function with the PassDown option.
 func Test_HookRegistry_Run_PassDown_2(t *testing.T) {
 	reg := NewPluginRegistry(t)
+	reg.Verification = config.PassDown
 	// The result of the hook will be nil and will be passed down to the next
 	reg.AddHook(OnNewLogger, 0, func(
 		ctx context.Context,
@@ -178,8 +179,7 @@ func Test_HookRegistry_Run_PassDown_2(t *testing.T) {
 	result, err := reg.Run(
 		context.Background(),
 		map[string]interface{}{"test": "test"},
-		OnNewLogger,
-		config.PassDown)
+		OnNewLogger)
 	assert.Nil(t, err)
 	assert.NotNil(t, result)
 }
@@ -187,6 +187,7 @@ func Test_HookRegistry_Run_PassDown_2(t *testing.T) {
 // Test_HookRegistry_Run_Ignore tests the Run function with the Ignore option.
 func Test_HookRegistry_Run_Ignore(t *testing.T) {
 	reg := NewPluginRegistry(t)
+	reg.Verification = config.Ignore
 	// This should not run, because the return value is not the same as the params
 	reg.AddHook(OnNewLogger, 0, func(
 		ctx context.Context,
@@ -214,8 +215,7 @@ func Test_HookRegistry_Run_Ignore(t *testing.T) {
 	result, err := reg.Run(
 		context.Background(),
 		map[string]interface{}{"test": "test"},
-		OnNewLogger,
-		config.Ignore)
+		OnNewLogger)
 	assert.Nil(t, err)
 	assert.NotNil(t, result)
 }
@@ -223,6 +223,7 @@ func Test_HookRegistry_Run_Ignore(t *testing.T) {
 // Test_HookRegistry_Run_Abort tests the Run function with the Abort option.
 func Test_HookRegistry_Run_Abort(t *testing.T) {
 	reg := NewPluginRegistry(t)
+	reg.Verification = config.Abort
 	// This should not run, because the return value is not the same as the params
 	reg.AddHook(OnNewLogger, 0, func(
 		ctx context.Context,
@@ -244,8 +245,7 @@ func Test_HookRegistry_Run_Abort(t *testing.T) {
 		return output, nil
 	})
 	// The first hook returns nil, and it aborts the execution of the rest of the
-	result, err := reg.Run(
-		context.Background(), map[string]interface{}{}, OnNewLogger, config.Abort)
+	result, err := reg.Run(context.Background(), map[string]interface{}{}, OnNewLogger)
 	assert.Nil(t, err)
 	assert.Equal(t, map[string]interface{}{}, result)
 }
@@ -253,6 +253,7 @@ func Test_HookRegistry_Run_Abort(t *testing.T) {
 // Test_HookRegistry_Run_Remove tests the Run function with the Remove option.
 func Test_HookRegistry_Run_Remove(t *testing.T) {
 	reg := NewPluginRegistry(t)
+	reg.Verification = config.Remove
 	// This should not run, because the return value is not the same as the params
 	reg.AddHook(OnNewLogger, 0, func(
 		ctx context.Context,
@@ -276,8 +277,7 @@ func Test_HookRegistry_Run_Remove(t *testing.T) {
 	// The first hook returns nil, and its signature doesn't match the params,
 	// so its result is ignored. The failing hook is removed from the list and
 	// the execution continues with the next hook in the list.
-	result, err := reg.Run(
-		context.Background(), map[string]interface{}{}, OnNewLogger, config.Remove)
+	result, err := reg.Run(context.Background(), map[string]interface{}{}, OnNewLogger)
 	assert.Nil(t, err)
 	assert.Equal(t, map[string]interface{}{}, result)
 	assert.Equal(t, 1, len(reg.Hooks()[OnNewLogger]))

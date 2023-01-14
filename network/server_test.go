@@ -39,7 +39,7 @@ func TestRunServer(t *testing.T) {
 
 	logger := logging.NewLogger(cfg)
 
-	pluginRegistry := plugin.NewRegistry(config.Loose, config.PassDown, logger)
+	pluginRegistry := plugin.NewRegistry(config.Loose, config.PassDown, config.Accept, logger)
 
 	onTrafficFromClient := func(
 		ctx context.Context,

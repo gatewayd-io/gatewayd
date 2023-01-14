@@ -6,7 +6,7 @@ import (
 )
 
 // GetVerificationPolicy returns the hook verification policy from plugin config file.
-func (p PluginConfig) GetVerificationPolicy() Policy {
+func (p PluginConfig) GetVerificationPolicy() VerificationPolicy {
 	switch p.VerificationPolicy {
 	case "ignore":
 		return Ignore
@@ -19,8 +19,8 @@ func (p PluginConfig) GetVerificationPolicy() Policy {
 	}
 }
 
-// GetPluginCompatPolicy returns the plugin compatibility policy from plugin config file.
-func (p PluginConfig) GetPluginCompatPolicy() CompatPolicy {
+// GetPluginCompatibilityPolicy returns the plugin compatibility policy from plugin config file.
+func (p PluginConfig) GetPluginCompatibilityPolicy() CompatibilityPolicy {
 	switch p.CompatibilityPolicy {
 	case "strict":
 		return Strict
@@ -28,6 +28,18 @@ func (p PluginConfig) GetPluginCompatPolicy() CompatPolicy {
 		return Loose
 	default:
 		return Strict
+	}
+}
+
+// GetAcceptancePolicy returns the acceptance policy from plugin config file.
+func (p PluginConfig) GetAcceptancePolicy() AcceptancePolicy {
+	switch p.AcceptancePolicy {
+	case "accept":
+		return Accept
+	case "reject":
+		return Reject
+	default:
+		return Accept
 	}
 }
 

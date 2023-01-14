@@ -375,8 +375,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 				},
 			},
 			origErr),
-		plugin.OnTrafficFromClient,
-		pr.pluginRegistry.Verification)
+		plugin.OnTrafficFromClient)
 	if err != nil {
 		pr.logger.Error().Err(err).Msg("Error running hook")
 	}
@@ -408,8 +407,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 				},
 			},
 			err),
-		plugin.OnTrafficToServer,
-		pr.pluginRegistry.Verification)
+		plugin.OnTrafficToServer)
 	if err != nil {
 		pr.logger.Error().Err(err).Msg("Error running hook")
 	}
@@ -464,8 +462,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 				},
 			},
 			err),
-		plugin.OnTrafficFromServer,
-		pr.pluginRegistry.Verification)
+		plugin.OnTrafficFromServer)
 	if err != nil {
 		pr.logger.Error().Err(err).Msg("Error running hook")
 	}
@@ -498,8 +495,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 			},
 			err,
 		),
-		plugin.OnTrafficToClient,
-		pr.pluginRegistry.Verification)
+		plugin.OnTrafficToClient)
 	if err != nil {
 		pr.logger.Error().Err(err).Msg("Error running hook")
 	}
