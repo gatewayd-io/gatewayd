@@ -59,8 +59,11 @@ func TestNewLogger_File(t *testing.T) {
 	logger := NewLogger(
 		LoggerConfig{
 			Output:     config.File,
-			FileName:   "test.log",
-			Permission: config.DefaultLogFilePermission,
+			FileName:   "gatewayd.log",
+			MaxSize:    config.DefaultMaxSize,
+			MaxBackups: config.DefaultMaxBackups,
+			MaxAge:     config.DefaultMaxAge,
+			Compress:   config.DefaultCompress,
 			Level:      zerolog.DebugLevel,
 			TimeFormat: zerolog.TimeFormatUnix,
 			StartupMsg: true,
@@ -71,9 +74,9 @@ func TestNewLogger_File(t *testing.T) {
 
 	logger.Error().Str("key", "value").Msg("This is an error")
 
-	f, err := os.ReadFile("test.log")
+	f, err := os.ReadFile("gatewayd.log")
 	assert.NoError(t, err)
 	assert.NotEmpty(t, f)
 	assert.Containsf(t, string(f), "Created a new logger", "The logger did not write to the file")
-	os.Remove("./test.log")
+	os.Remove("gatewayd.log")
 }
