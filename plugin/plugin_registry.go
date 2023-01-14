@@ -17,7 +17,17 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-//nolint:interfacebloat
+type IHook interface {
+	AddHook(hookName string, priority Priority, hookMethod Method)
+	Hooks() map[string]map[Priority]Method
+	Run(
+		ctx context.Context,
+		args map[string]interface{},
+		hookName string,
+		opts ...grpc.CallOption,
+	) (map[string]interface{}, *gerr.GatewayDError)
+}
+
 type IRegistry interface {
 	// Plugin management
 	Add(plugin *Plugin) bool
@@ -30,14 +40,7 @@ type IRegistry interface {
 	RegisterHooks(id Identifier)
 
 	// Hook management
-	AddHook(hookName string, priority Priority, hookMethod Method)
-	Hooks() map[string]map[Priority]Method
-	Run(
-		ctx context.Context,
-		args map[string]interface{},
-		hookName string,
-		opts ...grpc.CallOption,
-	) (map[string]interface{}, *gerr.GatewayDError)
+	IHook
 }
 
 type Registry struct {
