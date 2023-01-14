@@ -491,6 +491,8 @@ func (reg *Registry) LoadPlugins(plugins []config.Plugin) {
 
 		reg.RegisterHooks(plugin.ID)
 		reg.Logger.Debug().Str("name", plugin.ID.Name).Msg("Plugin hooks registered")
+
+		reg.Logger.Info().Str("name", plugin.ID.Name).Msg("Plugin is ready")
 	}
 }
 
