@@ -22,7 +22,7 @@ func NewPluginRegistry(t *testing.T) *Registry {
 		NoColor:    true,
 	}
 	logger := logging.NewLogger(cfg)
-	reg := NewRegistry(config.Loose, config.PassDown, logger)
+	reg := NewRegistry(config.Loose, config.PassDown, config.Accept, logger)
 	return reg
 }
 
