@@ -43,7 +43,6 @@ const (
 	Console LogOutput = iota
 	Stdout
 	Stderr
-	Buffer // Buffer the output and return it as a string (for testing).
 	File
 )
 
