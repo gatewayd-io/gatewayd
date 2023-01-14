@@ -47,6 +47,7 @@ type GatewayDPluginServiceClient interface {
 	OnShutdown(ctx context.Context, in *structpb.Struct, opts ...grpc.CallOption) (*structpb.Struct, error)
 	OnTick(ctx context.Context, in *structpb.Struct, opts ...grpc.CallOption) (*structpb.Struct, error)
 	OnNewClient(ctx context.Context, in *structpb.Struct, opts ...grpc.CallOption) (*structpb.Struct, error)
+	OnHook(ctx context.Context, in *structpb.Struct, opts ...grpc.CallOption) (*structpb.Struct, error)
 }
 
 type gatewayDPluginServiceClient struct {
@@ -255,6 +256,15 @@ func (c *gatewayDPluginServiceClient) OnNewClient(ctx context.Context, in *struc
 	return out, nil
 }
 
+func (c *gatewayDPluginServiceClient) OnHook(ctx context.Context, in *structpb.Struct, opts ...grpc.CallOption) (*structpb.Struct, error) {
+	out := new(structpb.Struct)
+	err := c.cc.Invoke(ctx, "/plugin.v1.GatewayDPluginService/OnHook", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GatewayDPluginServiceServer is the server API for GatewayDPluginService service.
 // All implementations must embed UnimplementedGatewayDPluginServiceServer
 // for forward compatibility
@@ -283,6 +293,7 @@ type GatewayDPluginServiceServer interface {
 	OnShutdown(context.Context, *structpb.Struct) (*structpb.Struct, error)
 	OnTick(context.Context, *structpb.Struct) (*structpb.Struct, error)
 	OnNewClient(context.Context, *structpb.Struct) (*structpb.Struct, error)
+	OnHook(context.Context, *structpb.Struct) (*structpb.Struct, error)
 	mustEmbedUnimplementedGatewayDPluginServiceServer()
 }
 
@@ -355,6 +366,9 @@ func (UnimplementedGatewayDPluginServiceServer) OnTick(context.Context, *structp
 }
 func (UnimplementedGatewayDPluginServiceServer) OnNewClient(context.Context, *structpb.Struct) (*structpb.Struct, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method OnNewClient not implemented")
+}
+func (UnimplementedGatewayDPluginServiceServer) OnHook(context.Context, *structpb.Struct) (*structpb.Struct, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method OnHook not implemented")
 }
 func (UnimplementedGatewayDPluginServiceServer) mustEmbedUnimplementedGatewayDPluginServiceServer() {}
 
@@ -765,6 +779,24 @@ func _GatewayDPluginService_OnNewClient_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _GatewayDPluginService_OnHook_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(structpb.Struct)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GatewayDPluginServiceServer).OnHook(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/plugin.v1.GatewayDPluginService/OnHook",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GatewayDPluginServiceServer).OnHook(ctx, req.(*structpb.Struct))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // GatewayDPluginService_ServiceDesc is the grpc.ServiceDesc for GatewayDPluginService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -859,6 +891,10 @@ var GatewayDPluginService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "OnNewClient",
 			Handler:    _GatewayDPluginService_OnNewClient_Handler,
+		},
+		{
+			MethodName: "OnHook",
+			Handler:    _GatewayDPluginService_OnHook_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

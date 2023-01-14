@@ -48,6 +48,7 @@ type Registry struct {
 	Logger        zerolog.Logger
 	Compatibility config.CompatibilityPolicy
 	Verification  config.VerificationPolicy
+	Acceptance    config.AcceptancePolicy
 }
 
 var _ IRegistry = &Registry{}
@@ -56,6 +57,7 @@ var _ IRegistry = &Registry{}
 func NewRegistry(
 	compatibility config.CompatibilityPolicy,
 	verification config.VerificationPolicy,
+	acceptance config.AcceptancePolicy,
 	logger zerolog.Logger,
 ) *Registry {
 	return &Registry{
@@ -64,6 +66,7 @@ func NewRegistry(
 		Logger:        logger,
 		Compatibility: compatibility,
 		Verification:  verification,
+		Acceptance:    acceptance,
 	}
 }
 
@@ -552,14 +555,25 @@ func (reg *Registry) RegisterHooks(id Identifier) {
 		case OnNewClient:
 			hookMethod = pluginV1.OnNewClient
 		default:
-			reg.Logger.Warn().Fields(map[string]interface{}{
-				"hook":     hookName,
-				"priority": pluginImpl.Priority,
-				"name":     pluginImpl.ID.Name,
-			}).Msg(
-				"Unknown hook, skipping")
+			switch reg.Acceptance {
+			case config.Reject:
+				reg.Logger.Warn().Fields(map[string]interface{}{
+					"hook":     hookName,
+					"priority": pluginImpl.Priority,
+					"name":     pluginImpl.ID.Name,
+				}).Msg("Unknown hook, skipping")
+			default:
+				// Default is to accept custom hooks.
+				reg.Logger.Warn().Fields(map[string]interface{}{
+					"hook":     hookName,
+					"priority": pluginImpl.Priority,
+					"name":     pluginImpl.ID.Name,
+				}).Msg("Registering a custom hook")
+				reg.AddHook(hookName, pluginImpl.Priority, pluginV1.OnHook)
+			}
 			continue
 		}
+
 		reg.Logger.Debug().Fields(map[string]interface{}{
 			"hook":     hookName,
 			"priority": pluginImpl.Priority,
