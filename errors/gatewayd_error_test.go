@@ -1,7 +1,7 @@
 package errors
 
 import (
-	"errors"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -16,9 +16,8 @@ func TestNewGatewayDError(t *testing.T) {
 	assert.Equal(t, err.Message, "test")
 	assert.Nil(t, err.OriginalError)
 
-	origErr := errors.New("original error") //nolint:goerr113
-	assert.NotNil(t, err.Wrap(origErr))
-	assert.Equal(t, err.OriginalError, origErr)
-	assert.Equal(t, origErr, err.Unwrap())
-	assert.Equal(t, err.Error(), "test, OriginalError: original error")
+	assert.NotNil(t, err.Wrap(io.EOF))
+	assert.Equal(t, err.OriginalError, io.EOF)
+	assert.Equal(t, io.EOF, err.Unwrap())
+	assert.Equal(t, err.Error(), "test, OriginalError: EOF")
 }

@@ -49,12 +49,15 @@ type Client struct {
 
 type Logger struct {
 	Output     string `koanf:"output"`
-	FileName   string `koanf:"fileName"`
 	TimeFormat string `koanf:"timeFormat"`
 	Level      string `koanf:"level"`
-	Permission uint32 `koanf:"permission"`
 	NoColor    bool   `koanf:"noColor"`
 	StartupMsg bool   `koanf:"startupMsg"`
+	FileName   string `koanf:"fileName"`
+	MaxSize    int    `koanf:"maxSize"`
+	MaxBackups int    `koanf:"maxBackups"`
+	MaxAge     int    `koanf:"maxAge"`
+	Compress   bool   `koanf:"compress"`
 }
 
 type Pool struct {
@@ -103,7 +106,10 @@ func LoadGlobalConfigDefaults(cfg *koanf.Koanf) {
 				"output":     DefaultLogOutput,
 				"level":      DefaultLogLevel,
 				"fileName":   DefaultLogFileName,
-				"permission": DefaultLogFilePermission,
+				"maxSize":    DefaultMaxSize,
+				"maxBackups": DefaultMaxBackups,
+				"maxAge":     DefaultMaxAge,
+				"compress":   DefaultCompress,
 			},
 		},
 		"clients": map[string]interface{}{
