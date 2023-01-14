@@ -1,60 +1,40 @@
 package logging
 
 import (
-	"bytes"
-	"encoding/json"
 	"os"
 	"testing"
 
 	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
+	"github.com/zenizh/go-capturer"
 )
 
-// TestNewLogger tests the creation of a new logger.
-func TestNewLogger(t *testing.T) {
-	var buffer bytes.Buffer
-	logger := NewLoggerWithBuffer(
-		LoggerConfig{
-			Output:     config.Buffer, // This is only used for testing.
-			Level:      zerolog.DebugLevel,
-			TimeFormat: zerolog.TimeFormatUnix,
-			StartupMsg: true,
-			NoColor:    true,
-		},
-		&buffer,
-	)
-	assert.NotNil(t, logger)
+// TestNewLogger_Console tests the creation of a new logger with the console output.
+func TestNewLogger_Console(t *testing.T) {
+	consoleStdout := capturer.CaptureStdout(func() {
+		logger := NewLogger(
+			LoggerConfig{
+				Output:     config.Console,
+				Level:      zerolog.DebugLevel,
+				TimeFormat: zerolog.TimeFormatUnix,
+				StartupMsg: true,
+				NoColor:    true,
+			},
+		)
+		assert.NotNil(t, logger)
 
-	var msg interface{}
-	err := json.Unmarshal(buffer.Bytes(), &msg)
-	assert.NoError(t, err)
+		logger.Error().Str("key", "value").Msg("This is an error")
+	})
 
-	if jsonMsg, ok := msg.(map[string]interface{}); ok {
-		// This is created when the logger is created and
-		// is used to test that the logger is working.
-		assert.Equal(t, "Created a new logger", jsonMsg["message"])
-		assert.Equal(t, "debug", jsonMsg["level"])
-	} else {
-		t.Fail()
-	}
-
-	buffer.Reset()
-
-	logger.Error().Str("key", "value").Msg("This is an error")
-	var msg2 interface{}
-	err = json.Unmarshal(buffer.Bytes(), &msg2)
-	assert.NoError(t, err)
-
-	if jsonMsg, ok := msg2.(map[string]interface{}); ok {
-		assert.Equal(t, "This is an error", jsonMsg["message"])
-		assert.Equal(t, "error", jsonMsg["level"])
-		assert.Equal(t, "value", jsonMsg["key"])
-	} else {
-		t.Fail()
-	}
+	assert.Contains(t, consoleStdout, "Created a new logger")
+	assert.Contains(t, consoleStdout, "DBG")
+	assert.Contains(t, consoleStdout, "This is an error")
+	assert.Contains(t, consoleStdout, "ERR")
+	assert.Contains(t, consoleStdout, "key=value")
 }
 
+// TestNewLogger_File tests the creation of a new logger with the file output.
 func TestNewLogger_File(t *testing.T) {
 	logger := NewLogger(
 		LoggerConfig{
@@ -79,4 +59,52 @@ func TestNewLogger_File(t *testing.T) {
 	assert.NotEmpty(t, f)
 	assert.Containsf(t, string(f), "Created a new logger", "The logger did not write to the file")
 	os.Remove("gatewayd.log")
+}
+
+// TestNewLogger_Stdout tests the creation of a new logger with the stdout output.
+func TestNewLogger_Stdout(t *testing.T) {
+	stdout := capturer.CaptureStdout(func() {
+		logger := NewLogger(
+			LoggerConfig{
+				Output:     config.Stdout,
+				Level:      zerolog.DebugLevel,
+				TimeFormat: zerolog.TimeFormatUnix,
+				StartupMsg: true,
+				NoColor:    true,
+			},
+		)
+		assert.NotNil(t, logger)
+
+		logger.Error().Str("key", "value").Msg("This is an error")
+	})
+
+	assert.Contains(t, stdout, "Created a new logger")
+	assert.Contains(t, stdout, `"level":"debug"`)
+	assert.Contains(t, stdout, "This is an error")
+	assert.Contains(t, stdout, `"level":"error"`)
+	assert.Contains(t, stdout, `"key":"value"`)
+}
+
+// TestNewLogger_Stderr tests the creation of a new logger with the stderr output.
+func TestNewLogger_Stderr(t *testing.T) {
+	stderr := capturer.CaptureStderr(func() {
+		logger := NewLogger(
+			LoggerConfig{
+				Output:     config.Stderr,
+				Level:      zerolog.DebugLevel,
+				TimeFormat: zerolog.TimeFormatUnix,
+				StartupMsg: true,
+				NoColor:    true,
+			},
+		)
+		assert.NotNil(t, logger)
+
+		logger.Error().Str("key", "value").Msg("This is an error")
+	})
+
+	assert.Contains(t, stderr, "Created a new logger")
+	assert.Contains(t, stderr, `"level":"debug"`)
+	assert.Contains(t, stderr, "This is an error")
+	assert.Contains(t, stderr, `"level":"error"`)
+	assert.Contains(t, stderr, `"key":"value"`)
 }
