@@ -210,9 +210,6 @@ func TestRunServer(t *testing.T) {
 					},
 					logger)
 
-				assert.Equal(t, 1, proxy.availableConnections.Size())
-				assert.Equal(t, 1, proxy.busyConnections.Size())
-
 				assert.NotNil(t, client)
 				sent, err := client.Send(CreatePgStartupPacket())
 				assert.Nil(t, err)
@@ -231,6 +228,9 @@ func TestRunServer(t *testing.T) {
 				assert.Equal(t, msg, data[5:size])
 				// AuthenticationOk.
 				assert.Equal(t, uint8(0x52), data[0])
+
+				assert.Equal(t, 1, proxy.availableConnections.Size())
+				assert.Equal(t, 1, proxy.busyConnections.Size())
 
 				// Clean up.
 				server.Shutdown()
