@@ -29,15 +29,12 @@ func TestRunServer(t *testing.T) {
 		errs <- err
 	}
 
-	// Create a logger.
-	cfg := logging.LoggerConfig{
+	logger := logging.NewLogger(logging.LoggerConfig{
 		Output:     config.Console,
 		TimeFormat: zerolog.TimeFormatUnix,
 		Level:      zerolog.DebugLevel,
 		NoColor:    true,
-	}
-
-	logger := logging.NewLogger(cfg)
+	})
 
 	pluginRegistry := plugin.NewRegistry(config.Loose, config.PassDown, config.Accept, logger)
 
@@ -69,6 +66,34 @@ func TestRunServer(t *testing.T) {
 	}
 	pluginRegistry.AddHook(plugin.OnTrafficFromClient, 1, onTrafficFromClient)
 
+	onTrafficToServer := func(
+		ctx context.Context,
+		params *structpb.Struct,
+		opts ...grpc.CallOption,
+	) (*structpb.Struct, error) {
+		paramsMap := params.AsMap()
+		if paramsMap["request"] == nil {
+			errs <- errors.New("request is nil") //nolint:goerr113
+		}
+
+		logger.Info().Msg("Ingress traffic")
+		// Decode the request.
+		// The request is []byte, but it is base64-encoded as a string
+		// via using the structpb.NewStruct function.
+		if req, ok := paramsMap["request"].(string); ok {
+			if request, err := base64.StdEncoding.DecodeString(req); err == nil {
+				assert.Equal(t, CreatePgStartupPacket(), request)
+			} else {
+				errs <- err
+			}
+		} else {
+			errs <- errors.New("request is not a []byte") //nolint:goerr113
+		}
+		assert.Empty(t, paramsMap["error"])
+		return params, nil
+	}
+	pluginRegistry.AddHook(plugin.OnTrafficToServer, 1, onTrafficToServer)
+
 	onTrafficFromServer := func(
 		ctx context.Context,
 		params *structpb.Struct,
@@ -93,6 +118,31 @@ func TestRunServer(t *testing.T) {
 		return params, nil
 	}
 	pluginRegistry.AddHook(plugin.OnTrafficFromServer, 1, onTrafficFromServer)
+
+	onTrafficToClient := func(
+		ctx context.Context,
+		params *structpb.Struct,
+		opts ...grpc.CallOption,
+	) (*structpb.Struct, error) {
+		paramsMap := params.AsMap()
+		if paramsMap["response"] == nil {
+			errs <- errors.New("response is nil") //nolint:goerr113
+		}
+
+		logger.Info().Msg("Egress traffic")
+		if resp, ok := paramsMap["response"].(string); ok {
+			if response, err := base64.StdEncoding.DecodeString(resp); err == nil {
+				assert.Equal(t, CreatePostgreSQLPacket('R', []byte{0x0, 0x0, 0x0, 0x3}), response)
+			} else {
+				errs <- err
+			}
+		} else {
+			errs <- errors.New("response is not a []byte") //nolint:goerr113
+		}
+		assert.Empty(t, paramsMap["error"])
+		return params, nil
+	}
+	pluginRegistry.AddHook(plugin.OnTrafficToClient, 1, onTrafficToClient)
 
 	clientConfig := config.Client{
 		Network:            "tcp",
