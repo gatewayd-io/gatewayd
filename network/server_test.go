@@ -20,7 +20,7 @@ import (
 
 // TestRunServer tests an entire server run with a single client connection and hooks.
 //
-//nolint:funlen
+//nolint:funlen,maintidx
 func TestRunServer(t *testing.T) {
 	errs := make(chan error)
 
