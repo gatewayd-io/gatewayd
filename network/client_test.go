@@ -10,27 +10,21 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestNewClient tests the NewClient function.
-func TestNewClient(t *testing.T) {
+// CreateNewClient creates a new client for testing.
+func CreateNewClient(t *testing.T) (*Client, *embeddedpostgres.EmbeddedPostgres) {
+	t.Helper()
+
 	postgres := embeddedpostgres.NewDatabase()
 	if err := postgres.Start(); err != nil {
 		t.Fatal(err)
 	}
 
-	defer func() {
-		if err := postgres.Stop(); err != nil {
-			t.Fatal(err)
-		}
-	}()
-
-	cfg := logging.LoggerConfig{
+	logger := logging.NewLogger(logging.LoggerConfig{
 		Output:     config.Console,
 		TimeFormat: zerolog.TimeFormatUnix,
 		Level:      zerolog.DebugLevel,
 		NoColor:    true,
-	}
-
-	logger := logging.NewLogger(cfg)
+	})
 
 	client := NewClient(
 		&config.Client{
@@ -44,6 +38,18 @@ func TestNewClient(t *testing.T) {
 			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 		},
 		logger)
+
+	return client, postgres
+}
+
+// TestNewClient tests the NewClient function.
+func TestNewClient(t *testing.T) {
+	client, postgres := CreateNewClient(t)
+	defer func() {
+		if err := postgres.Stop(); err != nil {
+			t.Fatal(err)
+		}
+	}()
 	defer client.Close()
 
 	assert.Equal(t, "tcp", client.Network)
@@ -55,38 +61,12 @@ func TestNewClient(t *testing.T) {
 
 // TestSend tests the Send function.
 func TestSend(t *testing.T) {
-	postgres := embeddedpostgres.NewDatabase()
-	if err := postgres.Start(); err != nil {
-		t.Fatal(err)
-	}
-
+	client, postgres := CreateNewClient(t)
 	defer func() {
 		if err := postgres.Stop(); err != nil {
 			t.Fatal(err)
 		}
 	}()
-
-	cfg := logging.LoggerConfig{
-		Output:     config.Console,
-		TimeFormat: zerolog.TimeFormatUnix,
-		Level:      zerolog.DebugLevel,
-		NoColor:    true,
-	}
-
-	logger := logging.NewLogger(cfg)
-
-	client := NewClient(
-		&config.Client{
-			Network:            "tcp",
-			Address:            "localhost:5432",
-			ReceiveBufferSize:  config.DefaultBufferSize,
-			ReceiveChunkSize:   config.DefaultChunkSize,
-			ReceiveDeadline:    config.DefaultReceiveDeadline,
-			SendDeadline:       config.DefaultSendDeadline,
-			TCPKeepAlive:       false,
-			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
-		},
-		logger)
 	defer client.Close()
 
 	assert.NotNil(t, client)
@@ -98,38 +78,12 @@ func TestSend(t *testing.T) {
 
 // TestReceive tests the Receive function.
 func TestReceive(t *testing.T) {
-	postgres := embeddedpostgres.NewDatabase()
-	if err := postgres.Start(); err != nil {
-		t.Fatal(err)
-	}
-
+	client, postgres := CreateNewClient(t)
 	defer func() {
 		if err := postgres.Stop(); err != nil {
 			t.Fatal(err)
 		}
 	}()
-
-	cfg := logging.LoggerConfig{
-		Output:     config.Console,
-		TimeFormat: zerolog.TimeFormatUnix,
-		Level:      zerolog.DebugLevel,
-		NoColor:    true,
-	}
-
-	logger := logging.NewLogger(cfg)
-
-	client := NewClient(
-		&config.Client{
-			Network:            "tcp",
-			Address:            "localhost:5432",
-			ReceiveBufferSize:  config.DefaultBufferSize,
-			ReceiveChunkSize:   config.DefaultChunkSize,
-			ReceiveDeadline:    config.DefaultReceiveDeadline,
-			SendDeadline:       config.DefaultSendDeadline,
-			TCPKeepAlive:       false,
-			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
-		},
-		logger)
 	defer client.Close()
 
 	assert.NotNil(t, client)
@@ -151,38 +105,13 @@ func TestReceive(t *testing.T) {
 
 // TestClose tests the Close function.
 func TestClose(t *testing.T) {
-	postgres := embeddedpostgres.NewDatabase()
-	if err := postgres.Start(); err != nil {
-		t.Fatal(err)
-	}
-
+	client, postgres := CreateNewClient(t)
 	defer func() {
 		if err := postgres.Stop(); err != nil {
 			t.Fatal(err)
 		}
 	}()
 
-	cfg := logging.LoggerConfig{
-		Output:     config.Console,
-		TimeFormat: zerolog.TimeFormatUnix,
-		Level:      zerolog.DebugLevel,
-		NoColor:    true,
-	}
-
-	logger := logging.NewLogger(cfg)
-
-	client := NewClient(
-		&config.Client{
-			Network:            "tcp",
-			Address:            "localhost:5432",
-			ReceiveBufferSize:  config.DefaultBufferSize,
-			ReceiveChunkSize:   config.DefaultChunkSize,
-			ReceiveDeadline:    config.DefaultReceiveDeadline,
-			SendDeadline:       config.DefaultSendDeadline,
-			TCPKeepAlive:       false,
-			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
-		},
-		logger)
 	assert.NotNil(t, client)
 	client.Close()
 	assert.Equal(t, "", client.ID)
@@ -190,4 +119,18 @@ func TestClose(t *testing.T) {
 	assert.Equal(t, "", client.Address)
 	assert.Nil(t, client.Conn)
 	assert.Equal(t, config.DefaultBufferSize, client.ReceiveBufferSize)
+}
+
+// TestIsConnected tests the IsConnected function.
+func TestIsConnected(t *testing.T) {
+	client, postgres := CreateNewClient(t)
+	defer func() {
+		if err := postgres.Stop(); err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	assert.True(t, client.IsConnected())
+	client.Close()
+	assert.False(t, client.IsConnected())
 }

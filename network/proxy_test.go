@@ -25,14 +25,12 @@ func TestNewProxy(t *testing.T) {
 		}
 	}()
 
-	cfg := logging.LoggerConfig{
+	logger := logging.NewLogger(logging.LoggerConfig{
 		Output:     config.Console,
 		TimeFormat: zerolog.TimeFormatUnix,
 		Level:      zerolog.DebugLevel,
 		NoColor:    true,
-	}
-
-	logger := logging.NewLogger(cfg)
+	})
 
 	// Create a connection pool
 	pool := pool.NewPool(config.EmptyPoolCapacity)
@@ -60,6 +58,7 @@ func TestNewProxy(t *testing.T) {
 		config.DefaultHealthCheckPeriod,
 		nil,
 		logger)
+	defer proxy.Shutdown()
 
 	assert.NotNil(t, proxy)
 	assert.Equal(t, 0, proxy.busyConnections.Size(), "Proxy should have no connected clients")
@@ -69,20 +68,20 @@ func TestNewProxy(t *testing.T) {
 	}
 	assert.Equal(t, false, proxy.Elastic)
 	assert.Equal(t, false, proxy.ReuseElasticClients)
-
-	proxy.availableConnections.Clear()
+	assert.Equal(t, false, proxy.IsExhausted())
+	c, err := proxy.IsHealty(client)
+	assert.Nil(t, err)
+	assert.Equal(t, client, c)
 }
 
 // TestNewProxyElastic tests the creation of a new proxy with an elastic connection pool.
 func TestNewProxyElastic(t *testing.T) {
-	cfg := logging.LoggerConfig{
+	logger := logging.NewLogger(logging.LoggerConfig{
 		Output:     config.Console,
 		TimeFormat: zerolog.TimeFormatUnix,
 		Level:      zerolog.DebugLevel,
 		NoColor:    true,
-	}
-
-	logger := logging.NewLogger(cfg)
+	})
 
 	// Create a connection pool
 	pool := pool.NewPool(config.EmptyPoolCapacity)
@@ -104,6 +103,7 @@ func TestNewProxyElastic(t *testing.T) {
 			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 		},
 		logger)
+	defer proxy.Shutdown()
 
 	assert.NotNil(t, proxy)
 	assert.Equal(t, 0, proxy.busyConnections.Size())
@@ -113,6 +113,4 @@ func TestNewProxyElastic(t *testing.T) {
 	assert.Equal(t, "tcp", proxy.ClientConfig.Network)
 	assert.Equal(t, "localhost:5432", proxy.ClientConfig.Address)
 	assert.Equal(t, config.DefaultBufferSize, proxy.ClientConfig.ReceiveBufferSize)
-
-	proxy.availableConnections.Clear()
 }
