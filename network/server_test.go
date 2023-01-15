@@ -194,7 +194,7 @@ func TestRunServer(t *testing.T) {
 	}(server, errs)
 
 	//nolint:thelper
-	go func(t *testing.T, server *Server, errs chan error) {
+	go func(t *testing.T, server *Server, proxy *Proxy, errs chan error) {
 		for {
 			if server.IsRunning() {
 				client := NewClient(
@@ -209,6 +209,9 @@ func TestRunServer(t *testing.T) {
 						TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 					},
 					logger)
+
+				assert.Equal(t, 1, proxy.availableConnections.Size())
+				assert.Equal(t, 1, proxy.busyConnections.Size())
 
 				assert.NotNil(t, client)
 				sent, err := client.Send(CreatePgStartupPacket())
@@ -238,7 +241,7 @@ func TestRunServer(t *testing.T) {
 				break
 			}
 		}
-	}(t, server, errs)
+	}(t, server, proxy, errs)
 
 	for err := range errs {
 		if err != nil {
