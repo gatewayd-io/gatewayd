@@ -10,7 +10,6 @@ const (
 )
 
 var (
-	// List of built-in metrics names.
 	ClientConnections = promauto.NewGauge(prometheus.GaugeOpts{
 		Namespace: Namespace,
 		Name:      "client_connections",

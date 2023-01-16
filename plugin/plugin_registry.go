@@ -191,8 +191,6 @@ func (reg *Registry) AddHook(hookName string, priority Priority, hookMethod Meth
 // If the verification mode is set to PassDown, the extra keys/values in the result
 // are passed down to the next  The verification mode is set to PassDown by default.
 // The opts are passed to the hooks as well to allow them to use the grpc.CallOption.
-//
-//nolint:funlen
 func (reg *Registry) Run(
 	ctx context.Context,
 	args map[string]interface{},
@@ -307,8 +305,6 @@ func (reg *Registry) Run(
 }
 
 // LoadPlugins loads plugins from the config file.
-//
-//nolint:funlen
 func (reg *Registry) LoadPlugins(plugins []config.Plugin) {
 	// TODO: Append built-in plugins to the list of plugins
 	// Built-in plugins are plugins that are compiled and shipped with the gatewayd binary.
@@ -497,8 +493,6 @@ func (reg *Registry) LoadPlugins(plugins []config.Plugin) {
 }
 
 // RegisterHooks registers the hooks for the given plugin.
-//
-//nolint:funlen
 func (reg *Registry) RegisterHooks(id Identifier) {
 	pluginImpl := reg.Get(id)
 	reg.Logger.Debug().Str("name", pluginImpl.ID.Name).Msg(

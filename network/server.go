@@ -322,8 +322,6 @@ func (s *Server) IsRunning() bool {
 }
 
 // NewServer creates a new server.
-//
-//nolint:funlen
 func NewServer(
 	network, address string,
 	softLimit, hardLimit uint64,

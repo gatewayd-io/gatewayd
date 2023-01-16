@@ -37,8 +37,6 @@ type Client struct {
 var _ IClient = &Client{}
 
 // NewClient creates a new client.
-//
-//nolint:funlen
 func NewClient(clientConfig *config.Client, logger zerolog.Logger) *Client {
 	var client Client
 
