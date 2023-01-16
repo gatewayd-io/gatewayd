@@ -8,6 +8,7 @@ import (
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/logging"
+	"github.com/gatewayd-io/gatewayd/metrics"
 	pluginV1 "github.com/gatewayd-io/gatewayd/plugin/v1"
 	"github.com/gatewayd-io/gatewayd/pool"
 	goplugin "github.com/hashicorp/go-plugin"
@@ -289,7 +290,7 @@ func (reg *Registry) Run(
 			if idx == 0 {
 				returnVal = params
 			}
-		case config.PassDown:
+		case config.PassDown: // fallthrough
 		default:
 			returnVal = result
 		}
@@ -299,6 +300,8 @@ func (reg *Registry) Run(
 	for _, priority := range removeList {
 		delete(reg.hooks[hookName], priority)
 	}
+
+	metrics.PluginHooksExecuted.Inc()
 
 	return returnVal.AsMap(), nil
 }
@@ -312,11 +315,6 @@ func (reg *Registry) LoadPlugins(plugins []config.Plugin) {
 
 	// Add each plugin to the registry.
 	for priority, pCfg := range plugins {
-		// Skip the top-level "plugins" key.
-		if pCfg.Name == "plugins" {
-			continue
-		}
-
 		reg.Logger.Debug().Str("name", pCfg.Name).Msg("Loading plugin")
 		plugin := &Plugin{
 			ID: Identifier{
@@ -493,6 +491,7 @@ func (reg *Registry) LoadPlugins(plugins []config.Plugin) {
 		reg.RegisterHooks(plugin.ID)
 		reg.Logger.Debug().Str("name", plugin.ID.Name).Msg("Plugin hooks registered")
 
+		metrics.PluginsLoaded.Inc()
 		reg.Logger.Info().Str("name", plugin.ID.Name).Msg("Plugin is ready")
 	}
 }
@@ -573,6 +572,7 @@ func (reg *Registry) RegisterHooks(id Identifier) {
 					"priority": pluginImpl.Priority,
 					"name":     pluginImpl.ID.Name,
 				}).Msg("Registering a custom hook")
+				metrics.PluginHooksRegistered.Inc()
 				reg.AddHook(hookName, pluginImpl.Priority, pluginV1.OnHook)
 			}
 			continue
@@ -583,6 +583,7 @@ func (reg *Registry) RegisterHooks(id Identifier) {
 			"priority": pluginImpl.Priority,
 			"name":     pluginImpl.ID.Name,
 		}).Msg("Registering hook")
+		metrics.PluginHooksRegistered.Inc()
 		reg.AddHook(hookName, pluginImpl.Priority, hookMethod)
 	}
 }

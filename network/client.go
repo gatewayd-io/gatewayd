@@ -7,6 +7,7 @@ import (
 
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
+	"github.com/gatewayd-io/gatewayd/metrics"
 	"github.com/rs/zerolog"
 )
 
@@ -140,6 +141,8 @@ func NewClient(clientConfig *config.Client, logger zerolog.Logger) *Client {
 	client.ID = GetID(
 		conn.LocalAddr().Network(), conn.LocalAddr().String(), config.DefaultSeed, logger)
 
+	metrics.ServerConnections.Inc()
+
 	return &client
 }
 
@@ -156,6 +159,9 @@ func (c *Client) Send(data []byte) (int, *gerr.GatewayDError) {
 			"address": c.Address,
 		},
 	).Msg("Sent data to server")
+
+	metrics.BytesSentToServer.Observe(float64(sent))
+
 	return sent, nil
 }
 
@@ -172,9 +178,11 @@ func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 			received += read
 			buffer = append(buffer, chunk[:read]...)
 			c.logger.Error().Err(err).Msg("Couldn't receive data from the server")
+			metrics.BytesReceivedFromServer.Observe(float64(received))
 			return received, buffer, gerr.ErrClientReceiveFailed.Wrap(err)
 		case err != nil:
 			c.logger.Error().Err(err).Msg("Couldn't receive data from the server")
+			metrics.BytesReceivedFromServer.Observe(float64(received))
 			return received, buffer, gerr.ErrClientReceiveFailed.Wrap(err)
 		default:
 			received += read
@@ -185,6 +193,7 @@ func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 			break
 		}
 	}
+	metrics.BytesReceivedFromServer.Observe(float64(received))
 	return received, buffer, nil
 }
 
@@ -198,6 +207,8 @@ func (c *Client) Close() {
 	c.Conn = nil
 	c.Address = ""
 	c.Network = ""
+
+	metrics.ServerConnections.Dec()
 }
 
 // IsConnected checks if the client is still connected to the server.
