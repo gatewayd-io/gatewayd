@@ -3,6 +3,8 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
@@ -18,6 +20,7 @@ import (
 	"github.com/knadh/koanf/providers/confmap"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/panjf2000/gnet/v2"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 )
@@ -121,6 +124,34 @@ var runCmd = &cobra.Command{
 			DefaultLogger.Fatal().Err(err).Msg("Failed to unmarshal updated global configuration")
 			pluginRegistry.Shutdown()
 			os.Exit(gerr.FailedToLoadGlobalConfig)
+		}
+
+		if gConfig.Metrics[config.Default].Enabled {
+			// Start the metrics server if enabled.
+			go func(
+				gConfig config.GlobalConfig,
+				logger zerolog.Logger,
+				pluginRegistry *plugin.Registry,
+			) {
+				http.Handle(gConfig.Metrics[config.Default].Path, promhttp.Handler())
+
+				fqdn, err := url.Parse("http://" + gConfig.Metrics[config.Default].Address)
+				if err != nil {
+					logger.Fatal().Err(err).Msg("Failed to parse metrics address")
+					pluginRegistry.Shutdown()
+					os.Exit(gerr.FailedToStartMetricsServer)
+				}
+
+				address, err := url.JoinPath(fqdn.String(), gConfig.Metrics[config.Default].Path)
+				if err != nil {
+					logger.Fatal().Err(err).Msg("Failed to parse metrics path")
+					pluginRegistry.Shutdown()
+					os.Exit(gerr.FailedToStartMetricsServer)
+				}
+
+				logger.Info().Str("address", address).Msg("Metrics are exposed")
+				http.ListenAndServe(gConfig.Metrics[config.Default].Address, nil)
+			}(gConfig, DefaultLogger, pluginRegistry)
 		}
 
 		// Create a new logger from the config.
