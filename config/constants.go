@@ -89,4 +89,8 @@ const (
 	// Utility constants.
 	DefaultSeed        = 1000
 	ChecksumBufferSize = 65536
+
+	// Metrics constants.
+	DefaultMetricsAddress = "127.0.0.1:2112"
+	DefaultMetricsPath    = "/metrics"
 )

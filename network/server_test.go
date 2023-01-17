@@ -19,8 +19,6 @@ import (
 )
 
 // TestRunServer tests an entire server run with a single client connection and hooks.
-//
-//nolint:funlen,maintidx
 func TestRunServer(t *testing.T) {
 	errs := make(chan error)
 
@@ -231,6 +229,9 @@ func TestRunServer(t *testing.T) {
 
 				assert.Equal(t, 1, proxy.availableConnections.Size())
 				assert.Equal(t, 1, proxy.busyConnections.Size())
+
+				// Test Prometheus metrics.
+				CollectAndComparePrometheusMetrics(t)
 
 				// Clean up.
 				server.Shutdown()

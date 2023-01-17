@@ -3,6 +3,8 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
@@ -18,6 +20,7 @@ import (
 	"github.com/knadh/koanf/providers/confmap"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/panjf2000/gnet/v2"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 )
@@ -121,6 +124,40 @@ var runCmd = &cobra.Command{
 			DefaultLogger.Fatal().Err(err).Msg("Failed to unmarshal updated global configuration")
 			pluginRegistry.Shutdown()
 			os.Exit(gerr.FailedToLoadGlobalConfig)
+		}
+
+		if gConfig.Metrics[config.Default].Enabled {
+			// Start the metrics server if enabled.
+			go func(
+				gConfig config.GlobalConfig,
+				logger zerolog.Logger,
+				pluginRegistry *plugin.Registry,
+			) {
+				http.Handle(gConfig.Metrics[config.Default].Path, promhttp.Handler())
+
+				fqdn, err := url.Parse("http://" + gConfig.Metrics[config.Default].Address)
+				if err != nil {
+					logger.Fatal().Err(err).Msg("Failed to parse metrics address")
+					pluginRegistry.Shutdown()
+					os.Exit(gerr.FailedToStartMetricsServer)
+				}
+
+				address, err := url.JoinPath(fqdn.String(), gConfig.Metrics[config.Default].Path)
+				if err != nil {
+					logger.Fatal().Err(err).Msg("Failed to parse metrics path")
+					pluginRegistry.Shutdown()
+					os.Exit(gerr.FailedToStartMetricsServer)
+				}
+
+				logger.Info().Str("address", address).Msg("Metrics are exposed")
+				//nolint:gosec
+				if err = http.ListenAndServe(
+					gConfig.Metrics[config.Default].Address, nil); err != nil {
+					logger.Fatal().Err(err).Msg("Failed to start metrics server")
+					pluginRegistry.Shutdown()
+					os.Exit(gerr.FailedToStartMetricsServer)
+				}
+			}(gConfig, DefaultLogger, pluginRegistry)
 		}
 
 		// Create a new logger from the config.
@@ -313,7 +350,7 @@ var runCmd = &cobra.Command{
 		)
 		signalsCh := make(chan os.Signal, 1)
 		signal.Notify(signalsCh, signals...)
-		go func(pluginRegistry *plugin.Registry) {
+		go func(pluginRegistry *plugin.Registry, logger zerolog.Logger, server *network.Server) {
 			for sig := range signalsCh {
 				for _, s := range signals {
 					if sig != s {
@@ -333,11 +370,14 @@ var runCmd = &cobra.Command{
 					}
 				}
 			}
-		}(pluginRegistry)
+		}(pluginRegistry, logger, server)
 
 		// Run the server.
 		if err := server.Run(); err != nil {
 			logger.Error().Err(err).Msg("Failed to start server")
+			server.Shutdown()
+			pluginRegistry.Shutdown()
+			os.Exit(gerr.FailedToStartServer)
 		}
 	},
 }
@@ -347,8 +387,8 @@ func init() {
 
 	runCmd.Flags().StringP(
 		"config", "c", "./gatewayd.yaml",
-		"config file (default is ./gatewayd.yaml)")
+		"Global config file")
 	runCmd.Flags().StringP(
 		"plugin-config", "p", "./gatewayd_plugins.yaml",
-		"plugin config file (default is ./gatewayd_plugins.yaml)")
+		"Plugin config file")
 }
