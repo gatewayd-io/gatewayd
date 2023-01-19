@@ -93,59 +93,63 @@ func (m *Merger) Start() {
 	// Merge metrics from plugins by reading from their unix domain sockets.
 	// This is done periodically.
 
-	if _, err := m.metricsMergerScheduler.Every(m.MetricsMergerPeriod).SingletonMode().StartAt(time.Now().Add(m.MetricsMergerPeriod)).Do(func() {
-		readers, err := m.ReadMetrics()
-		if err != nil {
-			m.Logger.Error().Err(err).Msg("Failed to read plugin metrics")
-		}
+	if _, err := m.metricsMergerScheduler.
+		Every(m.MetricsMergerPeriod).
+		SingletonMode().
+		StartAt(time.Now().Add(m.MetricsMergerPeriod)).
+		Do(func() {
+			readers, err := m.ReadMetrics()
+			if err != nil {
+				m.Logger.Error().Err(err).Msg("Failed to read plugin metrics")
+			}
 
-		// TODO: There should be a better, more efficient way to merge metrics from plugins.
-		var metricsOutput bytes.Buffer
-		enc := expfmt.NewEncoder(io.Writer(&metricsOutput), expfmt.FmtText)
-		for plugin, reader := range readers {
-			if reader != nil {
-				defer reader.Close()
+			// TODO: There should be a better, more efficient way to merge metrics from plugins.
+			var metricsOutput bytes.Buffer
+			enc := expfmt.NewEncoder(io.Writer(&metricsOutput), expfmt.FmtText)
+			for plugin, reader := range readers {
+				if reader != nil {
+					defer reader.Close()
 
-				// Retrieve plugin metrics.
-				textParser := expfmt.TextParser{}
-				if metrics, err := textParser.TextToMetricFamilies(reader); err != nil {
-					m.Logger.Error().Err(err).Msg("Failed to parse plugin metrics")
-				} else {
-					metricFamilies := map[string]*promClient.MetricFamily{}
+					// Retrieve plugin metrics.
+					textParser := expfmt.TextParser{}
+					if metrics, err := textParser.TextToMetricFamilies(reader); err != nil {
+						m.Logger.Error().Err(err).Msg("Failed to parse plugin metrics")
+					} else {
+						metricFamilies := map[string]*promClient.MetricFamily{}
 
-					for _, metric := range metrics {
-						for _, sample := range metric.Metric {
-							// Add plugin label to each metric.
-							sample.Label = append(sample.Label, &promClient.LabelPair{
-								Name:  proto.String("plugin"),
-								Value: proto.String(strings.ReplaceAll(plugin, "-", "_")),
-							})
+						for _, metric := range metrics {
+							for _, sample := range metric.Metric {
+								// Add plugin label to each metric.
+								sample.Label = append(sample.Label, &promClient.LabelPair{
+									Name:  proto.String("plugin"),
+									Value: proto.String(strings.ReplaceAll(plugin, "-", "_")),
+								})
+							}
+							metricFamilies[metric.GetName()] = metric
 						}
-						metricFamilies[metric.GetName()] = metric
-					}
 
-					metricNames := maps.Keys(metricFamilies)
-					sort.Strings(metricNames)
+						metricNames := maps.Keys(metricFamilies)
+						sort.Strings(metricNames)
 
-					for _, metric := range metricNames {
-						err := enc.Encode(metricFamilies[metric])
-						if err != nil {
-							m.Logger.Error().Err(err).Msg("Failed to encode plugin metrics")
-							return
+						for _, metric := range metricNames {
+							err := enc.Encode(metricFamilies[metric])
+							if err != nil {
+								m.Logger.Error().Err(err).Msg("Failed to encode plugin metrics")
+								return
+							}
 						}
-					}
 
-					m.Logger.Debug().Fields(
-						map[string]interface{}{
-							"plugin": plugin,
-							"count":  len(metricNames),
-						}).Msgf("Processed and merged metrics")
+						m.Logger.Debug().Fields(
+							map[string]interface{}{
+								"plugin": plugin,
+								"count":  len(metricNames),
+							}).Msgf("Processed and merged metrics")
+					}
 				}
 			}
-		}
 
-		m.OutputMetrics = metricsOutput.Bytes()
-	}); err != nil {
+			m.OutputMetrics = metricsOutput.Bytes()
+		}); err != nil {
 		m.Logger.Error().Err(err).Msg("Failed to start metrics merger scheduler")
 	}
 
