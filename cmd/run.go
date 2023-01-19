@@ -140,11 +140,7 @@ var runCmd = &cobra.Command{
 		}
 
 		// Start the metrics server if enabled.
-		go func(
-			metricsConfig config.Metrics,
-			pluginRegistry *plugin.Registry,
-			logger zerolog.Logger,
-		) {
+		go func(metricsConfig config.Metrics, logger zerolog.Logger) {
 			// TODO: refactor this to a separate function.
 			if !metricsConfig.Enabled {
 				logger.Info().Msg("Metrics server is disabled")
@@ -198,7 +194,7 @@ var runCmd = &cobra.Command{
 				metricsConfig.Address, nil); err != nil {
 				logger.Error().Err(err).Msg("Failed to start metrics server")
 			}
-		}(gConfig.Metrics[config.Default], pluginRegistry, DefaultLogger)
+		}(gConfig.Metrics[config.Default], DefaultLogger)
 
 		// Create a new logger from the config.
 		loggerCfg := gConfig.Loggers[config.Default]
