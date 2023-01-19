@@ -259,6 +259,8 @@ func (s *Server) OnTick() (time.Duration, gnet.Action) {
 		s.logger.Error().Err(err).Msg("Failed to run OnTick hook")
 	}
 
+	// TODO: Investigate whether to move schedulers here or not
+
 	metrics.ServerTicksFired.Inc()
 
 	// TickInterval is the interval at which the OnTick hooks are called. It can be adjusted

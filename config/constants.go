@@ -61,10 +61,11 @@ const (
 	DefaultCompress    = true
 
 	// Plugin constants.
-	DefaultMinPort      = 50000
-	DefaultMaxPort      = 60000
-	PluginPriorityStart = 1000
-	LoggerName          = "plugin"
+	DefaultMinPort             = 50000
+	DefaultMaxPort             = 60000
+	PluginPriorityStart        = 1000
+	LoggerName                 = "plugin"
+	DefaultMetricsMergerPeriod = 5 * time.Second
 
 	// Client constants.
 	DefaultChunkSize          = 4096
