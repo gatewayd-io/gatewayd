@@ -93,7 +93,7 @@ func (m *Merger) Start() {
 	// Merge metrics from plugins by reading from their unix domain sockets.
 	// This is done periodically.
 
-	m.metricsMergerScheduler.Every(m.MetricsMergerPeriod).SingletonMode().StartAt(time.Now().Add(m.MetricsMergerPeriod)).Do(func() {
+	if _, err := m.metricsMergerScheduler.Every(m.MetricsMergerPeriod).SingletonMode().StartAt(time.Now().Add(m.MetricsMergerPeriod)).Do(func() {
 		readers, err := m.ReadMetrics()
 		if err != nil {
 			m.Logger.Error().Err(err).Msg("Failed to read plugin metrics")
@@ -145,7 +145,9 @@ func (m *Merger) Start() {
 		}
 
 		m.OutputMetrics = metricsOutput.Bytes()
-	})
+	}); err != nil {
+		m.Logger.Error().Err(err).Msg("Failed to start metrics merger scheduler")
+	}
 
 	m.metricsMergerScheduler.StartAsync()
 }
