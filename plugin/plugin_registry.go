@@ -35,6 +35,7 @@ type IRegistry interface {
 	Get(id Identifier) *Plugin
 	List() []Identifier
 	Exists(name, version, remoteURL string) bool
+	ForEach(f func(Identifier, *Plugin))
 	Remove(id Identifier)
 	Shutdown()
 	LoadPlugins(plugins []config.Plugin)
@@ -125,6 +126,7 @@ func (reg *Registry) Exists(name, version, remoteURL string) bool {
 
 			// Check if the version of the plugin is less than or equal to
 			// the version in the registry.
+			// TODO: Should we check the major version only, or as well?
 			if suppliedVer.LessThan(registryVer) || suppliedVer.Equal(registryVer) {
 				return true
 			}
@@ -136,6 +138,18 @@ func (reg *Registry) Exists(name, version, remoteURL string) bool {
 	}
 
 	return false
+}
+
+// ForEach iterates over all plugins in the registry.
+func (reg *Registry) ForEach(f func(Identifier, *Plugin)) {
+	reg.plugins.ForEach(func(key, value interface{}) bool {
+		if id, ok := key.(Identifier); ok {
+			if plugin, ok := value.(*Plugin); ok {
+				f(id, plugin)
+			}
+		}
+		return true
+	})
 }
 
 // Remove removes a plugin from the registry.

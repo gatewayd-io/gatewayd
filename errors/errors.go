@@ -97,9 +97,8 @@ var (
 )
 
 const (
-	FailedToLoadPluginConfig   = 1
-	FailedToLoadGlobalConfig   = 2
-	FailedToInitializePool     = 3
-	FailedToStartMetricsServer = 4
-	FailedToStartServer        = 5
+	FailedToLoadPluginConfig = 1
+	FailedToLoadGlobalConfig = 2
+	FailedToInitializePool   = 3
+	FailedToStartServer      = 4
 )
