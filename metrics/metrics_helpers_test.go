@@ -32,6 +32,7 @@ func exposeMetrics(t *testing.T) {
 		t.Error("Failed to start metrics server")
 	}
 
+	//nolint:gosec
 	if err := http.Serve(listener, promhttp.Handler()); err != nil {
 		t.Error("Failed to start metrics server")
 	}
