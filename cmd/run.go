@@ -18,10 +18,6 @@ import (
 	"github.com/gatewayd-io/gatewayd/network"
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
-	"github.com/knadh/koanf"
-	"github.com/knadh/koanf/parsers/yaml"
-	"github.com/knadh/koanf/providers/confmap"
-	"github.com/knadh/koanf/providers/file"
 	"github.com/panjf2000/gnet/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -30,7 +26,10 @@ import (
 )
 
 var (
-	DefaultLogger = logging.NewLogger(
+	pluginConfigFile string
+	globalConfigFile string
+	conf             *config.Config
+	DefaultLogger    = logging.NewLogger(
 		logging.LoggerConfig{
 			Level:   zerolog.InfoLevel, // Default log level
 			NoColor: true,
@@ -38,10 +37,6 @@ var (
 	)
 	// The plugins are loaded and hooks registered before the configuration is loaded.
 	pluginRegistry = plugin.NewRegistry(config.Loose, config.PassDown, config.Accept, DefaultLogger)
-	// Global koanf instance. Using "." as the key path delimiter.
-	globalConfig = koanf.New(".")
-	// Plugin koanf instance. Using "." as the key path delimiter.
-	pluginConfig = koanf.New(".")
 )
 
 // runCmd represents the run command.
@@ -49,39 +44,21 @@ var runCmd = &cobra.Command{
 	Use:   "run",
 	Short: "Run a gatewayd instance",
 	Run: func(cmd *cobra.Command, args []string) {
-		// Load default plugin configuration.
-		config.LoadPluginConfigDefaults(pluginConfig)
-
-		// Load the plugin configuration file.
-		if f, err := cmd.Flags().GetString("plugin-config"); err == nil {
-			if err := pluginConfig.Load(file.Provider(f), yaml.Parser()); err != nil {
-				DefaultLogger.Fatal().Err(err).Msg("Failed to load plugin configuration")
-				os.Exit(gerr.FailedToLoadPluginConfig)
-			}
-		}
-
-		// Load environment variables for the global configuration.
-		config.LoadEnvVars(pluginConfig)
-
-		// Unmarshal the plugin configuration for easier access.
-		var pConfig config.PluginConfig
-		if err := pluginConfig.Unmarshal("", &pConfig); err != nil {
-			DefaultLogger.Fatal().Err(err).Msg("Failed to unmarshal plugin configuration")
-			os.Exit(gerr.FailedToLoadPluginConfig)
-		}
+		// Load global and plugin configuration.
+		conf = config.NewConfig(globalConfigFile, pluginConfigFile, DefaultLogger)
 
 		// Set the plugin requirement's compatibility policy.
-		pluginRegistry.Compatibility = pConfig.GetPluginCompatibilityPolicy()
+		pluginRegistry.Compatibility = conf.Plugin.GetPluginCompatibilityPolicy()
 		// Set hooks' signature verification policy.
-		pluginRegistry.Verification = pConfig.GetVerificationPolicy()
+		pluginRegistry.Verification = conf.Plugin.GetVerificationPolicy()
 		// Set custom hook acceptance policy.
-		pluginRegistry.Acceptance = pConfig.GetAcceptancePolicy()
+		pluginRegistry.Acceptance = conf.Plugin.GetAcceptancePolicy()
 
 		// Load plugins and register their hooks.
-		pluginRegistry.LoadPlugins(pConfig.Plugins)
+		pluginRegistry.LoadPlugins(conf.Plugin.Plugins)
 
 		// Start the metrics merger.
-		metricsMerger := metrics.NewMerger(pConfig.MetricsMergerPeriod, DefaultLogger)
+		metricsMerger := metrics.NewMerger(conf.Plugin.MetricsMergerPeriod, DefaultLogger)
 		pluginRegistry.ForEach(func(_ plugin.Identifier, plugin *plugin.Plugin) {
 			if metricsEnabled, err := strconv.ParseBool(plugin.Config["metricsEnabled"]); err == nil && metricsEnabled {
 				metricsMerger.Add(plugin.ID.Name, plugin.Config["metricsUnixDomainSocket"])
@@ -89,34 +66,11 @@ var runCmd = &cobra.Command{
 		})
 		metricsMerger.Start()
 
-		// Load default global configuration.
-		config.LoadGlobalConfigDefaults(globalConfig)
-
-		// Load the global configuration file.
-		if f, err := cmd.Flags().GetString("config"); err == nil {
-			if err := globalConfig.Load(file.Provider(f), yaml.Parser()); err != nil {
-				DefaultLogger.Fatal().Err(err).Msg("Failed to load configuration")
-				pluginRegistry.Shutdown()
-				os.Exit(gerr.FailedToLoadGlobalConfig)
-			}
-		}
-
-		// Load environment variables for the global configuration.
-		config.LoadEnvVars(globalConfig)
-
-		// Unmarshal the global configuration for easier access.
-		var gConfig config.GlobalConfig
-		if err := globalConfig.Unmarshal("", &gConfig); err != nil {
-			DefaultLogger.Fatal().Err(err).Msg("Failed to unmarshal global configuration")
-			pluginRegistry.Shutdown()
-			os.Exit(gerr.FailedToLoadGlobalConfig)
-		}
-
 		// The config will be passed to the plugins that register to the "OnConfigLoaded" plugin.
 		// The plugins can modify the config and return it.
 		updatedGlobalConfig, err := pluginRegistry.Run(
 			context.Background(),
-			globalConfig.All(),
+			conf.GlobalKoanf.All(),
 			plugin.OnConfigLoaded)
 		if err != nil {
 			DefaultLogger.Error().Err(err).Msg("Failed to run OnConfigLoaded hooks")
@@ -128,15 +82,7 @@ var runCmd = &cobra.Command{
 		if updatedGlobalConfig != nil {
 			// Merge the config with the one loaded from the file (in memory).
 			// The changes won't be persisted to disk.
-			if err := globalConfig.Load(
-				confmap.Provider(updatedGlobalConfig, "."), nil); err != nil {
-				DefaultLogger.Fatal().Err(err).Msg("Failed to merge configuration")
-			}
-		}
-		if err := globalConfig.Unmarshal("", &gConfig); err != nil {
-			DefaultLogger.Fatal().Err(err).Msg("Failed to unmarshal updated global configuration")
-			pluginRegistry.Shutdown()
-			os.Exit(gerr.FailedToLoadGlobalConfig)
+			conf.MergeGlobalConfig(updatedGlobalConfig)
 		}
 
 		// Start the metrics server if enabled.
@@ -194,10 +140,10 @@ var runCmd = &cobra.Command{
 				metricsConfig.Address, nil); err != nil {
 				logger.Error().Err(err).Msg("Failed to start metrics server")
 			}
-		}(gConfig.Metrics[config.Default], DefaultLogger)
+		}(conf.Global.Metrics[config.Default], DefaultLogger)
 
 		// Create a new logger from the config.
-		loggerCfg := gConfig.Loggers[config.Default]
+		loggerCfg := conf.Global.Loggers[config.Default]
 		logger := logging.NewLogger(logging.LoggerConfig{
 			Output:     loggerCfg.GetOutput(),
 			Level:      loggerCfg.GetLevel(),
@@ -225,11 +171,11 @@ var runCmd = &cobra.Command{
 		}
 
 		// Create and initialize a pool of connections.
-		poolSize := gConfig.Pools[config.Default].GetSize()
+		poolSize := conf.Global.Pools[config.Default].GetSize()
 		pool := pool.NewPool(poolSize)
 
 		// Get client config from the config file.
-		clientConfig := gConfig.Clients[config.Default]
+		clientConfig := conf.Global.Clients[config.Default]
 
 		// Add clients to the pool.
 		for i := 0; i < poolSize; i++ {
@@ -280,9 +226,9 @@ var runCmd = &cobra.Command{
 		}
 
 		// Create a prefork proxy with the pool of clients.
-		elastic := gConfig.Proxy[config.Default].Elastic
-		reuseElasticClients := gConfig.Proxy[config.Default].ReuseElasticClients
-		healthCheckPeriod := gConfig.Proxy[config.Default].HealthCheckPeriod
+		elastic := conf.Global.Proxy[config.Default].Elastic
+		reuseElasticClients := conf.Global.Proxy[config.Default].ReuseElasticClients
+		healthCheckPeriod := conf.Global.Proxy[config.Default].HealthCheckPeriod
 		proxy := network.NewProxy(
 			pool,
 			pluginRegistry,
@@ -315,35 +261,35 @@ var runCmd = &cobra.Command{
 
 		// Create a server
 		server := network.NewServer(
-			gConfig.Server.Network,
-			gConfig.Server.Address,
-			gConfig.Server.SoftLimit,
-			gConfig.Server.HardLimit,
-			gConfig.Server.TickInterval,
+			conf.Global.Server.Network,
+			conf.Global.Server.Address,
+			conf.Global.Server.SoftLimit,
+			conf.Global.Server.HardLimit,
+			conf.Global.Server.TickInterval,
 			[]gnet.Option{
 				// Scheduling options
-				gnet.WithMulticore(gConfig.Server.MultiCore),
-				gnet.WithLockOSThread(gConfig.Server.LockOSThread),
+				gnet.WithMulticore(conf.Global.Server.MultiCore),
+				gnet.WithLockOSThread(conf.Global.Server.LockOSThread),
 				// NumEventLoop overrides Multicore option.
 				// gnet.WithNumEventLoop(1),
 
 				// Can be used to send keepalive messages to the client.
-				gnet.WithTicker(gConfig.Server.EnableTicker),
+				gnet.WithTicker(conf.Global.Server.EnableTicker),
 
 				// Internal event-loop load balancing options
-				gnet.WithLoadBalancing(gConfig.Server.GetLoadBalancer()),
+				gnet.WithLoadBalancing(conf.Global.Server.GetLoadBalancer()),
 
 				// Buffer options
-				gnet.WithReadBufferCap(gConfig.Server.ReadBufferCap),
-				gnet.WithWriteBufferCap(gConfig.Server.WriteBufferCap),
-				gnet.WithSocketRecvBuffer(gConfig.Server.SocketRecvBuffer),
-				gnet.WithSocketSendBuffer(gConfig.Server.SocketSendBuffer),
+				gnet.WithReadBufferCap(conf.Global.Server.ReadBufferCap),
+				gnet.WithWriteBufferCap(conf.Global.Server.WriteBufferCap),
+				gnet.WithSocketRecvBuffer(conf.Global.Server.SocketRecvBuffer),
+				gnet.WithSocketSendBuffer(conf.Global.Server.SocketSendBuffer),
 
 				// TCP options
-				gnet.WithReuseAddr(gConfig.Server.ReuseAddress),
-				gnet.WithReusePort(gConfig.Server.ReusePort),
-				gnet.WithTCPKeepAlive(gConfig.Server.TCPKeepAlive),
-				gnet.WithTCPNoDelay(gConfig.Server.GetTCPNoDelay()),
+				gnet.WithReuseAddr(conf.Global.Server.ReuseAddress),
+				gnet.WithReusePort(conf.Global.Server.ReusePort),
+				gnet.WithTCPKeepAlive(conf.Global.Server.TCPKeepAlive),
+				gnet.WithTCPNoDelay(conf.Global.Server.GetTCPNoDelay()),
 			},
 			proxy,
 			logger,
@@ -351,23 +297,23 @@ var runCmd = &cobra.Command{
 		)
 
 		serverCfg := map[string]interface{}{
-			"network":          gConfig.Server.Network,
-			"address":          gConfig.Server.Address,
-			"softLimit":        gConfig.Server.SoftLimit,
-			"hardLimit":        gConfig.Server.HardLimit,
-			"tickInterval":     gConfig.Server.TickInterval.String(),
-			"multiCore":        gConfig.Server.MultiCore,
-			"lockOSThread":     gConfig.Server.LockOSThread,
-			"enableTicker":     gConfig.Server.EnableTicker,
-			"loadBalancer":     gConfig.Server.LoadBalancer,
-			"readBufferCap":    gConfig.Server.ReadBufferCap,
-			"writeBufferCap":   gConfig.Server.WriteBufferCap,
-			"socketRecvBuffer": gConfig.Server.SocketRecvBuffer,
-			"socketSendBuffer": gConfig.Server.SocketSendBuffer,
-			"reuseAddress":     gConfig.Server.ReuseAddress,
-			"reusePort":        gConfig.Server.ReusePort,
-			"tcpKeepAlive":     gConfig.Server.TCPKeepAlive.String(),
-			"tcpNoDelay":       gConfig.Server.TCPNoDelay,
+			"network":          conf.Global.Server.Network,
+			"address":          conf.Global.Server.Address,
+			"softLimit":        conf.Global.Server.SoftLimit,
+			"hardLimit":        conf.Global.Server.HardLimit,
+			"tickInterval":     conf.Global.Server.TickInterval.String(),
+			"multiCore":        conf.Global.Server.MultiCore,
+			"lockOSThread":     conf.Global.Server.LockOSThread,
+			"enableTicker":     conf.Global.Server.EnableTicker,
+			"loadBalancer":     conf.Global.Server.LoadBalancer,
+			"readBufferCap":    conf.Global.Server.ReadBufferCap,
+			"writeBufferCap":   conf.Global.Server.WriteBufferCap,
+			"socketRecvBuffer": conf.Global.Server.SocketRecvBuffer,
+			"socketSendBuffer": conf.Global.Server.SocketSendBuffer,
+			"reuseAddress":     conf.Global.Server.ReuseAddress,
+			"reusePort":        conf.Global.Server.ReusePort,
+			"tcpKeepAlive":     conf.Global.Server.TCPKeepAlive.String(),
+			"tcpNoDelay":       conf.Global.Server.TCPNoDelay,
 		}
 		_, err = pluginRegistry.Run(context.Background(), serverCfg, plugin.OnNewServer)
 		if err != nil {
@@ -424,10 +370,12 @@ var runCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(runCmd)
 
-	runCmd.Flags().StringP(
+	runCmd.Flags().StringVarP(
+		&globalConfigFile,
 		"config", "c", "./gatewayd.yaml",
 		"Global config file")
-	runCmd.Flags().StringP(
+	runCmd.Flags().StringVarP(
+		&pluginConfigFile,
 		"plugin-config", "p", "./gatewayd_plugins.yaml",
 		"Plugin config file")
 }
