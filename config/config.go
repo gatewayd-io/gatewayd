@@ -2,16 +2,13 @@ package config
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
-	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/knadh/koanf"
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/confmap"
 	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/providers/file"
-	"github.com/rs/zerolog"
 )
 
 type IConfig interface {
@@ -28,7 +25,6 @@ type Config struct {
 	pluginDefaults   map[string]interface{}
 	globalConfigFile string
 	pluginConfigFile string
-	logger           zerolog.Logger
 
 	GlobalKoanf *koanf.Koanf
 	PluginKoanf *koanf.Koanf
@@ -38,7 +34,7 @@ type Config struct {
 
 var _ IConfig = &Config{}
 
-func NewConfig(globalConfigFile, pluginConfigFile string, logger zerolog.Logger) *Config {
+func NewConfig(globalConfigFile, pluginConfigFile string) *Config {
 	config := Config{
 		GlobalKoanf:      koanf.New("."),
 		PluginKoanf:      koanf.New("."),
@@ -46,7 +42,6 @@ func NewConfig(globalConfigFile, pluginConfigFile string, logger zerolog.Logger)
 		pluginDefaults:   make(map[string]interface{}),
 		globalConfigFile: globalConfigFile,
 		pluginConfigFile: pluginConfigFile,
-		logger:           logger,
 	}
 
 	config.LoadDefaults()
@@ -169,41 +164,37 @@ func loadEnvVars() *env.Env {
 // LoadGlobalConfig loads the plugin configuration file.
 func (c *Config) LoadGlobalConfigFile() {
 	if err := c.GlobalKoanf.Load(file.Provider(c.globalConfigFile), yaml.Parser()); err != nil {
-		c.logger.Fatal().Err(err).Msg("Failed to load plugin configuration")
-		os.Exit(gerr.FailedToLoadPluginConfig) // panic here?
+		panic(fmt.Errorf("failed to load global configuration: %w", err))
 	}
 }
 
 // LoadPluginConfig loads the plugin configuration file.
 func (c *Config) LoadPluginConfigFile() {
 	if err := c.PluginKoanf.Load(file.Provider(c.pluginConfigFile), yaml.Parser()); err != nil {
-		c.logger.Fatal().Err(err).Msg("Failed to load plugin configuration")
-		os.Exit(gerr.FailedToLoadPluginConfig) // panic here?
+		panic(fmt.Errorf("failed to load plugin configuration: %w", err))
 	}
 }
 
 // UnmarshalGlobalConfig unmarshals the global configuration for easier access.
 func (c *Config) UnmarshalGlobalConfig() {
 	if err := c.GlobalKoanf.Unmarshal("", &c.Global); err != nil {
-		c.logger.Fatal().Err(err).Msg("Failed to unmarshal global configuration")
-		os.Exit(gerr.FailedToLoadPluginConfig) // panic here?
+		panic(fmt.Errorf("failed to unmarshal global configuration: %w", err))
 	}
 }
 
 // UnmarshalPluginConfig unmarshals the plugin configuration for easier access.
 func (c *Config) UnmarshalPluginConfig() {
 	if err := c.PluginKoanf.Unmarshal("", &c.Plugin); err != nil {
-		c.logger.Fatal().Err(err).Msg("Failed to unmarshal plugin configuration")
-		os.Exit(gerr.FailedToLoadPluginConfig) // panic here?
+		panic(fmt.Errorf("failed to unmarshal plugin configuration: %w", err))
 	}
 }
 
 func (c *Config) MergeGlobalConfig(updatedGlobalConfig map[string]interface{}) {
 	if err := c.GlobalKoanf.Load(confmap.Provider(updatedGlobalConfig, "."), nil); err != nil {
-		c.logger.Fatal().Err(err).Msg("Failed to merge configuration")
+		panic(fmt.Errorf("failed to merge global configuration: %w", err))
 	}
 
 	if err := c.GlobalKoanf.Unmarshal("", &c.Global); err != nil {
-		c.logger.Fatal().Err(err).Msg("Failed to unmarshal plugin configuration")
+		panic(fmt.Errorf("failed to unmarshal global configuration: %w", err))
 	}
 }
