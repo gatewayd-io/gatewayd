@@ -3,6 +3,7 @@ package logging
 import (
 	"bytes"
 	"io"
+	"log/syslog"
 	"os"
 
 	"github.com/gatewayd-io/gatewayd/config"
@@ -24,6 +25,11 @@ type LoggerConfig struct {
 	Level             zerolog.Level
 	NoColor           bool
 	ConsoleTimeFormat string
+
+	// (R)Syslog configuration.
+	RSyslogNetwork string
+	RSyslogAddress string
+	SyslogPriority syslog.Priority
 
 	// File output configuration.
 	FileName   string
@@ -69,6 +75,21 @@ func NewLoggerWithBuffer(cfg LoggerConfig, buffer *bytes.Buffer) zerolog.Logger 
 					LocalTime:  cfg.LocalTime,
 				},
 			)
+		case config.Syslog:
+			syslogWriter, err := syslog.New(cfg.SyslogPriority, config.DefaultSyslogTag)
+			if err != nil {
+				panic(err)
+			}
+			output = append(output, syslogWriter)
+		case config.RSyslog:
+			// TODO: Add support for TLS.
+			// See: https://github.com/RackSec/srslog (deprecated)
+			rsyslogWriter, err := syslog.Dial(
+				cfg.RSyslogNetwork, cfg.RSyslogAddress, cfg.SyslogPriority, config.DefaultSyslogTag)
+			if err != nil {
+				panic(err)
+			}
+			output = append(output, zerolog.SyslogLevelWriter(rsyslogWriter))
 		default:
 			output = append(output, os.Stdout)
 		}
