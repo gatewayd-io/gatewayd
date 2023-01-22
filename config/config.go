@@ -67,13 +67,16 @@ func (c *Config) LoadDefaults() {
 	c.globalDefaults = map[string]interface{}{
 		"loggers": map[string]interface{}{
 			"default": map[string]interface{}{
-				"output":     DefaultLogOutput,
-				"level":      DefaultLogLevel,
-				"fileName":   DefaultLogFileName,
-				"maxSize":    DefaultMaxSize,
-				"maxBackups": DefaultMaxBackups,
-				"maxAge":     DefaultMaxAge,
-				"compress":   DefaultCompress,
+				"output":            DefaultLogOutput,
+				"level":             DefaultLogLevel,
+				"timeFormat":        DefaultTimeFormat,
+				"consoleTimeFormat": DefaultConsoleTimeFormat,
+				"fileName":          DefaultLogFileName,
+				"maxSize":           DefaultMaxSize,
+				"maxBackups":        DefaultMaxBackups,
+				"maxAge":            DefaultMaxAge,
+				"compress":          DefaultCompress,
+				"localTime":         DefaultLocalTime,
 			},
 		},
 		"clients": map[string]interface{}{
