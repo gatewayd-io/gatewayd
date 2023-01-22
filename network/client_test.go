@@ -3,7 +3,6 @@ package network
 import (
 	"testing"
 
-	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
 	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/rs/zerolog"
@@ -11,13 +10,8 @@ import (
 )
 
 // CreateNewClient creates a new client for testing.
-func CreateNewClient(t *testing.T) (*Client, *embeddedpostgres.EmbeddedPostgres) {
+func CreateNewClient(t *testing.T) *Client {
 	t.Helper()
-
-	postgres := embeddedpostgres.NewDatabase()
-	if err := postgres.Start(); err != nil {
-		t.Fatal(err)
-	}
 
 	logger := logging.NewLogger(logging.LoggerConfig{
 		Output:     config.Console,
@@ -39,17 +33,12 @@ func CreateNewClient(t *testing.T) (*Client, *embeddedpostgres.EmbeddedPostgres)
 		},
 		logger)
 
-	return client, postgres
+	return client
 }
 
 // TestNewClient tests the NewClient function.
 func TestNewClient(t *testing.T) {
-	client, postgres := CreateNewClient(t)
-	defer func() {
-		if err := postgres.Stop(); err != nil {
-			t.Fatal(err)
-		}
-	}()
+	client := CreateNewClient(t)
 	defer client.Close()
 
 	assert.Equal(t, "tcp", client.Network)
@@ -61,12 +50,7 @@ func TestNewClient(t *testing.T) {
 
 // TestSend tests the Send function.
 func TestSend(t *testing.T) {
-	client, postgres := CreateNewClient(t)
-	defer func() {
-		if err := postgres.Stop(); err != nil {
-			t.Fatal(err)
-		}
-	}()
+	client := CreateNewClient(t)
 	defer client.Close()
 
 	assert.NotNil(t, client)
@@ -78,12 +62,7 @@ func TestSend(t *testing.T) {
 
 // TestReceive tests the Receive function.
 func TestReceive(t *testing.T) {
-	client, postgres := CreateNewClient(t)
-	defer func() {
-		if err := postgres.Stop(); err != nil {
-			t.Fatal(err)
-		}
-	}()
+	client := CreateNewClient(t)
 	defer client.Close()
 
 	assert.NotNil(t, client)
@@ -93,8 +72,9 @@ func TestReceive(t *testing.T) {
 	assert.Equal(t, len(packet), sent)
 
 	size, data, err := client.Receive()
-	msg := "\x00\x00\x00\x03"
-	assert.Equal(t, 9, size)
+	// AuthenticationSASL
+	msg := "\x00\x00\x00\nSCRAM-SHA-256\x00\x00"
+	assert.Equal(t, 24, size)
 	assert.Equal(t, len(data[:size]), size)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, data[:size])
@@ -105,12 +85,7 @@ func TestReceive(t *testing.T) {
 
 // TestClose tests the Close function.
 func TestClose(t *testing.T) {
-	client, postgres := CreateNewClient(t)
-	defer func() {
-		if err := postgres.Stop(); err != nil {
-			t.Fatal(err)
-		}
-	}()
+	client := CreateNewClient(t)
 
 	assert.NotNil(t, client)
 	client.Close()
@@ -123,12 +98,7 @@ func TestClose(t *testing.T) {
 
 // TestIsConnected tests the IsConnected function.
 func TestIsConnected(t *testing.T) {
-	client, postgres := CreateNewClient(t)
-	defer func() {
-		if err := postgres.Stop(); err != nil {
-			t.Fatal(err)
-		}
-	}()
+	client := CreateNewClient(t)
 
 	assert.True(t, client.IsConnected())
 	client.Close()

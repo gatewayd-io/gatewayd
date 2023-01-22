@@ -3,7 +3,6 @@ package network
 import (
 	"testing"
 
-	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
 	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/gatewayd-io/gatewayd/plugin"
@@ -14,17 +13,6 @@ import (
 
 // TestNewProxy tests the creation of a new proxy with a fixed connection pool.
 func TestNewProxy(t *testing.T) {
-	postgres := embeddedpostgres.NewDatabase()
-	if err := postgres.Start(); err != nil {
-		t.Fatal(err)
-	}
-
-	defer func() {
-		if err := postgres.Stop(); err != nil {
-			t.Fatal(err)
-		}
-	}()
-
 	logger := logging.NewLogger(logging.LoggerConfig{
 		Output:     config.Console,
 		TimeFormat: zerolog.TimeFormatUnix,
