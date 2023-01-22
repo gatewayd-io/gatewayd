@@ -15,11 +15,11 @@ func TestNewHcLogAdapter(t *testing.T) {
 	consoleOutput := capturer.CaptureStdout(func() {
 		logger := NewLogger(
 			LoggerConfig{
-				Output:     config.Console,
-				Level:      zerolog.TraceLevel,
-				TimeFormat: zerolog.TimeFormatUnix,
-				StartupMsg: true,
-				NoColor:    true,
+				Output:            []config.LogOutput{config.Console},
+				Level:             zerolog.TraceLevel,
+				TimeFormat:        zerolog.TimeFormatUnix,
+				ConsoleTimeFormat: config.DefaultConsoleTimeFormat,
+				NoColor:           true,
 			},
 		)
 
@@ -37,7 +37,6 @@ func TestNewHcLogAdapter(t *testing.T) {
 		hcLogAdapter.Trace("This is a trace message, but it should not be logged")
 	})
 
-	assert.Contains(t, consoleOutput, "DBG Created a new logger")
 	assert.Contains(t, consoleOutput, "TRC This is a trace message")
 	assert.Contains(t, consoleOutput, "DBG This is a debug message")
 	assert.Contains(t, consoleOutput, "INF This is an info message")
@@ -54,10 +53,9 @@ func TestNewHcLogAdapter_LogLevel_Difference(t *testing.T) {
 	consoleOutput := capturer.CaptureStdout(func() {
 		logger := NewLogger(
 			LoggerConfig{
-				Output:     config.Console,
+				Output:     []config.LogOutput{config.Console},
 				Level:      zerolog.WarnLevel,
 				TimeFormat: zerolog.TimeFormatUnix,
-				StartupMsg: false,
 				NoColor:    true,
 			},
 		)

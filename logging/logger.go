@@ -19,11 +19,11 @@ type (
 )
 
 type LoggerConfig struct {
-	Output     config.LogOutput
-	TimeFormat string
-	Level      zerolog.Level
-	NoColor    bool
-	StartupMsg bool
+	Output            []config.LogOutput
+	TimeFormat        string
+	Level             zerolog.Level
+	NoColor           bool
+	ConsoleTimeFormat string
 
 	// File output configuration.
 	FileName   string
@@ -31,8 +31,7 @@ type LoggerConfig struct {
 	MaxBackups int
 	MaxAge     int
 	Compress   bool
-
-	hook OnNewLogger
+	LocalTime  bool
 }
 
 // NewLogger creates a new logger with the given configuration.
@@ -45,55 +44,42 @@ func NewLoggerWithBuffer(cfg LoggerConfig, buffer *bytes.Buffer) zerolog.Logger 
 	// Create a new logger.
 	consoleWriter := zerolog.ConsoleWriter{
 		Out:        os.Stdout,
-		TimeFormat: cfg.TimeFormat,
+		TimeFormat: cfg.ConsoleTimeFormat,
 		NoColor:    cfg.NoColor,
 	}
 
-	var output io.Writer
+	var output []io.Writer
 
-	if cfg.FileName == "" {
-		cfg.FileName = config.DefaultLogFileName
-	}
-
-	switch cfg.Output {
-	case config.Console:
-		output = consoleWriter
-	case config.Stdout:
-		output = os.Stdout
-	case config.Stderr:
-		output = os.Stderr
-	case config.File:
-		output = &lumberjack.Logger{
-			Filename:   cfg.FileName,
-			MaxSize:    cfg.MaxSize,
-			MaxBackups: cfg.MaxBackups,
-			MaxAge:     cfg.MaxAge,
-			Compress:   cfg.Compress,
+	for _, out := range cfg.Output {
+		switch out {
+		case config.Console:
+			output = append(output, consoleWriter)
+		case config.Stdout:
+			output = append(output, os.Stdout)
+		case config.Stderr:
+			output = append(output, os.Stderr)
+		case config.File:
+			output = append(
+				output, &lumberjack.Logger{
+					Filename:   cfg.FileName,
+					MaxSize:    cfg.MaxSize,
+					MaxBackups: cfg.MaxBackups,
+					MaxAge:     cfg.MaxAge,
+					Compress:   cfg.Compress,
+					LocalTime:  cfg.LocalTime,
+				},
+			)
+		default:
+			output = append(output, os.Stdout)
 		}
-	default:
-		output = os.Stdout
-	}
-
-	if cfg.TimeFormat == "" {
-		cfg.TimeFormat = zerolog.TimeFieldFormat
 	}
 
 	zerolog.SetGlobalLevel(cfg.Level)
 	zerolog.TimeFieldFormat = cfg.TimeFormat
 
-	// Create a new logger.
-	logger := zerolog.New(output)
-	if cfg.TimeFormat != "" {
-		logger = logger.With().Timestamp().Logger()
-	}
-
-	if cfg.StartupMsg {
-		logger.Debug().Msg("Created a new logger")
-	}
-
-	if cfg.hook != nil {
-		cfg.hook(Signature{"logger": logger})
-	}
+	multiWriter := zerolog.MultiLevelWriter(output...)
+	logger := zerolog.New(multiWriter)
+	logger = logger.With().Timestamp().Logger()
 
 	return logger
 }

@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 
 	"github.com/NYTimes/gziphandler"
@@ -31,8 +32,9 @@ var (
 	conf             *config.Config
 	DefaultLogger    = logging.NewLogger(
 		logging.LoggerConfig{
-			Level:   zerolog.InfoLevel, // Default log level
-			NoColor: true,
+			Output:            []config.LogOutput{config.Console},
+			ConsoleTimeFormat: config.DefaultConsoleTimeFormat,
+			Level:             zerolog.InfoLevel, // Default log level
 		},
 	)
 	// The plugins are loaded and hooks registered before the configuration is loaded.
@@ -145,11 +147,16 @@ var runCmd = &cobra.Command{
 		// Create a new logger from the config.
 		loggerCfg := conf.Global.Loggers[config.Default]
 		logger := logging.NewLogger(logging.LoggerConfig{
-			Output:     loggerCfg.GetOutput(),
-			Level:      loggerCfg.GetLevel(),
-			TimeFormat: loggerCfg.GetTimeFormat(),
-			NoColor:    loggerCfg.NoColor,
-			FileName:   loggerCfg.FileName,
+			Output:            loggerCfg.GetOutput(),
+			Level:             loggerCfg.GetLevel(),
+			TimeFormat:        loggerCfg.GetTimeFormat(),
+			ConsoleTimeFormat: loggerCfg.GetConsoleTimeFormat(),
+			NoColor:           loggerCfg.NoColor,
+			FileName:          loggerCfg.FileName,
+			MaxSize:           loggerCfg.MaxSize,
+			MaxBackups:        loggerCfg.MaxBackups,
+			MaxAge:            loggerCfg.MaxAge,
+			Compress:          loggerCfg.Compress,
 		})
 
 		// Replace the default logger with the new one from the config.
@@ -158,11 +165,16 @@ var runCmd = &cobra.Command{
 
 		// This is a notification hook, so we don't care about the result.
 		data := map[string]interface{}{
-			"output":     loggerCfg.Output,
-			"level":      loggerCfg.Level,
-			"timeFormat": loggerCfg.TimeFormat,
-			"noColor":    loggerCfg.NoColor,
-			"fileName":   loggerCfg.FileName,
+			"output":            strings.Join(loggerCfg.Output, ","),
+			"level":             loggerCfg.Level,
+			"timeFormat":        loggerCfg.TimeFormat,
+			"consoleTimeFormat": loggerCfg.ConsoleTimeFormat,
+			"noColor":           loggerCfg.NoColor,
+			"fileName":          loggerCfg.FileName,
+			"maxSize":           loggerCfg.MaxSize,
+			"maxBackups":        loggerCfg.MaxBackups,
+			"maxAge":            loggerCfg.MaxAge,
+			"compress":          loggerCfg.Compress,
 		}
 		// TODO: Use a context with a timeout
 		_, err = pluginRegistry.Run(context.Background(), data, plugin.OnNewLogger)
