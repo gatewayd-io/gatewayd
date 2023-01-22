@@ -188,7 +188,7 @@ func TestRunServer(t *testing.T) {
 	}(server, errs)
 
 	//nolint:thelper
-	go func(t *testing.T, server *Server, proxy *Proxy, errs chan error) {
+	go func(t *testing.T, server *Server, proxy *Proxy) {
 		for {
 			if server.IsRunning() {
 				client := NewClient(
@@ -211,7 +211,10 @@ func TestRunServer(t *testing.T) {
 
 				// The server should respond with an 'R' packet.
 				size, data, err := client.Receive()
-				msg := []byte{0x0, 0x0, 0x0, 0xa, 0x53, 0x43, 0x52, 0x41, 0x4d, 0x2d, 0x53, 0x48, 0x41, 0x2d, 0x32, 0x35, 0x36, 0x0, 0x0}
+				msg := []byte{
+					0x0, 0x0, 0x0, 0xa, 0x53, 0x43, 0x52, 0x41, 0x4d, 0x2d,
+					0x53, 0x48, 0x41, 0x2d, 0x32, 0x35, 0x36, 0x0, 0x0,
+				}
 				// This includes the message type, length and the message itself.
 				assert.Equal(t, 24, size)
 				assert.Equal(t, len(data[:size]), size)
@@ -235,7 +238,7 @@ func TestRunServer(t *testing.T) {
 				break
 			}
 		}
-	}(t, server, proxy, errs)
+	}(t, server, proxy)
 
 	for err := range errs {
 		if err != nil {
