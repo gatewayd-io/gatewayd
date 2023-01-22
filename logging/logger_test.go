@@ -99,3 +99,30 @@ func TestNewLogger_Stderr(t *testing.T) {
 	assert.Contains(t, stderr, "This is an error")
 	assert.Contains(t, stderr, `"key":"value"`)
 }
+
+// TestNewLogger_MultipleOutputs tests the creation of a new logger with multiple outputs.
+func TestNewLogger_MultipleOutputs(t *testing.T) {
+	stderr := capturer.CaptureStderr(func() {
+		stdout := capturer.CaptureStdout(func() {
+			logger := NewLogger(
+				LoggerConfig{
+					Output:     []config.LogOutput{config.Stdout, config.Stderr},
+					Level:      zerolog.DebugLevel,
+					TimeFormat: zerolog.TimeFormatUnix,
+					NoColor:    true,
+				},
+			)
+			assert.NotNil(t, logger)
+
+			logger.Error().Str("key", "value").Msg("This is an error")
+		})
+
+		assert.Contains(t, stdout, `"level":"error"`)
+		assert.Contains(t, stdout, "This is an error")
+		assert.Contains(t, stdout, `"key":"value"`)
+	})
+
+	assert.Contains(t, stderr, `"level":"error"`)
+	assert.Contains(t, stderr, "This is an error")
+	assert.Contains(t, stderr, `"key":"value"`)
+}
