@@ -55,9 +55,9 @@ type Logger struct {
 	MaxAge     int    `koanf:"maxAge"`
 	Compress   bool   `koanf:"compress"`
 
-	RSyslogNetwork  string `koanf:"rSyslogNetwork"`
-	RSyslogAddress  string `koanf:"rSyslogAddress"`
-	RSyslogPriority string `koanf:"rSyslogPriority"`
+	RSyslogNetwork string `koanf:"rSyslogNetwork"`
+	RSyslogAddress string `koanf:"rSyslogAddress"`
+	SyslogPriority string `koanf:"syslogPriority"`
 }
 
 type Pool struct {
