@@ -1,6 +1,7 @@
 package config
 
 import (
+	"log/syslog"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -48,9 +49,14 @@ const (
 	Stdout
 	Stderr
 	File
+	Syslog
+	RSyslog
 )
 
-var DefaultLogOutput = [...]string{"console"}
+var (
+	DefaultLogOutput       = [...]string{"console"}
+	DefaultRSyslogPriority = syslog.LOG_LOCAL0 | syslog.LOG_DEBUG //nolint:nosnakecase
+)
 
 const (
 	// Config constants.
@@ -67,6 +73,9 @@ const (
 	DefaultMaxAge            = 30 // days
 	DefaultCompress          = true
 	DefaultLocalTime         = false
+	DefaultSyslogTag         = "gatewayd"
+	DefaultRSyslogNetwork    = "tcp"
+	DefaultRSyslogRAddress   = "localhost:514"
 
 	// Plugin constants.
 	DefaultMinPort             = 50000
@@ -101,6 +110,6 @@ const (
 	ChecksumBufferSize = 65536
 
 	// Metrics constants.
-	DefaultMetricsAddress = "127.0.0.1:2112"
+	DefaultMetricsAddress = "localhost:2112"
 	DefaultMetricsPath    = "/metrics"
 )

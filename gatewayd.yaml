@@ -2,7 +2,7 @@
 
 loggers:
   default:
-    output: ["console", "file"] #, "stdout", "stderr", "file"]
+    output: ["console", "file"] # "stdout", "stderr", "syslog", "rsyslog"
     level: "debug" # panic, fatal, error, warn, info (default), debug, trace
     noColor: False
     timeFormat: "unix" # unixms, unixmicro and unixnano
@@ -14,6 +14,10 @@ loggers:
     maxAge: 30 # days
     compress: True
     localTime: True
+    # Rsyslog config
+    rsyslogNetwork: "tcp"
+    rsyslogAddress: "localhost:514"
+    rsyslogPriority: "info" # emerg, alert, crit, err, warning, notice, debug
 
 clients:
   default:
