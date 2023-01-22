@@ -135,7 +135,7 @@ func NewClient(clientConfig *config.Client, logger zerolog.Logger) *Client {
 		client.ReceiveChunkSize = clientConfig.ReceiveChunkSize
 	}
 
-	logger.Debug().Str("address", client.Address).Msg("New client created")
+	logger.Trace().Str("address", client.Address).Msg("New client created")
 	client.ID = GetID(
 		conn.LocalAddr().Network(), conn.LocalAddr().String(), config.DefaultSeed, logger)
 
