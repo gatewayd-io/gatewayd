@@ -54,6 +54,7 @@ type Logger struct {
 	MaxBackups int    `koanf:"maxBackups"`
 	MaxAge     int    `koanf:"maxAge"`
 	Compress   bool   `koanf:"compress"`
+	LocalTime  bool   `koanf:"localTime"`
 
 	RSyslogNetwork string `koanf:"rSyslogNetwork"`
 	RSyslogAddress string `koanf:"rSyslogAddress"`

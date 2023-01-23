@@ -13,6 +13,7 @@ import (
 
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
+	"github.com/getsentry/sentry-go"
 	"github.com/go-co-op/gocron"
 	promClient "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
@@ -192,6 +193,7 @@ func (m *Merger) Start() {
 			}
 		}); err != nil {
 		m.Logger.Error().Err(err).Msg("Failed to start metrics merger scheduler")
+		sentry.CaptureException(err)
 	}
 
 	m.scheduler.StartAsync()

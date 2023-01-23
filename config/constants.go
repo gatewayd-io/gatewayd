@@ -112,4 +112,9 @@ const (
 	// Metrics constants.
 	DefaultMetricsAddress = "localhost:2112"
 	DefaultMetricsPath    = "/metrics"
+
+	// Sentry constants.
+	DefaultTraceSampleRate  = 0.2
+	DefaultAttachStacktrace = true
+	DefaultFlushTimeout     = 2 * time.Second
 )
