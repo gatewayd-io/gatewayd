@@ -74,6 +74,10 @@ var runCmd = &cobra.Command{
 			MaxBackups:        loggerCfg.MaxBackups,
 			MaxAge:            loggerCfg.MaxAge,
 			Compress:          loggerCfg.Compress,
+			LocalTime:         loggerCfg.LocalTime,
+			SyslogPriority:    loggerCfg.GetSyslogPriority(),
+			RSyslogNetwork:    loggerCfg.RSyslogNetwork,
+			RSyslogAddress:    loggerCfg.RSyslogAddress,
 		})
 
 		// Create a new plugin registry.
@@ -186,6 +190,10 @@ var runCmd = &cobra.Command{
 			"maxBackups":        loggerCfg.MaxBackups,
 			"maxAge":            loggerCfg.MaxAge,
 			"compress":          loggerCfg.Compress,
+			"localTime":         loggerCfg.LocalTime,
+			"rsyslogNetwork":    loggerCfg.RSyslogNetwork,
+			"rsyslogAddress":    loggerCfg.RSyslogAddress,
+			"syslogPriority":    loggerCfg.SyslogPriority,
 		}
 		// TODO: Use a context with a timeout
 		_, err = pluginRegistry.Run(context.Background(), data, plugin.OnNewLogger)
