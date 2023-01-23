@@ -12,8 +12,6 @@ builds:
     goarch:
       - amd64
       - arm64
-    gcflags:
-      - all=-trimpath={{.Env.GOPATH}}
     ldflags:
       - -s -w -X config.Version={{.VERSION}} -X config.VersionDetails={{.Date}}/{{.Commit}}
 
