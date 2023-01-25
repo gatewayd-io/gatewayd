@@ -69,7 +69,7 @@ func (m *Merger) Add(pluginName string, unixDomainSocket string) {
 //
 //nolint:wrapcheck
 func (m *Merger) ReadMetrics() (map[string][]byte, *gerr.GatewayDError) {
-	readers := make(map[string][]byte)
+	pluginMetrics := make(map[string][]byte)
 
 	for pluginName, unixDomainSocket := range m.Addresses {
 		if file, err := os.Stat(unixDomainSocket); err != nil || file.IsDir() || file.Mode().Type() != os.ModeSocket {
@@ -108,10 +108,10 @@ func (m *Merger) ReadMetrics() (map[string][]byte, *gerr.GatewayDError) {
 			return nil, gerr.ErrFailedToMergePluginMetrics.Wrap(err)
 		}
 
-		readers[pluginName] = metrics
+		pluginMetrics[pluginName] = metrics
 	}
 
-	return readers, nil
+	return pluginMetrics, nil
 }
 
 func (m *Merger) MergeMetrics(pluginMetrics map[string][]byte) *gerr.GatewayDError {
