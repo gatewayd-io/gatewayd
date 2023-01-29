@@ -13,9 +13,9 @@ import (
 type Traffic func(buf []byte, err error) error
 
 type Proxy interface {
-	Connect(c gnet.Conn) error
-	Disconnect(c gnet.Conn) error
-	PassThrough(c gnet.Conn, onIncomingTraffic, onOutgoingTraffic Traffic) error
+	Connect(gconn gnet.Conn) error
+	Disconnect(gconn gnet.Conn) error
+	PassThrough(gconn gnet.Conn, onIncomingTraffic, onOutgoingTraffic Traffic) error
 	Reconnect(cl *Client) *Client
 	Shutdown()
 	Size() int
@@ -62,7 +62,7 @@ func NewProxy(size int, elastic, reuseElasticClients bool) *ProxyImpl {
 	return &proxy
 }
 
-func (pr *ProxyImpl) Connect(c gnet.Conn) error {
+func (pr *ProxyImpl) Connect(gconn gnet.Conn) error {
 	clientIDs := pr.pool.ClientIDs()
 
 	var client *Client
@@ -82,8 +82,8 @@ func (pr *ProxyImpl) Connect(c gnet.Conn) error {
 	}
 
 	if client.ID != "" {
-		pr.connClients.Store(c, client)
-		logrus.Debugf("Client %s has been assigned to %s", client.ID, c.RemoteAddr().String())
+		pr.connClients.Store(gconn, client)
+		logrus.Debugf("Client %s has been assigned to %s", client.ID, gconn.RemoteAddr().String())
 	} else {
 		return errors.New("client is not connected (connect)")
 	}
@@ -94,12 +94,12 @@ func (pr *ProxyImpl) Connect(c gnet.Conn) error {
 	return nil
 }
 
-func (pr *ProxyImpl) Disconnect(c gnet.Conn) error {
+func (pr *ProxyImpl) Disconnect(gconn gnet.Conn) error {
 	var client *Client
-	if cl, ok := pr.connClients.Load(c); ok {
+	if cl, ok := pr.connClients.Load(gconn); ok {
 		client = cl.(*Client)
 	}
-	pr.connClients.Delete(c)
+	pr.connClients.Delete(gconn)
 
 	// TODO: The connection is unstable when I put the client back in the pool
 	// If the client is not in the pool, put it back
@@ -120,7 +120,7 @@ func (pr *ProxyImpl) Disconnect(c gnet.Conn) error {
 	return nil
 }
 
-func (pr *ProxyImpl) PassThrough(c gnet.Conn, onIncomingTraffic, onOutgoingTraffic Traffic) error {
+func (pr *ProxyImpl) PassThrough(gconn gnet.Conn, onIncomingTraffic, onOutgoingTraffic Traffic) error {
 	// TODO: Handle bi-directional traffic
 	// Currently the passthrough is a one-way street from the client to the server, that is,
 	// the client can send data to the server and receive the response back, but the server
@@ -128,14 +128,14 @@ func (pr *ProxyImpl) PassThrough(c gnet.Conn, onIncomingTraffic, onOutgoingTraff
 	// that listens for data from the server and sends it to the client
 
 	var client *Client
-	if c, ok := pr.connClients.Load(c); ok {
+	if c, ok := pr.connClients.Load(gconn); ok {
 		client = c.(*Client)
 	} else {
 		return errors.New("client not found")
 	}
 
 	// buf contains the data from the client (query)
-	buf, err := c.Next(-1)
+	buf, err := gconn.Next(-1)
 	if err != nil {
 		logrus.Errorf("Error reading from client: %v", err)
 	}
@@ -146,7 +146,7 @@ func (pr *ProxyImpl) PassThrough(c gnet.Conn, onIncomingTraffic, onOutgoingTraff
 	// TODO: parse the buffer and send the response or error
 	// TODO: This is a very basic implementation of the gateway
 	// and it is synchronous. I should make it asynchronous.
-	logrus.Debugf("Received %d bytes from %s", len(buf), c.RemoteAddr().String())
+	logrus.Debugf("Received %d bytes from %s", len(buf), gconn.RemoteAddr().String())
 
 	// Send the query to the server
 	err = client.Send(buf)
@@ -169,17 +169,17 @@ func (pr *ProxyImpl) PassThrough(c gnet.Conn, onIncomingTraffic, onOutgoingTraff
 			// Reconnect the client
 			client = pr.Reconnect(client)
 			// Store the client in the map, replacing the old one
-			pr.connClients.Store(c, client)
+			pr.connClients.Store(gconn, client)
 		} else {
 			// Write the error to the client
-			_, err := c.Write(response[:size])
+			_, err := gconn.Write(response[:size])
 			if err != nil {
 				logrus.Errorf("Error writing the error to client: %v", err)
 			}
 		}
 	} else {
 		// Write the response to the incoming connection
-		_, err := c.Write(response[:size])
+		_, err := gconn.Write(response[:size])
 		if err != nil {
 			logrus.Errorf("Error writing to client: %v", err)
 		}

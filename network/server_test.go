@@ -14,7 +14,7 @@ func TestRunServer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	s := &Server{
+	server := &Server{
 		Network: "tcp",
 		Address: "localhost:15432",
 		Options: []gnet.Option{
@@ -23,22 +23,22 @@ func TestRunServer(t *testing.T) {
 		SoftLimit: 1,
 		HardLimit: 2,
 	}
-	assert.NotNil(t, s)
+	assert.NotNil(t, server)
 
-	go func(t *testing.T, s *Server) {
-		s.Run()
-	}(t, s)
+	go func(t *testing.T, server *Server) {
+		server.Run()
+	}(t, server)
 
 	for {
-		if s.Status == Running {
-			c := NewClient("tcp", "localhost:15432", 4096)
-			defer c.Close()
+		if server.Status == Running {
+			client := NewClient("tcp", "localhost:15432", 4096)
+			defer client.Close()
 
-			assert.NotNil(t, c)
-			err := c.Send(CreatePostgreSQLPacket('Q', []byte("select 1;")))
+			assert.NotNil(t, client)
+			err := client.Send(CreatePostgreSQLPacket('Q', []byte("select 1;")))
 			assert.Nil(t, err)
 
-			size, data, err := c.Receive()
+			size, data, err := client.Receive()
 			msg := "SFATAL\x00VFATAL\x00C0A000\x00Munsupported frontend protocol 0.0: server supports 3.0 to 3.0\x00Fpostmaster.c\x00L2138\x00RProcessStartupPacket\x00\x00"
 			assert.Equal(t, 132, size)
 			assert.Equal(t, len(data[:size]), size)
@@ -48,7 +48,7 @@ func TestRunServer(t *testing.T) {
 			assert.Equal(t, "E", string(data[0]))
 
 			// Clean up
-			s.Shutdown()
+			server.Shutdown()
 			assert.NoError(t, postgres.Stop())
 			break
 		}
