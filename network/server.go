@@ -1,6 +1,7 @@
 package network
 
 import (
+	"os"
 	"time"
 
 	"github.com/panjf2000/gnet/v2"
@@ -95,8 +96,13 @@ func (s *Server) OnTick() (delay time.Duration, action gnet.Action) {
 }
 
 func (s *Server) Run() {
+	logrus.Infof("PostgreSQL server is running with PID %d", os.Getpid())
 	err := gnet.Run(s, s.Network+"://"+s.Address, s.Options...)
 	if err != nil {
 		logrus.Error(err)
 	}
+}
+
+func (s *Server) Shutdown() {
+	s.proxy.Shutdown()
 }
