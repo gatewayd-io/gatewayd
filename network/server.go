@@ -17,6 +17,8 @@ type Server struct {
 	Options   []gnet.Option
 	SoftLimit int
 	HardLimit int
+	// TODO: Clients should be moved to the proxy struct
+	Clients map[string]*Client
 }
 
 func GetRLimit() syscall.Rlimit {
@@ -60,22 +62,35 @@ func (s *Server) OnOpen(c gnet.Conn) (out []byte, action gnet.Action) {
 		c.Close()
 		return nil, gnet.Close
 	}
+
+	if _, ok := s.Clients[c.RemoteAddr().String()]; !ok {
+		s.Clients[c.RemoteAddr().String()] = NewClient("tcp", "localhost:5432", 4096)
+	}
+
 	logrus.Infof("PostgreSQL server is opening a connection from %s", c.RemoteAddr().String())
-	return []byte("connected\n"), gnet.None
+	return nil, gnet.None
 }
 
 func (s *Server) OnClose(c gnet.Conn, err error) (action gnet.Action) {
 	logrus.Infof("PostgreSQL server is closing a connection from %s", c.RemoteAddr().String())
-	return gnet.None
+	s.Clients[c.RemoteAddr().String()].Close()
+	return gnet.Close
 }
 
 func (s *Server) OnTraffic(c gnet.Conn) gnet.Action {
 	// buf contains the data from the client (query)
 	buf, _ := c.Next(-1)
+
 	// TODO: parse the buffer and send the response or error
+	// TODO: This is a very basic implementation of the gateway
+	// and it is synchronous. I should make it asynchronous.
+	logrus.Infof("Received %d bytes from %s", len(buf), c.RemoteAddr().String())
+	s.Clients[c.RemoteAddr().String()].Send(buf)
+	size, response := s.Clients[c.RemoteAddr().String()].Receive()
 	// Write writes the response to the client
-	c.Write([]byte("OK\n"))
-	logrus.Infof("Received data: %s", string(buf))
+	c.Write(response[:size])
+
+	// logrus.Infof("Received data: %s", string(buf))
 	return gnet.None
 }
 

@@ -12,7 +12,7 @@ import (
 func main() {
 	// Create a server
 	server := &network.Server{
-		Network: "unix",
+		Network: "tcp",
 		Address: ":15432",
 		Options: []gnet.Option{
 			// Scheduling options
@@ -46,6 +46,7 @@ func main() {
 			gnet.WithTCPKeepAlive(time.Second * 3),
 			gnet.WithTCPNoDelay(gnet.TCPNoDelay),
 		},
+		Clients: make(map[string]*network.Client),
 	}
 	server.Run()
 }
