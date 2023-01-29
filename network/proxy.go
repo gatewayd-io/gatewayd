@@ -11,6 +11,7 @@ import (
 	"github.com/gatewayd-io/gatewayd/pool"
 	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
+	"golang.org/x/exp/maps"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
@@ -144,8 +145,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 		pr.logger.Error().Err(err).Msgf("Error reading from client: %v", err)
 	}
 
-	//nolint:nestif
-	if ingressData, err := structpb.NewStruct(map[string]interface{}{
+	addresses := map[string]interface{}{
 		"client": map[string]interface{}{
 			"local":  gconn.LocalAddr().String(),
 			"remote": gconn.RemoteAddr().String(),
@@ -154,10 +154,20 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 			"local":  client.Conn.LocalAddr().String(),
 			"remote": client.Conn.RemoteAddr().String(),
 		},
+	}
+
+	ingress := map[string]interface{}{
 		"buffer": buf, // Will be converted to base64-encoded string
-		"error":  err.Error(),
-	}); err != nil {
-		pr.logger.Error().Err(err).Msgf("Error creating ingress data: %v", err)
+		"error":  "",
+	}
+	if err != nil {
+		ingress["error"] = err.Error()
+	}
+	maps.Copy(ingress, addresses)
+
+	//nolint:nestif
+	if ingressData, intErr := structpb.NewStruct(ingress); intErr != nil {
+		pr.logger.Error().Err(intErr).Msgf("Error creating ingress data: %v", err)
 	} else {
 		result, err := pr.hookConfig.Run(
 			context.Background(),
@@ -191,20 +201,18 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 	// Receive the response from the server
 	size, response, err := client.Receive()
 
-	//nolint:nestif
-	if egressData, err := structpb.NewStruct(map[string]interface{}{
-		"client": map[string]interface{}{
-			"local":  gconn.LocalAddr().String(),
-			"remote": gconn.RemoteAddr().String(),
-		},
-		"server": map[string]interface{}{
-			"local":  client.Conn.LocalAddr().String(),
-			"remote": client.Conn.RemoteAddr().String(),
-		},
+	egress := map[string]interface{}{
 		"response": response[:size], // Will be converted to base64-encoded string
-		"error":    err.Error(),
-	}); err != nil {
-		pr.logger.Error().Err(err).Msgf("Error creating egress data: %v", err)
+		"error":    "",
+	}
+	if err != nil {
+		egress["error"] = err.Error()
+	}
+	maps.Copy(egress, addresses)
+
+	//nolint:nestif
+	if egressData, intErr := structpb.NewStruct(egress); intErr != nil {
+		pr.logger.Error().Err(intErr).Msgf("Error creating egress data: %v", err)
 	} else {
 		result, err := pr.hookConfig.Run(
 			context.Background(),
