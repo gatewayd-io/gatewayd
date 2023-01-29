@@ -262,7 +262,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 
 	// The connection to the server is closed, so we MUST reconnect,
 	// otherwise the client will be stuck.
-	if received == 0 && err != nil && errors.Is(err.Unwrap(), io.EOF) {
+	if IsConnClosed(received, err) || IsConnTimedOut(err) {
 		pr.logger.Debug().Fields(
 			map[string]interface{}{
 				"function": "proxy.passthrough",
