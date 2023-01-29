@@ -204,57 +204,59 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 func (reg *RegistryImpl) RegisterHooks(id Identifier) {
 	pluginImpl := reg.Get(id)
 	reg.hooksConfig.Logger.Debug().Msgf("Registering hooks for plugin: %s", pluginImpl.ID.Name)
-	if pluginV1, err := pluginImpl.Dispense(); err != nil {
+	var pluginV1 pluginV1.GatewayDPluginServiceClient
+	var err error
+	if pluginV1, err = pluginImpl.Dispense(); err != nil {
 		reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to dispense plugin")
 		return
-	} else {
-		for _, hook := range pluginImpl.Hooks {
-			var hookFunc HookDef
-			switch hook {
-			case OnConfigLoaded:
-				hookFunc = pluginV1.OnConfigLoaded
-			case OnNewLogger:
-				hookFunc = pluginV1.OnNewLogger
-			case OnNewPool:
-				hookFunc = pluginV1.OnNewPool
-			case OnNewProxy:
-				hookFunc = pluginV1.OnNewProxy
-			case OnNewServer:
-				hookFunc = pluginV1.OnNewServer
-			case OnSignal:
-				hookFunc = pluginV1.OnSignal
-			case OnRun:
-				hookFunc = pluginV1.OnRun
-			case OnBooting:
-				hookFunc = pluginV1.OnBooting
-			case OnBooted:
-				hookFunc = pluginV1.OnBooted
-			case OnOpening:
-				hookFunc = pluginV1.OnOpening
-			case OnOpened:
-				hookFunc = pluginV1.OnOpened
-			case OnClosing:
-				hookFunc = pluginV1.OnClosing
-			case OnClosed:
-				hookFunc = pluginV1.OnClosed
-			case OnTraffic:
-				hookFunc = pluginV1.OnTraffic
-			case OnIngressTraffic:
-				hookFunc = pluginV1.OnIngressTraffic
-			case OnEgressTraffic:
-				hookFunc = pluginV1.OnEgressTraffic
-			case OnShutdown:
-				hookFunc = pluginV1.OnShutdown
-			case OnTick:
-				hookFunc = pluginV1.OnTick
-			case OnNewClient:
-				hookFunc = pluginV1.OnNewClient
-			default:
-				reg.hooksConfig.Logger.Warn().Msgf("Unknown hook type: %s", hook)
-				continue
-			}
-			reg.hooksConfig.Logger.Debug().Msgf("Registering hook: %s", hook)
-			reg.hooksConfig.Add(HookType(hook), pluginImpl.Priority, hookFunc)
+	}
+
+	for _, hook := range pluginImpl.Hooks {
+		var hookFunc HookDef
+		switch hook {
+		case OnConfigLoaded:
+			hookFunc = pluginV1.OnConfigLoaded
+		case OnNewLogger:
+			hookFunc = pluginV1.OnNewLogger
+		case OnNewPool:
+			hookFunc = pluginV1.OnNewPool
+		case OnNewProxy:
+			hookFunc = pluginV1.OnNewProxy
+		case OnNewServer:
+			hookFunc = pluginV1.OnNewServer
+		case OnSignal:
+			hookFunc = pluginV1.OnSignal
+		case OnRun:
+			hookFunc = pluginV1.OnRun
+		case OnBooting:
+			hookFunc = pluginV1.OnBooting
+		case OnBooted:
+			hookFunc = pluginV1.OnBooted
+		case OnOpening:
+			hookFunc = pluginV1.OnOpening
+		case OnOpened:
+			hookFunc = pluginV1.OnOpened
+		case OnClosing:
+			hookFunc = pluginV1.OnClosing
+		case OnClosed:
+			hookFunc = pluginV1.OnClosed
+		case OnTraffic:
+			hookFunc = pluginV1.OnTraffic
+		case OnIngressTraffic:
+			hookFunc = pluginV1.OnIngressTraffic
+		case OnEgressTraffic:
+			hookFunc = pluginV1.OnEgressTraffic
+		case OnShutdown:
+			hookFunc = pluginV1.OnShutdown
+		case OnTick:
+			hookFunc = pluginV1.OnTick
+		case OnNewClient:
+			hookFunc = pluginV1.OnNewClient
+		default:
+			reg.hooksConfig.Logger.Warn().Msgf("Unknown hook type: %s", hook)
+			continue
 		}
+		reg.hooksConfig.Logger.Debug().Msgf("Registering hook: %s", hook)
+		reg.hooksConfig.Add(HookType(hook), pluginImpl.Priority, hookFunc)
 	}
 }
