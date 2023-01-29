@@ -94,8 +94,9 @@ func (p *PoolImpl) Close() error {
 
 func (p *PoolImpl) Shutdown() {
 	p.pool.Range(func(key, value interface{}) bool {
-		client := value.(*Client)
-		client.Close()
+		if cl, ok := value.(*Client); ok {
+			cl.Close()
+		}
 		p.pool.Delete(key)
 		return true
 	})
