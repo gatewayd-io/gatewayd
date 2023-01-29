@@ -120,6 +120,12 @@ func (pr *ProxyImpl) Disconnect(c gnet.Conn) error {
 }
 
 func (pr *ProxyImpl) PassThrough(c gnet.Conn, onIncomingTraffic, onOutgoingTraffic Traffic) error {
+	// TODO: Handle bi-directional traffic
+	// Currently the passthrough is a one-way street from the client to the server, that is,
+	// the client can send data to the server and receive the response back, but the server
+	// cannot take initiative and send data to the client. So, there should be another event-loop
+	// that listens for data from the server and sends it to the client
+
 	var client *Client
 	if c, ok := pr.connClients.Load(c); !ok {
 		return errors.New("client is not connected (passthrough)")
@@ -135,13 +141,6 @@ func (pr *ProxyImpl) PassThrough(c gnet.Conn, onIncomingTraffic, onOutgoingTraff
 	if err = onIncomingTraffic(buf, err); err != nil {
 		logrus.Errorf("Error processing data from client: %v", err)
 	}
-
-	// // Parse the query
-	// pkt := wire.NewPacket()
-	// pkt = pkt.Unmarshal(buf)
-	// if pkt.Message != nil {
-	// 	logrus.Infof("Query: %s", pkt.Message)
-	// }
 
 	// TODO: parse the buffer and send the response or error
 	// TODO: This is a very basic implementation of the gateway
