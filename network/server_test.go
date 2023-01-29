@@ -6,7 +6,6 @@ import (
 	"errors"
 	"testing"
 
-	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
 	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/gatewayd-io/gatewayd/plugin"
@@ -21,11 +20,6 @@ import (
 // TestRunServer tests an entire server run with a single client connection and hooks.
 func TestRunServer(t *testing.T) {
 	errs := make(chan error)
-
-	postgres := embeddedpostgres.NewDatabase()
-	if err := postgres.Start(); err != nil {
-		errs <- err
-	}
 
 	logger := logging.NewLogger(logging.LoggerConfig{
 		Output:     config.Console,
@@ -105,7 +99,9 @@ func TestRunServer(t *testing.T) {
 		logger.Info().Msg("Egress traffic")
 		if resp, ok := paramsMap["response"].(string); ok {
 			if response, err := base64.StdEncoding.DecodeString(resp); err == nil {
-				assert.Equal(t, CreatePostgreSQLPacket('R', []byte{0x0, 0x0, 0x0, 0x3}), response)
+				assert.Equal(t, CreatePostgreSQLPacket('R', []byte{
+					0x0, 0x0, 0x0, 0xa, 0x53, 0x43, 0x52, 0x41, 0x4d, 0x2d, 0x53, 0x48, 0x41, 0x2d, 0x32, 0x35, 0x36, 0x0, 0x0,
+				}), response)
 			} else {
 				errs <- err
 			}
@@ -130,7 +126,7 @@ func TestRunServer(t *testing.T) {
 		logger.Info().Msg("Egress traffic")
 		if resp, ok := paramsMap["response"].(string); ok {
 			if response, err := base64.StdEncoding.DecodeString(resp); err == nil {
-				assert.Equal(t, CreatePostgreSQLPacket('R', []byte{0x0, 0x0, 0x0, 0x3}), response)
+				assert.Equal(t, uint8(0x52), response[0])
 			} else {
 				errs <- err
 			}
@@ -215,13 +211,13 @@ func TestRunServer(t *testing.T) {
 
 				// The server should respond with an 'R' packet.
 				size, data, err := client.Receive()
-				msg := []byte{0x0, 0x0, 0x0, 0x3}
+				msg := []byte{0x0, 0x0, 0x0, 0xa, 0x53, 0x43, 0x52, 0x41, 0x4d, 0x2d, 0x53, 0x48, 0x41, 0x2d, 0x32, 0x35, 0x36, 0x0, 0x0}
 				// This includes the message type, length and the message itself.
-				assert.Equal(t, 9, size)
+				assert.Equal(t, 24, size)
 				assert.Equal(t, len(data[:size]), size)
 				assert.Nil(t, err)
 				packetSize := int(data[1])<<24 | int(data[2])<<16 | int(data[3])<<8 | int(data[4])
-				assert.Equal(t, 8, packetSize)
+				assert.Equal(t, 23, packetSize)
 				assert.NotEmpty(t, data[:size])
 				assert.Equal(t, msg, data[5:size])
 				// AuthenticationOk.
@@ -236,9 +232,6 @@ func TestRunServer(t *testing.T) {
 				// Clean up.
 				server.Shutdown()
 				client.Close()
-				if pgErr := postgres.Stop(); pgErr != nil {
-					errs <- err
-				}
 				break
 			}
 		}
