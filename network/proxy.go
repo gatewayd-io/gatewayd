@@ -61,7 +61,10 @@ func NewProxy(size, bufferSize int, elastic, reuseElasticClients bool) *ProxyImp
 
 	logrus.Infof("There are %d clients in the pool", len(proxy.pool.ClientIDs()))
 	if len(proxy.pool.ClientIDs()) != size {
-		logrus.Error("The pool size is incorrect, either because the clients are cannot connect (no network connectivity) or the server is not running")
+		logrus.Error(
+			"The pool size is incorrect, either because " +
+				"the clients are cannot connect (no network connectivity) " +
+				"or the server is not running")
 		os.Exit(1)
 	}
 

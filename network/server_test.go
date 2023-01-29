@@ -41,7 +41,8 @@ func TestRunServer(t *testing.T) {
 			assert.Nil(t, err)
 
 			size, data, err := client.Receive()
-			msg := "SFATAL\x00VFATAL\x00C0A000\x00Munsupported frontend protocol 0.0: server supports 3.0 to 3.0\x00Fpostmaster.c\x00L2138\x00RProcessStartupPacket\x00\x00"
+			msg := "SFATAL\x00VFATAL\x00C0A000\x00Munsupported frontend protocol 0.0: " +
+				"server supports 3.0 to 3.0\x00Fpostmaster.c\x00L2138\x00R" + "ProcessStartupPacket\x00\x00"
 			assert.Equal(t, 132, size)
 			assert.Equal(t, len(data[:size]), size)
 			assert.Nil(t, err)
