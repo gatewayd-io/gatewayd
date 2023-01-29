@@ -133,7 +133,6 @@ var runCmd = &cobra.Command{
 				} else {
 					hooksConfig.Run(
 						plugin.OnNewClient, context.Background(), clientCfg, hooksConfig.Verification)
-
 				}
 
 				if client != nil {
