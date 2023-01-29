@@ -58,9 +58,12 @@ func NewClient(network, address string, receiveBufferSize int, logger zerolog.Lo
 	}
 
 	client.Conn = conn
-	if client.ReceiveBufferSize == 0 {
+	if receiveBufferSize <= 0 {
 		client.ReceiveBufferSize = DefaultBufferSize
+	} else {
+		client.ReceiveBufferSize = receiveBufferSize
 	}
+
 	logger.Debug().Msgf("New client created: %s", client.Address)
 	client.ID = GetID(conn.LocalAddr().Network(), conn.LocalAddr().String(), DefaultSeed, logger)
 
