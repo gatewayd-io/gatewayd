@@ -176,14 +176,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn, onIncomingTraffic, onOutgoingT
 		logrus.Errorf("Error processing data from server: %s", err)
 	}
 
-	switch {
-	case errors.Is(err, nil):
-		// Write the response to the incoming connection
-		_, err := gconn.Write(response[:size])
-		if err != nil {
-			logrus.Errorf("Error writing to client: %v", err)
-		}
-	case errors.Is(err, io.EOF):
+	if err != nil && errors.Is(err, io.EOF) {
 		// The server has closed the connection
 		logrus.Error("The client is not connected to the server anymore")
 		// Either the client is not connected to the server anymore or
@@ -192,12 +185,22 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn, onIncomingTraffic, onOutgoingT
 		client = pr.Reconnect(client)
 		// Store the client in the map, replacing the old one
 		pr.connClients.Store(gconn, client)
-	default:
+		return err
+	}
+
+	if err != nil {
 		// Write the error to the client
 		_, err := gconn.Write(response[:size])
 		if err != nil {
 			logrus.Errorf("Error writing the error to client: %v", err)
 		}
+		return err
+	}
+
+	// Write the response to the incoming connection
+	_, err = gconn.Write(response[:size])
+	if err != nil {
+		logrus.Errorf("Error writing to client: %v", err)
 	}
 
 	return nil
