@@ -30,15 +30,7 @@ var (
 	pluginConfigFile string
 	globalConfigFile string
 	conf             *config.Config
-	DefaultLogger    = logging.NewLogger(
-		logging.LoggerConfig{
-			Output:            []config.LogOutput{config.Console},
-			ConsoleTimeFormat: config.DefaultConsoleTimeFormat,
-			Level:             zerolog.InfoLevel, // Default log level
-		},
-	)
-	// The plugins are loaded and hooks registered before the configuration is loaded.
-	pluginRegistry = plugin.NewRegistry(config.Loose, config.PassDown, config.Accept, DefaultLogger)
+	pluginRegistry   *plugin.Registry
 )
 
 // runCmd represents the run command.
@@ -47,8 +39,26 @@ var runCmd = &cobra.Command{
 	Short: "Run a gatewayd instance",
 	Run: func(cmd *cobra.Command, args []string) {
 		// Load global and plugin configuration.
-		conf = config.NewConfig(globalConfigFile, pluginConfigFile, DefaultLogger)
+		conf = config.NewConfig(globalConfigFile, pluginConfigFile)
 
+		// Create a new logger from the config.
+		loggerCfg := conf.Global.Loggers[config.Default]
+		logger := logging.NewLogger(logging.LoggerConfig{
+			Output:            loggerCfg.GetOutput(),
+			Level:             loggerCfg.GetLevel(),
+			TimeFormat:        loggerCfg.GetTimeFormat(),
+			ConsoleTimeFormat: loggerCfg.GetConsoleTimeFormat(),
+			NoColor:           loggerCfg.NoColor,
+			FileName:          loggerCfg.FileName,
+			MaxSize:           loggerCfg.MaxSize,
+			MaxBackups:        loggerCfg.MaxBackups,
+			MaxAge:            loggerCfg.MaxAge,
+			Compress:          loggerCfg.Compress,
+		})
+
+		// Create a new plugin registry.
+		// The plugins are loaded and hooks registered before the configuration is loaded.
+		pluginRegistry = plugin.NewRegistry(config.Loose, config.PassDown, config.Accept, logger)
 		// Set the plugin requirement's compatibility policy.
 		pluginRegistry.Compatibility = conf.Plugin.GetPluginCompatibilityPolicy()
 		// Set hooks' signature verification policy.
@@ -60,7 +70,7 @@ var runCmd = &cobra.Command{
 		pluginRegistry.LoadPlugins(conf.Plugin.Plugins)
 
 		// Start the metrics merger.
-		metricsMerger := metrics.NewMerger(conf.Plugin.MetricsMergerPeriod, DefaultLogger)
+		metricsMerger := metrics.NewMerger(conf.Plugin.MetricsMergerPeriod, logger)
 		pluginRegistry.ForEach(func(_ plugin.Identifier, plugin *plugin.Plugin) {
 			if metricsEnabled, err := strconv.ParseBool(plugin.Config["metricsEnabled"]); err == nil && metricsEnabled {
 				metricsMerger.Add(plugin.ID.Name, plugin.Config["metricsUnixDomainSocket"])
@@ -75,7 +85,7 @@ var runCmd = &cobra.Command{
 			conf.GlobalKoanf.All(),
 			plugin.OnConfigLoaded)
 		if err != nil {
-			DefaultLogger.Error().Err(err).Msg("Failed to run OnConfigLoaded hooks")
+			logger.Error().Err(err).Msg("Failed to run OnConfigLoaded hooks")
 		}
 
 		// If the config was modified by the plugins, merge it with the one loaded from the file.
@@ -142,26 +152,7 @@ var runCmd = &cobra.Command{
 				metricsConfig.Address, nil); err != nil {
 				logger.Error().Err(err).Msg("Failed to start metrics server")
 			}
-		}(conf.Global.Metrics[config.Default], DefaultLogger)
-
-		// Create a new logger from the config.
-		loggerCfg := conf.Global.Loggers[config.Default]
-		logger := logging.NewLogger(logging.LoggerConfig{
-			Output:            loggerCfg.GetOutput(),
-			Level:             loggerCfg.GetLevel(),
-			TimeFormat:        loggerCfg.GetTimeFormat(),
-			ConsoleTimeFormat: loggerCfg.GetConsoleTimeFormat(),
-			NoColor:           loggerCfg.NoColor,
-			FileName:          loggerCfg.FileName,
-			MaxSize:           loggerCfg.MaxSize,
-			MaxBackups:        loggerCfg.MaxBackups,
-			MaxAge:            loggerCfg.MaxAge,
-			Compress:          loggerCfg.Compress,
-		})
-
-		// Replace the default logger with the new one from the config.
-		pluginRegistry.Logger = logger
-		metricsMerger.Logger = logger
+		}(conf.Global.Metrics[config.Default], logger)
 
 		// This is a notification hook, so we don't care about the result.
 		data := map[string]interface{}{
