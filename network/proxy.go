@@ -268,7 +268,10 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 			pr.logger,
 		)
 		pr.busyConnections.Remove(gconn)
-		pr.busyConnections.Put(gconn, client)
+		if err := pr.busyConnections.Put(gconn, client); err != nil {
+			// This should never happen
+			return err
+		}
 	}
 
 	egress := map[string]interface{}{
