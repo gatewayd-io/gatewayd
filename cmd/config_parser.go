@@ -36,7 +36,7 @@ func getPath(path string) string {
 // 	return nil
 // }
 
-// verificationPolicy returns the verification policy for the plugin from config file.
+// verificationPolicy returns the hook verification policy from plugin config file.
 func verificationPolicy() plugin.Policy {
 	vPolicy := globalConfig.String("plugins.verificationPolicy")
 	verificationPolicy := plugin.PassDown // default
