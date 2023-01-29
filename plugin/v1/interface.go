@@ -22,11 +22,6 @@ func GetPluginMap(pluginName string) map[string]goplugin.Plugin {
 	}
 }
 
-// PluginMap is the map of plugins we can dispense.
-var PluginMap = map[string]goplugin.Plugin{
-	"gatewayd-plugin-test": &Plugin{},
-}
-
 // Plugin is the interface that all plugins must implement.
 type Plugin struct {
 	goplugin.GRPCPlugin
