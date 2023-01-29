@@ -136,6 +136,7 @@ func (s *Server) IsRunning() bool {
 	return s.Status == Running
 }
 
+//nolint:funlen
 func NewServer(
 	network, address string,
 	softLimit, hardLimit uint64,

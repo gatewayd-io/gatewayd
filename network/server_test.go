@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+//nolint:funlen
 func TestRunServer(t *testing.T) {
 	postgres := embeddedpostgres.NewDatabase()
 	if err := postgres.Start(); err != nil {
