@@ -24,6 +24,7 @@ func NewClient(network, address string, receiveBufferSize int) *Client {
 	if c.ReceiveBufferSize == 0 {
 		c.ReceiveBufferSize = 4096
 	}
+	logrus.Infof("New client created: %s", c.Address)
 
 	return &c
 }
@@ -33,17 +34,20 @@ func (c *Client) Send(data []byte) {
 	if err != nil {
 		logrus.Error(err)
 	}
+	logrus.Infof("Sent %d bytes to %s", len(data), c.Address)
 }
 
 func (c *Client) Receive() []byte {
 	buf := make([]byte, c.ReceiveBufferSize)
-	_, err := c.Read(buf)
+	read, err := c.Read(buf)
 	if err != nil {
 		logrus.Error(err)
 	}
+	logrus.Infof("Received %d bytes from %s", read, c.Address)
 	return buf
 }
 
 func (c *Client) Close() {
 	c.Conn.Close()
+	logrus.Infof("Closed connection to %s", c.Address)
 }
