@@ -3,7 +3,7 @@
 loggers:
   default:
     output: ["console", "file"] # "stdout", "stderr", "syslog", "rsyslog"
-    level: "debug" # panic, fatal, error, warn, info (default), debug, trace
+    level: "info" # panic, fatal, error, warn, info (default), debug, trace
     noColor: False
     timeFormat: "unix" # unixms, unixmicro and unixnano
     consoleTimeFormat: "RFC3339" # Go time format string
