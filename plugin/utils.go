@@ -13,6 +13,8 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
+const bufferSize = 65536
+
 func sha256sum(filename string) (string, error) {
 	if info, err := os.Stat(filename); err != nil || info.IsDir() {
 		return "", err
@@ -26,7 +28,7 @@ func sha256sum(filename string) (string, error) {
 
 	hashAlgorithm := sha256.New()
 
-	buf := make([]byte, 65536)
+	buf := make([]byte, bufferSize)
 	for {
 		n, err := bufio.NewReader(file).Read(buf)
 		//nolint:gocritic
