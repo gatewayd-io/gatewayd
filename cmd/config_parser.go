@@ -52,6 +52,20 @@ func verificationPolicy() plugin.Policy {
 	return verificationPolicy
 }
 
+// pluginCompatPolicy returns the plugin compatibility policy from plugin config file.
+func pluginCompatPolicy() plugin.PluginCompatPolicy {
+	vPolicy := pluginConfig.String("plugins.compatibilityPolicy")
+	compatPolicy := plugin.Strict // default
+	switch vPolicy {
+	case "strict":
+		compatPolicy = plugin.Strict
+	case "loose":
+		compatPolicy = plugin.Loose
+	}
+
+	return compatPolicy
+}
+
 // loggerConfig returns the logger config from config file.
 func loggerConfig() logging.LoggerConfig {
 	cfg := logging.LoggerConfig{StartupMsg: true}
