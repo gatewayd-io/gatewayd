@@ -6,6 +6,7 @@ import (
 	"errors"
 	"testing"
 
+	sdkPlugin "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin"
 	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/gatewayd-io/gatewayd/plugin"
@@ -57,7 +58,7 @@ func TestRunServer(t *testing.T) {
 		assert.Empty(t, paramsMap["error"])
 		return params, nil
 	}
-	pluginRegistry.AddHook(plugin.OnTrafficFromClient, 1, onTrafficFromClient)
+	pluginRegistry.AddHook(sdkPlugin.OnTrafficFromClient, 1, onTrafficFromClient)
 
 	onTrafficToServer := func(
 		ctx context.Context,
@@ -85,7 +86,7 @@ func TestRunServer(t *testing.T) {
 		assert.Empty(t, paramsMap["error"])
 		return params, nil
 	}
-	pluginRegistry.AddHook(plugin.OnTrafficToServer, 1, onTrafficToServer)
+	pluginRegistry.AddHook(sdkPlugin.OnTrafficToServer, 1, onTrafficToServer)
 
 	onTrafficFromServer := func(
 		ctx context.Context,
@@ -112,7 +113,7 @@ func TestRunServer(t *testing.T) {
 		assert.Empty(t, paramsMap["error"])
 		return params, nil
 	}
-	pluginRegistry.AddHook(plugin.OnTrafficFromServer, 1, onTrafficFromServer)
+	pluginRegistry.AddHook(sdkPlugin.OnTrafficFromServer, 1, onTrafficFromServer)
 
 	onTrafficToClient := func(
 		ctx context.Context,
@@ -137,7 +138,7 @@ func TestRunServer(t *testing.T) {
 		assert.Empty(t, paramsMap["error"])
 		return params, nil
 	}
-	pluginRegistry.AddHook(plugin.OnTrafficToClient, 1, onTrafficToClient)
+	pluginRegistry.AddHook(sdkPlugin.OnTrafficToClient, 1, onTrafficToClient)
 
 	clientConfig := config.Client{
 		Network:            "tcp",

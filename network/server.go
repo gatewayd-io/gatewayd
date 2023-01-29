@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	sdkPlugin "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin"
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/metrics"
@@ -42,7 +43,7 @@ func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 	_, err := s.pluginRegistry.Run(
 		context.Background(),
 		map[string]interface{}{"status": fmt.Sprint(s.Status)},
-		plugin.OnBooting)
+		sdkPlugin.OnBooting)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to run OnBooting hook")
 	}
@@ -56,7 +57,7 @@ func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 	_, err = s.pluginRegistry.Run(
 		context.Background(),
 		map[string]interface{}{"status": fmt.Sprint(s.Status)},
-		plugin.OnBooted)
+		sdkPlugin.OnBooted)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to run OnBooted hook")
 	}
@@ -79,7 +80,7 @@ func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 			"remote": gconn.RemoteAddr().String(),
 		},
 	}
-	_, err := s.pluginRegistry.Run(context.Background(), onOpeningData, plugin.OnOpening)
+	_, err := s.pluginRegistry.Run(context.Background(), onOpeningData, sdkPlugin.OnOpening)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to run OnOpening hook")
 	}
@@ -119,7 +120,7 @@ func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 			"remote": gconn.RemoteAddr().String(),
 		},
 	}
-	_, err = s.pluginRegistry.Run(context.Background(), onOpenedData, plugin.OnOpened)
+	_, err = s.pluginRegistry.Run(context.Background(), onOpenedData, sdkPlugin.OnOpened)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to run OnOpened hook")
 	}
@@ -147,7 +148,7 @@ func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 	if err != nil {
 		data["error"] = err.Error()
 	}
-	_, gatewaydErr := s.pluginRegistry.Run(context.Background(), data, plugin.OnClosing)
+	_, gatewaydErr := s.pluginRegistry.Run(context.Background(), data, sdkPlugin.OnClosing)
 	if gatewaydErr != nil {
 		s.logger.Error().Err(gatewaydErr).Msg("Failed to run OnClosing hook")
 	}
@@ -177,7 +178,7 @@ func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 	if err != nil {
 		data["error"] = err.Error()
 	}
-	_, gatewaydErr = s.pluginRegistry.Run(context.Background(), data, plugin.OnClosed)
+	_, gatewaydErr = s.pluginRegistry.Run(context.Background(), data, sdkPlugin.OnClosed)
 	if gatewaydErr != nil {
 		s.logger.Error().Err(gatewaydErr).Msg("Failed to run OnClosed hook")
 	}
@@ -197,7 +198,7 @@ func (s *Server) OnTraffic(gconn gnet.Conn) gnet.Action {
 			"remote": gconn.RemoteAddr().String(),
 		},
 	}
-	_, err := s.pluginRegistry.Run(context.Background(), onTrafficData, plugin.OnTraffic)
+	_, err := s.pluginRegistry.Run(context.Background(), onTrafficData, sdkPlugin.OnTraffic)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to run OnTraffic hook")
 	}
@@ -232,7 +233,7 @@ func (s *Server) OnShutdown(engine gnet.Engine) {
 	_, err := s.pluginRegistry.Run(
 		context.Background(),
 		map[string]interface{}{"connections": s.engine.CountConnections()},
-		plugin.OnShutdown)
+		sdkPlugin.OnShutdown)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to run OnShutdown hook")
 	}
@@ -254,7 +255,7 @@ func (s *Server) OnTick() (time.Duration, gnet.Action) {
 	_, err := s.pluginRegistry.Run(
 		context.Background(),
 		map[string]interface{}{"connections": s.engine.CountConnections()},
-		plugin.OnTick)
+		sdkPlugin.OnTick)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to run OnTick hook")
 	}
@@ -284,7 +285,7 @@ func (s *Server) Run() error {
 	if err != nil && err.Unwrap() != nil {
 		onRunData["error"] = err.OriginalError.Error()
 	}
-	result, err := s.pluginRegistry.Run(context.Background(), onRunData, plugin.OnRun)
+	result, err := s.pluginRegistry.Run(context.Background(), onRunData, sdkPlugin.OnRun)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to run the hook")
 	}

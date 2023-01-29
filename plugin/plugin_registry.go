@@ -5,11 +5,12 @@ import (
 	"sort"
 
 	semver "github.com/Masterminds/semver/v3"
+	sdkPlugin "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin"
+	v1 "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin/v1"
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/gatewayd-io/gatewayd/metrics"
-	pluginV1 "github.com/gatewayd-io/gatewayd/plugin/v1"
 	"github.com/gatewayd-io/gatewayd/pool"
 	goplugin "github.com/hashicorp/go-plugin"
 	"github.com/mitchellh/mapstructure"
@@ -19,8 +20,8 @@ import (
 )
 
 type IHook interface {
-	AddHook(hookName string, priority Priority, hookMethod Method)
-	Hooks() map[string]map[Priority]Method
+	AddHook(hookName string, priority sdkPlugin.Priority, hookMethod sdkPlugin.Method)
+	Hooks() map[string]map[sdkPlugin.Priority]sdkPlugin.Method
 	Run(
 		ctx context.Context,
 		args map[string]interface{},
@@ -32,14 +33,14 @@ type IHook interface {
 type IRegistry interface {
 	// Plugin management
 	Add(plugin *Plugin) bool
-	Get(id Identifier) *Plugin
-	List() []Identifier
+	Get(id sdkPlugin.Identifier) *Plugin
+	List() []sdkPlugin.Identifier
 	Exists(name, version, remoteURL string) bool
-	ForEach(f func(Identifier, *Plugin))
-	Remove(id Identifier)
+	ForEach(f func(sdkPlugin.Identifier, *Plugin))
+	Remove(id sdkPlugin.Identifier)
 	Shutdown()
 	LoadPlugins(plugins []config.Plugin)
-	RegisterHooks(id Identifier)
+	RegisterHooks(id sdkPlugin.Identifier)
 
 	// Hook management
 	IHook
@@ -47,7 +48,7 @@ type IRegistry interface {
 
 type Registry struct {
 	plugins pool.IPool
-	hooks   map[string]map[Priority]Method
+	hooks   map[string]map[sdkPlugin.Priority]sdkPlugin.Method
 
 	Logger        zerolog.Logger
 	Compatibility config.CompatibilityPolicy
@@ -66,7 +67,7 @@ func NewRegistry(
 ) *Registry {
 	return &Registry{
 		plugins:       pool.NewPool(config.EmptyPoolCapacity),
-		hooks:         map[string]map[Priority]Method{},
+		hooks:         map[string]map[sdkPlugin.Priority]sdkPlugin.Method{},
 		Logger:        logger,
 		Compatibility: compatibility,
 		Verification:  verification,
@@ -85,7 +86,7 @@ func (reg *Registry) Add(plugin *Plugin) bool {
 }
 
 // Get returns a plugin from the registry.
-func (reg *Registry) Get(id Identifier) *Plugin {
+func (reg *Registry) Get(id sdkPlugin.Identifier) *Plugin {
 	if plugin, ok := reg.plugins.Get(id).(*Plugin); ok {
 		return plugin
 	}
@@ -94,10 +95,10 @@ func (reg *Registry) Get(id Identifier) *Plugin {
 }
 
 // List returns a list of all plugins in the registry.
-func (reg *Registry) List() []Identifier {
-	var plugins []Identifier
+func (reg *Registry) List() []sdkPlugin.Identifier {
+	var plugins []sdkPlugin.Identifier
 	reg.plugins.ForEach(func(key, _ interface{}) bool {
-		if id, ok := key.(Identifier); ok {
+		if id, ok := key.(sdkPlugin.Identifier); ok {
 			plugins = append(plugins, id)
 		}
 		return true
@@ -141,9 +142,9 @@ func (reg *Registry) Exists(name, version, remoteURL string) bool {
 }
 
 // ForEach iterates over all plugins in the registry.
-func (reg *Registry) ForEach(f func(Identifier, *Plugin)) {
+func (reg *Registry) ForEach(f func(sdkPlugin.Identifier, *Plugin)) {
 	reg.plugins.ForEach(func(key, value interface{}) bool {
-		if id, ok := key.(Identifier); ok {
+		if id, ok := key.(sdkPlugin.Identifier); ok {
 			if plugin, ok := value.(*Plugin); ok {
 				f(id, plugin)
 			}
@@ -153,14 +154,14 @@ func (reg *Registry) ForEach(f func(Identifier, *Plugin)) {
 }
 
 // Remove removes a plugin from the registry.
-func (reg *Registry) Remove(id Identifier) {
+func (reg *Registry) Remove(id sdkPlugin.Identifier) {
 	reg.plugins.Remove(id)
 }
 
 // Shutdown shuts down all plugins in the registry.
 func (reg *Registry) Shutdown() {
 	reg.plugins.ForEach(func(key, value interface{}) bool {
-		if id, ok := key.(Identifier); ok {
+		if id, ok := key.(sdkPlugin.Identifier); ok {
 			if plugin, ok := value.(*Plugin); ok {
 				plugin.Stop()
 				reg.Remove(id)
@@ -172,14 +173,14 @@ func (reg *Registry) Shutdown() {
 }
 
 // Hooks returns the hooks map.
-func (reg *Registry) Hooks() map[string]map[Priority]Method {
+func (reg *Registry) Hooks() map[string]map[sdkPlugin.Priority]sdkPlugin.Method {
 	return reg.hooks
 }
 
 // Add adds a hook with a priority to the hooks map.
-func (reg *Registry) AddHook(hookName string, priority Priority, hookMethod Method) {
+func (reg *Registry) AddHook(hookName string, priority sdkPlugin.Priority, hookMethod sdkPlugin.Method) {
 	if len(reg.hooks[hookName]) == 0 {
-		reg.hooks[hookName] = map[Priority]Method{priority: hookMethod}
+		reg.hooks[hookName] = map[sdkPlugin.Priority]sdkPlugin.Method{priority: hookMethod}
 	} else {
 		if _, ok := reg.hooks[hookName][priority]; ok {
 			reg.Logger.Warn().Fields(
@@ -233,7 +234,7 @@ func (reg *Registry) Run(
 	}
 
 	// Sort hooks by priority.
-	priorities := make([]Priority, 0, len(reg.hooks[hookName]))
+	priorities := make([]sdkPlugin.Priority, 0, len(reg.hooks[hookName]))
 	for priority := range reg.hooks[hookName] {
 		priorities = append(priorities, priority)
 	}
@@ -243,7 +244,7 @@ func (reg *Registry) Run(
 
 	// Run hooks, passing the result of the previous hook to the next one.
 	returnVal := &structpb.Struct{}
-	var removeList []Priority
+	var removeList []sdkPlugin.Priority
 	// The signature of parameters and args MUST be the same for this to work.
 	for idx, priority := range priorities {
 		var result *structpb.Struct
@@ -328,7 +329,7 @@ func (reg *Registry) LoadPlugins(plugins []config.Plugin) {
 	for priority, pCfg := range plugins {
 		reg.Logger.Debug().Str("name", pCfg.Name).Msg("Loading plugin")
 		plugin := &Plugin{
-			ID: Identifier{
+			ID: sdkPlugin.Identifier{
 				Name:     pCfg.Name,
 				Checksum: pCfg.Checksum,
 			},
@@ -380,14 +381,14 @@ func (reg *Registry) LoadPlugins(plugins []config.Plugin) {
 		// in the config file. Built-in plugins are loaded first, followed by user-defined
 		// plugins. Built-in plugins have a priority of 0 to 999, and user-defined plugins
 		// have a priority of 1000 or greater.
-		plugin.Priority = Priority(config.PluginPriorityStart + uint(priority))
+		plugin.Priority = sdkPlugin.Priority(config.PluginPriorityStart + uint(priority))
 
 		logAdapter := logging.NewHcLogAdapter(&reg.Logger, config.LoggerName)
 
-		plugin.client = goplugin.NewClient(
+		plugin.Client = goplugin.NewClient(
 			&goplugin.ClientConfig{
-				HandshakeConfig: pluginV1.Handshake,
-				Plugins:         pluginV1.GetPluginMap(plugin.ID.Name),
+				HandshakeConfig: v1.Handshake,
+				Plugins:         v1.GetPluginMap(plugin.ID.Name),
 				Cmd:             NewCommand(plugin.LocalPath, plugin.Args, plugin.Env),
 				AllowedProtocols: []goplugin.Protocol{
 					goplugin.ProtocolGRPC,
@@ -508,11 +509,11 @@ func (reg *Registry) LoadPlugins(plugins []config.Plugin) {
 }
 
 // RegisterHooks registers the hooks for the given plugin.
-func (reg *Registry) RegisterHooks(id Identifier) {
+func (reg *Registry) RegisterHooks(id sdkPlugin.Identifier) {
 	pluginImpl := reg.Get(id)
 	reg.Logger.Debug().Str("name", pluginImpl.ID.Name).Msg(
 		"Registering hooks for plugin")
-	var pluginV1 pluginV1.GatewayDPluginServiceClient
+	var pluginV1 v1.GatewayDPluginServiceClient
 	var err *gerr.GatewayDError
 	if pluginV1, err = pluginImpl.Dispense(); err != nil {
 		reg.Logger.Debug().Str("name", pluginImpl.ID.Name).Err(err).Msg(
@@ -521,49 +522,49 @@ func (reg *Registry) RegisterHooks(id Identifier) {
 	}
 
 	for _, hookName := range pluginImpl.Hooks {
-		var hookMethod Method
+		var hookMethod sdkPlugin.Method
 		switch hookName {
-		case OnConfigLoaded:
+		case sdkPlugin.OnConfigLoaded:
 			hookMethod = pluginV1.OnConfigLoaded
-		case OnNewLogger:
+		case sdkPlugin.OnNewLogger:
 			hookMethod = pluginV1.OnNewLogger
-		case OnNewPool:
+		case sdkPlugin.OnNewPool:
 			hookMethod = pluginV1.OnNewPool
-		case OnNewProxy:
+		case sdkPlugin.OnNewProxy:
 			hookMethod = pluginV1.OnNewProxy
-		case OnNewServer:
+		case sdkPlugin.OnNewServer:
 			hookMethod = pluginV1.OnNewServer
-		case OnSignal:
+		case sdkPlugin.OnSignal:
 			hookMethod = pluginV1.OnSignal
-		case OnRun:
+		case sdkPlugin.OnRun:
 			hookMethod = pluginV1.OnRun
-		case OnBooting:
+		case sdkPlugin.OnBooting:
 			hookMethod = pluginV1.OnBooting
-		case OnBooted:
+		case sdkPlugin.OnBooted:
 			hookMethod = pluginV1.OnBooted
-		case OnOpening:
+		case sdkPlugin.OnOpening:
 			hookMethod = pluginV1.OnOpening
-		case OnOpened:
+		case sdkPlugin.OnOpened:
 			hookMethod = pluginV1.OnOpened
-		case OnClosing:
+		case sdkPlugin.OnClosing:
 			hookMethod = pluginV1.OnClosing
-		case OnClosed:
+		case sdkPlugin.OnClosed:
 			hookMethod = pluginV1.OnClosed
-		case OnTraffic:
+		case sdkPlugin.OnTraffic:
 			hookMethod = pluginV1.OnTraffic
-		case OnTrafficFromClient:
+		case sdkPlugin.OnTrafficFromClient:
 			hookMethod = pluginV1.OnTrafficFromClient
-		case OnTrafficToServer:
+		case sdkPlugin.OnTrafficToServer:
 			hookMethod = pluginV1.OnTrafficToServer
-		case OnTrafficFromServer:
+		case sdkPlugin.OnTrafficFromServer:
 			hookMethod = pluginV1.OnTrafficFromServer
-		case OnTrafficToClient:
+		case sdkPlugin.OnTrafficToClient:
 			hookMethod = pluginV1.OnTrafficToClient
-		case OnShutdown:
+		case sdkPlugin.OnShutdown:
 			hookMethod = pluginV1.OnShutdown
-		case OnTick:
+		case sdkPlugin.OnTick:
 			hookMethod = pluginV1.OnTick
-		case OnNewClient:
+		case sdkPlugin.OnNewClient:
 			hookMethod = pluginV1.OnNewClient
 		default:
 			switch reg.Acceptance {
