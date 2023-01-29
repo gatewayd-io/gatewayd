@@ -30,7 +30,7 @@ var (
 		},
 	)
 	// The plugins are loaded and hooks registered before the configuration is loaded.
-	pluginRegistry = plugin.NewRegistry(config.Loose, config.PassDown, DefaultLogger)
+	pluginRegistry = plugin.NewRegistry(config.Loose, config.PassDown, config.Accept, DefaultLogger)
 	// Global koanf instance. Using "." as the key path delimiter.
 	globalConfig = koanf.New(".")
 	// Plugin koanf instance. Using "." as the key path delimiter.
@@ -63,8 +63,12 @@ var runCmd = &cobra.Command{
 			os.Exit(gerr.FailedToLoadPluginConfig)
 		}
 
-		// Set the plugin compatibility policy.
+		// Set the plugin requirement's compatibility policy.
 		pluginRegistry.Compatibility = pConfig.GetPluginCompatibilityPolicy()
+		// Set hooks' signature verification policy.
+		pluginRegistry.Verification = pConfig.GetVerificationPolicy()
+		// Set custom hook acceptance policy.
+		pluginRegistry.Acceptance = pConfig.GetAcceptancePolicy()
 
 		// Load plugins and register their hooks.
 		pluginRegistry.LoadPlugins(pConfig.Plugins)
@@ -83,9 +87,6 @@ var runCmd = &cobra.Command{
 
 		// Load environment variables for the global configuration.
 		config.LoadEnvVars(globalConfig)
-
-		// Get hooks signature verification policy.
-		pluginRegistry.Verification = pConfig.GetVerificationPolicy()
 
 		// Unmarshal the global configuration for easier access.
 		var gConfig config.GlobalConfig
