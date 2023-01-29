@@ -17,10 +17,11 @@ func TestMerger(t *testing.T) {
 	go exposeMetrics(t)
 
 	logger := logging.NewLogger(logging.LoggerConfig{
-		Output:     config.Console,
-		TimeFormat: zerolog.TimeFormatUnix,
-		Level:      zerolog.InfoLevel,
-		NoColor:    true,
+		Output:            []config.LogOutput{config.Console},
+		TimeFormat:        zerolog.TimeFormatUnix,
+		ConsoleTimeFormat: config.DefaultConsoleTimeFormat,
+		Level:             zerolog.InfoLevel,
+		NoColor:           true,
 	})
 
 	merger := NewMerger(1, logger)

@@ -12,10 +12,11 @@ import (
 // TestGetRlimit tests the GetRLimit function.
 func TestGetRlimit(t *testing.T) {
 	cfg := logging.LoggerConfig{
-		Output:     config.Console,
-		TimeFormat: zerolog.TimeFormatUnix,
-		Level:      zerolog.DebugLevel,
-		NoColor:    true,
+		Output:            []config.LogOutput{config.Console},
+		TimeFormat:        zerolog.TimeFormatUnix,
+		ConsoleTimeFormat: config.DefaultConsoleTimeFormat,
+		Level:             zerolog.DebugLevel,
+		NoColor:           true,
 	}
 
 	logger := logging.NewLogger(cfg)
@@ -27,10 +28,11 @@ func TestGetRlimit(t *testing.T) {
 // TestGetID tests the GetID function.
 func TestGetID(t *testing.T) {
 	cfg := logging.LoggerConfig{
-		Output:     config.Console,
-		TimeFormat: zerolog.TimeFormatUnix,
-		Level:      zerolog.DebugLevel,
-		NoColor:    true,
+		Output:            []config.LogOutput{config.Console},
+		TimeFormat:        zerolog.TimeFormatUnix,
+		ConsoleTimeFormat: config.DefaultConsoleTimeFormat,
+		Level:             zerolog.DebugLevel,
+		NoColor:           true,
 	}
 
 	logger := logging.NewLogger(cfg)
@@ -41,10 +43,11 @@ func TestGetID(t *testing.T) {
 // TestResolve tests the Resolve function.
 func TestResolve(t *testing.T) {
 	cfg := logging.LoggerConfig{
-		Output:     config.Console,
-		TimeFormat: zerolog.TimeFormatUnix,
-		Level:      zerolog.DebugLevel,
-		NoColor:    true,
+		Output:            []config.LogOutput{config.Console},
+		TimeFormat:        zerolog.TimeFormatUnix,
+		ConsoleTimeFormat: config.DefaultConsoleTimeFormat,
+		Level:             zerolog.DebugLevel,
+		NoColor:           true,
 	}
 
 	logger := logging.NewLogger(cfg)

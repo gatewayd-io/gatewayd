@@ -22,10 +22,11 @@ func TestRunServer(t *testing.T) {
 	errs := make(chan error)
 
 	logger := logging.NewLogger(logging.LoggerConfig{
-		Output:     config.Console,
-		TimeFormat: zerolog.TimeFormatUnix,
-		Level:      zerolog.DebugLevel,
-		NoColor:    true,
+		Output:            []config.LogOutput{config.Console},
+		TimeFormat:        zerolog.TimeFormatUnix,
+		ConsoleTimeFormat: config.DefaultConsoleTimeFormat,
+		Level:             zerolog.DebugLevel,
+		NoColor:           true,
 	})
 
 	pluginRegistry := plugin.NewRegistry(config.Loose, config.PassDown, config.Accept, logger)

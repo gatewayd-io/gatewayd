@@ -14,10 +14,11 @@ import (
 // TestNewProxy tests the creation of a new proxy with a fixed connection pool.
 func TestNewProxy(t *testing.T) {
 	logger := logging.NewLogger(logging.LoggerConfig{
-		Output:     config.Console,
-		TimeFormat: zerolog.TimeFormatUnix,
-		Level:      zerolog.DebugLevel,
-		NoColor:    true,
+		Output:            []config.LogOutput{config.Console},
+		TimeFormat:        zerolog.TimeFormatUnix,
+		ConsoleTimeFormat: config.DefaultConsoleTimeFormat,
+		Level:             zerolog.DebugLevel,
+		NoColor:           true,
 	})
 
 	// Create a connection pool
@@ -65,10 +66,11 @@ func TestNewProxy(t *testing.T) {
 // TestNewProxyElastic tests the creation of a new proxy with an elastic connection pool.
 func TestNewProxyElastic(t *testing.T) {
 	logger := logging.NewLogger(logging.LoggerConfig{
-		Output:     config.Console,
-		TimeFormat: zerolog.TimeFormatUnix,
-		Level:      zerolog.DebugLevel,
-		NoColor:    true,
+		Output:            []config.LogOutput{config.Console},
+		TimeFormat:        zerolog.TimeFormatUnix,
+		ConsoleTimeFormat: config.DefaultConsoleTimeFormat,
+		Level:             zerolog.DebugLevel,
+		NoColor:           true,
 	})
 
 	// Create a connection pool
