@@ -157,7 +157,7 @@ func (m *Merger) MergeMetrics(pluginMetrics map[string][]byte) *gerr.GatewayDErr
 			}
 		}
 
-		m.Logger.Debug().Fields(
+		m.Logger.Trace().Fields(
 			map[string]interface{}{
 				"plugin": pluginName,
 				"count":  len(metricNames),
@@ -171,12 +171,15 @@ func (m *Merger) MergeMetrics(pluginMetrics map[string][]byte) *gerr.GatewayDErr
 
 // Start starts the metrics merger.
 func (m *Merger) Start() {
+	startDelay := time.Now().Add(m.MetricsMergerPeriod)
 	// Merge metrics from plugins by reading from their unix domain sockets periodically.
 	if _, err := m.scheduler.
 		Every(m.MetricsMergerPeriod).
 		SingletonMode().
-		StartAt(time.Now().Add(m.MetricsMergerPeriod)).
+		StartAt(startDelay).
 		Do(func() {
+			m.Logger.Trace().Msg(
+				"Running the scheduler for merging metrics from plugins with GatewayD.")
 			pluginMetrics, err := m.ReadMetrics()
 			if err != nil {
 				m.Logger.Error().Err(err.Unwrap()).Msg("Failed to read plugin metrics")
@@ -192,6 +195,12 @@ func (m *Merger) Start() {
 	}
 
 	m.scheduler.StartAsync()
+	m.Logger.Info().Fields(
+		map[string]interface{}{
+			"startDelay":          startDelay,
+			"metricsMergerPeriod": m.MetricsMergerPeriod.String(),
+		},
+	).Msg("Started the metrics merger scheduler")
 }
 
 // Stop stops the metrics merger.
