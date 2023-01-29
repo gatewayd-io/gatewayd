@@ -7,47 +7,42 @@ import (
 
 // GetVerificationPolicy returns the hook verification policy from plugin config file.
 func (p PluginConfig) GetVerificationPolicy() Policy {
-	// vPolicy := pluginConfig.String("plugins.verificationPolicy")
-	verificationPolicy := PassDown // default
 	switch p.VerificationPolicy {
 	case "ignore":
-		verificationPolicy = Ignore
+		return Ignore
 	case "abort":
-		verificationPolicy = Abort
+		return Abort
 	case "remove":
-		verificationPolicy = Remove
+		return Remove
+	default:
+		return PassDown
 	}
-
-	return verificationPolicy
 }
 
 // GetPluginCompatPolicy returns the plugin compatibility policy from plugin config file.
 func (p PluginConfig) GetPluginCompatPolicy() CompatPolicy {
-	// vPolicy := pluginConfig.String("plugins.compatibilityPolicy")
-	compatPolicy := Strict // default
 	switch p.CompatibilityPolicy {
 	case "strict":
-		compatPolicy = Strict
+		return Strict
 	case "loose":
-		compatPolicy = Loose
+		return Loose
+	default:
+		return Strict
 	}
-
-	return compatPolicy
 }
 
 // GetLoadBalancer returns the load balancing algorithm to use.
 func (s Server) GetLoadBalancer() gnet.LoadBalancing {
-	loadBalancer := map[string]gnet.LoadBalancing{
-		"roundrobin":       gnet.RoundRobin,
-		"leastconnections": gnet.LeastConnections,
-		"sourceaddrhash":   gnet.SourceAddrHash,
+	switch s.LoadBalancer {
+	case "roundrobin":
+		return gnet.RoundRobin
+	case "leastconnections":
+		return gnet.LeastConnections
+	case "sourceaddrhash":
+		return gnet.SourceAddrHash
+	default:
+		return gnet.RoundRobin
 	}
-
-	if lb, ok := loadBalancer[s.LoadBalancer]; ok {
-		return lb
-	}
-
-	return gnet.RoundRobin
 }
 
 // GetTCPNoDelay returns the TCP no delay option from config file.
