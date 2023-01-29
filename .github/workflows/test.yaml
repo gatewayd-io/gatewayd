@@ -57,7 +57,8 @@ jobs:
       - name: Checkout test plugin 🛎️
         uses: actions/checkout@v3
         with:
-          repository: gatewayd-plugin-test
+          repository: gatewayd-io/gatewayd-plugin-test
+          path: gatewayd-plugin-test
 
       - name: Install Go 🧑‍💻
         uses: actions/setup-go@v3
