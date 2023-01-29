@@ -166,7 +166,9 @@ var runCmd = &cobra.Command{
 			// Merge the metrics from the plugins with the ones from GatewayD.
 			mergedMetricsHandler := func(next http.Handler) http.Handler {
 				handler := func(w http.ResponseWriter, r *http.Request) {
-					w.Write(metricsMerger.OutputMetrics)
+					if _, err := w.Write(metricsMerger.OutputMetrics); err != nil {
+						logger.Error().Err(err).Msg("Failed to write metrics")
+					}
 					next.ServeHTTP(w, r)
 				}
 				return http.HandlerFunc(handler)
