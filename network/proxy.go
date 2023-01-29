@@ -126,7 +126,7 @@ func (pr *ProxyImpl) Connect(gconn gnet.Conn) *gerr.GatewayDError {
 	pr.logger.Debug().Fields(
 		map[string]interface{}{
 			"function": "proxy.connect",
-			"count":    pr.availableConnections.Size(),
+			"count":    pr.busyConnections.Size(),
 		},
 	).Msg("Busy client connections")
 
@@ -171,7 +171,7 @@ func (pr *ProxyImpl) Disconnect(gconn gnet.Conn) *gerr.GatewayDError {
 	pr.logger.Debug().Fields(
 		map[string]interface{}{
 			"function": "proxy.disconnect",
-			"count":    pr.availableConnections.Size(),
+			"count":    pr.busyConnections.Size(),
 		},
 	).Msg("Busy client connections")
 
