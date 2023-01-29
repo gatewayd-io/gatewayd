@@ -1,6 +1,8 @@
 package config
 
 import (
+	"time"
+
 	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
 )
@@ -81,17 +83,21 @@ func (p Pool) GetSize() int {
 }
 
 // GetOutput returns the logger output from config file.
-func (l Logger) GetOutput() LogOutput {
-	switch l.Output {
-	case "file":
-		return File
-	case "stdout":
-		return Stdout
-	case "stderr":
-		return Stderr
-	default:
-		return Console
+func (l Logger) GetOutput() []LogOutput {
+	var outputs []LogOutput
+	for _, output := range l.Output {
+		switch output {
+		case "file":
+			outputs = append(outputs, File)
+		case "stdout":
+			outputs = append(outputs, Stdout)
+		case "stderr":
+			outputs = append(outputs, Stderr)
+		default:
+			outputs = append(outputs, Console)
+		}
 	}
+	return outputs
 }
 
 // GetTimeFormat returns the logger time format from config file.
@@ -107,6 +113,46 @@ func (l Logger) GetTimeFormat() string {
 		return zerolog.TimeFormatUnix
 	default:
 		return zerolog.TimeFormatUnix
+	}
+}
+
+// GetConsoleTimeFormat returns the console logger's time format from config file.
+func (l Logger) GetConsoleTimeFormat() string {
+	switch l.ConsoleTimeFormat {
+	case "Layout":
+		return time.Layout
+	case "ANSIC":
+		return time.ANSIC
+	case "UnixDate":
+		return time.UnixDate
+	case "RubyDate":
+		return time.RubyDate
+	case "RFC822":
+		return time.RFC822
+	case "RFC822Z":
+		return time.RFC822Z
+	case "RFC850":
+		return time.RFC850
+	case "RFC1123":
+		return time.RFC1123
+	case "RFC1123Z":
+		return time.RFC1123Z
+	case "RFC3339":
+		return time.RFC3339
+	case "RFC3339Nano":
+		return time.RFC3339Nano
+	case "Kitchen":
+		return time.Kitchen
+	case "Stamp":
+		return time.Stamp
+	case "StampMilli":
+		return time.StampMilli
+	case "StampMicro":
+		return time.StampMicro
+	case "StampNano":
+		return time.StampNano
+	default:
+		return time.RFC3339
 	}
 }
 

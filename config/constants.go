@@ -1,6 +1,10 @@
 package config
 
-import "time"
+import (
+	"time"
+
+	"github.com/rs/zerolog"
+)
 
 type (
 	Status              uint
@@ -46,19 +50,23 @@ const (
 	File
 )
 
+var DefaultLogOutput = [...]string{"console"}
+
 const (
 	// Config constants.
 	Default   = "default"
 	EnvPrefix = "GATEWAYD_"
 
 	// Logger constants.
-	DefaultLogFileName = "gatewayd.log"
-	DefaultLogOutput   = "console"
-	DefaultLogLevel    = "info"
-	DefaultMaxSize     = 500 // megabytes
-	DefaultMaxBackups  = 5
-	DefaultMaxAge      = 30 // days
-	DefaultCompress    = true
+	DefaultLogFileName       = "gatewayd.log"
+	DefaultLogLevel          = "info"
+	DefaultTimeFormat        = zerolog.TimeFormatUnix
+	DefaultConsoleTimeFormat = time.RFC3339
+	DefaultMaxSize           = 500 // megabytes
+	DefaultMaxBackups        = 5
+	DefaultMaxAge            = 30 // days
+	DefaultCompress          = true
+	DefaultLocalTime         = false
 
 	// Plugin constants.
 	DefaultMinPort             = 50000

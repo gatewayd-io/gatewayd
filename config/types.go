@@ -43,16 +43,17 @@ type Client struct {
 }
 
 type Logger struct {
-	Output     string `koanf:"output"`
-	TimeFormat string `koanf:"timeFormat"`
-	Level      string `koanf:"level"`
-	NoColor    bool   `koanf:"noColor"`
-	StartupMsg bool   `koanf:"startupMsg"`
-	FileName   string `koanf:"fileName"`
-	MaxSize    int    `koanf:"maxSize"`
-	MaxBackups int    `koanf:"maxBackups"`
-	MaxAge     int    `koanf:"maxAge"`
-	Compress   bool   `koanf:"compress"`
+	Output            []string `koanf:"output"`
+	TimeFormat        string   `koanf:"timeFormat"`
+	Level             string   `koanf:"level"`
+	ConsoleTimeFormat string   `koanf:"consoleTimeFormat"`
+	NoColor           bool     `koanf:"noColor"`
+	StartupMsg        bool     `koanf:"startupMsg"`
+	FileName          string   `koanf:"fileName"`
+	MaxSize           int      `koanf:"maxSize"`
+	MaxBackups        int      `koanf:"maxBackups"`
+	MaxAge            int      `koanf:"maxAge"`
+	Compress          bool     `koanf:"compress"`
 }
 
 type Pool struct {
