@@ -82,6 +82,74 @@ func TestPool_ForEach(t *testing.T) {
 	})
 }
 
+func TestPool_Get(t *testing.T) {
+	pool := NewPool()
+	defer pool.Clear()
+	assert.NotNil(t, pool)
+	assert.NotNil(t, pool.Pool())
+	assert.Equal(t, 0, pool.Size())
+	pool.Put("client1.ID", "client1")
+	assert.Equal(t, 1, pool.Size())
+	pool.Put("client2.ID", "client2")
+	assert.Equal(t, 2, pool.Size())
+	if c1, ok := pool.Get("client1.ID").(string); !ok {
+		assert.Equal(t, c1, "client1")
+	} else {
+		assert.Equal(t, "client1", c1)
+		assert.Equal(t, 2, pool.Size())
+	}
+	if c2, ok := pool.Get("client2.ID").(string); !ok {
+		assert.Equal(t, c2, "client2")
+	} else {
+		assert.Equal(t, "client2", c2)
+		assert.Equal(t, 2, pool.Size())
+	}
+}
+
+func TestPool_GetOrPut(t *testing.T) {
+	pool := NewPool()
+	defer pool.Clear()
+	assert.NotNil(t, pool)
+	assert.NotNil(t, pool.Pool())
+	assert.Equal(t, 0, pool.Size())
+	pool.Put("client1.ID", "client1")
+	assert.Equal(t, 1, pool.Size())
+	pool.Put("client2.ID", "client2")
+	assert.Equal(t, 2, pool.Size())
+	c1, loaded := pool.GetOrPut("client1.ID", "client1")
+	assert.True(t, loaded)
+	if c1, ok := c1.(string); !ok {
+		assert.Equal(t, c1, "client1")
+	} else {
+		assert.Equal(t, "client1", c1)
+		assert.Equal(t, 2, pool.Size())
+	}
+	c2, loaded := pool.GetOrPut("client2.ID", "client2")
+	assert.True(t, loaded)
+	if c2, ok := c2.(string); !ok {
+		assert.Equal(t, c2, "client2")
+	} else {
+		assert.Equal(t, "client2", c2)
+		assert.Equal(t, 2, pool.Size())
+	}
+}
+
+func TestPool_Remove(t *testing.T) {
+	pool := NewPool()
+	defer pool.Clear()
+	assert.NotNil(t, pool)
+	assert.NotNil(t, pool.Pool())
+	assert.Equal(t, 0, pool.Size())
+	pool.Put("client1.ID", "client1")
+	assert.Equal(t, 1, pool.Size())
+	pool.Put("client2.ID", "client2")
+	assert.Equal(t, 2, pool.Size())
+	pool.Remove("client1.ID")
+	assert.Equal(t, 1, pool.Size())
+	pool.Remove("client2.ID")
+	assert.Equal(t, 0, pool.Size())
+}
+
 func TestPool_GetClientIDs(t *testing.T) {
 	pool := NewPool()
 	defer pool.Clear()
