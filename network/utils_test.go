@@ -3,6 +3,7 @@ package network
 import (
 	"testing"
 
+	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
@@ -11,7 +12,7 @@ import (
 // TestGetRlimit tests the GetRLimit function.
 func TestGetRlimit(t *testing.T) {
 	cfg := logging.LoggerConfig{
-		Output:     nil,
+		Output:     config.Console,
 		TimeFormat: zerolog.TimeFormatUnix,
 		Level:      zerolog.DebugLevel,
 		NoColor:    true,
@@ -26,7 +27,7 @@ func TestGetRlimit(t *testing.T) {
 // TestGetID tests the GetID function.
 func TestGetID(t *testing.T) {
 	cfg := logging.LoggerConfig{
-		Output:     nil,
+		Output:     config.Console,
 		TimeFormat: zerolog.TimeFormatUnix,
 		Level:      zerolog.DebugLevel,
 		NoColor:    true,
@@ -40,7 +41,7 @@ func TestGetID(t *testing.T) {
 // TestResolve tests the Resolve function.
 func TestResolve(t *testing.T) {
 	cfg := logging.LoggerConfig{
-		Output:     nil,
+		Output:     config.Console,
 		TimeFormat: zerolog.TimeFormatUnix,
 		Level:      zerolog.DebugLevel,
 		NoColor:    true,
