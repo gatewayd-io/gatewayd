@@ -9,6 +9,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// TODO: Remove this once we have a proper hooks package.
 // This is duplicated from the network package, because import cycles are not allowed.
 type (
 	Signature   map[string]interface{}

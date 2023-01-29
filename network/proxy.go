@@ -5,7 +5,7 @@ import (
 
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
-	"github.com/gatewayd-io/gatewayd/plugin"
+	"github.com/gatewayd-io/gatewayd/plugin/hook"
 	"github.com/gatewayd-io/gatewayd/pool"
 	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
@@ -24,7 +24,7 @@ type Proxy struct {
 	availableConnections pool.IPool
 	busyConnections      pool.IPool
 	logger               zerolog.Logger
-	hookConfig           *plugin.HookConfig
+	hookConfig           *hook.HookConfig
 
 	Elastic             bool
 	ReuseElasticClients bool
@@ -37,7 +37,7 @@ var _ IProxy = &Proxy{}
 
 // NewProxy creates a new proxy.
 func NewProxy(
-	p pool.IPool, hookConfig *plugin.HookConfig,
+	p pool.IPool, hookConfig *hook.HookConfig,
 	elastic, reuseElasticClients bool,
 	clientConfig *config.Client, logger zerolog.Logger,
 ) *Proxy {
@@ -201,7 +201,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	result, err := pr.hookConfig.Run(
 		context.Background(),
 		trafficData(gconn, client, "request", request, origErr),
-		plugin.OnIngressTraffic,
+		hook.OnIngressTraffic,
 		pr.hookConfig.Verification)
 	if err != nil {
 		pr.logger.Error().Err(err).Msg("Error running hook")
@@ -277,7 +277,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	result, err = pr.hookConfig.Run(
 		context.Background(),
 		trafficData(gconn, client, "response", response[:received], err),
-		plugin.OnEgressTraffic,
+		hook.OnEgressTraffic,
 		pr.hookConfig.Verification)
 	if err != nil {
 		pr.logger.Error().Err(err).Msg("Error running hook")

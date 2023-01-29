@@ -3,12 +3,13 @@ package plugin
 import (
 	"testing"
 
+	"github.com/gatewayd-io/gatewayd/plugin/hook"
 	"github.com/stretchr/testify/assert"
 )
 
 // TestPluginRegistry tests the PluginRegistry.
 func TestPluginRegistry(t *testing.T) {
-	hooksConfig := NewHookConfig()
+	hooksConfig := hook.NewHookConfig()
 	assert.NotNil(t, hooksConfig)
 	reg := NewRegistry(hooksConfig)
 	assert.NotNil(t, reg)

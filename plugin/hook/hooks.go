@@ -1,4 +1,4 @@
-package plugin
+package hook
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
-	"github.com/gatewayd-io/gatewayd/plugin/hook"
+	"github.com/gatewayd-io/gatewayd/plugin/utils"
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -14,31 +14,31 @@ import (
 
 const (
 	// Run command hooks (cmd/run.go).
-	OnConfigLoaded hook.HookType = "onConfigLoaded"
-	OnNewLogger    hook.HookType = "onNewLogger"
-	OnNewPool      hook.HookType = "onNewPool"
-	OnNewProxy     hook.HookType = "onNewProxy"
-	OnNewServer    hook.HookType = "onNewServer"
-	OnSignal       hook.HookType = "onSignal"
+	OnConfigLoaded HookType = "onConfigLoaded"
+	OnNewLogger    HookType = "onNewLogger"
+	OnNewPool      HookType = "onNewPool"
+	OnNewProxy     HookType = "onNewProxy"
+	OnNewServer    HookType = "onNewServer"
+	OnSignal       HookType = "onSignal"
 	// Server hooks (network/server.go).
-	OnRun            hook.HookType = "onRun"
-	OnBooting        hook.HookType = "onBooting"
-	OnBooted         hook.HookType = "onBooted"
-	OnOpening        hook.HookType = "onOpening"
-	OnOpened         hook.HookType = "onOpened"
-	OnClosing        hook.HookType = "onClosing"
-	OnClosed         hook.HookType = "onClosed"
-	OnTraffic        hook.HookType = "onTraffic"
-	OnIngressTraffic hook.HookType = "onIngressTraffic"
-	OnEgressTraffic  hook.HookType = "onEgressTraffic"
-	OnShutdown       hook.HookType = "onShutdown"
-	OnTick           hook.HookType = "onTick"
+	OnRun            HookType = "onRun"
+	OnBooting        HookType = "onBooting"
+	OnBooted         HookType = "onBooted"
+	OnOpening        HookType = "onOpening"
+	OnOpened         HookType = "onOpened"
+	OnClosing        HookType = "onClosing"
+	OnClosed         HookType = "onClosed"
+	OnTraffic        HookType = "onTraffic"
+	OnIngressTraffic HookType = "onIngressTraffic"
+	OnEgressTraffic  HookType = "onEgressTraffic"
+	OnShutdown       HookType = "onShutdown"
+	OnTick           HookType = "onTick"
 	// Pool hooks (network/pool.go).
-	OnNewClient hook.HookType = "onNewClient"
+	OnNewClient HookType = "onNewClient"
 )
 
 type HookConfig struct {
-	hooks        map[hook.HookType]map[hook.Priority]hook.HookDef
+	hooks        map[HookType]map[Priority]HookDef
 	Logger       zerolog.Logger
 	Verification config.Policy
 }
@@ -46,19 +46,19 @@ type HookConfig struct {
 // NewHookConfig returns a new HookConfig.
 func NewHookConfig() *HookConfig {
 	return &HookConfig{
-		hooks: map[hook.HookType]map[hook.Priority]hook.HookDef{},
+		hooks: map[HookType]map[Priority]HookDef{},
 	}
 }
 
 // Hooks returns the hooks.
-func (h *HookConfig) Hooks() map[hook.HookType]map[hook.Priority]hook.HookDef {
+func (h *HookConfig) Hooks() map[HookType]map[Priority]HookDef {
 	return h.hooks
 }
 
 // Add adds a hook with a priority to the hooks map.
-func (h *HookConfig) Add(hookType hook.HookType, prio hook.Priority, hookFunc hook.HookDef) {
+func (h *HookConfig) Add(hookType HookType, prio Priority, hookFunc HookDef) {
 	if len(h.hooks[hookType]) == 0 {
-		h.hooks[hookType] = map[hook.Priority]hook.HookDef{prio: hookFunc}
+		h.hooks[hookType] = map[Priority]HookDef{prio: hookFunc}
 	} else {
 		if _, ok := h.hooks[hookType][prio]; ok {
 			h.Logger.Warn().Fields(
@@ -73,7 +73,7 @@ func (h *HookConfig) Add(hookType hook.HookType, prio hook.Priority, hookFunc ho
 }
 
 // Get returns the hooks of a specific type.
-func (h *HookConfig) Get(hookType hook.HookType) map[hook.Priority]hook.HookDef {
+func (h *HookConfig) Get(hookType HookType) map[Priority]HookDef {
 	return h.hooks[hookType]
 }
 
@@ -87,14 +87,14 @@ func (h *HookConfig) Get(hookType hook.HookType) map[hook.Priority]hook.HookDef 
 // to Remove, the hook is removed from the list of hooks on the first error. If the
 // verification mode is set to Ignore, the error is ignored and the execution continues.
 // If the verification mode is set to PassDown, the extra keys/values in the result
-// are passed down to the next hook. The verification mode is set to PassDown by default.
+// are passed down to the next  The verification mode is set to PassDown by default.
 // The opts are passed to the hooks as well to allow them to use the grpc.CallOption.
 //
 //nolint:funlen
 func (h *HookConfig) Run(
 	ctx context.Context,
 	args map[string]interface{},
-	hookType hook.HookType,
+	hookType HookType,
 	verification config.Policy,
 	opts ...grpc.CallOption,
 ) (map[string]interface{}, *gerr.GatewayDError) {
@@ -107,7 +107,7 @@ func (h *HookConfig) Run(
 	defer cancel()
 
 	// Cast custom fields to their primitive types, like time.Duration to float64.
-	args = CastToPrimitiveTypes(args)
+	args = utils.CastToPrimitiveTypes(args)
 
 	// Create structpb.Struct from args.
 	var params *structpb.Struct
@@ -120,7 +120,7 @@ func (h *HookConfig) Run(
 	}
 
 	// Sort hooks by priority.
-	priorities := make([]hook.Priority, 0, len(h.hooks[hookType]))
+	priorities := make([]Priority, 0, len(h.hooks[hookType]))
 	for prio := range h.hooks[hookType] {
 		priorities = append(priorities, prio)
 	}
@@ -130,7 +130,7 @@ func (h *HookConfig) Run(
 
 	// Run hooks, passing the result of the previous hook to the next one.
 	returnVal := &structpb.Struct{}
-	var removeList []hook.Priority
+	var removeList []Priority
 	// The signature of parameters and args MUST be the same for this to work.
 	for idx, prio := range priorities {
 		var result *structpb.Struct
@@ -145,7 +145,7 @@ func (h *HookConfig) Run(
 		// and that the hook does not return any unexpected values.
 		// If the verification mode is non-strict (permissive), let the plugin pass
 		// extra keys/values to the next plugin in chain.
-		if Verify(params, result) || verification == config.PassDown {
+		if utils.Verify(params, result) || verification == config.PassDown {
 			// Update the last return value with the current result
 			returnVal = result
 			continue
@@ -154,7 +154,7 @@ func (h *HookConfig) Run(
 		// At this point, the hook returned an invalid value, so we need to handle it.
 		// The result of the current hook will be ignored, regardless of the policy.
 		switch verification {
-		// Ignore the result of this plugin, log an error and execute the next hook.
+		// Ignore the result of this plugin, log an error and execute the next
 		case config.Ignore:
 			h.Logger.Error().Err(err).Fields(
 				map[string]interface{}{
@@ -165,7 +165,7 @@ func (h *HookConfig) Run(
 			if idx == 0 {
 				returnVal = params
 			}
-		// Abort execution of the plugins, log the error and return the result of the last hook.
+		// Abort execution of the plugins, log the error and return the result of the last
 		case config.Abort:
 			h.Logger.Error().Err(err).Fields(
 				map[string]interface{}{
@@ -177,7 +177,7 @@ func (h *HookConfig) Run(
 				return args, nil
 			}
 			return returnVal.AsMap(), nil
-		// Remove the hook from the registry, log the error and execute the next hook.
+		// Remove the hook from the registry, log the error and execute the next
 		case config.Remove:
 			h.Logger.Error().Err(err).Fields(
 				map[string]interface{}{

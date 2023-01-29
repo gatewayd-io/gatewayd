@@ -8,6 +8,7 @@ import (
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/gatewayd-io/gatewayd/plugin/hook"
+	"github.com/gatewayd-io/gatewayd/plugin/utils"
 	pluginV1 "github.com/gatewayd-io/gatewayd/plugin/v1"
 	"github.com/gatewayd-io/gatewayd/pool"
 	goplugin "github.com/hashicorp/go-plugin"
@@ -28,14 +29,14 @@ type IPluginRegistry interface {
 
 type PluginRegistry struct { //nolint:golint,revive
 	plugins      pool.IPool
-	hooksConfig  *HookConfig
+	hooksConfig  *hook.HookConfig
 	CompatPolicy config.CompatPolicy
 }
 
 var _ IPluginRegistry = &PluginRegistry{}
 
 // NewRegistry creates a new plugin registry.
-func NewRegistry(hooksConfig *HookConfig) *PluginRegistry {
+func NewRegistry(hooksConfig *hook.HookConfig) *PluginRegistry {
 	return &PluginRegistry{
 		plugins:     pool.NewPool(config.EmptyPoolCapacity),
 		hooksConfig: hooksConfig,
@@ -175,7 +176,7 @@ func (reg *PluginRegistry) LoadPlugins(plugins []config.Plugin) {
 
 		// Verify the checksum.
 		// TODO: Load the plugin from a remote location if the checksum didn't match?
-		if sum, err := sha256sum(plugin.LocalPath); err != nil {
+		if sum, err := utils.SHA256SUM(plugin.LocalPath); err != nil {
 			reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to calculate checksum")
 			continue
 		} else if sum != plugin.ID.Checksum {
@@ -200,7 +201,7 @@ func (reg *PluginRegistry) LoadPlugins(plugins []config.Plugin) {
 			&goplugin.ClientConfig{
 				HandshakeConfig: pluginV1.Handshake,
 				Plugins:         pluginV1.GetPluginMap(plugin.ID.Name),
-				Cmd:             NewCommand(plugin.LocalPath, plugin.Args, plugin.Env),
+				Cmd:             utils.NewCommand(plugin.LocalPath, plugin.Args, plugin.Env),
 				AllowedProtocols: []goplugin.Protocol{
 					goplugin.ProtocolGRPC,
 				},
@@ -330,43 +331,43 @@ func (reg *PluginRegistry) RegisterHooks(id Identifier) {
 	for _, hookType := range pluginImpl.Hooks {
 		var hookFunc hook.HookDef
 		switch hookType {
-		case OnConfigLoaded:
+		case hook.OnConfigLoaded:
 			hookFunc = pluginV1.OnConfigLoaded
-		case OnNewLogger:
+		case hook.OnNewLogger:
 			hookFunc = pluginV1.OnNewLogger
-		case OnNewPool:
+		case hook.OnNewPool:
 			hookFunc = pluginV1.OnNewPool
-		case OnNewProxy:
+		case hook.OnNewProxy:
 			hookFunc = pluginV1.OnNewProxy
-		case OnNewServer:
+		case hook.OnNewServer:
 			hookFunc = pluginV1.OnNewServer
-		case OnSignal:
+		case hook.OnSignal:
 			hookFunc = pluginV1.OnSignal
-		case OnRun:
+		case hook.OnRun:
 			hookFunc = pluginV1.OnRun
-		case OnBooting:
+		case hook.OnBooting:
 			hookFunc = pluginV1.OnBooting
-		case OnBooted:
+		case hook.OnBooted:
 			hookFunc = pluginV1.OnBooted
-		case OnOpening:
+		case hook.OnOpening:
 			hookFunc = pluginV1.OnOpening
-		case OnOpened:
+		case hook.OnOpened:
 			hookFunc = pluginV1.OnOpened
-		case OnClosing:
+		case hook.OnClosing:
 			hookFunc = pluginV1.OnClosing
-		case OnClosed:
+		case hook.OnClosed:
 			hookFunc = pluginV1.OnClosed
-		case OnTraffic:
+		case hook.OnTraffic:
 			hookFunc = pluginV1.OnTraffic
-		case OnIngressTraffic:
+		case hook.OnIngressTraffic:
 			hookFunc = pluginV1.OnIngressTraffic
-		case OnEgressTraffic:
+		case hook.OnEgressTraffic:
 			hookFunc = pluginV1.OnEgressTraffic
-		case OnShutdown:
+		case hook.OnShutdown:
 			hookFunc = pluginV1.OnShutdown
-		case OnTick:
+		case hook.OnTick:
 			hookFunc = pluginV1.OnTick
-		case OnNewClient:
+		case hook.OnNewClient:
 			hookFunc = pluginV1.OnNewClient
 		default:
 			reg.hooksConfig.Logger.Warn().Str("hook", string(hookType)).Msg("Unknown hook type")

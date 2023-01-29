@@ -12,6 +12,7 @@ import (
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/gatewayd-io/gatewayd/network"
 	"github.com/gatewayd-io/gatewayd/plugin"
+	"github.com/gatewayd-io/gatewayd/plugin/hook"
 	"github.com/gatewayd-io/gatewayd/pool"
 	"github.com/knadh/koanf"
 	"github.com/knadh/koanf/parsers/yaml"
@@ -28,7 +29,7 @@ var (
 )
 
 var (
-	hooksConfig   = plugin.NewHookConfig()
+	hooksConfig   = hook.NewHookConfig()
 	DefaultLogger = logging.NewLogger(
 		logging.LoggerConfig{
 			Level:   zerolog.DebugLevel,
@@ -108,7 +109,7 @@ var runCmd = &cobra.Command{
 		updatedGlobalConfig, err := hooksConfig.Run(
 			context.Background(),
 			globalConfig.All(),
-			plugin.OnConfigLoaded,
+			hook.OnConfigLoaded,
 			hooksConfig.Verification)
 		if err != nil {
 			DefaultLogger.Error().Err(err).Msg("Failed to run OnConfigLoaded hooks")
@@ -154,7 +155,7 @@ var runCmd = &cobra.Command{
 		}
 		// TODO: Use a context with a timeout
 		_, err = hooksConfig.Run(
-			context.Background(), data, plugin.OnNewLogger, hooksConfig.Verification)
+			context.Background(), data, hook.OnNewLogger, hooksConfig.Verification)
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to run OnNewLogger hooks")
 		}
@@ -185,7 +186,7 @@ var runCmd = &cobra.Command{
 				_, err := hooksConfig.Run(
 					context.Background(),
 					clientCfg,
-					plugin.OnNewClient,
+					hook.OnNewClient,
 					hooksConfig.Verification)
 				if err != nil {
 					logger.Error().Err(err).Msg("Failed to run OnNewClient hooks")
@@ -213,7 +214,7 @@ var runCmd = &cobra.Command{
 		_, err = hooksConfig.Run(
 			context.Background(),
 			map[string]interface{}{"size": poolSize},
-			plugin.OnNewPool,
+			hook.OnNewPool,
 			hooksConfig.Verification)
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to run OnNewPool hooks")
@@ -240,7 +241,7 @@ var runCmd = &cobra.Command{
 			},
 		}
 		_, err = hooksConfig.Run(
-			context.Background(), proxyCfg, plugin.OnNewProxy, hooksConfig.Verification)
+			context.Background(), proxyCfg, hook.OnNewProxy, hooksConfig.Verification)
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to run OnNewProxy hooks")
 		}
@@ -302,7 +303,7 @@ var runCmd = &cobra.Command{
 			"tcpNoDelay":       gConfig.Server.TCPNoDelay,
 		}
 		_, err = hooksConfig.Run(
-			context.Background(), serverCfg, plugin.OnNewServer, hooksConfig.Verification)
+			context.Background(), serverCfg, hook.OnNewServer, hooksConfig.Verification)
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to run OnNewServer hooks")
 		}
@@ -320,7 +321,7 @@ var runCmd = &cobra.Command{
 		)
 		signalsCh := make(chan os.Signal, 1)
 		signal.Notify(signalsCh, signals...)
-		go func(hooksConfig *plugin.HookConfig) {
+		go func(hooksConfig *hook.HookConfig) {
 			for sig := range signalsCh {
 				for _, s := range signals {
 					if sig != s {
@@ -328,7 +329,7 @@ var runCmd = &cobra.Command{
 						_, err := hooksConfig.Run(
 							context.Background(),
 							map[string]interface{}{"signal": sig.String()},
-							plugin.OnSignal,
+							hook.OnSignal,
 							hooksConfig.Verification,
 						)
 						if err != nil {
