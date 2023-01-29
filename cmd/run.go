@@ -131,10 +131,15 @@ var runCmd = &cobra.Command{
 
 			if client != nil {
 				clientCfg := map[string]interface{}{
-					"id":                client.ID,
-					"network":           clientConfig.Network,
-					"address":           clientConfig.Address,
-					"receiveBufferSize": clientConfig.ReceiveBufferSize,
+					"id":                 client.ID,
+					"network":            clientConfig.Network,
+					"address":            clientConfig.Address,
+					"receiveBufferSize":  clientConfig.ReceiveBufferSize,
+					"receiveChunkSize":   clientConfig.ReceiveChunkSize,
+					"receiveDeadline":    clientConfig.ReceiveDeadline,
+					"sendDeadline":       clientConfig.SendDeadline,
+					"tcpKeepAlive":       clientConfig.TCPKeepAlive,
+					"tcpKeepAlivePeriod": clientConfig.TCPKeepAlivePeriod,
 				}
 				_, err := hooksConfig.Run(
 					context.Background(),
@@ -182,12 +187,14 @@ var runCmd = &cobra.Command{
 			"elastic":             elastic,
 			"reuseElasticClients": reuseElasticClients,
 			"clientConfig": map[string]interface{}{
-				"network":           elasticClientConfig.Network,
-				"address":           elasticClientConfig.Address,
-				"receiveBufferSize": elasticClientConfig.ReceiveBufferSize,
-				"receiveChunkSize":  elasticClientConfig.ReceiveChunkSize,
-				"receiveDeadline":   elasticClientConfig.ReceiveDeadline.Seconds(),
-				"sendDeadline":      elasticClientConfig.SendDeadline.Seconds(),
+				"network":            elasticClientConfig.Network,
+				"address":            elasticClientConfig.Address,
+				"receiveBufferSize":  elasticClientConfig.ReceiveBufferSize,
+				"receiveChunkSize":   elasticClientConfig.ReceiveChunkSize,
+				"receiveDeadline":    elasticClientConfig.ReceiveDeadline.Seconds(),
+				"sendDeadline":       elasticClientConfig.SendDeadline.Seconds(),
+				"tcpKeepAlive":       elasticClientConfig.TCPKeepAlive,
+				"tcpKeepAlivePeriod": elasticClientConfig.TCPKeepAlivePeriod.Seconds(),
 			},
 		}
 		_, err = hooksConfig.Run(
