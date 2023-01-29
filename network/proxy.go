@@ -91,7 +91,7 @@ func (pr *ProxyImpl) Connect(gconn gnet.Conn) error {
 
 	client, err := pr.TryReconnect(client)
 	if err != nil {
-		return err
+		pr.logger.Error().Err(err).Msgf("Failed to connect to the client")
 	}
 
 	if err := pr.busyConnections.Put(gconn, client); err != nil {
@@ -115,14 +115,16 @@ func (pr *ProxyImpl) Disconnect(gconn gnet.Conn) error {
 	if client != nil {
 		if cl, ok := client.(*Client); ok {
 			if (pr.Elastic && pr.ReuseElasticClients) || !pr.Elastic {
-				cl, err := pr.TryReconnect(cl)
-				if err != nil {
-					return err
+				if !cl.IsConnected() {
+					_, err := pr.TryReconnect(cl)
+					if err != nil {
+						pr.logger.Error().Err(err).Msgf("Failed to reconnect to the client")
+					}
 				}
 				// If the client is not in the pool, put it back
-				err = pr.availableConnections.Put(cl.ID, cl)
+				err := pr.availableConnections.Put(cl.ID, cl)
 				if err != nil {
-					return err //nolint:wrapcheck
+					pr.logger.Error().Err(err).Msgf("Failed to put the client back in the pool")
 				}
 			} else {
 				return gerr.ErrClientNotConnected
@@ -222,7 +224,6 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 	// Send the query to the server
 	sent, err := client.Send(buf)
 	if err != nil {
-		// return err
 		pr.logger.Error().Err(err).Msgf("Error sending data to database")
 	}
 	pr.logger.Debug().Fields(
@@ -301,17 +302,11 @@ func (pr *ProxyImpl) TryReconnect(client *Client) (*Client, error) {
 
 	if pr.IsExhausted() {
 		pr.logger.Error().Msg("No more available connections :: TryReconnect")
+		return client, gerr.ErrPoolExhausted
 	}
 
 	if !client.IsConnected() {
-		client.Close()
-
-		client = NewClient(
-			pr.ClientConfig.Network,
-			pr.ClientConfig.Address,
-			pr.ClientConfig.ReceiveBufferSize,
-			client.logger,
-		)
+		pr.logger.Error().Msg("Client is disconnected")
 	}
 
 	return client, nil
