@@ -4,7 +4,7 @@ import (
 	"context"
 	"os/exec"
 
-	plugin_v1 "github.com/gatewayd-io/gatewayd/plugin/v1"
+	pluginV1 "github.com/gatewayd-io/gatewayd/plugin/v1"
 	"github.com/gatewayd-io/gatewayd/pool"
 	goplugin "github.com/hashicorp/go-plugin"
 	"github.com/knadh/koanf"
@@ -143,7 +143,7 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 		plugin.client = goplugin.NewClient(
 			&goplugin.ClientConfig{
 				HandshakeConfig: handshakeConfig,
-				Plugins:         plugin_v1.GetPluginMap(plugin.ID.Name),
+				Plugins:         pluginV1.GetPluginMap(plugin.ID.Name),
 				Cmd:             exec.Command(plugin.LocalPath),
 				AllowedProtocols: []goplugin.Protocol{
 					goplugin.ProtocolGRPC,
@@ -166,11 +166,11 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 
 		// Load metadata from the plugin
 		var metadata *structpb.Struct
-		if plugin_v1, err := plugin.Dispense(); err != nil {
+		if pluginV1, err := plugin.Dispense(); err != nil {
 			reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to dispense plugin")
 			continue
 		} else {
-			if metadata, err = plugin_v1.GetPluginConfig(context.Background(), &structpb.Struct{}); err != nil {
+			if metadata, err = pluginV1.GetPluginConfig(context.Background(), &structpb.Struct{}); err != nil {
 				reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to get plugin metadata")
 				continue
 			}
@@ -204,7 +204,7 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 func (reg *RegistryImpl) RegisterHooks(id Identifier) {
 	pluginImpl := reg.Get(id)
 	reg.hooksConfig.Logger.Debug().Msgf("Registering hooks for plugin: %s", pluginImpl.ID.Name)
-	if plugin_v1, err := pluginImpl.Dispense(); err != nil {
+	if pluginV1, err := pluginImpl.Dispense(); err != nil {
 		reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to dispense plugin")
 		return
 	} else {
@@ -212,43 +212,43 @@ func (reg *RegistryImpl) RegisterHooks(id Identifier) {
 			var hookFunc HookDef
 			switch hook {
 			case OnConfigLoaded:
-				hookFunc = plugin_v1.OnConfigLoaded
+				hookFunc = pluginV1.OnConfigLoaded
 			case OnNewLogger:
-				hookFunc = plugin_v1.OnNewLogger
+				hookFunc = pluginV1.OnNewLogger
 			case OnNewPool:
-				hookFunc = plugin_v1.OnNewPool
+				hookFunc = pluginV1.OnNewPool
 			case OnNewProxy:
-				hookFunc = plugin_v1.OnNewProxy
+				hookFunc = pluginV1.OnNewProxy
 			case OnNewServer:
-				hookFunc = plugin_v1.OnNewServer
+				hookFunc = pluginV1.OnNewServer
 			case OnSignal:
-				hookFunc = plugin_v1.OnSignal
+				hookFunc = pluginV1.OnSignal
 			case OnRun:
-				hookFunc = plugin_v1.OnRun
+				hookFunc = pluginV1.OnRun
 			case OnBooting:
-				hookFunc = plugin_v1.OnBooting
+				hookFunc = pluginV1.OnBooting
 			case OnBooted:
-				hookFunc = plugin_v1.OnBooted
+				hookFunc = pluginV1.OnBooted
 			case OnOpening:
-				hookFunc = plugin_v1.OnOpening
+				hookFunc = pluginV1.OnOpening
 			case OnOpened:
-				hookFunc = plugin_v1.OnOpened
+				hookFunc = pluginV1.OnOpened
 			case OnClosing:
-				hookFunc = plugin_v1.OnClosing
+				hookFunc = pluginV1.OnClosing
 			case OnClosed:
-				hookFunc = plugin_v1.OnClosed
+				hookFunc = pluginV1.OnClosed
 			case OnTraffic:
-				hookFunc = plugin_v1.OnTraffic
+				hookFunc = pluginV1.OnTraffic
 			case OnIngressTraffic:
-				hookFunc = plugin_v1.OnIngressTraffic
+				hookFunc = pluginV1.OnIngressTraffic
 			case OnEgressTraffic:
-				hookFunc = plugin_v1.OnEgressTraffic
+				hookFunc = pluginV1.OnEgressTraffic
 			case OnShutdown:
-				hookFunc = plugin_v1.OnShutdown
+				hookFunc = pluginV1.OnShutdown
 			case OnTick:
-				hookFunc = plugin_v1.OnTick
+				hookFunc = pluginV1.OnTick
 			case OnNewClient:
-				hookFunc = plugin_v1.OnNewClient
+				hookFunc = pluginV1.OnNewClient
 			default:
 				reg.hooksConfig.Logger.Warn().Msgf("Unknown hook type: %s", hook)
 				continue

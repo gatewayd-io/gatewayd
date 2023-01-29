@@ -4,14 +4,14 @@ import (
 	"net"
 
 	gerr "github.com/gatewayd-io/gatewayd/errors"
-	plugin_v1 "github.com/gatewayd-io/gatewayd/plugin/v1"
+	pluginV1 "github.com/gatewayd-io/gatewayd/plugin/v1"
 	goplugin "github.com/hashicorp/go-plugin"
 )
 
 type Plugin interface {
 	Start() (net.Addr, error)
 	Stop()
-	Dispense() (plugin_v1.GatewayDPluginServiceClient, error)
+	Dispense() (pluginV1.GatewayDPluginServiceClient, error)
 }
 
 type Identifier struct {
@@ -23,7 +23,7 @@ type Identifier struct {
 
 type Impl struct {
 	goplugin.NetRPCUnsupportedPlugin
-	plugin_v1.GatewayDPluginServiceServer
+	pluginV1.GatewayDPluginServiceServer
 
 	client *goplugin.Client
 
@@ -61,7 +61,7 @@ func (p *Impl) Stop() {
 	p.client.Kill()
 }
 
-func (p *Impl) Dispense() (plugin_v1.GatewayDPluginServiceClient, error) {
+func (p *Impl) Dispense() (pluginV1.GatewayDPluginServiceClient, error) {
 	rpcClient, err := p.client.Client()
 	if err != nil {
 		return nil, err
@@ -72,7 +72,7 @@ func (p *Impl) Dispense() (plugin_v1.GatewayDPluginServiceClient, error) {
 		return nil, err
 	}
 
-	if gatewaydPlugin, ok := raw.(plugin_v1.GatewayDPluginServiceClient); ok {
+	if gatewaydPlugin, ok := raw.(pluginV1.GatewayDPluginServiceClient); ok {
 		return gatewaydPlugin, nil
 	}
 
