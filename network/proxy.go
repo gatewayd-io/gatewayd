@@ -12,7 +12,7 @@ import (
 type Proxy interface {
 	Connect(gconn gnet.Conn) error
 	Disconnect(gconn gnet.Conn) error
-	PassThrough(gconn gnet.Conn, onIncomingTraffic, onOutgoingTraffic map[Prio]HookDef) error
+	PassThrough(gconn gnet.Conn) error
 	Reconnect(cl *Client) *Client
 	Shutdown()
 }
@@ -113,11 +113,7 @@ func (pr *ProxyImpl) Disconnect(gconn gnet.Conn) error {
 }
 
 //nolint:funlen
-func (pr *ProxyImpl) PassThrough(
-	gconn gnet.Conn,
-	onIncomingTraffic,
-	onOutgoingTraffic map[Prio]HookDef,
-) error {
+func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 	// TODO: Handle bi-directional traffic
 	// Currently the passthrough is a one-way street from the client to the server, that is,
 	// the client can send data to the server and receive the response back, but the server
@@ -136,18 +132,7 @@ func (pr *ProxyImpl) PassThrough(
 	if err != nil {
 		pr.logger.Error().Err(err).Msgf("Error reading from client: %v", err)
 	}
-	for _, traffic := range onIncomingTraffic {
-		if result := traffic(map[string]interface{}{
-			"gconn":  gconn,
-			"client": client,
-			"buffer": buf,
-			"error":  err,
-		}); result["error"] != nil {
-			if err, ok := result["error"].(error); ok {
-				pr.logger.Error().Err(err).Msgf("Error processing data from client: %v", err)
-			}
-		}
-	}
+	// TODO: OnIncomingTraffic hook should be called here
 
 	// TODO: This is a very basic implementation of the gateway
 	// and it is synchronous. I should make it asynchronous.
@@ -161,18 +146,7 @@ func (pr *ProxyImpl) PassThrough(
 
 	// Receive the response from the server
 	size, response, err := client.Receive()
-	for _, traffic := range onOutgoingTraffic {
-		if result := traffic(map[string]interface{}{
-			"gconn":  gconn,
-			"client": client,
-			"buffer": response[:size],
-			"error":  err,
-		}); result["error"] != nil {
-			if err, ok := result["error"].(error); ok {
-				pr.logger.Error().Err(err).Msgf("Error processing data from server: %s", err)
-			}
-		}
-	}
+	// TODO: OnOutgoingTraffic hook should be called here
 
 	if err != nil && errors.Is(err, io.EOF) {
 		// The server has closed the connection

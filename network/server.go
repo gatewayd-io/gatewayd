@@ -146,10 +146,7 @@ func (s *Server) OnTraffic(gconn gnet.Conn) gnet.Action {
 		},
 		s.hooksConfig.Verification)
 
-	if err := s.proxy.PassThrough(
-		gconn,
-		s.hooksConfig.Get(OnIncomingTraffic),
-		s.hooksConfig.Get(OnOutgoingTraffic)); err != nil {
+	if err := s.proxy.PassThrough(gconn); err != nil {
 		s.logger.Error().Err(err).Msg("Failed to pass through traffic")
 		// TODO: Close the connection *gracefully*
 		return gnet.Close
