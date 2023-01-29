@@ -18,7 +18,7 @@ import (
 type Server struct {
 	gnet.BuiltinEventEngine
 	engine      gnet.Engine
-	proxy       Proxy
+	proxy       IProxy
 	logger      zerolog.Logger
 	hooksConfig *plugin.HookConfig
 
@@ -331,7 +331,7 @@ func NewServer(
 	softLimit, hardLimit uint64,
 	tickInterval time.Duration,
 	options []gnet.Option,
-	proxy Proxy,
+	proxy IProxy,
 	logger zerolog.Logger,
 	hooksConfig *plugin.HookConfig,
 ) *Server {
