@@ -140,10 +140,10 @@ func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 	if err != nil {
 		data["error"] = err.Error()
 	}
-	_, err = s.hooksConfig.Run(
+	_, gatewaydErr := s.hooksConfig.Run(
 		context.Background(), data, plugin.OnClosing, s.hooksConfig.Verification)
 	if err != nil {
-		s.logger.Error().Err(err).Msg("Failed to run OnClosing hook")
+		s.logger.Error().Err(gatewaydErr).Msg("Failed to run OnClosing hook")
 	}
 
 	// Shutdown the server if there are no more connections and the server is stopped
@@ -166,10 +166,10 @@ func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 	if err != nil {
 		data["error"] = err.Error()
 	}
-	_, err = s.hooksConfig.Run(
+	_, gatewaydErr = s.hooksConfig.Run(
 		context.Background(), data, plugin.OnClosed, s.hooksConfig.Verification)
-	if err != nil {
-		s.logger.Error().Err(err).Msg("Failed to run OnClosed hook")
+	if gatewaydErr != nil {
+		s.logger.Error().Err(gatewaydErr).Msg("Failed to run OnClosed hook")
 	}
 
 	return gnet.Close
