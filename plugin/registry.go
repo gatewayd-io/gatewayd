@@ -129,10 +129,7 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 			plugin.LocalPath = localPath
 		}
 
-		if args, ok := pluginConfig.Get(name + ".args").([]string); !ok || args == nil {
-			reg.hooksConfig.Logger.Debug().Str("name", name).Msg(
-				"Commandline args of plugin doesn't exist or is not set")
-		} else {
+		if args := pluginConfig.Strings(name + ".args"); len(args) > 0 {
 			plugin.Args = args
 		}
 
