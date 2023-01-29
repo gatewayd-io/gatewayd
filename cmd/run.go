@@ -67,7 +67,8 @@ var runCmd = &cobra.Command{
 
 		// Create a prefork proxy with the pool of clients
 		elastic, reuseElasticClients, elasticClientConfig := proxyConfig()
-		proxy := network.NewProxy(pool, elastic, reuseElasticClients, elasticClientConfig, logger)
+		proxy := network.NewProxy(
+			pool, hooksConfig, elastic, reuseElasticClients, elasticClientConfig, logger)
 		hooksConfig.Run(
 			network.OnNewProxy, network.Signature{"proxy": proxy}, hooksConfig.Verification)
 
