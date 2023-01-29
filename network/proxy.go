@@ -194,7 +194,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn, onIncomingTraffic, onOutgoingT
 		if err != nil {
 			logrus.Errorf("Error writing the error to client: %v", err)
 		}
-		return err
+		return fmt.Errorf("error receiving data from server: %w", err)
 	}
 
 	// Write the response to the incoming connection

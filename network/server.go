@@ -1,6 +1,7 @@
 package network
 
 import (
+	"fmt"
 	"os"
 	"time"
 
@@ -121,7 +122,7 @@ func (s *Server) Run() error {
 	err = gnet.Run(s, s.Network+"://"+addr, s.Options...)
 	if err != nil {
 		logrus.Error(err)
-		return err
+		return fmt.Errorf("failed to start server: %w", err)
 	}
 
 	return nil
