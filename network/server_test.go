@@ -184,6 +184,7 @@ func TestRunServer(t *testing.T) {
 				if pgErr := postgres.Stop(); pgErr != nil {
 					errs <- err
 				}
+				break
 			}
 		}
 	}(t, server, errs)
