@@ -138,7 +138,7 @@ func NewPool(
 	}
 
 	// Verify that the pool is properly populated
-	logger.Debug().Msgf("There are %d clients in the pool", len(pool.ClientIDs()))
+	logger.Info().Msgf("There are %d clients in the pool", len(pool.ClientIDs()))
 	if len(pool.ClientIDs()) != poolSize {
 		logger.Error().Msg(
 			"The pool size is incorrect, either because " +
