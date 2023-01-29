@@ -13,7 +13,7 @@ builds:
       - amd64
       - arm64
     ldflags:
-      - -s -w -X config.Version={{.VERSION}} -X config.VersionDetails={{.Date}}/{{.Commit}}
+      - -s -w -X config.Version={{.Version}} -X config.VersionDetails={{.Date}}/{{.ShortCommit}}
 
 archives:
   - format: tar.gz
