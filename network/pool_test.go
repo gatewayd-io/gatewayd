@@ -18,7 +18,7 @@ func TestNewPool(t *testing.T) {
 	}
 
 	logger := logging.NewLogger(cfg)
-	pool := NewPool(logger, 0, nil)
+	pool := NewPool(logger, 0, nil, nil)
 	defer pool.Close()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
@@ -46,7 +46,7 @@ func TestPool_Put(t *testing.T) {
 
 	logger := logging.NewLogger(cfg)
 
-	pool := NewPool(logger, 0, nil)
+	pool := NewPool(logger, 0, nil, nil)
 	defer pool.Close()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
@@ -78,7 +78,7 @@ func TestPool_Pop(t *testing.T) {
 
 	logger := logging.NewLogger(cfg)
 
-	pool := NewPool(logger, 0, nil)
+	pool := NewPool(logger, 0, nil, nil)
 	defer pool.Close()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
@@ -118,7 +118,7 @@ func TestPool_Close(t *testing.T) {
 
 	logger := logging.NewLogger(cfg)
 
-	pool := NewPool(logger, 0, nil)
+	pool := NewPool(logger, 0, nil, nil)
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
 	assert.Equal(t, 0, pool.Size())
@@ -154,7 +154,7 @@ func TestPool_Shutdown(t *testing.T) {
 
 	logger := logging.NewLogger(cfg)
 
-	pool := NewPool(logger, 0, nil)
+	pool := NewPool(logger, 0, nil, nil)
 	defer pool.Close()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
@@ -190,7 +190,7 @@ func TestPool_ForEach(t *testing.T) {
 
 	logger := logging.NewLogger(cfg)
 
-	pool := NewPool(logger, 0, nil)
+	pool := NewPool(logger, 0, nil, nil)
 	defer pool.Close()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
@@ -228,7 +228,7 @@ func TestPool_ClientIDs(t *testing.T) {
 
 	logger := logging.NewLogger(cfg)
 
-	pool := NewPool(logger, 0, nil)
+	pool := NewPool(logger, 0, nil, nil)
 	defer pool.Close()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())

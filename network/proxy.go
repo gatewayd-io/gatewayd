@@ -15,7 +15,7 @@ type Traffic func(gconn gnet.Conn, cl *Client, buf []byte, err error) error
 type Proxy interface {
 	Connect(gconn gnet.Conn) error
 	Disconnect(gconn gnet.Conn) error
-	PassThrough(gconn gnet.Conn, onIncomingTraffic, onOutgoingTraffic Traffic) error
+	PassThrough(gconn gnet.Conn, onIncomingTraffic, onOutgoingTraffic map[Prio]Traffic) error
 	Reconnect(cl *Client) *Client
 	Shutdown()
 	Size() int
@@ -118,7 +118,11 @@ func (pr *ProxyImpl) Disconnect(gconn gnet.Conn) error {
 }
 
 //nolint:funlen
-func (pr *ProxyImpl) PassThrough(gconn gnet.Conn, onIncomingTraffic, onOutgoingTraffic Traffic) error {
+func (pr *ProxyImpl) PassThrough(
+	gconn gnet.Conn,
+	onIncomingTraffic,
+	onOutgoingTraffic map[Prio]Traffic,
+) error {
 	// TODO: Handle bi-directional traffic
 	// Currently the passthrough is a one-way street from the client to the server, that is,
 	// the client can send data to the server and receive the response back, but the server
@@ -139,8 +143,10 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn, onIncomingTraffic, onOutgoingT
 	if err != nil {
 		pr.logger.Error().Err(err).Msgf("Error reading from client: %v", err)
 	}
-	if err = onIncomingTraffic(gconn, client, buf, err); err != nil {
-		pr.logger.Error().Err(err).Msgf("Error processing data from client: %v", err)
+	for _, traffic := range onIncomingTraffic {
+		if err = traffic(gconn, client, buf, err); err != nil {
+			pr.logger.Error().Err(err).Msgf("Error processing data from client: %v", err)
+		}
 	}
 
 	// TODO: parse the buffer and send the response or error
@@ -156,8 +162,10 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn, onIncomingTraffic, onOutgoingT
 
 	// Receive the response from the server
 	size, response, err := client.Receive()
-	if err := onOutgoingTraffic(gconn, client, response[:size], err); err != nil {
-		pr.logger.Error().Err(err).Msgf("Error processing data from server: %s", err)
+	for _, traffic := range onOutgoingTraffic {
+		if err := traffic(gconn, client, response[:size], err); err != nil {
+			pr.logger.Error().Err(err).Msgf("Error processing data from server: %s", err)
+		}
 	}
 
 	if err != nil && errors.Is(err, io.EOF) {
