@@ -1,6 +1,9 @@
 before:
   hooks:
     - go mod tidy
+gomod:
+  env:
+    - GOPRIVATE=github.com/gatewayd-io/gatewayd-*
 builds:
   - env:
       - CGO_ENABLED=0
@@ -12,7 +15,6 @@ builds:
       - arm64
     ldflags:
       - -s -w -X github.com/gatewayd-io/gatewayd/config.Version={{.Version}} -X github.com/gatewayd-io/gatewayd/config.VersionDetails={{.Date}}/{{.ShortCommit}}
-
 archives:
   - format: tar.gz
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
