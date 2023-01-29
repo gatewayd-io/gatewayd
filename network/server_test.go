@@ -33,8 +33,8 @@ func TestRunServer(t *testing.T) {
 
 	// Create a connection pool
 	pool := NewPool()
-	pool.Put(NewClient("tcp", "localhost:5432", DefaultBufferSize))
-	pool.Put(NewClient("tcp", "localhost:5432", DefaultBufferSize))
+	assert.NoError(t, pool.Put(NewClient("tcp", "localhost:5432", DefaultBufferSize)))
+	assert.NoError(t, pool.Put(NewClient("tcp", "localhost:5432", DefaultBufferSize)))
 
 	// Create a proxy with a fixed buffer pool
 	proxy := NewProxy(pool, false, false, &Client{
