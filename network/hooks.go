@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/rs/zerolog"
 )
 
@@ -73,13 +75,12 @@ func (h *HookConfig) Get(hookType HookType) map[Prio]HookDef {
 }
 
 func verify(params, returnVal Signature) bool {
-	for key := range returnVal {
-		if _, ok := params[key]; !ok {
-			return false
-		}
-	}
-
-	return true
+	return cmp.Equal(params, returnVal, cmp.Options{
+		cmpopts.SortMaps(func(a, b string) bool {
+			return a < b
+		}),
+		cmpopts.EquateEmpty(),
+	})
 }
 
 //nolint:funlen
