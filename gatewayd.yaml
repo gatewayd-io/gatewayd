@@ -48,7 +48,7 @@ server:
   proxy: proxy
 
   enableTicker: False
-  tickInterval: 5 # seconds
+  tickInterval: 5s # seconds
   multiCore: True
   lockOSThread: False
   loadBalancer: roundrobin
@@ -58,7 +58,7 @@ server:
   socketSendBuffer: 4096
   reuseAddress: True
   reusePort: True
-  tcpKeepAlive: 3 # seconds
+  tcpKeepAlive: 3s # seconds
   tcpNoDelay: True
 
   incomingTrafficHandler: "null"
