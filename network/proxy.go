@@ -2,7 +2,6 @@ package network
 
 import (
 	"context"
-	"time"
 
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/plugin"
@@ -230,9 +229,6 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 			"remote":   client.Conn.RemoteAddr().String(),
 		},
 	).Msg("Sent data to database")
-
-	// This is a hack to make sure the server has time to respond
-	time.Sleep(time.Millisecond * 100)
 
 	// Receive the response from the server
 	received, response, err := client.Receive()
