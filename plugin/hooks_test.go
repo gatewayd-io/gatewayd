@@ -144,7 +144,7 @@ func Test_HookConfig_Run_PassDown(t *testing.T) {
 		args *structpb.Struct,
 		opts ...grpc.CallOption,
 	) (*structpb.Struct, error) {
-		return nil, nil
+		return nil, nil //nolint:nilnil
 	})
 	// The consolidated result should be {"test": "test"}.
 	hooks.Add(OnNewLogger, 1, func(
@@ -223,7 +223,7 @@ func Test_HookConfig_Run_Ignore(t *testing.T) {
 		args *structpb.Struct,
 		opts ...grpc.CallOption,
 	) (*structpb.Struct, error) {
-		return nil, nil
+		return nil, nil //nolint:nilnil
 	})
 	// This should run, because the return value is the same as the params
 	hooks.Add(OnNewLogger, 1, func(
@@ -260,7 +260,7 @@ func Test_HookConfig_Run_Abort(t *testing.T) {
 		args *structpb.Struct,
 		opts ...grpc.CallOption,
 	) (*structpb.Struct, error) {
-		return nil, nil
+		return nil, nil //nolint:nilnil
 	})
 	// This should not run, because the first hook returns nil, and its result is ignored.
 	hooks.Add(OnNewLogger, 1, func(
@@ -288,7 +288,7 @@ func Test_HookConfig_Run_Remove(t *testing.T) {
 		args *structpb.Struct,
 		opts ...grpc.CallOption,
 	) (*structpb.Struct, error) {
-		return nil, nil
+		return nil, nil //nolint:nilnil
 	})
 	// This should not run, because the first hook returns nil, and its result is ignored.
 	hooks.Add(OnNewLogger, 1, func(
