@@ -6,6 +6,7 @@ verificationPolicy: "passdown"
 compatibilityPolicy: "strict"
 # Possible values: "accept" (default) and "reject" 
 acceptancePolicy: "accept"
+metricsMergerPeriod: 5s
 
 plugins:
   # Plugin name
@@ -25,7 +26,7 @@ plugins:
       - MAGIC_COOKIE_KEY=GATEWAYD_PLUGIN
       - MAGIC_COOKIE_VALUE=5712b87aa5d7e9f9e9ab643e6603181c5b796015cb1c09d6f5ada882bf2a1872
     # Checksum hash to verify the binary before loading
-    checksum: 6b367989d88abc9a3e0074176593f3339cab88c93c67ed34dc7e56e3826c8d75
+    checksum: d19b71bc3b16169a5b960dc0c6dc4cfbe969774045c8925a4b21856e7f06b141
   - name: gatewayd-plugin-cache
     enabled: True
     localPath: ../gatewayd-plugin-cache/gatewayd-plugin-cache
@@ -34,4 +35,4 @@ plugins:
       - MAGIC_COOKIE_KEY=GATEWAYD_PLUGIN
       - MAGIC_COOKIE_VALUE=5712b87aa5d7e9f9e9ab643e6603181c5b796015cb1c09d6f5ada882bf2a1872
       - REDIS_ADDR=localhost:6379
-    checksum: b3cb3b4658e2d34ee08d838f4755c8082d9e49d590a26da0ddc4fbc036f5862a
+    checksum: b44303159cb3cbd7e6c03050b8fd86c7404ca96a2e8282076a34e2ada0e6191c
