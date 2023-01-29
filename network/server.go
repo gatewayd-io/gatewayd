@@ -72,7 +72,10 @@ func (s *Server) OnOpen(c gnet.Conn) (out []byte, action gnet.Action) {
 	}
 	if s.engine.CountConnections() >= s.HardLimit {
 		logrus.Error("Hard limit reached")
-		c.Write([]byte("Hard limit reached\n"))
+		_, err := c.Write([]byte("Hard limit reached\n"))
+		if err != nil {
+			logrus.Error(err)
+		}
 		c.Close()
 		return nil, gnet.Close
 	}

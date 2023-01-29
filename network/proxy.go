@@ -171,11 +171,17 @@ func (pr *ProxyImpl) PassThrough(c gnet.Conn, onIncomingTraffic, onOutgoingTraff
 			pr.connClients.Store(c, client)
 		} else {
 			// Write the error to the client
-			c.Write(response[:size])
+			_, err := c.Write(response[:size])
+			if err != nil {
+				logrus.Errorf("Error writing the error to client: %v", err)
+			}
 		}
 	} else {
 		// Write the response to the incoming connection
-		c.Write(response[:size])
+		_, err := c.Write(response[:size])
+		if err != nil {
+			logrus.Errorf("Error writing to client: %v", err)
+		}
 	}
 
 	return nil
