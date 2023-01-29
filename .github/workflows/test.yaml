@@ -59,6 +59,7 @@ jobs:
         with:
           repository: gatewayd-io/gatewayd-plugin-test
           path: gatewayd-plugin-test
+          token: ${{ secrets.GH_PLUGIN_TOKEN }}
 
       - name: Install Go 🧑‍💻
         uses: actions/setup-go@v3
