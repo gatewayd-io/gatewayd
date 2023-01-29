@@ -338,7 +338,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	// Run the OnTrafficToServer hooks.
 	_, err = pr.hookConfig.Run(
 		context.Background(),
-		trafficData(gconn, client, "request", request, err.Unwrap().Error()),
+		trafficData(gconn, client, "request", request, err),
 		hook.OnTrafficToServer,
 		pr.hookConfig.Verification)
 	if err != nil {
