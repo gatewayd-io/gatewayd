@@ -25,6 +25,7 @@ type LoggerConfig struct {
 	NoColor    bool
 	StartupMsg bool
 
+	// File output configuration.
 	FileName   string
 	MaxSize    int
 	MaxBackups int
@@ -36,11 +37,11 @@ type LoggerConfig struct {
 
 // NewLogger creates a new logger with the given configuration.
 func NewLogger(cfg LoggerConfig) zerolog.Logger {
-	return NewLoggerWithBuffer(cfg)
+	return NewLoggerWithBuffer(cfg, nil)
 }
 
 // NewLoggerWithBuffer creates a new logger with the given configuration.
-func NewLoggerWithBuffer(cfg LoggerConfig, buffer ...*bytes.Buffer) zerolog.Logger {
+func NewLoggerWithBuffer(cfg LoggerConfig, buffer *bytes.Buffer) zerolog.Logger {
 	// Create a new logger.
 	consoleWriter := zerolog.ConsoleWriter{
 		Out:        os.Stdout,
@@ -68,12 +69,6 @@ func NewLoggerWithBuffer(cfg LoggerConfig, buffer ...*bytes.Buffer) zerolog.Logg
 			MaxBackups: cfg.MaxBackups,
 			MaxAge:     cfg.MaxAge,
 			Compress:   cfg.Compress,
-		}
-	case config.Buffer:
-		if len(buffer) == 0 {
-			output = os.Stdout
-		} else {
-			output = buffer[0]
 		}
 	default:
 		output = os.Stdout
