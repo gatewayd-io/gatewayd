@@ -85,6 +85,7 @@ func (reg *RegistryImpl) Shutdown() {
 		}
 		return true
 	})
+	goplugin.CleanupClients()
 }
 
 //nolint:funlen
