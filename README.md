@@ -1,6 +1,6 @@
 # <img src="https://github.com/gatewayd-io/gatewayd/blob/main/assets/gatewayd-logo.png" alt="gatewayd logo" style="height: 48px; width: 48px;"/> GatewayD
 
-GatewayD is a cloud-native database gateway and framework. It sits in between your database(s) and your database client(s) and proxies all queries to and their responses from the database. While doing so, it supports the following features:
+GatewayD is a cloud-native database gateway and framework for building data-driven applications. It sits in between your database(s) and your database client(s) and proxies all queries to and their responses from the database. While doing so, it supports the following features:
 
 - Manage authentication, authorization and access
 - Support multiple database backends (SQL and NoSQL)
