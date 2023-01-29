@@ -26,6 +26,8 @@ func TestRunServer(t *testing.T) {
 	assert.NotNil(t, server)
 
 	go func(t *testing.T, server *Server) {
+		t.Helper()
+
 		server.Run()
 	}(t, server)
 
