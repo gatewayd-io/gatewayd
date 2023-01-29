@@ -215,12 +215,6 @@ var runCmd = &cobra.Command{
 				// Internal event-loop load balancing options
 				gnet.WithLoadBalancing(serverConfig.LoadBalancer),
 
-				// Logger options
-				// TODO: This is a temporary solution and will be replaced.
-				// gnet.WithLogger(logrus.New()),
-				// gnet.WithLogPath("./gnet.log"),
-				// gnet.WithLogLevel(zapcore.DebugLevel),
-
 				// Buffer options
 				gnet.WithReadBufferCap(serverConfig.ReadBufferCap),
 				gnet.WithWriteBufferCap(serverConfig.WriteBufferCap),
