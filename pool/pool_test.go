@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TestNewPool tests the NewPool function.
 func TestNewPool(t *testing.T) {
 	pool := NewPool(EmptyPoolCapacity)
 	defer pool.Clear()
@@ -14,6 +15,7 @@ func TestNewPool(t *testing.T) {
 	assert.Equal(t, 0, pool.Size())
 }
 
+// TestPool_Put tests the Put function.
 func TestPool_Put(t *testing.T) {
 	pool := NewPool(EmptyPoolCapacity)
 	defer pool.Clear()
@@ -28,6 +30,8 @@ func TestPool_Put(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+// TestPool_Pop tests the Pop function.
+//
 //nolint:dupl
 func TestPool_Pop(t *testing.T) {
 	pool := NewPool(EmptyPoolCapacity)
@@ -55,6 +59,7 @@ func TestPool_Pop(t *testing.T) {
 	}
 }
 
+// TestPool_Clear tests the Clear function.
 func TestPool_Clear(t *testing.T) {
 	pool := NewPool(EmptyPoolCapacity)
 	defer pool.Clear()
@@ -71,6 +76,7 @@ func TestPool_Clear(t *testing.T) {
 	assert.Equal(t, 0, pool.Size())
 }
 
+// TestPool_ForEach tests the ForEach function.
 func TestPool_ForEach(t *testing.T) {
 	pool := NewPool(EmptyPoolCapacity)
 	defer pool.Clear()
@@ -91,6 +97,8 @@ func TestPool_ForEach(t *testing.T) {
 	})
 }
 
+// TestPool_Get tests the Get function.
+//
 //nolint:dupl
 func TestPool_Get(t *testing.T) {
 	pool := NewPool(EmptyPoolCapacity)
@@ -118,6 +126,7 @@ func TestPool_Get(t *testing.T) {
 	}
 }
 
+// TestPool_GetOrPut tests the GetOrPut function.
 func TestPool_GetOrPut(t *testing.T) {
 	pool := NewPool(EmptyPoolCapacity)
 	defer pool.Clear()
@@ -150,6 +159,7 @@ func TestPool_GetOrPut(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+// TestPool_Remove tests the Remove function.
 func TestPool_Remove(t *testing.T) {
 	pool := NewPool(EmptyPoolCapacity)
 	defer pool.Clear()
@@ -168,6 +178,7 @@ func TestPool_Remove(t *testing.T) {
 	assert.Equal(t, 0, pool.Size())
 }
 
+// TestPool_GetClientIDs tests the GetClientIDs function.
 func TestPool_GetClientIDs(t *testing.T) {
 	pool := NewPool(EmptyPoolCapacity)
 	defer pool.Clear()
