@@ -36,7 +36,6 @@ type IRegistry interface {
 		ctx context.Context,
 		args map[string]interface{},
 		hookName string,
-		verification config.VerificationPolicy,
 		opts ...grpc.CallOption,
 	) (map[string]interface{}, *gerr.GatewayDError)
 }
@@ -194,7 +193,6 @@ func (reg *Registry) Run(
 	ctx context.Context,
 	args map[string]interface{},
 	hookName string,
-	verification config.VerificationPolicy,
 	opts ...grpc.CallOption,
 ) (map[string]interface{}, *gerr.GatewayDError) {
 	if ctx == nil {
@@ -244,7 +242,7 @@ func (reg *Registry) Run(
 		// and that the hook does not return any unexpected values.
 		// If the verification mode is non-strict (permissive), let the plugin pass
 		// extra keys/values to the next plugin in chain.
-		if Verify(params, result) || verification == config.PassDown {
+		if Verify(params, result) || reg.Verification == config.PassDown {
 			// Update the last return value with the current result
 			returnVal = result
 			continue
@@ -252,7 +250,7 @@ func (reg *Registry) Run(
 
 		// At this point, the hook returned an invalid value, so we need to handle it.
 		// The result of the current hook will be ignored, regardless of the policy.
-		switch verification {
+		switch reg.Verification {
 		// Ignore the result of this plugin, log an error and execute the next
 		case config.Ignore:
 			reg.Logger.Error().Err(err).Fields(

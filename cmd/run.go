@@ -101,8 +101,7 @@ var runCmd = &cobra.Command{
 		updatedGlobalConfig, err := pluginRegistry.Run(
 			context.Background(),
 			globalConfig.All(),
-			plugin.OnConfigLoaded,
-			pluginRegistry.Verification)
+			plugin.OnConfigLoaded)
 		if err != nil {
 			DefaultLogger.Error().Err(err).Msg("Failed to run OnConfigLoaded hooks")
 		}
@@ -146,8 +145,7 @@ var runCmd = &cobra.Command{
 			"fileName":   loggerCfg.FileName,
 		}
 		// TODO: Use a context with a timeout
-		_, err = pluginRegistry.Run(
-			context.Background(), data, plugin.OnNewLogger, pluginRegistry.Verification)
+		_, err = pluginRegistry.Run(context.Background(), data, plugin.OnNewLogger)
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to run OnNewLogger hooks")
 		}
@@ -175,11 +173,7 @@ var runCmd = &cobra.Command{
 					"tcpKeepAlive":       client.TCPKeepAlive,
 					"tcpKeepAlivePeriod": client.TCPKeepAlivePeriod.String(),
 				}
-				_, err := pluginRegistry.Run(
-					context.Background(),
-					clientCfg,
-					plugin.OnNewClient,
-					pluginRegistry.Verification)
+				_, err := pluginRegistry.Run(context.Background(), clientCfg, plugin.OnNewClient)
 				if err != nil {
 					logger.Error().Err(err).Msg("Failed to run OnNewClient hooks")
 				}
@@ -206,8 +200,7 @@ var runCmd = &cobra.Command{
 		_, err = pluginRegistry.Run(
 			context.Background(),
 			map[string]interface{}{"size": poolSize},
-			plugin.OnNewPool,
-			pluginRegistry.Verification)
+			plugin.OnNewPool)
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to run OnNewPool hooks")
 		}
@@ -241,8 +234,7 @@ var runCmd = &cobra.Command{
 				"tcpKeepAlivePeriod": clientConfig.TCPKeepAlivePeriod.String(),
 			},
 		}
-		_, err = pluginRegistry.Run(
-			context.Background(), proxyCfg, plugin.OnNewProxy, pluginRegistry.Verification)
+		_, err = pluginRegistry.Run(context.Background(), proxyCfg, plugin.OnNewProxy)
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to run OnNewProxy hooks")
 		}
@@ -303,8 +295,7 @@ var runCmd = &cobra.Command{
 			"tcpKeepAlive":     gConfig.Server.TCPKeepAlive.String(),
 			"tcpNoDelay":       gConfig.Server.TCPNoDelay,
 		}
-		_, err = pluginRegistry.Run(
-			context.Background(), serverCfg, plugin.OnNewServer, pluginRegistry.Verification)
+		_, err = pluginRegistry.Run(context.Background(), serverCfg, plugin.OnNewServer)
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to run OnNewServer hooks")
 		}
@@ -331,7 +322,6 @@ var runCmd = &cobra.Command{
 							context.Background(),
 							map[string]interface{}{"signal": sig.String()},
 							plugin.OnSignal,
-							pluginRegistry.Verification,
 						)
 						if err != nil {
 							logger.Error().Err(err).Msg("Failed to run OnSignal hooks")
