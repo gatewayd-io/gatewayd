@@ -5,6 +5,7 @@ go 1.19
 require (
 	github.com/Masterminds/semver/v3 v3.2.0
 	github.com/NYTimes/gziphandler v1.1.1
+	github.com/gatewayd-io/gatewayd-plugin-sdk v0.0.0-20230129122550-6c0b5c083cfc
 	github.com/getsentry/sentry-go v0.17.0
 	github.com/go-co-op/gocron v1.18.0
 	github.com/google/go-cmp v0.5.9
@@ -21,7 +22,7 @@ require (
 	github.com/stretchr/testify v1.8.1
 	github.com/zenizh/go-capturer v0.0.0-20211219060012-52ea6c8fed04
 	golang.org/x/exp v0.0.0-20230118134722-a68e582fa157
-	google.golang.org/grpc v1.52.1
+	google.golang.org/grpc v1.52.3
 	google.golang.org/protobuf v1.28.1
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 )
