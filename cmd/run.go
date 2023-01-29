@@ -96,8 +96,7 @@ var runCmd = &cobra.Command{
 		// This is a notification hook, so we don't care about the result.
 		data, err := structpb.NewStruct(map[string]interface{}{
 			"timeFormat": loggerCfg.TimeFormat,
-			"level":      loggerCfg.Level,
-			"output":     loggerCfg.Output,
+			"level":      loggerCfg.Level.String(),
 			"noColor":    loggerCfg.NoColor,
 		})
 		if err != nil {
@@ -179,7 +178,11 @@ var runCmd = &cobra.Command{
 		proxyCfg, err := structpb.NewStruct(map[string]interface{}{
 			"elastic":             elastic,
 			"reuseElasticClients": reuseElasticClients,
-			"clientConfig":        elasticClientConfig,
+			"clientConfig": map[string]interface{}{
+				"network":           elasticClientConfig.Network,
+				"address":           elasticClientConfig.Address,
+				"receiveBufferSize": elasticClientConfig.ReceiveBufferSize,
+			},
 		})
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to convert proxy config to structpb")
@@ -240,19 +243,19 @@ var runCmd = &cobra.Command{
 			"address":          serverConfig.Address,
 			"softLimit":        serverConfig.SoftLimit,
 			"hardLimit":        serverConfig.HardLimit,
-			"tickInterval":     serverConfig.TickInterval,
+			"tickInterval":     serverConfig.TickInterval.Seconds(),
 			"multiCore":        serverConfig.MultiCore,
 			"lockOSThread":     serverConfig.LockOSThread,
 			"enableTicker":     serverConfig.EnableTicker,
-			"loadBalancer":     serverConfig.LoadBalancer,
+			"loadBalancer":     int(serverConfig.LoadBalancer),
 			"readBufferCap":    serverConfig.ReadBufferCap,
 			"writeBufferCap":   serverConfig.WriteBufferCap,
 			"socketRecvBuffer": serverConfig.SocketRecvBuffer,
 			"socketSendBuffer": serverConfig.SocketSendBuffer,
 			"reuseAddress":     serverConfig.ReuseAddress,
 			"reusePort":        serverConfig.ReusePort,
-			"tcpKeepAlive":     serverConfig.TCPKeepAlive,
-			"tcpNoDelay":       serverConfig.TCPNoDelay,
+			"tcpKeepAlive":     serverConfig.TCPKeepAlive.Seconds(),
+			"tcpNoDelay":       int(serverConfig.TCPNoDelay),
 		})
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to convert server config to structpb")
@@ -281,7 +284,8 @@ var runCmd = &cobra.Command{
 				for _, s := range signals {
 					if sig != s {
 						// Notify the hooks that the server is shutting down
-						signalCfg, err := structpb.NewStruct(map[string]interface{}{"signal": sig})
+						signalCfg, err := structpb.NewStruct(
+							map[string]interface{}{"signal": sig.String()})
 						if err != nil {
 							logger.Error().Err(err).Msg(
 								"Failed to convert signal config to structpb")
