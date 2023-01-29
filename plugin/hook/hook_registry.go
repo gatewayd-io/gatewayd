@@ -14,7 +14,7 @@ import (
 
 type IRegistry interface {
 	Hooks() map[string]map[Priority]Method
-	Add(hookName string, prio Priority, hookFunc Method)
+	Add(hookName string, priority Priority, hookFunc Method)
 	Get(hookName string) map[Priority]Method
 	Run(
 		ctx context.Context,
@@ -47,19 +47,19 @@ func (h *Registry) Hooks() map[string]map[Priority]Method {
 }
 
 // Add adds a hook with a priority to the hooks map.
-func (h *Registry) Add(hookName string, prio Priority, hookFunc Method) {
+func (h *Registry) Add(hookName string, priority Priority, hookFunc Method) {
 	if len(h.hooks[hookName]) == 0 {
-		h.hooks[hookName] = map[Priority]Method{prio: hookFunc}
+		h.hooks[hookName] = map[Priority]Method{priority: hookFunc}
 	} else {
-		if _, ok := h.hooks[hookName][prio]; ok {
+		if _, ok := h.hooks[hookName][priority]; ok {
 			h.Logger.Warn().Fields(
 				map[string]interface{}{
 					"hookName": hookName,
-					"priority": prio,
+					"priority": priority,
 				},
 			).Msg("Hook is replaced")
 		}
-		h.hooks[hookName][prio] = hookFunc
+		h.hooks[hookName][priority] = hookFunc
 	}
 }
 
@@ -112,8 +112,8 @@ func (h *Registry) Run(
 
 	// Sort hooks by priority.
 	priorities := make([]Priority, 0, len(h.hooks[hookName]))
-	for prio := range h.hooks[hookName] {
-		priorities = append(priorities, prio)
+	for priority := range h.hooks[hookName] {
+		priorities = append(priorities, priority)
 	}
 	sort.SliceStable(priorities, func(i, j int) bool {
 		return priorities[i] < priorities[j]
@@ -123,13 +123,13 @@ func (h *Registry) Run(
 	returnVal := &structpb.Struct{}
 	var removeList []Priority
 	// The signature of parameters and args MUST be the same for this to work.
-	for idx, prio := range priorities {
+	for idx, priority := range priorities {
 		var result *structpb.Struct
 		var err error
 		if idx == 0 {
-			result, err = h.hooks[hookName][prio](inheritedCtx, params, opts...)
+			result, err = h.hooks[hookName][priority](inheritedCtx, params, opts...)
 		} else {
-			result, err = h.hooks[hookName][prio](inheritedCtx, returnVal, opts...)
+			result, err = h.hooks[hookName][priority](inheritedCtx, returnVal, opts...)
 		}
 
 		// This is done to ensure that the return value of the hook is always valid,
@@ -150,7 +150,7 @@ func (h *Registry) Run(
 			h.Logger.Error().Err(err).Fields(
 				map[string]interface{}{
 					"hookName": hookName,
-					"priority": prio,
+					"priority": priority,
 				},
 			).Msg("Hook returned invalid value, ignoring")
 			if idx == 0 {
@@ -161,7 +161,7 @@ func (h *Registry) Run(
 			h.Logger.Error().Err(err).Fields(
 				map[string]interface{}{
 					"hookName": hookName,
-					"priority": prio,
+					"priority": priority,
 				},
 			).Msg("Hook returned invalid value, aborting")
 			if idx == 0 {
@@ -173,10 +173,10 @@ func (h *Registry) Run(
 			h.Logger.Error().Err(err).Fields(
 				map[string]interface{}{
 					"hookName": hookName,
-					"priority": prio,
+					"priority": priority,
 				},
 			).Msg("Hook returned invalid value, removing")
-			removeList = append(removeList, prio)
+			removeList = append(removeList, priority)
 			if idx == 0 {
 				returnVal = params
 			}
@@ -187,8 +187,8 @@ func (h *Registry) Run(
 	}
 
 	// Remove hooks that failed verification.
-	for _, prio := range removeList {
-		delete(h.hooks[hookName], prio)
+	for _, priority := range removeList {
+		delete(h.hooks[hookName], priority)
 	}
 
 	return returnVal.AsMap(), nil

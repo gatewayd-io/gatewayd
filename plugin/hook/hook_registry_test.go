@@ -62,10 +62,10 @@ func Test_HookConfig_Get(t *testing.T) {
 	) (*structpb.Struct, error) {
 		return args, nil
 	}
-	prio := Priority(0)
-	hooks.Add(OnNewLogger, prio, testFunc)
+	priority := Priority(0)
+	hooks.Add(OnNewLogger, priority, testFunc)
 	assert.NotNil(t, hooks.Get(OnNewLogger))
-	assert.ObjectsAreEqual(testFunc, hooks.Get(OnNewLogger)[prio])
+	assert.ObjectsAreEqual(testFunc, hooks.Get(OnNewLogger)[priority])
 }
 
 // Test_HookConfig_Run tests the Run function.
@@ -109,7 +109,7 @@ func Test_HookConfig_Run_PassDown(t *testing.T) {
 	})
 
 	// Although the first hook returns nil, and its signature doesn't match the params,
-	// so its result (nil) is passed down to the next hook in chain (prio 2).
+	// so its result (nil) is passed down to the next hook in chain (priority 2).
 	// Then the second hook runs and returns a signature with a "test" key and value.
 	result, err := hooks.Run(
 		context.Background(),
@@ -150,7 +150,7 @@ func Test_HookConfig_Run_PassDown_2(t *testing.T) {
 		return args, nil
 	})
 	// Although the first hook returns nil, and its signature doesn't match the params,
-	// so its result (nil) is passed down to the next hook in chain (prio 2).
+	// so its result (nil) is passed down to the next hook in chain (priority 2).
 	// Then the second hook runs and returns a signature with a "test1" and "test2" key and value.
 	result, err := hooks.Run(
 		context.Background(),
