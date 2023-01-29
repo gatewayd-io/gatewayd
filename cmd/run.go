@@ -55,6 +55,7 @@ var runCmd = &cobra.Command{
 
 			// Flush buffered events before the program terminates.
 			defer sentry.Flush(config.DefaultFlushTimeout)
+			// Recover from panics and report the error to Sentry.
 			defer sentry.Recover()
 		}
 
@@ -146,6 +147,7 @@ var runCmd = &cobra.Command{
 				handler := func(w http.ResponseWriter, r *http.Request) {
 					if _, err := w.Write(metricsMerger.OutputMetrics); err != nil {
 						logger.Error().Err(err).Msg("Failed to write metrics")
+						sentry.CaptureException(err)
 					}
 					next.ServeHTTP(w, r)
 				}

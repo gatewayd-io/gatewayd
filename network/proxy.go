@@ -9,6 +9,7 @@ import (
 	"github.com/gatewayd-io/gatewayd/metrics"
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
+	"github.com/getsentry/sentry-go"
 	"github.com/go-co-op/gocron"
 	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
@@ -95,6 +96,7 @@ func NewProxy(
 		},
 	); err != nil {
 		proxy.logger.Error().Err(err).Msg("Failed to schedule the client health check")
+		sentry.CaptureException(err)
 	}
 
 	// Start the scheduler.
