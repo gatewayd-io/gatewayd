@@ -121,6 +121,7 @@ func extractFieldValue(result map[string]interface{}, fieldName string) ([]byte,
 	return data, err, conversionErr
 }
 
+// IsConnTimedOut returns true if the error is a timeout error.
 func IsConnTimedOut(err *gerr.GatewayDError) bool {
 	if err != nil && err.Unwrap() != nil {
 		var netErr net.Error
@@ -131,6 +132,7 @@ func IsConnTimedOut(err *gerr.GatewayDError) bool {
 	return false
 }
 
+// IsConnClosed returns true if the connection is closed.
 func IsConnClosed(received int, err *gerr.GatewayDError) bool {
 	return received == 0 && err != nil && err.Unwrap() != nil && errors.Is(err.Unwrap(), io.EOF)
 }
