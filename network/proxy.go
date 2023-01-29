@@ -312,6 +312,17 @@ func (pr *ProxyImpl) TryReconnect(client *Client) (*Client, error) {
 		pr.logger.Error().Msg("No more available connections :: TryReconnect")
 	}
 
+	if !client.IsConnected() {
+		client.Close()
+
+		client = NewClient(
+			pr.ClientConfig.Network,
+			pr.ClientConfig.Address,
+			pr.ClientConfig.ReceiveBufferSize,
+			client.logger,
+		)
+	}
+
 	return client, nil
 }
 
