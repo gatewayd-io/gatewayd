@@ -26,7 +26,7 @@ type Proxy struct {
 	availableConnections pool.IPool
 	busyConnections      pool.IPool
 	logger               zerolog.Logger
-	hookConfig           *hook.Registry
+	hookRegistry         *hook.Registry
 	scheduler            *gocron.Scheduler
 
 	Elastic             bool
@@ -41,7 +41,7 @@ var _ IProxy = &Proxy{}
 
 // NewProxy creates a new proxy.
 func NewProxy(
-	connPool pool.IPool, hookConfig *hook.Registry,
+	connPool pool.IPool, hookRegistry *hook.Registry,
 	elastic, reuseElasticClients bool,
 	healthCheckPeriod time.Duration,
 	clientConfig *config.Client, logger zerolog.Logger,
@@ -50,7 +50,7 @@ func NewProxy(
 		availableConnections: connPool,
 		busyConnections:      pool.NewPool(config.EmptyPoolCapacity),
 		logger:               logger,
-		hookConfig:           hookConfig,
+		hookRegistry:         hookRegistry,
 		scheduler:            gocron.NewScheduler(time.UTC),
 		Elastic:              elastic,
 		ReuseElasticClients:  reuseElasticClients,
@@ -363,7 +363,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	request, origErr := receiveTrafficFromClient()
 
 	// Run the OnTrafficFromClient hooks.
-	result, err := pr.hookConfig.Run(
+	result, err := pr.hookRegistry.Run(
 		context.Background(),
 		trafficData(
 			gconn,
@@ -376,7 +376,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 			},
 			origErr),
 		hook.OnTrafficFromClient,
-		pr.hookConfig.Verification)
+		pr.hookRegistry.Verification)
 	if err != nil {
 		pr.logger.Error().Err(err).Msg("Error running hook")
 	}
@@ -396,7 +396,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	_, err = sendTrafficToServer(request)
 
 	// Run the OnTrafficToServer hooks.
-	_, err = pr.hookConfig.Run(
+	_, err = pr.hookRegistry.Run(
 		context.Background(),
 		trafficData(
 			gconn,
@@ -409,7 +409,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 			},
 			err),
 		hook.OnTrafficToServer,
-		pr.hookConfig.Verification)
+		pr.hookRegistry.Verification)
 	if err != nil {
 		pr.logger.Error().Err(err).Msg("Error running hook")
 	}
@@ -448,7 +448,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	}
 
 	// Run the OnTrafficFromServer hooks.
-	result, err = pr.hookConfig.Run(
+	result, err = pr.hookRegistry.Run(
 		context.Background(),
 		trafficData(
 			gconn,
@@ -465,7 +465,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 			},
 			err),
 		hook.OnTrafficFromServer,
-		pr.hookConfig.Verification)
+		pr.hookRegistry.Verification)
 	if err != nil {
 		pr.logger.Error().Err(err).Msg("Error running hook")
 	}
@@ -481,7 +481,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	errVerdict := sendTrafficToClient(response, received)
 
 	// Run the OnTrafficToClient hooks.
-	_, err = pr.hookConfig.Run(
+	_, err = pr.hookRegistry.Run(
 		context.Background(),
 		trafficData(
 			gconn,
@@ -499,7 +499,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 			err,
 		),
 		hook.OnTrafficToClient,
-		pr.hookConfig.Verification)
+		pr.hookRegistry.Verification)
 	if err != nil {
 		pr.logger.Error().Err(err).Msg("Error running hook")
 	}

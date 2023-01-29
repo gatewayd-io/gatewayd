@@ -10,14 +10,14 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-// Test_NewHookConfig tests the NewHookConfig function.
-func Test_NewHookConfig(t *testing.T) {
+// Test_NewHookRegistry tests the NewHookRegistry function.
+func Test_NewHookRegistry(t *testing.T) {
 	hc := NewRegistry()
 	assert.NotNil(t, hc)
 }
 
-// Test_HookConfig_Add tests the Add function.
-func Test_HookConfig_Add(t *testing.T) {
+// Test_HookRegistry_Add tests the Add function.
+func Test_HookRegistry_Add(t *testing.T) {
 	hooks := NewRegistry()
 	testFunc := func(
 		ctx context.Context,
@@ -31,8 +31,8 @@ func Test_HookConfig_Add(t *testing.T) {
 	assert.ObjectsAreEqual(testFunc, hooks.Hooks()[OnNewLogger][0])
 }
 
-// Test_HookConfig_Add_Multiple_Hooks tests the Add function with multiple hooks.
-func Test_HookConfig_Add_Multiple_Hooks(t *testing.T) {
+// Test_HookRegistry_Add_Multiple_Hooks tests the Add function with multiple hooks.
+func Test_HookRegistry_Add_Multiple_Hooks(t *testing.T) {
 	hooks := NewRegistry()
 	hooks.Add(OnNewLogger, 0, func(
 		ctx context.Context,
@@ -52,8 +52,8 @@ func Test_HookConfig_Add_Multiple_Hooks(t *testing.T) {
 	assert.NotNil(t, hooks.Hooks()[OnNewLogger][1])
 }
 
-// Test_HookConfig_Get tests the Get function.
-func Test_HookConfig_Get(t *testing.T) {
+// Test_HookRegistry_Get tests the Get function.
+func Test_HookRegistry_Get(t *testing.T) {
 	hooks := NewRegistry()
 	testFunc := func(
 		ctx context.Context,
@@ -68,8 +68,8 @@ func Test_HookConfig_Get(t *testing.T) {
 	assert.ObjectsAreEqual(testFunc, hooks.Get(OnNewLogger)[priority])
 }
 
-// Test_HookConfig_Run tests the Run function.
-func Test_HookConfig_Run(t *testing.T) {
+// Test_HookRegistry_Run tests the Run function.
+func Test_HookRegistry_Run(t *testing.T) {
 	hooks := NewRegistry()
 	hooks.Add(OnNewLogger, 0, func(
 		ctx context.Context,
@@ -84,8 +84,8 @@ func Test_HookConfig_Run(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-// Test_HookConfig_Run_PassDown tests the Run function with the PassDown option.
-func Test_HookConfig_Run_PassDown(t *testing.T) {
+// Test_HookRegistry_Run_PassDown tests the Run function with the PassDown option.
+func Test_HookRegistry_Run_PassDown(t *testing.T) {
 	hooks := NewRegistry()
 	// The result of the hook will be nil and will be passed down to the next
 	hooks.Add(OnNewLogger, 0, func(
@@ -120,8 +120,8 @@ func Test_HookConfig_Run_PassDown(t *testing.T) {
 	assert.NotNil(t, result)
 }
 
-// Test_HookConfig_Run_PassDown_2 tests the Run function with the PassDown option.
-func Test_HookConfig_Run_PassDown_2(t *testing.T) {
+// Test_HookRegistry_Run_PassDown_2 tests the Run function with the PassDown option.
+func Test_HookRegistry_Run_PassDown_2(t *testing.T) {
 	hooks := NewRegistry()
 	// The result of the hook will be nil and will be passed down to the next
 	hooks.Add(OnNewLogger, 0, func(
@@ -161,8 +161,8 @@ func Test_HookConfig_Run_PassDown_2(t *testing.T) {
 	assert.NotNil(t, result)
 }
 
-// Test_HookConfig_Run_Ignore tests the Run function with the Ignore option.
-func Test_HookConfig_Run_Ignore(t *testing.T) {
+// Test_HookRegistry_Run_Ignore tests the Run function with the Ignore option.
+func Test_HookRegistry_Run_Ignore(t *testing.T) {
 	hooks := NewRegistry()
 	// This should not run, because the return value is not the same as the params
 	hooks.Add(OnNewLogger, 0, func(
@@ -197,8 +197,8 @@ func Test_HookConfig_Run_Ignore(t *testing.T) {
 	assert.NotNil(t, result)
 }
 
-// Test_HookConfig_Run_Abort tests the Run function with the Abort option.
-func Test_HookConfig_Run_Abort(t *testing.T) {
+// Test_HookRegistry_Run_Abort tests the Run function with the Abort option.
+func Test_HookRegistry_Run_Abort(t *testing.T) {
 	hooks := NewRegistry()
 	// This should not run, because the return value is not the same as the params
 	hooks.Add(OnNewLogger, 0, func(
@@ -227,8 +227,8 @@ func Test_HookConfig_Run_Abort(t *testing.T) {
 	assert.Equal(t, map[string]interface{}{}, result)
 }
 
-// Test_HookConfig_Run_Remove tests the Run function with the Remove option.
-func Test_HookConfig_Run_Remove(t *testing.T) {
+// Test_HookRegistry_Run_Remove tests the Run function with the Remove option.
+func Test_HookRegistry_Run_Remove(t *testing.T) {
 	hooks := NewRegistry()
 	// This should not run, because the return value is not the same as the params
 	hooks.Add(OnNewLogger, 0, func(
