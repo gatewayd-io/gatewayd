@@ -22,7 +22,7 @@ func sha256sum(filename string) (string, error) {
 
 	file, err := os.Open(filename)
 	if err != nil {
-		return "", err
+		return "", err //nolint:wrapcheck
 	}
 	defer func() { _ = file.Close() }()
 
