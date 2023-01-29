@@ -93,7 +93,7 @@ func (pr *ProxyImpl) Connect(gconn gnet.Conn) *gerr.GatewayDError {
 
 	client, err := pr.TryReconnect(client)
 	if err != nil {
-		pr.logger.Error().Err(err).Msgf("Failed to connect to the client")
+		pr.logger.Error().Err(err).Msg("Failed to connect to the client")
 	}
 
 	if err := pr.busyConnections.Put(gconn, client); err != nil {
@@ -120,13 +120,13 @@ func (pr *ProxyImpl) Disconnect(gconn gnet.Conn) *gerr.GatewayDError {
 				if !client.IsConnected() {
 					_, err := pr.TryReconnect(client)
 					if err != nil {
-						pr.logger.Error().Err(err).Msgf("Failed to reconnect to the client")
+						pr.logger.Error().Err(err).Msg("Failed to reconnect to the client")
 					}
 				}
 				// If the client is not in the pool, put it back
 				err := pr.availableConnections.Put(client.ID, client)
 				if err != nil {
-					pr.logger.Error().Err(err).Msgf("Failed to put the client back in the pool")
+					pr.logger.Error().Err(err).Msg("Failed to put the client back in the pool")
 				}
 			} else {
 				return gerr.ErrClientNotConnected
@@ -223,7 +223,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	// Send the query to the server
 	sent, err := client.Send(request)
 	if err != nil {
-		pr.logger.Error().Err(err).Msgf("Error sending data to database")
+		pr.logger.Error().Err(err).Msg("Error sending data to database")
 	}
 	pr.logger.Debug().Fields(
 		map[string]interface{}{
@@ -286,7 +286,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 		return err
 	})
 	if origErr != nil {
-		pr.logger.Error().Err(err).Msgf("Error writing to client")
+		pr.logger.Error().Err(err).Msg("Error writing to client")
 		return gerr.ErrServerSendFailed.Wrap(err)
 	}
 
