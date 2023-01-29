@@ -25,11 +25,15 @@ var _ Pool = &PoolImpl{}
 
 func (p *PoolImpl) ForEach(callback func(client *Client) error) {
 	p.pool.Range(func(key, value interface{}) bool {
-		err := callback(value.(*Client))
-		if err != nil {
-			logrus.Errorf("an error occurred running the callback: %v", err)
+		if c, ok := value.(*Client); ok {
+			err := callback(c)
+			if err != nil {
+				logrus.Errorf("an error occurred running the callback: %v", err)
+			}
+			return true
 		}
-		return true
+
+		return false
 	})
 }
 
@@ -40,8 +44,11 @@ func (p *PoolImpl) Pool() sync.Map {
 func (p *PoolImpl) ClientIDs() []string {
 	var ids []string
 	p.pool.Range(func(key, _ interface{}) bool {
-		ids = append(ids, key.(string))
-		return true
+		if id, ok := key.(string); ok {
+			ids = append(ids, id)
+			return true
+		}
+		return false
 	})
 	return ids
 }
@@ -57,7 +64,10 @@ func (p *PoolImpl) Pop(id string) *Client {
 	if client, ok := p.pool.Load(id); ok {
 		p.pool.Delete(id)
 		logrus.Debugf("Client %s has been popped from the pool", id)
-		return client.(*Client)
+		if c, ok := client.(*Client); ok {
+			return c
+		}
+		return nil
 	}
 
 	return nil
