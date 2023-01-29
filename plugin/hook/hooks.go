@@ -37,26 +37,26 @@ const (
 	OnNewClient HookType = "onNewClient"
 )
 
-type HookConfig struct {
+type Config struct {
 	hooks        map[HookType]map[Priority]HookDef
 	Logger       zerolog.Logger
 	Verification config.Policy
 }
 
-// NewHookConfig returns a new HookConfig.
-func NewHookConfig() *HookConfig {
-	return &HookConfig{
+// NewHookConfig returns a new Config.
+func NewHookConfig() *Config {
+	return &Config{
 		hooks: map[HookType]map[Priority]HookDef{},
 	}
 }
 
 // Hooks returns the hooks.
-func (h *HookConfig) Hooks() map[HookType]map[Priority]HookDef {
+func (h *Config) Hooks() map[HookType]map[Priority]HookDef {
 	return h.hooks
 }
 
 // Add adds a hook with a priority to the hooks map.
-func (h *HookConfig) Add(hookType HookType, prio Priority, hookFunc HookDef) {
+func (h *Config) Add(hookType HookType, prio Priority, hookFunc HookDef) {
 	if len(h.hooks[hookType]) == 0 {
 		h.hooks[hookType] = map[Priority]HookDef{prio: hookFunc}
 	} else {
@@ -73,7 +73,7 @@ func (h *HookConfig) Add(hookType HookType, prio Priority, hookFunc HookDef) {
 }
 
 // Get returns the hooks of a specific type.
-func (h *HookConfig) Get(hookType HookType) map[Priority]HookDef {
+func (h *Config) Get(hookType HookType) map[Priority]HookDef {
 	return h.hooks[hookType]
 }
 
@@ -91,7 +91,7 @@ func (h *HookConfig) Get(hookType HookType) map[Priority]HookDef {
 // The opts are passed to the hooks as well to allow them to use the grpc.CallOption.
 //
 //nolint:funlen
-func (h *HookConfig) Run(
+func (h *Config) Run(
 	ctx context.Context,
 	args map[string]interface{},
 	hookType HookType,

@@ -20,7 +20,7 @@ type Server struct {
 	engine      gnet.Engine
 	proxy       IProxy
 	logger      zerolog.Logger
-	hooksConfig *hook.HookConfig
+	hooksConfig *hook.Config
 
 	Network      string // tcp/udp/unix
 	Address      string
@@ -333,7 +333,7 @@ func NewServer(
 	options []gnet.Option,
 	proxy IProxy,
 	logger zerolog.Logger,
-	hooksConfig *hook.HookConfig,
+	hooksConfig *hook.Config,
 ) *Server {
 	// Create the server.
 	server := Server{
