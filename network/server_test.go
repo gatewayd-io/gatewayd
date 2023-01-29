@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"testing"
+	"time"
 
 	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
 	"github.com/gatewayd-io/gatewayd/config"
@@ -14,6 +15,7 @@ import (
 	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -94,6 +96,9 @@ func TestRunServer(t *testing.T) {
 	}
 	hooksConfig.Add(hook.OnTrafficFromServer, 1, onTrafficFromServer)
 
+	keepAlive, err := time.ParseDuration(config.DefaultTCPKeepAlivePeriod)
+	require.NoError(t, err)
+
 	clientConfig := config.Client{
 		Network:            "tcp",
 		Address:            "localhost:5432",
@@ -102,20 +107,26 @@ func TestRunServer(t *testing.T) {
 		ReceiveDeadline:    config.DefaultReceiveDeadline,
 		SendDeadline:       config.DefaultSendDeadline,
 		TCPKeepAlive:       false,
-		TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
+		TCPKeepAlivePeriod: keepAlive,
 	}
 
 	// Create a connection pool.
 	pool := pool.NewPool(2)
 	client1 := NewClient(&clientConfig, logger)
-	err := pool.Put(client1.ID, client1)
+	err = pool.Put(client1.ID, client1)
 	assert.Nil(t, err)
 	client2 := NewClient(&clientConfig, logger)
 	err = pool.Put(client2.ID, client2)
 	assert.Nil(t, err)
 
+	healthCheck, err := time.ParseDuration(config.DefaultHealthCheckPeriod)
+	require.NoError(t, err)
+
 	// Create a proxy with a fixed buffer pool.
-	proxy := NewProxy(pool, hooksConfig, false, false, &clientConfig, logger)
+	proxy := NewProxy(pool, hooksConfig, false, false, healthCheck, &clientConfig, logger)
+
+	tickInterval, err := time.ParseDuration(config.DefaultTickInterval)
+	require.NoError(t, err)
 
 	// Create a server.
 	server := NewServer(
@@ -123,7 +134,7 @@ func TestRunServer(t *testing.T) {
 		"127.0.0.1:15432",
 		0,
 		0,
-		config.DefaultTickInterval,
+		tickInterval,
 		[]gnet.Option{
 			gnet.WithMulticore(false),
 			gnet.WithReuseAddr(true),
@@ -146,6 +157,9 @@ func TestRunServer(t *testing.T) {
 	go func(t *testing.T, server *Server, errs chan error) {
 		for {
 			if server.IsRunning() {
+				keepAlive, err := time.ParseDuration(config.DefaultTCPKeepAlivePeriod)
+				require.NoError(t, err)
+
 				client := NewClient(
 					&config.Client{
 						Network:            "tcp",
@@ -155,7 +169,7 @@ func TestRunServer(t *testing.T) {
 						ReceiveDeadline:    config.DefaultReceiveDeadline,
 						SendDeadline:       config.DefaultSendDeadline,
 						TCPKeepAlive:       false,
-						TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
+						TCPKeepAlivePeriod: keepAlive,
 					},
 					logger)
 
