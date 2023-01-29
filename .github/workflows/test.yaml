@@ -82,6 +82,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Install Go 🧑‍💻
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.19'
+
       - run: |
           git config --global url."https://mostafa:${TOKEN}@github.com/".insteadOf "https://github.com"
           go mod tidy
@@ -95,11 +100,6 @@ jobs:
           repository: gatewayd-io/gatewayd-plugin-test
           path: gatewayd-plugin-test
           token: ${{ secrets.GH_PLUGIN_TOKEN }}
-
-      - name: Install Go 🧑‍💻
-        uses: actions/setup-go@v3
-        with:
-          go-version: '1.19'
 
       - name: Build test plugin 🏗️
         run: |
