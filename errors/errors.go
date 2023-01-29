@@ -92,4 +92,5 @@ var (
 const (
 	FailedToLoadPluginConfig = 1
 	FailedToLoadGlobalConfig = 2
+	FailedToInitializePool   = 3
 )
