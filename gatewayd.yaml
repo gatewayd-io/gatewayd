@@ -1,62 +1,47 @@
 # Gatewayd config
-# This file is used to configure the gatewayd daemon.
 
 loggers:
   default:
-    output: "console" # stdout, stderr, file or console
-    # Implementing file output
-    # file : ./logs/gatewayd.log
-    level: "debug" # panic, fatal, error, warn, info, debug, trace
+    output: "console" # stdout, stderr or file
+    level: "debug" # panic, fatal, error, warn, info (default), debug, trace
     noColor: False
-    timeFormat: "unix"
+    timeFormat: "unix" # unixms, unixmicro and unixnano
 
 clients:
   default:
     network: tcp
     address: localhost:5432
-    # tcpKeepAlive: True
-    # tcpKeepAlivePeriod: 20s # duration
-    # receiveBufferSize: 16777216
-    # receiveChunkSize: 4096
-    # receiveDeadline: 0ms # duration, 0ms/0s means no deadline
-    # sendDeadline: 0ms # duration, 0ms/0s means no deadline
+    tcpKeepAlive: False
+    tcpKeepAlivePeriod: 30s # duration
+    receiveBufferSize: 16777216
+    receiveChunkSize: 4096
+    receiveDeadline: 0ms # duration, 0ms/0s means no deadline
+    sendDeadline: 0ms # duration, 0ms/0s means no deadline
 
 pools:
   default:
     size: 10
-    # Database configs for the connection pool
-    client: clients.default
 
 proxy:
   default:
-    # Use the logger config passed here
-    # i.e. don't assume it's the same as the logger config above
-    logger: loggers.default
-      # Use the pool config passed here
-    # i.e. don't assume it's the same as the pool config above
-    pool: pool
     elastic: False
     reuseElasticClients: False
-    elasticClient: clients.default
+    healthCheckPeriod: 60s # duration
 
 server:
   network: tcp
   address: 0.0.0.0:15432
-  # softLimit: 0
-  # hardLimit: 0
-
-  logger: loggers.default
-  proxy: proxy.default
-
+  softLimit: 0
+  hardLimit: 0
   enableTicker: False
   tickInterval: 5s # duration
   multiCore: True
   lockOSThread: False
   loadBalancer: roundrobin
-  # readBufferCap: 16777216
-  # writeBufferCap: 16777216
-  # socketRecvBuffer: 16777216
-  # socketSendBuffer: 16777216
+  readBufferCap: 16777216
+  writeBufferCap: 16777216
+  socketRecvBuffer: 16777216
+  socketSendBuffer: 16777216
   reuseAddress: True
   reusePort: True
   tcpKeepAlive: 3s # duration
