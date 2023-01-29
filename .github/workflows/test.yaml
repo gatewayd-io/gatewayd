@@ -39,6 +39,13 @@ jobs:
         with:
           go-version: '1.19'
 
+      - run: |
+          git config --global url."https://mostafa:${TOKEN}@github.com/".insteadOf "https://github.com"
+          go mod tidy
+        env:
+          TOKEN: ${{ secrets.GH_SDK_TOKEN }}
+          GOPRIVATE: github.com/gatewayd-io/gatewayd-*
+
       - name: Lint code issues 🚨
         uses: golangci/golangci-lint-action@v3
 
@@ -75,17 +82,24 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Install Go 🧑‍💻
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.19'
+
+      - run: |
+          git config --global url."https://mostafa:${TOKEN}@github.com/".insteadOf "https://github.com"
+          go mod tidy
+        env:
+          TOKEN: ${{ secrets.GH_SDK_TOKEN }}
+          GOPRIVATE: github.com/gatewayd-io/gatewayd-*
+
       - name: Checkout test plugin 🛎️
         uses: actions/checkout@v3
         with:
           repository: gatewayd-io/gatewayd-plugin-test
           path: gatewayd-plugin-test
           token: ${{ secrets.GH_PLUGIN_TOKEN }}
-
-      - name: Install Go 🧑‍💻
-        uses: actions/setup-go@v3
-        with:
-          go-version: '1.19'
 
       - name: Build test plugin 🏗️
         run: |
