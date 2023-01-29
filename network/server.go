@@ -142,7 +142,7 @@ func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 	}
 	_, gatewaydErr := s.hooksConfig.Run(
 		context.Background(), data, plugin.OnClosing, s.hooksConfig.Verification)
-	if err != nil {
+	if gatewaydErr != nil {
 		s.logger.Error().Err(gatewaydErr).Msg("Failed to run OnClosing hook")
 	}
 
