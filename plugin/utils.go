@@ -29,6 +29,7 @@ func sha256sum(filename string) (string, error) {
 	buf := make([]byte, 65536)
 	for {
 		n, err := bufio.NewReader(file).Read(buf)
+		//nolint:gocritic
 		if err == nil {
 			hashAlgorithm.Write(buf[:n])
 		} else if errors.Is(err, io.EOF) {
