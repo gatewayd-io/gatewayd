@@ -13,6 +13,8 @@ type Status string
 const (
 	Running Status = "running"
 	Stopped Status = "stopped"
+
+	DefaultTickInterval = 5 * time.Second
 )
 
 type Server struct {
@@ -20,12 +22,13 @@ type Server struct {
 	engine gnet.Engine
 	proxy  Proxy
 
-	Network   string // tcp/udp/unix
-	Address   string
-	Options   []gnet.Option
-	SoftLimit int
-	HardLimit int
-	Status    Status
+	Network      string // tcp/udp/unix
+	Address      string
+	Options      []gnet.Option
+	SoftLimit    int
+	HardLimit    int
+	Status       Status
+	TickInterval int
 }
 
 func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
@@ -124,7 +127,11 @@ func (s *Server) OnShutdown(engine gnet.Engine) {
 func (s *Server) OnTick() (time.Duration, gnet.Action) {
 	logrus.Println("GatewayD is ticking...")
 	logrus.Infof("Active connections: %d", s.engine.CountConnections())
-	return time.Second * 5, gnet.None
+	interval := DefaultTickInterval
+	if s.TickInterval > 0 {
+		interval = time.Duration(s.TickInterval) * time.Second
+	}
+	return interval, gnet.None
 }
 
 func (s *Server) Run() {
