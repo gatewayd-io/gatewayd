@@ -10,6 +10,7 @@ import (
 	"github.com/zenizh/go-capturer"
 )
 
+// TestNewHcLogAdapter tests the HcLogAdapter.
 func TestNewHcLogAdapter(t *testing.T) {
 	consoleOutput := capturer.CaptureStdout(func() {
 		logger := NewLogger(
@@ -47,6 +48,8 @@ func TestNewHcLogAdapter(t *testing.T) {
 	assert.NotContains(t, consoleOutput, "TRC This is a trace message, but it should not be logged")
 }
 
+// TestNewHcLogAdapter_LogLevel_Difference tests the HcLogAdapter when the
+// logger and the hclog adapter have different log levels.
 func TestNewHcLogAdapter_LogLevel_Difference(t *testing.T) {
 	consoleOutput := capturer.CaptureStdout(func() {
 		logger := NewLogger(
