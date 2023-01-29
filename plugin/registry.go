@@ -2,7 +2,6 @@ package plugin
 
 import (
 	"context"
-	"os/exec"
 
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/logging"
@@ -167,7 +166,7 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 			&goplugin.ClientConfig{
 				HandshakeConfig: pluginV1.Handshake,
 				Plugins:         pluginV1.GetPluginMap(plugin.ID.Name),
-				Cmd:             exec.Command(plugin.LocalPath, plugin.Args...), //nolint:gosec
+				Cmd:             NewCommand(plugin.LocalPath, plugin.Args, nil),
 				AllowedProtocols: []goplugin.Protocol{
 					goplugin.ProtocolGRPC,
 				},
