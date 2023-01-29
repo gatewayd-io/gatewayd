@@ -131,6 +131,10 @@ func proxyConfig() (bool, bool, *network.Client) {
 	address := globalConfig.String(ref + ".address")
 	receiveBufferSize := globalConfig.Int(ref + ".receiveBufferSize")
 
+	if receiveBufferSize <= 0 {
+		receiveBufferSize = network.DefaultBufferSize
+	}
+
 	return elastic, reuseElasticClients, &network.Client{
 		Network:           net,
 		Address:           address,
