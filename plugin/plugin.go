@@ -33,6 +33,7 @@ type Impl struct {
 	License     string
 	ProjectURL  string
 	LocalPath   string
+	Args        []string
 	Enabled     bool
 	// internal and external config options
 	Config map[string]string
