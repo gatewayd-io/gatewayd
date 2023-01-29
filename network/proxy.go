@@ -82,7 +82,7 @@ func (pr *ProxyImpl) Connect(gconn gnet.Conn) error {
 			client = NewClient("tcp", "localhost:5432", pr.BufferSize)
 			logrus.Debugf("Reused the client %s by putting it back in the pool", client.ID)
 		} else {
-			return PoolExhausted
+			return ErrPoolExhausted
 		}
 	} else {
 		// Get a client from the pool
@@ -94,7 +94,7 @@ func (pr *ProxyImpl) Connect(gconn gnet.Conn) error {
 		pr.connClients.Store(gconn, client)
 		logrus.Debugf("Client %s has been assigned to %s", client.ID, gconn.RemoteAddr().String())
 	} else {
-		return ClientNotConnected
+		return ErrClientNotConnected
 	}
 
 	logrus.Debugf("[C] There are %d clients in the pool", len(pr.pool.ClientIDs()))
@@ -144,7 +144,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn, onIncomingTraffic, onOutgoingT
 			client = cl
 		}
 	} else {
-		return ClientNotFound
+		return ErrClientNotFound
 	}
 
 	// buf contains the data from the client (query)

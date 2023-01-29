@@ -42,6 +42,6 @@ func Resolve(network, address string) (string, error) {
 		return addr.String(), err
 	default:
 		logrus.Errorf("Network %s is not supported", network)
-		return "", NetworkNotSupported
+		return "", ErrNetworkNotSupported
 	}
 }

@@ -3,8 +3,8 @@ package network
 import "errors"
 
 var (
-	ClientNotFound      = errors.New("client not found")
-	NetworkNotSupported = errors.New("network is not supported")
-	ClientNotConnected  = errors.New("client is not connected")
-	PoolExhausted       = errors.New("pool is exhausted")
+	ErrClientNotFound      = errors.New("client not found")
+	ErrNetworkNotSupported = errors.New("network is not supported")
+	ErrClientNotConnected  = errors.New("client is not connected")
+	ErrPoolExhausted       = errors.New("pool is exhausted")
 )
