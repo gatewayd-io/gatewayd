@@ -190,9 +190,14 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 			&plugin.Hooks); err != nil {
 			reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to decode plugin hooks")
 		}
-		if err := mapstructure.Decode(metadata.Fields["config"].GetStructValue().AsMap(),
-			&plugin.Config); err != nil {
-			reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to decode plugin config")
+
+		plugin.Config = make(map[string]string)
+		for key, value := range metadata.Fields["config"].GetStructValue().AsMap() {
+			if val, ok := value.(string); ok {
+				plugin.Config[key] = val
+			} else {
+				reg.hooksConfig.Logger.Debug().Msgf("Failed to decode plugin config: %s", key)
+			}
 		}
 
 		reg.Add(plugin)
