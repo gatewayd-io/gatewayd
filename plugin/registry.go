@@ -106,7 +106,7 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 
 	// Add each plugin to the registry.
 	for priority, name := range plugins {
-		reg.hooksConfig.Logger.Debug().Msgf("Loading plugin: %s", name)
+		reg.hooksConfig.Logger.Debug().Str("name", name).Msg("Loading plugin")
 		plugin := &Impl{
 			ID: Identifier{
 				Name: name,
@@ -114,7 +114,7 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 		}
 
 		if enabled, ok := pluginConfig.Get(name + ".enabled").(bool); !ok || !enabled {
-			reg.hooksConfig.Logger.Debug().Msgf("Plugin is disabled or is not set: %s", name)
+			reg.hooksConfig.Logger.Debug().Str("name", name).Msg("Plugin is disabled or is not set")
 			continue
 		} else {
 			plugin.Enabled = enabled
@@ -122,14 +122,16 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 
 		if localPath, ok := pluginConfig.Get(
 			name + ".localPath").(string); !ok || localPath == "" {
-			reg.hooksConfig.Logger.Debug().Msgf("Local file of plugin doesn't exist or is not set: %s", name)
+			reg.hooksConfig.Logger.Debug().Str("name", name).Msg(
+				"Local file of plugin doesn't exist or is not set")
 			continue
 		} else {
 			plugin.LocalPath = localPath
 		}
 
 		if checksum, ok := pluginConfig.Get(name + ".checksum").(string); !ok || checksum == "" {
-			reg.hooksConfig.Logger.Debug().Msgf("Checksum of plugin doesn't exist or is not set: %s", name)
+			reg.hooksConfig.Logger.Debug().Str("name", name).Msg(
+				"Checksum of plugin doesn't exist or is not set")
 			continue
 		} else {
 			plugin.ID.Checksum = checksum
@@ -141,8 +143,12 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 			reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to calculate checksum")
 			continue
 		} else if sum != plugin.ID.Checksum {
-			reg.hooksConfig.Logger.Debug().Msgf(
-				"Checksum mismatch: %s != %s", sum, plugin.ID.Checksum)
+			reg.hooksConfig.Logger.Debug().Fields(
+				map[string]interface{}{
+					"calculated": sum,
+					"expected":   plugin.ID.Checksum,
+				},
+			).Msg("Checksum mismatch")
 			continue
 		}
 
@@ -174,7 +180,7 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 			},
 		)
 
-		reg.hooksConfig.Logger.Debug().Msgf("Plugin loaded: %s", plugin.ID.Name)
+		reg.hooksConfig.Logger.Debug().Str("name", plugin.ID.Name).Msg("Plugin loaded")
 		if _, err := plugin.Start(); err != nil {
 			reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to start plugin")
 		}
@@ -213,14 +219,15 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 			if val, ok := value.(string); ok {
 				plugin.Config[key] = val
 			} else {
-				reg.hooksConfig.Logger.Debug().Msgf("Failed to decode plugin config: %s", key)
+				reg.hooksConfig.Logger.Debug().Str("key", key).Msg(
+					"Failed to decode plugin config")
 			}
 		}
 
 		reg.Add(plugin)
 
 		reg.RegisterHooks(plugin.ID)
-		reg.hooksConfig.Logger.Debug().Msgf("Plugin metadata loaded: %s", plugin.ID.Name)
+		reg.hooksConfig.Logger.Debug().Str("name", plugin.ID.Name).Msg("Plugin metadata loaded")
 	}
 }
 
@@ -229,7 +236,8 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 //nolint:funlen
 func (reg *RegistryImpl) RegisterHooks(id Identifier) {
 	pluginImpl := reg.Get(id)
-	reg.hooksConfig.Logger.Debug().Msgf("Registering hooks for plugin: %s", pluginImpl.ID.Name)
+	reg.hooksConfig.Logger.Debug().Str("name", pluginImpl.ID.Name).Msg(
+		"Registering hooks for plugin")
 	var pluginV1 pluginV1.GatewayDPluginServiceClient
 	var err *gerr.GatewayDError
 	if pluginV1, err = pluginImpl.Dispense(); err != nil {
@@ -279,10 +287,10 @@ func (reg *RegistryImpl) RegisterHooks(id Identifier) {
 		case OnNewClient:
 			hookFunc = pluginV1.OnNewClient
 		default:
-			reg.hooksConfig.Logger.Warn().Msgf("Unknown hook type: %s", hook)
+			reg.hooksConfig.Logger.Warn().Str("hook", string(hook)).Msg("Unknown hook type")
 			continue
 		}
-		reg.hooksConfig.Logger.Debug().Msgf("Registering hook: %s", hook)
+		reg.hooksConfig.Logger.Debug().Str("hook", string(hook)).Msg("Registering hook")
 		reg.hooksConfig.Add(hook, pluginImpl.Priority, hookFunc)
 	}
 }
