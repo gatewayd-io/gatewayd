@@ -2,6 +2,7 @@ package network
 
 import (
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"net"
@@ -96,17 +97,22 @@ func trafficData(
 	return data
 }
 
-// extractField extracts the given field name and error message from the result of the hook.
-func extractField(result map[string]interface{}, fieldName string) ([]byte, string) {
+// extractFieldValue extracts the given field name and error message from the result of the hook.
+func extractFieldValue(result map[string]interface{}, fieldName string) ([]byte, string, error) {
 	var data []byte
 	var err string
+	var conversionErr error
 	if result != nil {
-		if fieldValue, ok := result[fieldName].([]byte); ok {
-			data = fieldValue
+		if fieldValue, ok := result[fieldName].(string); ok {
+			if base64Decoded, err := base64.StdEncoding.DecodeString(fieldValue); err == nil {
+				data = base64Decoded
+			} else {
+				conversionErr = err
+			}
 		}
 		if errMsg, ok := result["error"].(string); ok && errMsg != "" {
 			err = errMsg
 		}
 	}
-	return data, err
+	return data, err, conversionErr
 }

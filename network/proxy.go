@@ -222,9 +222,12 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 		pr.logger.Error().Err(err).Msg("Error running hook")
 	}
 	// If the hook modified the request, use the modified request.
-	modRequest, errMsg := extractField(result, "request")
+	modRequest, errMsg, convErr := extractFieldValue(result, "request")
 	if errMsg != "" {
 		pr.logger.Error().Str("error", errMsg).Msg("Error in hook")
+	}
+	if convErr != nil {
+		pr.logger.Error().Err(convErr).Msg("Error in data conversion")
 	}
 	if modRequest != nil {
 		request = modRequest
@@ -292,9 +295,12 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 		pr.logger.Error().Err(err).Msg("Error running hook")
 	}
 	// If the hook returns a response, use it instead of the original response.
-	modResponse, errMsg := extractField(result, "response")
+	modResponse, errMsg, convErr := extractFieldValue(result, "response")
 	if errMsg != "" {
 		pr.logger.Error().Str("error", errMsg).Msg("Error in hook")
+	}
+	if convErr != nil {
+		pr.logger.Error().Err(convErr).Msg("Error in data conversion")
 	}
 	if modResponse != nil {
 		response = modResponse
