@@ -39,6 +39,9 @@ jobs:
         with:
           go-version: '1.19'
 
+      - name: Install dependencies 📦
+        run: go mod tidy
+
       - name: Lint code issues 🚨
         uses: golangci/golangci-lint-action@v3
 
