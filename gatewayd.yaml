@@ -13,7 +13,7 @@ loggers:
     maxBackups: 5
     maxAge: 30 # days
     compress: True
-    localTime: True
+    localTime: False
     # Rsyslog config
     rsyslogNetwork: "tcp"
     rsyslogAddress: "localhost:514"
