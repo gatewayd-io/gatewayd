@@ -83,12 +83,11 @@ jobs:
             localPath: ./gdp-test
             checksum: ${SHA256SUM}
           EOF
-          cat gatewayd.yaml
-          cat gatewayd_plugins.yaml
 
       - name: Run GatewayD with test plugin 🚀
         run: |
-          ./gatewayd run
+          ./gatewayd run &
+          sleep 5s
 
       - name: Run a test with PSQL 🧪
         run: |
