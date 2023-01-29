@@ -30,10 +30,11 @@ type Plugin struct {
 }
 
 type PluginConfig struct {
-	VerificationPolicy  string   `koanf:"verificationPolicy"`
-	CompatibilityPolicy string   `koanf:"compatibilityPolicy"`
-	AcceptancePolicy    string   `koanf:"acceptancePolicy"`
-	Plugins             []Plugin `koanf:"plugins"`
+	VerificationPolicy  string        `koanf:"verificationPolicy"`
+	CompatibilityPolicy string        `koanf:"compatibilityPolicy"`
+	AcceptancePolicy    string        `koanf:"acceptancePolicy"`
+	MetricsMergerPeriod time.Duration `koanf:"metricsMergerPeriod"`
+	Plugins             []Plugin      `koanf:"plugins"`
 }
 
 type Client struct {
@@ -175,6 +176,8 @@ func LoadPluginConfigDefaults(cfg *koanf.Koanf) {
 		"plugins": map[string]interface{}{
 			"verificationPolicy":  "passdown",
 			"compatibilityPolicy": "strict",
+			"acceptancePolicy":    "accept",
+			"metricsMergerPeriod": DefaultMetricsMergerPeriod.String(),
 		},
 	}, "")
 
