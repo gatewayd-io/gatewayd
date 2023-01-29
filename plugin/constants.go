@@ -1,4 +1,4 @@
-package hook
+package plugin
 
 const (
 	// Run command hooks (cmd/run.go).

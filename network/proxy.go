@@ -6,7 +6,7 @@ import (
 
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
-	"github.com/gatewayd-io/gatewayd/plugin/hook"
+	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
 	"github.com/go-co-op/gocron"
 	"github.com/panjf2000/gnet/v2"
@@ -26,7 +26,7 @@ type Proxy struct {
 	availableConnections pool.IPool
 	busyConnections      pool.IPool
 	logger               zerolog.Logger
-	hookRegistry         *hook.Registry
+	pluginRegistry       *plugin.PluginRegistry
 	scheduler            *gocron.Scheduler
 
 	Elastic             bool
@@ -41,7 +41,7 @@ var _ IProxy = &Proxy{}
 
 // NewProxy creates a new proxy.
 func NewProxy(
-	connPool pool.IPool, hookRegistry *hook.Registry,
+	connPool pool.IPool, pluginRegistry *plugin.PluginRegistry,
 	elastic, reuseElasticClients bool,
 	healthCheckPeriod time.Duration,
 	clientConfig *config.Client, logger zerolog.Logger,
@@ -50,7 +50,7 @@ func NewProxy(
 		availableConnections: connPool,
 		busyConnections:      pool.NewPool(config.EmptyPoolCapacity),
 		logger:               logger,
-		hookRegistry:         hookRegistry,
+		pluginRegistry:       pluginRegistry,
 		scheduler:            gocron.NewScheduler(time.UTC),
 		Elastic:              elastic,
 		ReuseElasticClients:  reuseElasticClients,
@@ -363,7 +363,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	request, origErr := receiveTrafficFromClient()
 
 	// Run the OnTrafficFromClient hooks.
-	result, err := pr.hookRegistry.Run(
+	result, err := pr.pluginRegistry.Run(
 		context.Background(),
 		trafficData(
 			gconn,
@@ -375,8 +375,8 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 				},
 			},
 			origErr),
-		hook.OnTrafficFromClient,
-		pr.hookRegistry.Verification)
+		plugin.OnTrafficFromClient,
+		pr.pluginRegistry.Verification)
 	if err != nil {
 		pr.logger.Error().Err(err).Msg("Error running hook")
 	}
@@ -396,7 +396,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	_, err = sendTrafficToServer(request)
 
 	// Run the OnTrafficToServer hooks.
-	_, err = pr.hookRegistry.Run(
+	_, err = pr.pluginRegistry.Run(
 		context.Background(),
 		trafficData(
 			gconn,
@@ -408,8 +408,8 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 				},
 			},
 			err),
-		hook.OnTrafficToServer,
-		pr.hookRegistry.Verification)
+		plugin.OnTrafficToServer,
+		pr.pluginRegistry.Verification)
 	if err != nil {
 		pr.logger.Error().Err(err).Msg("Error running hook")
 	}
@@ -448,7 +448,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	}
 
 	// Run the OnTrafficFromServer hooks.
-	result, err = pr.hookRegistry.Run(
+	result, err = pr.pluginRegistry.Run(
 		context.Background(),
 		trafficData(
 			gconn,
@@ -464,8 +464,8 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 				},
 			},
 			err),
-		hook.OnTrafficFromServer,
-		pr.hookRegistry.Verification)
+		plugin.OnTrafficFromServer,
+		pr.pluginRegistry.Verification)
 	if err != nil {
 		pr.logger.Error().Err(err).Msg("Error running hook")
 	}
@@ -481,7 +481,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	errVerdict := sendTrafficToClient(response, received)
 
 	// Run the OnTrafficToClient hooks.
-	_, err = pr.hookRegistry.Run(
+	_, err = pr.pluginRegistry.Run(
 		context.Background(),
 		trafficData(
 			gconn,
@@ -498,8 +498,8 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 			},
 			err,
 		),
-		hook.OnTrafficToClient,
-		pr.hookRegistry.Verification)
+		plugin.OnTrafficToClient,
+		pr.pluginRegistry.Verification)
 	if err != nil {
 		pr.logger.Error().Err(err).Msg("Error running hook")
 	}

@@ -2,17 +2,19 @@ package plugin
 
 import (
 	"context"
+	"sort"
 
 	semver "github.com/Masterminds/semver/v3"
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/logging"
-	"github.com/gatewayd-io/gatewayd/plugin/hook"
 	"github.com/gatewayd-io/gatewayd/plugin/utils"
 	pluginV1 "github.com/gatewayd-io/gatewayd/plugin/v1"
 	"github.com/gatewayd-io/gatewayd/pool"
 	goplugin "github.com/hashicorp/go-plugin"
 	"github.com/mitchellh/mapstructure"
+	"github.com/rs/zerolog"
+	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
@@ -23,23 +25,44 @@ type IPluginRegistry interface {
 	Exists(name, version, remoteURL string) bool
 	Remove(id Identifier)
 	Shutdown()
+
+	AddHook(hookName string, priority Priority, hookMethod Method)
+	Hooks() map[string]map[Priority]Method
+	Run(
+		ctx context.Context,
+		args map[string]interface{},
+		hookName string,
+		verification config.Policy,
+		opts ...grpc.CallOption,
+	) (map[string]interface{}, *gerr.GatewayDError)
+
 	LoadPlugins(plugins []config.Plugin)
 	RegisterHooks(id Identifier)
 }
 
 type PluginRegistry struct { //nolint:golint,revive
-	plugins      pool.IPool
-	hookRegistry *hook.Registry
+	plugins pool.IPool
+	hooks   map[string]map[Priority]Method
+
+	Logger       zerolog.Logger
 	CompatPolicy config.CompatPolicy
+	Verification config.Policy
 }
 
 var _ IPluginRegistry = &PluginRegistry{}
 
 // NewRegistry creates a new plugin registry.
-func NewRegistry(hookRegistry *hook.Registry) *PluginRegistry {
+func NewRegistry(
+	compatPolicy config.CompatPolicy,
+	verification config.Policy,
+	logger zerolog.Logger,
+) *PluginRegistry {
 	return &PluginRegistry{
 		plugins:      pool.NewPool(config.EmptyPoolCapacity),
-		hookRegistry: hookRegistry,
+		hooks:        map[string]map[Priority]Method{},
+		Logger:       logger,
+		CompatPolicy: compatPolicy,
+		Verification: verification,
 	}
 }
 
@@ -47,7 +70,7 @@ func NewRegistry(hookRegistry *hook.Registry) *PluginRegistry {
 func (reg *PluginRegistry) Add(plugin *Plugin) bool {
 	_, loaded, err := reg.plugins.GetOrPut(plugin.ID, plugin)
 	if err != nil {
-		reg.hookRegistry.Logger.Error().Err(err).Msg("Failed to add plugin to registry")
+		reg.Logger.Error().Err(err).Msg("Failed to add plugin to registry")
 		return false
 	}
 	return loaded
@@ -81,14 +104,14 @@ func (reg *PluginRegistry) Exists(name, version, remoteURL string) bool {
 			// Parse the supplied version and the version in the registry.
 			suppliedVer, err := semver.NewVersion(version)
 			if err != nil {
-				reg.hookRegistry.Logger.Error().Err(err).Msg(
+				reg.Logger.Error().Err(err).Msg(
 					"Failed to parse supplied plugin version")
 				return false
 			}
 
 			registryVer, err := semver.NewVersion(plugin.Version)
 			if err != nil {
-				reg.hookRegistry.Logger.Error().Err(err).Msg(
+				reg.Logger.Error().Err(err).Msg(
 					"Failed to parse plugin version in registry")
 				return false
 			}
@@ -99,7 +122,7 @@ func (reg *PluginRegistry) Exists(name, version, remoteURL string) bool {
 				return true
 			}
 
-			reg.hookRegistry.Logger.Debug().Str("name", name).Str("version", version).Msg(
+			reg.Logger.Debug().Str("name", name).Str("version", version).Msg(
 				"Supplied plugin version is greater than the version in registry")
 			return false
 		}
@@ -127,6 +150,154 @@ func (reg *PluginRegistry) Shutdown() {
 	goplugin.CleanupClients()
 }
 
+// Hooks returns the hooks map.
+func (reg *PluginRegistry) Hooks() map[string]map[Priority]Method {
+	return reg.hooks
+}
+
+// Add adds a hook with a priority to the hooks map.
+func (reg *PluginRegistry) AddHook(hookName string, priority Priority, hookMethod Method) {
+	if len(reg.hooks[hookName]) == 0 {
+		reg.hooks[hookName] = map[Priority]Method{priority: hookMethod}
+	} else {
+		if _, ok := reg.hooks[hookName][priority]; ok {
+			reg.Logger.Warn().Fields(
+				map[string]interface{}{
+					"hookName": hookName,
+					"priority": priority,
+				},
+			).Msg("Hook is replaced")
+		}
+		reg.hooks[hookName][priority] = hookMethod
+	}
+}
+
+// Run runs the hooks of a specific type. The result of the previous hook is passed
+// to the next hook as the argument, aka. chained. The context is passed to the
+// hooks as well to allow them to cancel the execution. The args are passed to the
+// first hook as the argument. The result of the first hook is passed to the second
+// hook, and so on. The result of the last hook is eventually returned. The verification
+// mode is used to determine how to handle errors. If the verification mode is set to
+// Abort, the execution is aborted on the first error. If the verification mode is set
+// to Remove, the hook is removed from the list of hooks on the first error. If the
+// verification mode is set to Ignore, the error is ignored and the execution continues.
+// If the verification mode is set to PassDown, the extra keys/values in the result
+// are passed down to the next  The verification mode is set to PassDown by default.
+// The opts are passed to the hooks as well to allow them to use the grpc.CallOption.
+//
+//nolint:funlen
+func (reg *PluginRegistry) Run(
+	ctx context.Context,
+	args map[string]interface{},
+	hookName string,
+	verification config.Policy,
+	opts ...grpc.CallOption,
+) (map[string]interface{}, *gerr.GatewayDError) {
+	if ctx == nil {
+		return nil, gerr.ErrNilContext
+	}
+
+	// Inherit context.
+	inheritedCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	// Cast custom fields to their primitive types, like time.Duration to float64.
+	args = utils.CastToPrimitiveTypes(args)
+
+	// Create structpb.Struct from args.
+	var params *structpb.Struct
+	if len(args) == 0 {
+		params = &structpb.Struct{}
+	} else if casted, err := structpb.NewStruct(args); err == nil {
+		params = casted
+	} else {
+		return nil, gerr.ErrCastFailed.Wrap(err)
+	}
+
+	// Sort hooks by priority.
+	priorities := make([]Priority, 0, len(reg.hooks[hookName]))
+	for priority := range reg.hooks[hookName] {
+		priorities = append(priorities, priority)
+	}
+	sort.SliceStable(priorities, func(i, j int) bool {
+		return priorities[i] < priorities[j]
+	})
+
+	// Run hooks, passing the result of the previous hook to the next one.
+	returnVal := &structpb.Struct{}
+	var removeList []Priority
+	// The signature of parameters and args MUST be the same for this to work.
+	for idx, priority := range priorities {
+		var result *structpb.Struct
+		var err error
+		if idx == 0 {
+			result, err = reg.hooks[hookName][priority](inheritedCtx, params, opts...)
+		} else {
+			result, err = reg.hooks[hookName][priority](inheritedCtx, returnVal, opts...)
+		}
+
+		// This is done to ensure that the return value of the hook is always valid,
+		// and that the hook does not return any unexpected values.
+		// If the verification mode is non-strict (permissive), let the plugin pass
+		// extra keys/values to the next plugin in chain.
+		if utils.Verify(params, result) || verification == config.PassDown {
+			// Update the last return value with the current result
+			returnVal = result
+			continue
+		}
+
+		// At this point, the hook returned an invalid value, so we need to handle it.
+		// The result of the current hook will be ignored, regardless of the policy.
+		switch verification {
+		// Ignore the result of this plugin, log an error and execute the next
+		case config.Ignore:
+			reg.Logger.Error().Err(err).Fields(
+				map[string]interface{}{
+					"hookName": hookName,
+					"priority": priority,
+				},
+			).Msg("Hook returned invalid value, ignoring")
+			if idx == 0 {
+				returnVal = params
+			}
+		// Abort execution of the plugins, log the error and return the result of the last
+		case config.Abort:
+			reg.Logger.Error().Err(err).Fields(
+				map[string]interface{}{
+					"hookName": hookName,
+					"priority": priority,
+				},
+			).Msg("Hook returned invalid value, aborting")
+			if idx == 0 {
+				return args, nil
+			}
+			return returnVal.AsMap(), nil
+		// Remove the hook from the registry, log the error and execute the next
+		case config.Remove:
+			reg.Logger.Error().Err(err).Fields(
+				map[string]interface{}{
+					"hookName": hookName,
+					"priority": priority,
+				},
+			).Msg("Hook returned invalid value, removing")
+			removeList = append(removeList, priority)
+			if idx == 0 {
+				returnVal = params
+			}
+		case config.PassDown:
+		default:
+			returnVal = result
+		}
+	}
+
+	// Remove hooks that failed verification.
+	for _, priority := range removeList {
+		delete(reg.hooks[hookName], priority)
+	}
+
+	return returnVal.AsMap(), nil
+}
+
 // LoadPlugins loads plugins from the config file.
 //
 //nolint:funlen
@@ -141,7 +312,7 @@ func (reg *PluginRegistry) LoadPlugins(plugins []config.Plugin) {
 			continue
 		}
 
-		reg.hookRegistry.Logger.Debug().Str("name", pCfg.Name).Msg("Loading plugin")
+		reg.Logger.Debug().Str("name", pCfg.Name).Msg("Loading plugin")
 		plugin := &Plugin{
 			ID: Identifier{
 				Name:     pCfg.Name,
@@ -156,20 +327,20 @@ func (reg *PluginRegistry) LoadPlugins(plugins []config.Plugin) {
 		// Is the plugin enabled?
 		plugin.Enabled = pCfg.Enabled
 		if !plugin.Enabled {
-			reg.hookRegistry.Logger.Debug().Str("name", plugin.ID.Name).Msg("Plugin is disabled")
+			reg.Logger.Debug().Str("name", plugin.ID.Name).Msg("Plugin is disabled")
 			continue
 		}
 
 		// File path of the plugin on disk.
 		if plugin.LocalPath == "" {
-			reg.hookRegistry.Logger.Debug().Str("name", plugin.ID.Name).Msg(
+			reg.Logger.Debug().Str("name", plugin.ID.Name).Msg(
 				"Local file of the plugin doesn't exist or is not set")
 			continue
 		}
 
 		// Checksum of the plugin.
 		if plugin.ID.Checksum == "" {
-			reg.hookRegistry.Logger.Debug().Str("name", plugin.ID.Name).Msg(
+			reg.Logger.Debug().Str("name", plugin.ID.Name).Msg(
 				"Checksum of plugin doesn't exist or is not set")
 			continue
 		}
@@ -177,11 +348,11 @@ func (reg *PluginRegistry) LoadPlugins(plugins []config.Plugin) {
 		// Verify the checksum.
 		// TODO: Load the plugin from a remote location if the checksum didn't match?
 		if sum, err := utils.SHA256SUM(plugin.LocalPath); err != nil {
-			reg.hookRegistry.Logger.Debug().Str("name", plugin.ID.Name).Err(err).Msg(
+			reg.Logger.Debug().Str("name", plugin.ID.Name).Err(err).Msg(
 				"Failed to calculate checksum")
 			continue
 		} else if sum != plugin.ID.Checksum {
-			reg.hookRegistry.Logger.Debug().Fields(
+			reg.Logger.Debug().Fields(
 				map[string]interface{}{
 					"calculated": sum,
 					"expected":   plugin.ID.Checksum,
@@ -195,9 +366,9 @@ func (reg *PluginRegistry) LoadPlugins(plugins []config.Plugin) {
 		// in the config file. Built-in plugins are loaded first, followed by user-defined
 		// plugins. Built-in plugins have a priority of 0 to 999, and user-defined plugins
 		// have a priority of 1000 or greater.
-		plugin.Priority = hook.Priority(config.PluginPriorityStart + uint(priority))
+		plugin.Priority = Priority(config.PluginPriorityStart + uint(priority))
 
-		logAdapter := logging.NewHcLogAdapter(&reg.hookRegistry.Logger, config.LoggerName)
+		logAdapter := logging.NewHcLogAdapter(&reg.Logger, config.LoggerName)
 
 		plugin.client = goplugin.NewClient(
 			&goplugin.ClientConfig{
@@ -220,22 +391,22 @@ func (reg *PluginRegistry) LoadPlugins(plugins []config.Plugin) {
 			},
 		)
 
-		reg.hookRegistry.Logger.Debug().Str("name", plugin.ID.Name).Msg("Plugin loaded")
+		reg.Logger.Debug().Str("name", plugin.ID.Name).Msg("Plugin loaded")
 		if _, err := plugin.Start(); err != nil {
-			reg.hookRegistry.Logger.Debug().Str("name", plugin.ID.Name).Err(err).Msg(
+			reg.Logger.Debug().Str("name", plugin.ID.Name).Err(err).Msg(
 				"Failed to start plugin")
 		}
 
 		// Load metadata from the plugin.
 		var metadata *structpb.Struct
 		if pluginV1, err := plugin.Dispense(); err != nil {
-			reg.hookRegistry.Logger.Debug().Str("name", plugin.ID.Name).Err(err).Msg(
+			reg.Logger.Debug().Str("name", plugin.ID.Name).Err(err).Msg(
 				"Failed to dispense plugin")
 			continue
 		} else {
 			if meta, origErr := pluginV1.GetPluginConfig(
 				context.Background(), &structpb.Struct{}); err != nil {
-				reg.hookRegistry.Logger.Debug().Str("name", plugin.ID.Name).Err(origErr).Msg(
+				reg.Logger.Debug().Str("name", plugin.ID.Name).Err(origErr).Msg(
 					"Failed to get plugin metadata")
 				continue
 			} else {
@@ -246,12 +417,12 @@ func (reg *PluginRegistry) LoadPlugins(plugins []config.Plugin) {
 		// Retrieve plugin requirements.
 		if err := mapstructure.Decode(metadata.Fields["requires"].GetListValue().AsSlice(),
 			&plugin.Requires); err != nil {
-			reg.hookRegistry.Logger.Debug().Err(err).Msg("Failed to decode plugin requirements")
+			reg.Logger.Debug().Err(err).Msg("Failed to decode plugin requirements")
 		}
 
 		// Too many requirements or not enough plugins loaded.
 		if len(plugin.Requires) > reg.plugins.Size() {
-			reg.hookRegistry.Logger.Debug().Msg(
+			reg.Logger.Debug().Msg(
 				"The plugin has too many requirements, " +
 					"and not enough of them exist in the registry, so it won't work properly")
 		}
@@ -259,19 +430,19 @@ func (reg *PluginRegistry) LoadPlugins(plugins []config.Plugin) {
 		// Check if the plugin requirements are met.
 		for _, req := range plugin.Requires {
 			if !reg.Exists(req.Name, req.Version, req.RemoteURL) {
-				reg.hookRegistry.Logger.Debug().Fields(
+				reg.Logger.Debug().Fields(
 					map[string]interface{}{
 						"name":        plugin.ID.Name,
 						"requirement": req.Name,
 					},
 				).Msg("The plugin requirement is not met, so it won't work properly")
 				if reg.CompatPolicy == config.Strict {
-					reg.hookRegistry.Logger.Debug().Str("name", plugin.ID.Name).Msg(
+					reg.Logger.Debug().Str("name", plugin.ID.Name).Msg(
 						"Registry is in strict compatibility mode, so the plugin won't be loaded")
 					plugin.Stop() // Stop the plugin.
 					continue
 				} else {
-					reg.hookRegistry.Logger.Debug().Fields(
+					reg.Logger.Debug().Fields(
 						map[string]interface{}{
 							"name":        plugin.ID.Name,
 							"requirement": req.Name,
@@ -290,12 +461,12 @@ func (reg *PluginRegistry) LoadPlugins(plugins []config.Plugin) {
 		// Retrieve authors.
 		if err := mapstructure.Decode(metadata.Fields["authors"].GetListValue().AsSlice(),
 			&plugin.Authors); err != nil {
-			reg.hookRegistry.Logger.Debug().Err(err).Msg("Failed to decode plugin authors")
+			reg.Logger.Debug().Err(err).Msg("Failed to decode plugin authors")
 		}
 		// Retrieve hooks.
 		if err := mapstructure.Decode(metadata.Fields["hooks"].GetListValue().AsSlice(),
 			&plugin.Hooks); err != nil {
-			reg.hookRegistry.Logger.Debug().Err(err).Msg("Failed to decode plugin hooks")
+			reg.Logger.Debug().Err(err).Msg("Failed to decode plugin hooks")
 		}
 
 		// Retrieve plugin config.
@@ -304,18 +475,18 @@ func (reg *PluginRegistry) LoadPlugins(plugins []config.Plugin) {
 			if val, ok := value.(string); ok {
 				plugin.Config[key] = val
 			} else {
-				reg.hookRegistry.Logger.Debug().Str("key", key).Msg(
+				reg.Logger.Debug().Str("key", key).Msg(
 					"Failed to decode plugin config")
 			}
 		}
 
-		reg.hookRegistry.Logger.Trace().Msgf("Plugin metadata: %+v", plugin)
+		reg.Logger.Trace().Msgf("Plugin metadata: %+v", plugin)
 
 		reg.Add(plugin)
-		reg.hookRegistry.Logger.Debug().Str("name", plugin.ID.Name).Msg("Plugin metadata loaded")
+		reg.Logger.Debug().Str("name", plugin.ID.Name).Msg("Plugin metadata loaded")
 
 		reg.RegisterHooks(plugin.ID)
-		reg.hookRegistry.Logger.Debug().Str("name", plugin.ID.Name).Msg("Plugin hooks registered")
+		reg.Logger.Debug().Str("name", plugin.ID.Name).Msg("Plugin hooks registered")
 	}
 }
 
@@ -324,63 +495,63 @@ func (reg *PluginRegistry) LoadPlugins(plugins []config.Plugin) {
 //nolint:funlen
 func (reg *PluginRegistry) RegisterHooks(id Identifier) {
 	pluginImpl := reg.Get(id)
-	reg.hookRegistry.Logger.Debug().Str("name", pluginImpl.ID.Name).Msg(
+	reg.Logger.Debug().Str("name", pluginImpl.ID.Name).Msg(
 		"Registering hooks for plugin")
 	var pluginV1 pluginV1.GatewayDPluginServiceClient
 	var err *gerr.GatewayDError
 	if pluginV1, err = pluginImpl.Dispense(); err != nil {
-		reg.hookRegistry.Logger.Debug().Str("name", pluginImpl.ID.Name).Err(err).Msg(
+		reg.Logger.Debug().Str("name", pluginImpl.ID.Name).Err(err).Msg(
 			"Failed to dispense plugin")
 		return
 	}
 
 	for _, hookName := range pluginImpl.Hooks {
-		var hookMethod hook.Method
+		var hookMethod Method
 		switch hookName {
-		case hook.OnConfigLoaded:
+		case OnConfigLoaded:
 			hookMethod = pluginV1.OnConfigLoaded
-		case hook.OnNewLogger:
+		case OnNewLogger:
 			hookMethod = pluginV1.OnNewLogger
-		case hook.OnNewPool:
+		case OnNewPool:
 			hookMethod = pluginV1.OnNewPool
-		case hook.OnNewProxy:
+		case OnNewProxy:
 			hookMethod = pluginV1.OnNewProxy
-		case hook.OnNewServer:
+		case OnNewServer:
 			hookMethod = pluginV1.OnNewServer
-		case hook.OnSignal:
+		case OnSignal:
 			hookMethod = pluginV1.OnSignal
-		case hook.OnRun:
+		case OnRun:
 			hookMethod = pluginV1.OnRun
-		case hook.OnBooting:
+		case OnBooting:
 			hookMethod = pluginV1.OnBooting
-		case hook.OnBooted:
+		case OnBooted:
 			hookMethod = pluginV1.OnBooted
-		case hook.OnOpening:
+		case OnOpening:
 			hookMethod = pluginV1.OnOpening
-		case hook.OnOpened:
+		case OnOpened:
 			hookMethod = pluginV1.OnOpened
-		case hook.OnClosing:
+		case OnClosing:
 			hookMethod = pluginV1.OnClosing
-		case hook.OnClosed:
+		case OnClosed:
 			hookMethod = pluginV1.OnClosed
-		case hook.OnTraffic:
+		case OnTraffic:
 			hookMethod = pluginV1.OnTraffic
-		case hook.OnTrafficFromClient:
+		case OnTrafficFromClient:
 			hookMethod = pluginV1.OnTrafficFromClient
-		case hook.OnTrafficToServer:
+		case OnTrafficToServer:
 			hookMethod = pluginV1.OnTrafficToServer
-		case hook.OnTrafficFromServer:
+		case OnTrafficFromServer:
 			hookMethod = pluginV1.OnTrafficFromServer
-		case hook.OnTrafficToClient:
+		case OnTrafficToClient:
 			hookMethod = pluginV1.OnTrafficToClient
-		case hook.OnShutdown:
+		case OnShutdown:
 			hookMethod = pluginV1.OnShutdown
-		case hook.OnTick:
+		case OnTick:
 			hookMethod = pluginV1.OnTick
-		case hook.OnNewClient:
+		case OnNewClient:
 			hookMethod = pluginV1.OnNewClient
 		default:
-			reg.hookRegistry.Logger.Warn().Fields(map[string]interface{}{
+			reg.Logger.Warn().Fields(map[string]interface{}{
 				"hook":     hookName,
 				"priority": pluginImpl.Priority,
 				"name":     pluginImpl.ID.Name,
@@ -388,11 +559,11 @@ func (reg *PluginRegistry) RegisterHooks(id Identifier) {
 				"Unknown hook, skipping")
 			continue
 		}
-		reg.hookRegistry.Logger.Debug().Fields(map[string]interface{}{
+		reg.Logger.Debug().Fields(map[string]interface{}{
 			"hook":     hookName,
 			"priority": pluginImpl.Priority,
 			"name":     pluginImpl.ID.Name,
 		}).Msg("Registering hook")
-		reg.hookRegistry.Add(hookName, pluginImpl.Priority, hookMethod)
+		reg.AddHook(hookName, pluginImpl.Priority, hookMethod)
 	}
 }
