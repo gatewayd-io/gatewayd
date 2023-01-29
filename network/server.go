@@ -3,7 +3,6 @@ package network
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"time"
@@ -141,10 +140,10 @@ func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 	if err != nil {
 		data["error"] = err.Error()
 	}
-	_, err = s.hooksConfig.Run(
+	_, gatewaydErr := s.hooksConfig.Run(
 		context.Background(), data, plugin.OnClosing, s.hooksConfig.Verification)
 	if err != nil {
-		s.logger.Error().Err(err).Msg("Failed to run OnClosing hook")
+		s.logger.Error().Err(gatewaydErr).Msg("Failed to run OnClosing hook")
 	}
 
 	// Shutdown the server if there are no more connections and the server is stopped
@@ -167,10 +166,10 @@ func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 	if err != nil {
 		data["error"] = err.Error()
 	}
-	_, err = s.hooksConfig.Run(
+	_, gatewaydErr = s.hooksConfig.Run(
 		context.Background(), data, plugin.OnClosed, s.hooksConfig.Verification)
-	if err != nil {
-		s.logger.Error().Err(err).Msg("Failed to run OnClosed hook")
+	if gatewaydErr != nil {
+		s.logger.Error().Err(gatewaydErr).Msg("Failed to run OnClosed hook")
 	}
 
 	return gnet.Close
@@ -262,8 +261,8 @@ func (s *Server) Run() error {
 	}
 
 	if result != nil {
-		if err, ok := result["error"].(error); ok && err != nil {
-			s.logger.Err(err).Msg("The hook returned an error")
+		if errMsg, ok := result["error"].(string); ok && errMsg != "" {
+			s.logger.Error().Msgf("Error in hook: %s", errMsg)
 		}
 
 		if address, ok := result["address"].(string); ok {
@@ -271,10 +270,10 @@ func (s *Server) Run() error {
 		}
 	}
 
-	err = gnet.Run(s, s.Network+"://"+addr, s.Options...)
-	if err != nil {
-		s.logger.Error().Err(err).Msg("Failed to start server")
-		return fmt.Errorf("failed to start server: %w", err)
+	origErr := gnet.Run(s, s.Network+"://"+addr, s.Options...)
+	if origErr != nil {
+		s.logger.Error().Err(origErr).Msg("Failed to start server")
+		return gerr.ErrFailedToStartServer.Wrap(origErr)
 	}
 
 	return nil
