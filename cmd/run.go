@@ -318,7 +318,11 @@ func init() {
 	rootCmd.AddCommand(runCmd)
 
 	runCmd.PersistentFlags().StringVarP(
-		&globalConfigFile, "config", "c", "./gatewayd.yaml", "config file (default is ./gatewayd.yaml)")
+		&globalConfigFile,
+		"config", "c", "./gatewayd.yaml",
+		"config file (default is ./gatewayd.yaml)")
 	runCmd.PersistentFlags().StringVarP(
-		&pluginConfigFile, "plugin-config", "p", "./gatewayd_plugins.yaml", "plugin config file (default is ./gatewayd_plugins.yaml)")
+		&pluginConfigFile,
+		"plugin-config", "p", "./gatewayd_plugins.yaml",
+		"plugin config file (default is ./gatewayd_plugins.yaml)")
 }
