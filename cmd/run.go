@@ -7,6 +7,7 @@ import (
 	"syscall"
 	"time"
 
+	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/gatewayd-io/gatewayd/network"
 	"github.com/gatewayd-io/gatewayd/plugin"
@@ -49,7 +50,7 @@ var runCmd = &cobra.Command{
 		if f, err := cmd.Flags().GetString("plugin-config"); err == nil {
 			if err := pluginConfig.Load(file.Provider(f), yaml.Parser()); err != nil {
 				DefaultLogger.Fatal().Err(err).Msg("Failed to load plugin configuration")
-				os.Exit(1)
+				os.Exit(gerr.FailedToLoadPluginConfig)
 			}
 		}
 
@@ -59,7 +60,7 @@ var runCmd = &cobra.Command{
 		if f, err := cmd.Flags().GetString("config"); err == nil {
 			if err := globalConfig.Load(file.Provider(f), yaml.Parser()); err != nil {
 				DefaultLogger.Fatal().Err(err).Msg("Failed to load configuration")
-				os.Exit(2)
+				os.Exit(gerr.FailedToLoadGlobalConfig)
 			}
 		}
 
