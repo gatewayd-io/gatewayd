@@ -26,7 +26,7 @@ plugins:
       - MAGIC_COOKIE_KEY=GATEWAYD_PLUGIN
       - MAGIC_COOKIE_VALUE=5712b87aa5d7e9f9e9ab643e6603181c5b796015cb1c09d6f5ada882bf2a1872
     # Checksum hash to verify the binary before loading
-    checksum: 01c300d950d24c00f28c9b3658d7705af093c3ff4a38dad6caf81e26bd6fb655
+    checksum: 4098de0e6058fd3805d3729d0940f7f15a78aedcdfa249fd074a5021aae7e8cb
   - name: gatewayd-plugin-cache
     enabled: True
     localPath: ../gatewayd-plugin-cache/gatewayd-plugin-cache
@@ -35,4 +35,4 @@ plugins:
       - MAGIC_COOKIE_KEY=GATEWAYD_PLUGIN
       - MAGIC_COOKIE_VALUE=5712b87aa5d7e9f9e9ab643e6603181c5b796015cb1c09d6f5ada882bf2a1872
       - REDIS_ADDR=localhost:6379
-    checksum: d86496fba6ca404ac35b20d473a0a4c6b287092027c5184273ebb72d33792889
+    checksum: 9b1cae466cdfa422e81257c314d0d24d2cc3d0ca40d672c52d76c18bbddadbf3
