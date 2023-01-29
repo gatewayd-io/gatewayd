@@ -88,9 +88,9 @@ func (c *Client) Receive() (int, []byte, error) {
 	received, err := c.Conn.Read(buf)
 	if err != nil && errors.Is(err, io.EOF) {
 		c.logger.Error().Err(err).Msg("Couldn't receive data from the server")
-		return 0, nil, err
+		return 0, nil, err //nolint:wrapcheck
 	}
-	return received, buf, err
+	return received, buf, err //nolint:wrapcheck
 }
 
 func (c *Client) Close() {
