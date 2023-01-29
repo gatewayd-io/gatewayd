@@ -1,3 +1,3 @@
-module github.com/mostafa/gatewayd
+module github.com/gatewayd-io/gatewayd
 
 go 1.18
