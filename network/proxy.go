@@ -41,13 +41,13 @@ var _ IProxy = &Proxy{}
 
 // NewProxy creates a new proxy.
 func NewProxy(
-	p pool.IPool, hookConfig *hook.Config,
+	connPool pool.IPool, hookConfig *hook.Config,
 	elastic, reuseElasticClients bool,
 	healthCheckPeriod time.Duration,
 	clientConfig *config.Client, logger zerolog.Logger,
 ) *Proxy {
 	proxy := Proxy{
-		availableConnections: p,
+		availableConnections: connPool,
 		busyConnections:      pool.NewPool(config.EmptyPoolCapacity),
 		logger:               logger,
 		hookConfig:           hookConfig,
