@@ -107,12 +107,18 @@ func TestPool_Pop(t *testing.T) {
 	client2 := NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)
 	pool.Put(client2.ID, client2)
 	assert.Equal(t, 2, pool.Size())
-	client := pool.Pop(client1.ID).(*Client)
-	assert.Equal(t, client1.ID, client.ID)
-	assert.Equal(t, 1, pool.Size())
-	client = pool.Pop(client2.ID).(*Client)
-	assert.Equal(t, client2.ID, client.ID)
-	assert.Equal(t, 0, pool.Size())
+	if c1, ok := pool.Pop(client1.ID).(*Client); !ok {
+		assert.Equal(t, c1, client1)
+	} else {
+		assert.Equal(t, client1.ID, c1.ID)
+		assert.Equal(t, 1, pool.Size())
+	}
+	if c2, ok := pool.Pop(client2.ID).(*Client); !ok {
+		assert.Equal(t, c2, client2)
+	} else {
+		assert.Equal(t, client2.ID, c2.ID)
+		assert.Equal(t, 0, pool.Size())
+	}
 }
 
 func TestPool_Clear(t *testing.T) {
@@ -184,7 +190,9 @@ func TestPool_ForEach(t *testing.T) {
 	pool.Put(client2.ID, client2)
 	assert.Equal(t, 2, pool.Size())
 	pool.ForEach(func(key, value interface{}) bool {
-		assert.NotNil(t, value.(*Client))
+		if c, ok := value.(*Client); ok {
+			assert.NotNil(t, c)
+		}
 		return true
 	})
 }
@@ -224,7 +232,9 @@ func TestPool_GetClientIDs(t *testing.T) {
 
 	var ids []string
 	pool.ForEach(func(key, value interface{}) bool {
-		ids = append(ids, key.(string))
+		if id, ok := key.(string); ok {
+			ids = append(ids, id)
+		}
 		return true
 	})
 	assert.Equal(t, 2, len(ids))
