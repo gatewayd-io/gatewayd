@@ -44,7 +44,8 @@ const (
 
 const (
 	// Config constants.
-	Default = "default"
+	Default   = "default"
+	EnvPrefix = "GATEWAYD_"
 
 	// Logger constants.
 	DefaultLogFileName       = "gatewayd.log"
