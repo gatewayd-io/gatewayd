@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 
+	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -18,14 +19,14 @@ const bufferSize = 65536
 // sha256sum returns the sha256 checksum of a file.
 // Ref: https://github.com/codingsince1985/checksum
 // A little copying is better than a little dependency.
-func sha256sum(filename string) (string, error) {
+func sha256sum(filename string) (string, *gerr.GatewayDError) {
 	if info, err := os.Stat(filename); err != nil || info.IsDir() {
-		return "", err //nolint:wrapcheck
+		return "", gerr.ErrFileNotFound.Wrap(err)
 	}
 
 	file, err := os.Open(filename)
 	if err != nil {
-		return "", err //nolint:wrapcheck
+		return "", gerr.ErrFileOpenFailed.Wrap(err)
 	}
 	defer func() { _ = file.Close() }()
 
@@ -40,7 +41,7 @@ func sha256sum(filename string) (string, error) {
 		} else if errors.Is(err, io.EOF) {
 			return fmt.Sprintf("%x", hashAlgorithm.Sum(nil)), nil
 		} else {
-			return "", err //nolint:wrapcheck
+			return "", gerr.ErrFileReadFailed.Wrap(err)
 		}
 	}
 }

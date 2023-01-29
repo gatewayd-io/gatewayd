@@ -15,9 +15,9 @@ type Callback func(key, value interface{}) bool
 type Pool interface {
 	ForEach(Callback)
 	Pool() *sync.Map
-	Put(key, value interface{}) error
+	Put(key, value interface{}) *gerr.GatewayDError
 	Get(key interface{}) interface{}
-	GetOrPut(key, value interface{}) (interface{}, bool, error)
+	GetOrPut(key, value interface{}) (interface{}, bool, *gerr.GatewayDError)
 	Pop(key interface{}) interface{}
 	Remove(key interface{})
 	Size() int
@@ -40,7 +40,7 @@ func (p *Impl) Pool() *sync.Map {
 	return &p.pool
 }
 
-func (p *Impl) Put(key, value interface{}) error {
+func (p *Impl) Put(key, value interface{}) *gerr.GatewayDError {
 	if p.cap > 0 && p.Size() >= p.cap {
 		return gerr.ErrPoolExhausted
 	}
@@ -55,7 +55,7 @@ func (p *Impl) Get(key interface{}) interface{} {
 	return nil
 }
 
-func (p *Impl) GetOrPut(key, value interface{}) (interface{}, bool, error) {
+func (p *Impl) GetOrPut(key, value interface{}) (interface{}, bool, *gerr.GatewayDError) {
 	if p.cap > 0 && p.Size() >= p.cap {
 		return nil, false, gerr.ErrPoolExhausted
 	}

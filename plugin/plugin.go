@@ -11,7 +11,7 @@ import (
 type Plugin interface {
 	Start() (net.Addr, error)
 	Stop()
-	Dispense() (pluginV1.GatewayDPluginServiceClient, error)
+	Dispense() (pluginV1.GatewayDPluginServiceClient, *gerr.GatewayDError)
 }
 
 type Identifier struct {
@@ -52,7 +52,7 @@ func (p *Impl) Start() (net.Addr, error) {
 	var addr net.Addr
 	var err error
 	if addr, err = p.client.Start(); err != nil {
-		return nil, err //nolint:wrapcheck
+		return nil, gerr.ErrFailedToStartPlugin.Wrap(err)
 	}
 	return addr, nil
 }
@@ -61,15 +61,15 @@ func (p *Impl) Stop() {
 	p.client.Kill()
 }
 
-func (p *Impl) Dispense() (pluginV1.GatewayDPluginServiceClient, error) {
+func (p *Impl) Dispense() (pluginV1.GatewayDPluginServiceClient, *gerr.GatewayDError) {
 	rpcClient, err := p.client.Client()
 	if err != nil {
-		return nil, err //nolint:wrapcheck
+		return nil, gerr.ErrFailedToGetRPCClient.Wrap(err)
 	}
 
 	raw, err := rpcClient.Dispense(p.ID.Name)
 	if err != nil {
-		return nil, err //nolint:wrapcheck
+		return nil, gerr.ErrFailedToDispensePlugin.Wrap(err)
 	}
 
 	if gatewaydPlugin, ok := raw.(pluginV1.GatewayDPluginServiceClient); ok {
