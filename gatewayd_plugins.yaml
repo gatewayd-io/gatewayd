@@ -8,5 +8,13 @@ gatewayd-plugin-test:
   localPath: ../gatewayd-plugin-test/gatewayd-plugin-test
   # Pass cmdline args to the plugin
   args: ["--log-level", "info"]
+  # Pass environment variables to the plugin
+  # System-wide environment variables are passed to the plugin normally
+  # and they can be accessed via os.Environ().
+  # Defining any environment variables below will override system-wide environment variables.
+  env:
+    # The below environment variables are used by the plugin loader to verify the plugin's identity.
+    - MAGIC_COOKIE_KEY=GATEWAYD_PLUGIN
+    - MAGIC_COOKIE_VALUE=5712b87aa5d7e9f9e9ab643e6603181c5b796015cb1c09d6f5ada882bf2a1872
   # Checksum hash to verify the binary before loading
-  checksum: a20e3a1529f4460ad24416a055d599f6f55f42ead836345a4bf0a17d056abb45
+  checksum: 1ce8c55e574491871b86f783000e7cfb82f7253b1d3a33a73dffee5fb8af97fe
