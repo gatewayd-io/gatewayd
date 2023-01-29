@@ -15,7 +15,7 @@ clients:
   client1:
     network: tcp
     address: localhost:5432
-    receiveBufferSize: 4096
+    # receiveBufferSize: 16777216
 
 # Pool config
 pool:
@@ -52,10 +52,10 @@ server:
   multiCore: True
   lockOSThread: False
   loadBalancer: roundrobin
-  readBufferCap: 4096
-  writeBufferCap: 4096
-  socketRecvBuffer: 4096
-  socketSendBuffer: 4096
+  # readBufferCap: 16777216
+  # writeBufferCap: 16777216
+  # socketRecvBuffer: 16777216
+  # socketSendBuffer: 16777216
   reuseAddress: True
   reusePort: True
   tcpKeepAlive: 3s # seconds
