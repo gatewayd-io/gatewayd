@@ -26,6 +26,7 @@ func TestPool_Put(t *testing.T) {
 	assert.Equal(t, 2, pool.Size())
 }
 
+//nolint:dupl
 func TestPool_Pop(t *testing.T) {
 	pool := NewPool()
 	defer pool.Clear()
@@ -82,6 +83,7 @@ func TestPool_ForEach(t *testing.T) {
 	})
 }
 
+//nolint:dupl
 func TestPool_Get(t *testing.T) {
 	pool := NewPool()
 	defer pool.Clear()
