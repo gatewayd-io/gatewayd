@@ -44,8 +44,7 @@ func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 	s.logger.Debug().Msg("GatewayD is booting...")
 
 	onBootingData, err := structpb.NewStruct(map[string]interface{}{
-		"server": s,
-		"engine": engine,
+		"status": string(s.Status),
 	})
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to create structpb")
@@ -63,8 +62,7 @@ func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 	s.Status = Running
 
 	onBootedData, err := structpb.NewStruct(map[string]interface{}{
-		"server": s,
-		"engine": engine,
+		"status": string(s.Status),
 	})
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to create structpb")
@@ -85,8 +83,10 @@ func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 	s.logger.Debug().Msgf("GatewayD is opening a connection from %s", gconn.RemoteAddr().String())
 
 	onOpeningData, err := structpb.NewStruct(map[string]interface{}{
-		"server": s,
-		"gconn":  gconn,
+		"client": map[string]interface{}{
+			"local":  gconn.LocalAddr().String(),
+			"remote": gconn.RemoteAddr().String(),
+		},
 	})
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to create structpb")
@@ -117,8 +117,10 @@ func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 	}
 
 	onOpenedData, err := structpb.NewStruct(map[string]interface{}{
-		"server": s,
-		"gconn":  gconn,
+		"client": map[string]interface{}{
+			"local":  gconn.LocalAddr().String(),
+			"remote": gconn.RemoteAddr().String(),
+		},
 	})
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to create structpb")
@@ -137,9 +139,11 @@ func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 	s.logger.Debug().Msgf("GatewayD is closing a connection from %s", gconn.RemoteAddr().String())
 
 	onClosingData, err := structpb.NewStruct(map[string]interface{}{
-		"server": s,
-		"gconn":  gconn,
-		"error":  err,
+		"client": map[string]interface{}{
+			"local":  gconn.LocalAddr().String(),
+			"remote": gconn.RemoteAddr().String(),
+		},
+		"error": err,
 	})
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to create structpb")
@@ -160,9 +164,11 @@ func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 	}
 
 	onClosedData, err := structpb.NewStruct(map[string]interface{}{
-		"server": s,
-		"gconn":  gconn,
-		"error":  err,
+		"client": map[string]interface{}{
+			"local":  gconn.LocalAddr().String(),
+			"remote": gconn.RemoteAddr().String(),
+		},
+		"error": err,
 	})
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to create structpb")
@@ -179,8 +185,10 @@ func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 
 func (s *Server) OnTraffic(gconn gnet.Conn) gnet.Action {
 	onTrafficData, err := structpb.NewStruct(map[string]interface{}{
-		"server": s,
-		"gconn":  gconn,
+		"client": map[string]interface{}{
+			"local":  gconn.LocalAddr().String(),
+			"remote": gconn.RemoteAddr().String(),
+		},
 	})
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to create structpb")
@@ -205,8 +213,7 @@ func (s *Server) OnShutdown(engine gnet.Engine) {
 	s.logger.Debug().Msg("GatewayD is shutting down...")
 
 	onShutdownData, err := structpb.NewStruct(map[string]interface{}{
-		"server": s,
-		"engine": engine,
+		"connections": s.engine.CountConnections(),
 	})
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to create structpb")
@@ -227,7 +234,7 @@ func (s *Server) OnTick() (time.Duration, gnet.Action) {
 	s.logger.Info().Msgf("Active connections: %d", s.engine.CountConnections())
 
 	onTickData, err := structpb.NewStruct(map[string]interface{}{
-		"server": s,
+		"connections": s.engine.CountConnections(),
 	})
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to create structpb")
@@ -254,7 +261,6 @@ func (s *Server) Run() error {
 	// Since gnet.Run is blocking, we need to run OnRun before it
 	//nolint:nestif
 	if onRunData, err := structpb.NewStruct(map[string]interface{}{
-		"server":  s,
 		"address": addr,
 		"error":   err,
 	}); err != nil {
