@@ -137,7 +137,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 		pr.logger.Error().Err(err).Msgf("Error reading from client: %v", err)
 	}
 
-	incomingTrafficResult := pr.hookConfig.Run(
+	result := pr.hookConfig.Run(
 		OnIncomingTraffic,
 		Signature{
 			"gconn":  gconn,
@@ -146,13 +146,13 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 			"error":  err,
 		},
 		pr.hookConfig.Verification)
-	if incomingTrafficResult != nil {
+	if result != nil {
 		// TODO: Not sure if the gconn and client can be modified in the hook,
 		// so I'm not using the modified values here
-		if buffer, ok := incomingTrafficResult["buffer"].([]byte); ok {
+		if buffer, ok := result["buffer"].([]byte); ok {
 			buf = buffer
 		}
-		if err, ok := incomingTrafficResult["error"].(error); ok && err != nil {
+		if err, ok := result["error"].(error); ok && err != nil {
 			pr.logger.Error().Err(err).Msg("Error in hook")
 		}
 	}
@@ -169,7 +169,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 
 	// Receive the response from the server
 	size, response, err := client.Receive()
-	outgoingTrafficResult := pr.hookConfig.Run(
+	result = pr.hookConfig.Run(
 		OnOutgoingTraffic,
 		Signature{
 			"gconn":    gconn,
@@ -178,13 +178,13 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 			"error":    err,
 		},
 		pr.hookConfig.Verification)
-	if outgoingTrafficResult != nil {
+	if result != nil {
 		// TODO: Not sure if the gconn and client can be modified in the hook,
 		// so I'm not using the modified values here
-		if resp, ok := outgoingTrafficResult["response"].([]byte); ok {
+		if resp, ok := result["response"].([]byte); ok {
 			response = resp
 		}
-		if err, ok := outgoingTrafficResult["error"].(error); ok && err != nil {
+		if err, ok := result["error"].(error); ok && err != nil {
 			pr.logger.Error().Err(err).Msg("Error in hook")
 		}
 	}
