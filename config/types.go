@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/knadh/koanf"
@@ -137,7 +138,9 @@ func LoadGlobalConfigDefaults(cfg *koanf.Koanf) {
 		},
 	}, "")
 
-	cfg.Load(defaultValues, nil)
+	if err := cfg.Load(defaultValues, nil); err != nil {
+		panic(fmt.Errorf("failed to load default global configuration: %w", err))
+	}
 }
 
 func LoadPluginConfigDefaults(cfg *koanf.Koanf) {
@@ -148,5 +151,7 @@ func LoadPluginConfigDefaults(cfg *koanf.Koanf) {
 		},
 	}, "")
 
-	cfg.Load(defaultValues, nil)
+	if err := cfg.Load(defaultValues, nil); err != nil {
+		panic(fmt.Errorf("failed to load default plugin configuration: %w", err))
+	}
 }
