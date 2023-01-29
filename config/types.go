@@ -1,13 +1,7 @@
 package config
 
 import (
-	"fmt"
-	"strings"
 	"time"
-
-	"github.com/knadh/koanf"
-	"github.com/knadh/koanf/providers/confmap"
-	"github.com/knadh/koanf/providers/env"
 )
 
 // // getPath returns the path to the referenced config value.
@@ -104,94 +98,4 @@ type GlobalConfig struct {
 	Proxy   map[string]Proxy   `koanf:"proxy"`
 	Server  Server             `koanf:"server"`
 	Metrics map[string]Metrics `koanf:"metrics"`
-}
-
-// LoadDefaultConfig loads the default configuration before loading the config file.
-func LoadGlobalConfigDefaults(cfg *koanf.Koanf) {
-	defaultValues := confmap.Provider(map[string]interface{}{
-		"loggers": map[string]interface{}{
-			"default": map[string]interface{}{
-				"output":     DefaultLogOutput,
-				"level":      DefaultLogLevel,
-				"fileName":   DefaultLogFileName,
-				"maxSize":    DefaultMaxSize,
-				"maxBackups": DefaultMaxBackups,
-				"maxAge":     DefaultMaxAge,
-				"compress":   DefaultCompress,
-			},
-		},
-		"clients": map[string]interface{}{
-			"default": map[string]interface{}{
-				"receiveBufferSize":  DefaultBufferSize,
-				"receiveChunkSize":   DefaultChunkSize,
-				"tcpKeepAlivePeriod": DefaultTCPKeepAlivePeriod.String(),
-			},
-		},
-		"pools": map[string]interface{}{
-			"default": map[string]interface{}{
-				"size": DefaultPoolSize,
-			},
-		},
-		"proxy": map[string]interface{}{
-			"default": map[string]interface{}{
-				"elastic":             false,
-				"reuseElasticClients": false,
-				"healthCheckPeriod":   DefaultHealthCheckPeriod.String(),
-			},
-		},
-		"server": map[string]interface{}{
-			"network":          DefaultListenNetwork,
-			"address":          DefaultListenAddress,
-			"softLimit":        0,
-			"hardLimit":        0,
-			"enableTicker":     false,
-			"multiCore":        true,
-			"lockOSThread":     false,
-			"reuseAddress":     true,
-			"reusePort":        true,
-			"loadBalancer":     DefaultLoadBalancer,
-			"readBufferCap":    DefaultBufferSize,
-			"writeBufferCap":   DefaultBufferSize,
-			"socketRecvBuffer": DefaultBufferSize,
-			"socketSendBuffer": DefaultBufferSize,
-		},
-		"metrics": map[string]interface{}{
-			"default": map[string]interface{}{
-				"enabled": true,
-				"address": DefaultMetricsAddress,
-				"path":    DefaultMetricsPath,
-			},
-		},
-	}, "")
-
-	if err := cfg.Load(defaultValues, nil); err != nil {
-		panic(fmt.Errorf("failed to load default global configuration: %w", err))
-	}
-}
-
-// LoadPluginConfigDefaults loads the default plugin configuration
-// before loading the plugin config file.
-func LoadPluginConfigDefaults(cfg *koanf.Koanf) {
-	defaultValues := confmap.Provider(map[string]interface{}{
-		"plugins": map[string]interface{}{
-			"verificationPolicy":  "passdown",
-			"compatibilityPolicy": "strict",
-			"acceptancePolicy":    "accept",
-			"metricsMergerPeriod": DefaultMetricsMergerPeriod.String(),
-		},
-	}, "")
-
-	if err := cfg.Load(defaultValues, nil); err != nil {
-		panic(fmt.Errorf("failed to load default plugin configuration: %w", err))
-	}
-}
-
-// LoadEnvVars loads the environment variables into the configuration with the
-// given prefix, "GATEWAYD_".
-func LoadEnvVars(cfg *koanf.Koanf) {
-	if err := cfg.Load(env.Provider(EnvPrefix, ".", func(env string) string {
-		return strings.ReplaceAll(strings.ToLower(strings.TrimPrefix(env, EnvPrefix)), "_", ".")
-	}), nil); err != nil {
-		panic(fmt.Errorf("failed to load environment variables: %w", err))
-	}
 }
