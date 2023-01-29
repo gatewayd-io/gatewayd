@@ -26,6 +26,7 @@ func NewLogger(
 	}
 
 	zerolog.SetGlobalLevel(level)
+	zerolog.TimeFieldFormat = timeFieldFormat
 
 	// Create a new logger
 	logger := zerolog.New(writer)
