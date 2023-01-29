@@ -3,6 +3,7 @@ package logging
 import (
 	"bytes"
 	"encoding/json"
+	"os"
 	"testing"
 
 	"github.com/gatewayd-io/gatewayd/config"
@@ -40,7 +41,7 @@ func TestNewLogger(t *testing.T) {
 
 	buffer.Reset()
 
-	logger.Error().Str("key", "key").Msg("This is an error")
+	logger.Error().Str("key", "value").Msg("This is an error")
 	var msg2 interface{}
 	err = json.Unmarshal(buffer.Bytes(), &msg2)
 	assert.NoError(t, err)
@@ -48,8 +49,31 @@ func TestNewLogger(t *testing.T) {
 	if jsonMsg, ok := msg2.(map[string]interface{}); ok {
 		assert.Equal(t, "This is an error", jsonMsg["message"])
 		assert.Equal(t, "error", jsonMsg["level"])
-		assert.Equal(t, "key", jsonMsg["key"])
+		assert.Equal(t, "value", jsonMsg["key"])
 	} else {
 		t.Fail()
 	}
+}
+
+func TestNewLogger_File(t *testing.T) {
+	logger := NewLogger(
+		LoggerConfig{
+			Output:     config.File,
+			FileName:   "test.log",
+			Permission: config.DefaultLogFilePermission,
+			Level:      zerolog.DebugLevel,
+			TimeFormat: zerolog.TimeFormatUnix,
+			StartupMsg: true,
+			NoColor:    true,
+		},
+	)
+	assert.NotNil(t, logger)
+
+	logger.Error().Str("key", "value").Msg("This is an error")
+
+	f, err := os.ReadFile("test.log")
+	assert.NoError(t, err)
+	assert.NotEmpty(t, f)
+	assert.Containsf(t, string(f), "Created a new logger", "The logger did not write to the file")
+	os.Remove("./test.log")
 }
