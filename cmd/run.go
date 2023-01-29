@@ -347,8 +347,8 @@ func init() {
 
 	runCmd.Flags().StringP(
 		"config", "c", "./gatewayd.yaml",
-		"config file (default is ./gatewayd.yaml)")
+		"Global config file")
 	runCmd.Flags().StringP(
 		"plugin-config", "p", "./gatewayd_plugins.yaml",
-		"plugin config file (default is ./gatewayd_plugins.yaml)")
+		"Plugin config file")
 }
