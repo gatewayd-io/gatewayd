@@ -34,13 +34,22 @@ func Resolve(network, address string, logger zerolog.Logger) (string, *gerr.Gate
 	switch network {
 	case "tcp", "tcp4", "tcp6":
 		addr, err := net.ResolveTCPAddr(network, address)
-		return addr.String(), gerr.ErrResolveFailed.Wrap(err)
+		if err == nil {
+			return addr.String(), nil
+		}
+		return "", gerr.ErrResolveFailed.Wrap(err)
 	case "udp", "udp4", "udp6":
 		addr, err := net.ResolveUDPAddr(network, address)
-		return addr.String(), gerr.ErrResolveFailed.Wrap(err)
+		if err == nil {
+			return addr.String(), nil
+		}
+		return "", gerr.ErrResolveFailed.Wrap(err)
 	case "unix", "unixgram", "unixpacket":
 		addr, err := net.ResolveUnixAddr(network, address)
-		return addr.String(), gerr.ErrResolveFailed.Wrap(err)
+		if err == nil {
+			return addr.String(), nil
+		}
+		return "", gerr.ErrResolveFailed.Wrap(err)
 	default:
 		logger.Error().Msgf("Network %s is not supported", network)
 		return "", gerr.ErrNetworkNotSupported
