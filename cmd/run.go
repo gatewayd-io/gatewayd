@@ -150,7 +150,13 @@ var runCmd = &cobra.Command{
 				}
 
 				logger.Info().Str("address", address).Msg("Metrics are exposed")
-				http.ListenAndServe(gConfig.Metrics[config.Default].Address, nil)
+				//nolint:gosec
+				if err = http.ListenAndServe(
+					gConfig.Metrics[config.Default].Address, nil); err != nil {
+					logger.Fatal().Err(err).Msg("Failed to start metrics server")
+					pluginRegistry.Shutdown()
+					os.Exit(gerr.FailedToStartMetricsServer)
+				}
 			}(gConfig, DefaultLogger, pluginRegistry)
 		}
 
