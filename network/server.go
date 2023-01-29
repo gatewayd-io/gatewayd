@@ -10,6 +10,7 @@ import (
 
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
+	"github.com/gatewayd-io/gatewayd/metrics"
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
@@ -123,6 +124,8 @@ func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 		s.logger.Error().Err(err).Msg("Failed to run OnOpened hook")
 	}
 
+	metrics.ClientConnections.Inc()
+
 	return nil, gnet.None
 }
 
@@ -178,6 +181,8 @@ func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 	if gatewaydErr != nil {
 		s.logger.Error().Err(gatewaydErr).Msg("Failed to run OnClosed hook")
 	}
+
+	metrics.ClientConnections.Dec()
 
 	return gnet.Close
 }
@@ -254,6 +259,8 @@ func (s *Server) OnTick() (time.Duration, gnet.Action) {
 		s.logger.Error().Err(err).Msg("Failed to run OnTick hook")
 	}
 
+	metrics.ServerTicksFired.Inc()
+
 	// TickInterval is the interval at which the OnTick hooks are called. It can be adjusted
 	// in the configuration file.
 	return s.TickInterval, gnet.None
@@ -315,8 +322,6 @@ func (s *Server) IsRunning() bool {
 }
 
 // NewServer creates a new server.
-//
-//nolint:funlen
 func NewServer(
 	network, address string,
 	softLimit, hardLimit uint64,

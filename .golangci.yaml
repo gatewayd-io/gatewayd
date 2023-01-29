@@ -15,4 +15,5 @@ linters:
     - gochecknoinits
     - gocyclo
     - maligned
-  
+    - funlen
+    - maintidx

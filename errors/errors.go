@@ -27,6 +27,8 @@ const (
 	ErrCodeFileNotFound
 	ErrCodeFileOpenFailed
 	ErrCodeFileReadFailed
+	ErrCodeDuplicateMetricsCollector
+	ErrCodeInvalidMetricType
 )
 
 var (
@@ -87,10 +89,17 @@ var (
 		ErrCodeFileOpenFailed, "failed to open file", nil)
 	ErrFileReadFailed = NewGatewayDError(
 		ErrCodeFileReadFailed, "failed to read file", nil)
+
+	ErrDuplicateMetricsCollector = NewGatewayDError(
+		ErrCodeDuplicateMetricsCollector, "duplicate metrics collector", nil)
+	ErrInvalidMetricType = NewGatewayDError(
+		ErrCodeInvalidMetricType, "invalid metric type", nil)
 )
 
 const (
-	FailedToLoadPluginConfig = 1
-	FailedToLoadGlobalConfig = 2
-	FailedToInitializePool   = 3
+	FailedToLoadPluginConfig   = 1
+	FailedToLoadGlobalConfig   = 2
+	FailedToInitializePool     = 3
+	FailedToStartMetricsServer = 4
+	FailedToStartServer        = 5
 )

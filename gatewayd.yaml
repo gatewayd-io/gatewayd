@@ -52,3 +52,9 @@ server:
   reusePort: True
   tcpKeepAlive: 3s # duration
   tcpNoDelay: True
+
+metrics:
+  default:
+    enabled: True
+    address: localhost:2112
+    path: /metrics
