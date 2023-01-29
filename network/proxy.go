@@ -111,6 +111,7 @@ func (pr *ProxyImpl) Connect(gconn gnet.Conn) error {
 
 func (pr *ProxyImpl) Disconnect(gconn gnet.Conn) error {
 	client := pr.busyConnections.Pop(gconn)
+	//nolint:nestif
 	if client != nil {
 		if cl, ok := client.(*Client); ok {
 			if (pr.Elastic && pr.ReuseElasticClients) || !pr.Elastic {
@@ -119,7 +120,10 @@ func (pr *ProxyImpl) Disconnect(gconn gnet.Conn) error {
 					return err
 				}
 				// If the client is not in the pool, put it back
-				pr.availableConnections.Put(cl.ID, cl)
+				err = pr.availableConnections.Put(cl.ID, cl)
+				if err != nil {
+					return err
+				}
 			} else {
 				return gerr.ErrClientNotConnected
 			}
@@ -292,20 +296,20 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 	return nil
 }
 
-func (pr *ProxyImpl) TryReconnect(cl *Client) (*Client, error) {
+func (pr *ProxyImpl) TryReconnect(client *Client) (*Client, error) {
 	// TODO: try retriable connection?
 
 	if pr.IsExhausted() {
 		pr.logger.Error().Msg("No more available connections :: TryReconnect")
-		return cl, gerr.ErrPoolExhausted
+		return client, gerr.ErrPoolExhausted
 	}
 
-	if !cl.IsConnected() {
+	if !client.IsConnected() {
 		pr.logger.Error().Msg("Client is disconnected")
-		return cl, gerr.ErrClientNotConnected
+		return client, gerr.ErrClientNotConnected
 	}
 
-	return cl, nil
+	return client, nil
 }
 
 func (pr *ProxyImpl) Shutdown() {

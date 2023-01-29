@@ -146,7 +146,10 @@ var runCmd = &cobra.Command{
 					}
 				}
 
-				pool.Put(client.ID, client)
+				err = pool.Put(client.ID, client)
+				if err != nil {
+					logger.Error().Err(err).Msg("Failed to add client to the pool")
+				}
 			}
 		}
 
