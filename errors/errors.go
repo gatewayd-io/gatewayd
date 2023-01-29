@@ -21,6 +21,7 @@ const (
 	ErrCodePutFailed
 	ErrCodeCastFailed
 	ErrCodeHookVerificationFailed
+	ErrCodeHookReturnedError
 	ErrCodeFileNotFound
 	ErrCodeFileOpenFailed
 	ErrCodeFileReadFailed
@@ -71,6 +72,8 @@ var (
 
 	ErrHookVerificationFailed = NewGatewayDError(
 		ErrCodeHookVerificationFailed, "failed to verify hook", nil)
+	ErrHookReturnedError = NewGatewayDError(
+		ErrCodeHookReturnedError, "hook returned error", nil)
 
 	ErrFileNotFound = NewGatewayDError(
 		ErrCodeFileNotFound, "file not found", nil)

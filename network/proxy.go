@@ -222,20 +222,12 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 		pr.logger.Error().Err(err).Msg("Error running hook")
 	}
 	// If the hook modified the request, use the modified request.
-	if result != nil {
-		if req, ok := result["request"].([]byte); ok {
-			pr.logger.Debug().Fields(
-				map[string]interface{}{
-					"function": "proxy.passthrough",
-					"from":     len(request),
-					"to":       len(req),
-				},
-			).Msg("Hook modified request")
-			request = req
-		}
-		if errMsg, ok := result["error"].(string); ok && errMsg != "" {
-			pr.logger.Error().Str("error", errMsg).Msg("Error in hook")
-		}
+	modRequest, errMsg := extractField(result, "request")
+	if errMsg != "" {
+		pr.logger.Error().Str("error", errMsg).Msg("Error in hook")
+	}
+	if modRequest != nil {
+		request = modRequest
 	}
 
 	// Send the request to the server.
@@ -300,20 +292,13 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 		pr.logger.Error().Err(err).Msg("Error running hook")
 	}
 	// If the hook returns a response, use it instead of the original response.
-	if result != nil {
-		if resp, ok := result["response"].([]byte); ok {
-			pr.logger.Debug().Fields(
-				map[string]interface{}{
-					"function": "proxy.passthrough",
-					"from":     len(response),
-					"to":       len(resp),
-				},
-			).Msg("Hook modified response")
-			response = resp
-		}
-		if errMsg, ok := result["error"].(string); ok && errMsg != "" {
-			pr.logger.Error().Str("error", errMsg).Msg("Error in hook")
-		}
+	modResponse, errMsg := extractField(result, "response")
+	if errMsg != "" {
+		pr.logger.Error().Str("error", errMsg).Msg("Error in hook")
+	}
+	if modResponse != nil {
+		response = modResponse
+		received = len(modResponse)
 	}
 
 	// Send the response to the client async.
