@@ -18,9 +18,3 @@ clean:
 
 test:
 	@go test -v ./...
-
-protolint:
-	@buf lint
-
-protogen:
-	@buf generate
