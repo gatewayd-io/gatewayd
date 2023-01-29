@@ -61,8 +61,5 @@ server:
   tcpKeepAlive: 3s # seconds
   tcpNoDelay: True
 
-  incomingTrafficHandler: "null"
-  outgoingTrafficHandler: "null"
-
 plugins:
   verificationPolicy: "ignore"
