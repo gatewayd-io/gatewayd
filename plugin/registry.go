@@ -25,8 +25,8 @@ var handshakeConfig = goplugin.HandshakeConfig{
 }
 
 type Registry interface {
-	Add(plugin *PluginImpl) bool
-	Get(id Identifier) *PluginImpl
+	Add(plugin *Impl) bool
+	Get(id Identifier) *Impl
 	List() []Identifier
 	Remove(id Identifier)
 	Shutdown()
@@ -45,13 +45,13 @@ func NewRegistry(hooksConfig *HookConfig) *RegistryImpl {
 	return &RegistryImpl{plugins: pool.NewPool(), hooksConfig: hooksConfig}
 }
 
-func (reg *RegistryImpl) Add(plugin *PluginImpl) bool {
+func (reg *RegistryImpl) Add(plugin *Impl) bool {
 	_, loaded := reg.plugins.GetOrPut(plugin.ID, plugin)
 	return loaded
 }
 
-func (reg *RegistryImpl) Get(id Identifier) *PluginImpl {
-	if plugin, ok := reg.plugins.Get(id).(*PluginImpl); ok {
+func (reg *RegistryImpl) Get(id Identifier) *Impl {
+	if plugin, ok := reg.plugins.Get(id).(*Impl); ok {
 		return plugin
 	}
 
@@ -76,7 +76,7 @@ func (reg *RegistryImpl) Remove(id Identifier) {
 func (reg *RegistryImpl) Shutdown() {
 	reg.plugins.ForEach(func(key, value interface{}) bool {
 		if id, ok := key.(Identifier); ok {
-			if plugin, ok := value.(*PluginImpl); ok {
+			if plugin, ok := value.(*Impl); ok {
 				plugin.Stop()
 				reg.Remove(id)
 			}
@@ -96,7 +96,7 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 	// Add each plugin to the registry
 	for priority, name := range plugins {
 		reg.hooksConfig.Logger.Debug().Msgf("Loading plugin: %s", name)
-		plugin := &PluginImpl{
+		plugin := &Impl{
 			ID: Identifier{
 				Name: name,
 			},

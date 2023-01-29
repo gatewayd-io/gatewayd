@@ -21,7 +21,7 @@ type Identifier struct {
 	Checksum  string
 }
 
-type PluginImpl struct {
+type Impl struct {
 	goplugin.NetRPCUnsupportedPlugin
 	plugin_v1.GatewayDPluginServiceServer
 
@@ -46,9 +46,9 @@ type PluginImpl struct {
 	Categories []string
 }
 
-var _ Plugin = &PluginImpl{}
+var _ Plugin = &Impl{}
 
-func (p *PluginImpl) Start() (net.Addr, error) {
+func (p *Impl) Start() (net.Addr, error) {
 	if addr, err := p.client.Start(); err != nil {
 		return nil, err
 	} else {
@@ -56,11 +56,11 @@ func (p *PluginImpl) Start() (net.Addr, error) {
 	}
 }
 
-func (p *PluginImpl) Stop() {
+func (p *Impl) Stop() {
 	p.client.Kill()
 }
 
-func (p *PluginImpl) Dispense() (plugin_v1.GatewayDPluginServiceClient, error) {
+func (p *Impl) Dispense() (plugin_v1.GatewayDPluginServiceClient, error) {
 	rpcClient, err := p.client.Client()
 	if err != nil {
 		return nil, err
