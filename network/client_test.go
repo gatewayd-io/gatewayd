@@ -2,14 +2,12 @@ package network
 
 import (
 	"testing"
-	"time"
 
 	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
 	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // TestNewClient tests the NewClient function.
@@ -34,9 +32,6 @@ func TestNewClient(t *testing.T) {
 
 	logger := logging.NewLogger(cfg)
 
-	keepAlive, err := time.ParseDuration(config.DefaultTCPKeepAlivePeriod)
-	require.NoError(t, err)
-
 	client := NewClient(
 		&config.Client{
 			Network:            "tcp",
@@ -46,7 +41,7 @@ func TestNewClient(t *testing.T) {
 			ReceiveDeadline:    config.DefaultReceiveDeadline,
 			SendDeadline:       config.DefaultSendDeadline,
 			TCPKeepAlive:       false,
-			TCPKeepAlivePeriod: keepAlive,
+			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 		},
 		logger)
 	defer client.Close()
@@ -80,9 +75,6 @@ func TestSend(t *testing.T) {
 
 	logger := logging.NewLogger(cfg)
 
-	keepAlive, err := time.ParseDuration(config.DefaultTCPKeepAlivePeriod)
-	require.NoError(t, err)
-
 	client := NewClient(
 		&config.Client{
 			Network:            "tcp",
@@ -92,7 +84,7 @@ func TestSend(t *testing.T) {
 			ReceiveDeadline:    config.DefaultReceiveDeadline,
 			SendDeadline:       config.DefaultSendDeadline,
 			TCPKeepAlive:       false,
-			TCPKeepAlivePeriod: keepAlive,
+			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 		},
 		logger)
 	defer client.Close()
@@ -126,9 +118,6 @@ func TestReceive(t *testing.T) {
 
 	logger := logging.NewLogger(cfg)
 
-	keepAlive, err := time.ParseDuration(config.DefaultTCPKeepAlivePeriod)
-	require.NoError(t, err)
-
 	client := NewClient(
 		&config.Client{
 			Network:            "tcp",
@@ -138,7 +127,7 @@ func TestReceive(t *testing.T) {
 			ReceiveDeadline:    config.DefaultReceiveDeadline,
 			SendDeadline:       config.DefaultSendDeadline,
 			TCPKeepAlive:       false,
-			TCPKeepAlivePeriod: keepAlive,
+			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 		},
 		logger)
 	defer client.Close()
@@ -182,9 +171,6 @@ func TestClose(t *testing.T) {
 
 	logger := logging.NewLogger(cfg)
 
-	keepAlive, err := time.ParseDuration(config.DefaultTCPKeepAlivePeriod)
-	require.NoError(t, err)
-
 	client := NewClient(
 		&config.Client{
 			Network:            "tcp",
@@ -194,7 +180,7 @@ func TestClose(t *testing.T) {
 			ReceiveDeadline:    config.DefaultReceiveDeadline,
 			SendDeadline:       config.DefaultSendDeadline,
 			TCPKeepAlive:       false,
-			TCPKeepAlivePeriod: keepAlive,
+			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 		},
 		logger)
 	assert.NotNil(t, client)
