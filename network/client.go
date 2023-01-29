@@ -22,25 +22,43 @@ type Client struct {
 // unexpected EOF on client connection with an open transaction
 
 func NewClient(network, address string, receiveBufferSize int) *Client {
-	// TODO: Resolve the address and return an error if it can't be resolved
+	var client Client
 
-	c := Client{
-		Network: network,
-		Address: address,
+	// Try to resolve the address and log an error if it can't be resolved
+	addr, err := Resolve(network, address)
+	if err != nil {
+		logrus.Error(err)
 	}
-	conn, err := net.Dial(c.Network, c.Address)
+
+	// Create a resolved client
+	client = Client{
+		Network: network,
+		Address: addr,
+	}
+
+	// Fall back to the original network and address if the address can't be resolved
+	if client.Address == "" || client.Network == "" {
+		client = Client{
+			Network: network,
+			Address: address,
+		}
+	}
+
+	// Create a new connection
+	conn, err := net.Dial(client.Network, client.Address)
 	if err != nil {
 		logrus.Error(err)
 		return nil
 	}
-	c.Conn = conn
-	if c.ReceiveBufferSize == 0 {
-		c.ReceiveBufferSize = 4096
-	}
-	logrus.Infof("New client created: %s", c.Address)
-	c.ID = GetID(conn.LocalAddr().Network(), conn.LocalAddr().String(), 1000)
 
-	return &c
+	client.Conn = conn
+	if client.ReceiveBufferSize == 0 {
+		client.ReceiveBufferSize = 4096
+	}
+	logrus.Infof("New client created: %s", client.Address)
+	client.ID = GetID(conn.LocalAddr().Network(), conn.LocalAddr().String(), 1000)
+
+	return &client
 }
 
 func (c Client) Send(data []byte) error {
