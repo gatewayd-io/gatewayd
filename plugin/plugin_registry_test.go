@@ -12,7 +12,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-func NewPluginRegistry(t *testing.T) *PluginRegistry {
+func NewPluginRegistry(t *testing.T) *Registry {
 	t.Helper()
 
 	cfg := logging.LoggerConfig{

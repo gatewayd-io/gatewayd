@@ -18,7 +18,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-type IPluginRegistry interface {
+type IRegistry interface {
 	Add(plugin *Plugin) bool
 	Get(id Identifier) *Plugin
 	List() []Identifier
@@ -40,7 +40,7 @@ type IPluginRegistry interface {
 	RegisterHooks(id Identifier)
 }
 
-type PluginRegistry struct { //nolint:golint,revive
+type Registry struct { //nolint:golint,revive
 	plugins pool.IPool
 	hooks   map[string]map[Priority]Method
 
@@ -49,15 +49,15 @@ type PluginRegistry struct { //nolint:golint,revive
 	Verification config.Policy
 }
 
-var _ IPluginRegistry = &PluginRegistry{}
+var _ IRegistry = &Registry{}
 
 // NewRegistry creates a new plugin registry.
 func NewRegistry(
 	compatPolicy config.CompatPolicy,
 	verification config.Policy,
 	logger zerolog.Logger,
-) *PluginRegistry {
-	return &PluginRegistry{
+) *Registry {
+	return &Registry{
 		plugins:      pool.NewPool(config.EmptyPoolCapacity),
 		hooks:        map[string]map[Priority]Method{},
 		Logger:       logger,
@@ -67,7 +67,7 @@ func NewRegistry(
 }
 
 // Add adds a plugin to the registry.
-func (reg *PluginRegistry) Add(plugin *Plugin) bool {
+func (reg *Registry) Add(plugin *Plugin) bool {
 	_, loaded, err := reg.plugins.GetOrPut(plugin.ID, plugin)
 	if err != nil {
 		reg.Logger.Error().Err(err).Msg("Failed to add plugin to registry")
@@ -77,7 +77,7 @@ func (reg *PluginRegistry) Add(plugin *Plugin) bool {
 }
 
 // Get returns a plugin from the registry.
-func (reg *PluginRegistry) Get(id Identifier) *Plugin {
+func (reg *Registry) Get(id Identifier) *Plugin {
 	if plugin, ok := reg.plugins.Get(id).(*Plugin); ok {
 		return plugin
 	}
@@ -86,7 +86,7 @@ func (reg *PluginRegistry) Get(id Identifier) *Plugin {
 }
 
 // List returns a list of all plugins in the registry.
-func (reg *PluginRegistry) List() []Identifier {
+func (reg *Registry) List() []Identifier {
 	var plugins []Identifier
 	reg.plugins.ForEach(func(key, _ interface{}) bool {
 		if id, ok := key.(Identifier); ok {
@@ -98,7 +98,7 @@ func (reg *PluginRegistry) List() []Identifier {
 }
 
 // Exists checks if a plugin exists in the registry.
-func (reg *PluginRegistry) Exists(name, version, remoteURL string) bool {
+func (reg *Registry) Exists(name, version, remoteURL string) bool {
 	for _, plugin := range reg.List() {
 		if plugin.Name == name && plugin.RemoteURL == remoteURL {
 			// Parse the supplied version and the version in the registry.
@@ -132,12 +132,12 @@ func (reg *PluginRegistry) Exists(name, version, remoteURL string) bool {
 }
 
 // Remove removes a plugin from the registry.
-func (reg *PluginRegistry) Remove(id Identifier) {
+func (reg *Registry) Remove(id Identifier) {
 	reg.plugins.Remove(id)
 }
 
 // Shutdown shuts down all plugins in the registry.
-func (reg *PluginRegistry) Shutdown() {
+func (reg *Registry) Shutdown() {
 	reg.plugins.ForEach(func(key, value interface{}) bool {
 		if id, ok := key.(Identifier); ok {
 			if plugin, ok := value.(*Plugin); ok {
@@ -151,12 +151,12 @@ func (reg *PluginRegistry) Shutdown() {
 }
 
 // Hooks returns the hooks map.
-func (reg *PluginRegistry) Hooks() map[string]map[Priority]Method {
+func (reg *Registry) Hooks() map[string]map[Priority]Method {
 	return reg.hooks
 }
 
 // Add adds a hook with a priority to the hooks map.
-func (reg *PluginRegistry) AddHook(hookName string, priority Priority, hookMethod Method) {
+func (reg *Registry) AddHook(hookName string, priority Priority, hookMethod Method) {
 	if len(reg.hooks[hookName]) == 0 {
 		reg.hooks[hookName] = map[Priority]Method{priority: hookMethod}
 	} else {
@@ -186,7 +186,7 @@ func (reg *PluginRegistry) AddHook(hookName string, priority Priority, hookMetho
 // The opts are passed to the hooks as well to allow them to use the grpc.CallOption.
 //
 //nolint:funlen
-func (reg *PluginRegistry) Run(
+func (reg *Registry) Run(
 	ctx context.Context,
 	args map[string]interface{},
 	hookName string,
@@ -301,7 +301,7 @@ func (reg *PluginRegistry) Run(
 // LoadPlugins loads plugins from the config file.
 //
 //nolint:funlen
-func (reg *PluginRegistry) LoadPlugins(plugins []config.Plugin) {
+func (reg *Registry) LoadPlugins(plugins []config.Plugin) {
 	// TODO: Append built-in plugins to the list of plugins
 	// Built-in plugins are plugins that are compiled and shipped with the gatewayd binary.
 
@@ -493,7 +493,7 @@ func (reg *PluginRegistry) LoadPlugins(plugins []config.Plugin) {
 // RegisterHooks registers the hooks for the given plugin.
 //
 //nolint:funlen
-func (reg *PluginRegistry) RegisterHooks(id Identifier) {
+func (reg *Registry) RegisterHooks(id Identifier) {
 	pluginImpl := reg.Get(id)
 	reg.Logger.Debug().Str("name", pluginImpl.ID.Name).Msg(
 		"Registering hooks for plugin")
