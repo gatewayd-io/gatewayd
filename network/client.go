@@ -1,8 +1,6 @@
 package network
 
 import (
-	"errors"
-	"io"
 	"net"
 
 	gerr "github.com/gatewayd-io/gatewayd/errors"
@@ -113,22 +111,23 @@ func (c *Client) Close() {
 	c.Network = ""
 }
 
-// Go returns io.EOF when the server closes the connection.
-// So, if I read 0 bytes and the error is io.EOF or net.ErrClosed, I should reconnect.
 func (c *Client) IsConnected() bool {
 	if c == nil {
+		c.logger.Debug().Str(
+			"reason", "client is nil").Msgf("Connection to %s is closed", c.Address)
 		return false
 	}
 
 	if c != nil && c.Conn == nil || c.ID == "" {
-		c.Close()
+		c.logger.Debug().Str(
+			"reason", "connection is nil or invalid",
+		).Msgf("Connection to %s is closed", c.Address)
 		return false
 	}
 
-	buf := make([]byte, 0)
-	if _, err := c.Read(buf); errors.Is(err, net.ErrClosed) || errors.Is(err, io.EOF) {
-		c.logger.Debug().Msgf("Connection to %s is closed", c.Address)
-		c.Close()
+	if n, err := c.Read([]byte{}); n == 0 && err != nil {
+		c.logger.Debug().Str(
+			"reason", "read 0 bytes").Msgf("Connection to %s is closed, ", c.Address)
 		return false
 	}
 
