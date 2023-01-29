@@ -42,23 +42,33 @@ func (h HcLogAdapter) Log(level hclog.Level, msg string, args ...interface{}) {
 }
 
 func (h HcLogAdapter) Trace(msg string, args ...interface{}) {
-	h.logger.Trace().Fields(ToMap(args)).Msg(msg)
+	extraArgs := ToMap(args)
+	extraArgs["plugin"] = h.name
+	h.logger.Trace().Fields(extraArgs).Msg(msg)
 }
 
 func (h HcLogAdapter) Debug(msg string, args ...interface{}) {
-	h.logger.Debug().Fields(ToMap(args)).Msg(msg)
+	extraArgs := ToMap(args)
+	extraArgs["plugin"] = h.name
+	h.logger.Debug().Fields(extraArgs).Msg(msg)
 }
 
 func (h HcLogAdapter) Info(msg string, args ...interface{}) {
-	h.logger.Info().Fields(ToMap(args)).Msg(msg)
+	extraArgs := ToMap(args)
+	extraArgs["plugin"] = h.name
+	h.logger.Info().Fields(extraArgs).Msg(msg)
 }
 
 func (h HcLogAdapter) Warn(msg string, args ...interface{}) {
-	h.logger.Warn().Fields(ToMap(args)).Msg(msg)
+	extraArgs := ToMap(args)
+	extraArgs["plugin"] = h.name
+	h.logger.Warn().Fields(extraArgs).Msg(msg)
 }
 
 func (h HcLogAdapter) Error(msg string, args ...interface{}) {
-	h.logger.Error().Fields(ToMap(args)).Msg(msg)
+	extraArgs := ToMap(args)
+	extraArgs["plugin"] = h.name
+	h.logger.Error().Fields(extraArgs).Msg(msg)
 }
 
 func (h HcLogAdapter) GetLevel() hclog.Level {
