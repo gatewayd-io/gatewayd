@@ -12,14 +12,6 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-// TODO: Remove this once we have a proper hooks package.
-// This is duplicated from the network package, because import cycles are not allowed.
-type (
-	Signature   map[string]interface{}
-	HookDef     func(Signature) Signature
-	OnNewLogger HookDef
-)
-
 type LoggerConfig struct {
 	Output            []config.LogOutput
 	TimeFormat        string
