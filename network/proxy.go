@@ -40,8 +40,6 @@ type Proxy struct {
 var _ IProxy = &Proxy{}
 
 // NewProxy creates a new proxy.
-//
-//nolint:funlen
 func NewProxy(
 	connPool pool.IPool, hookConfig *hook.Config,
 	elastic, reuseElasticClients bool,
