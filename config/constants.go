@@ -6,6 +6,7 @@ type (
 	Status              uint
 	VerificationPolicy  uint
 	CompatibilityPolicy uint
+	AcceptancePolicy    uint
 	LogOutput           uint
 )
 
@@ -29,6 +30,12 @@ const (
 const (
 	Strict CompatibilityPolicy = iota // Expect all required plugins to be loaded and present
 	Loose                             // Load the plugin, even if the requirements are not met
+)
+
+// AcceptancePolicy is the acceptance policy for custom hooks.
+const (
+	Accept AcceptancePolicy = iota // Accept all custom hooks
+	Reject                         // Reject all custom hooks
 )
 
 // LogOutput is the output type for the logger.
