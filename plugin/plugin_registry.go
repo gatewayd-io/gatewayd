@@ -177,13 +177,15 @@ func (reg *PluginRegistry) LoadPlugins(plugins []config.Plugin) {
 		// Verify the checksum.
 		// TODO: Load the plugin from a remote location if the checksum didn't match?
 		if sum, err := utils.SHA256SUM(plugin.LocalPath); err != nil {
-			reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to calculate checksum")
+			reg.hooksConfig.Logger.Debug().Str("name", plugin.ID.Name).Err(err).Msg(
+				"Failed to calculate checksum")
 			continue
 		} else if sum != plugin.ID.Checksum {
 			reg.hooksConfig.Logger.Debug().Fields(
 				map[string]interface{}{
 					"calculated": sum,
 					"expected":   plugin.ID.Checksum,
+					"name":       plugin.ID.Name,
 				},
 			).Msg("Checksum mismatch")
 			continue
@@ -220,18 +222,21 @@ func (reg *PluginRegistry) LoadPlugins(plugins []config.Plugin) {
 
 		reg.hooksConfig.Logger.Debug().Str("name", plugin.ID.Name).Msg("Plugin loaded")
 		if _, err := plugin.Start(); err != nil {
-			reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to start plugin")
+			reg.hooksConfig.Logger.Debug().Str("name", plugin.ID.Name).Err(err).Msg(
+				"Failed to start plugin")
 		}
 
 		// Load metadata from the plugin.
 		var metadata *structpb.Struct
 		if pluginV1, err := plugin.Dispense(); err != nil {
-			reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to dispense plugin")
+			reg.hooksConfig.Logger.Debug().Str("name", plugin.ID.Name).Err(err).Msg(
+				"Failed to dispense plugin")
 			continue
 		} else {
 			if md, origErr := pluginV1.GetPluginConfig(
 				context.Background(), &structpb.Struct{}); err != nil {
-				reg.hooksConfig.Logger.Debug().Err(origErr).Msg("Failed to get plugin metadata")
+				reg.hooksConfig.Logger.Debug().Str("name", plugin.ID.Name).Err(origErr).Msg(
+					"Failed to get plugin metadata")
 				continue
 			} else {
 				metadata = md
@@ -324,7 +329,8 @@ func (reg *PluginRegistry) RegisterHooks(id Identifier) {
 	var pluginV1 pluginV1.GatewayDPluginServiceClient
 	var err *gerr.GatewayDError
 	if pluginV1, err = pluginImpl.Dispense(); err != nil {
-		reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to dispense plugin")
+		reg.hooksConfig.Logger.Debug().Str("name", pluginImpl.ID.Name).Err(err).Msg(
+			"Failed to dispense plugin")
 		return
 	}
 
@@ -374,11 +380,19 @@ func (reg *PluginRegistry) RegisterHooks(id Identifier) {
 		case hook.OnNewClient:
 			hookFunc = pluginV1.OnNewClient
 		default:
-			reg.hooksConfig.Logger.Warn().Str("hook", string(hookType)).Msg(
+			reg.hooksConfig.Logger.Warn().Fields(map[string]interface{}{
+				"hook":     string(hookType),
+				"priority": pluginImpl.Priority,
+				"name":     pluginImpl.ID.Name,
+			}).Msg(
 				"Unknown hook, skipping")
 			continue
 		}
-		reg.hooksConfig.Logger.Debug().Str("hook", string(hookType)).Msg("Registering hook")
+		reg.hooksConfig.Logger.Debug().Fields(map[string]interface{}{
+			"hook":     string(hookType),
+			"priority": pluginImpl.Priority,
+			"name":     pluginImpl.ID.Name,
+		}).Msg("Registering hook")
 		reg.hooksConfig.Add(hookType, pluginImpl.Priority, hookFunc)
 	}
 }
