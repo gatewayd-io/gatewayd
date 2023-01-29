@@ -5,8 +5,9 @@ import (
 	"testing"
 
 	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
+	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/panjf2000/gnet/v2"
-	"github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -17,31 +18,34 @@ func TestRunServer(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Create a logger
+	logger := logging.NewLogger(nil, zerolog.TimeFormatUnix, zerolog.DebugLevel, true)
+
 	onIncomingTraffic := func(gconn gnet.Conn, cl *Client, buf []byte, err error) error {
-		logrus.Info("Incoming traffic")
+		logger.Info().Msg("Incoming traffic")
 		assert.Equal(t, CreatePgStartupPacket(), buf)
 		assert.Nil(t, err)
 		return nil
 	}
 
 	onOutgoingTraffic := func(gconn gnet.Conn, cl *Client, buf []byte, err error) error {
-		logrus.Info("Outgoing traffic")
+		logger.Info().Msg("Outgoing traffic")
 		assert.Equal(t, CreatePostgreSQLPacket('R', []byte{0x0, 0x0, 0x0, 0x3}), buf)
 		assert.Nil(t, err)
 		return nil
 	}
 
 	// Create a connection pool
-	pool := NewPool()
-	assert.NoError(t, pool.Put(NewClient("tcp", "localhost:5432", DefaultBufferSize)))
-	assert.NoError(t, pool.Put(NewClient("tcp", "localhost:5432", DefaultBufferSize)))
+	pool := NewPool(logger)
+	assert.NoError(t, pool.Put(NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)))
+	assert.NoError(t, pool.Put(NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)))
 
 	// Create a proxy with a fixed buffer pool
 	proxy := NewProxy(pool, false, false, &Client{
 		Network:           "tcp",
 		Address:           "localhost:5432",
 		ReceiveBufferSize: DefaultBufferSize,
-	})
+	}, logger)
 
 	// Create a server
 	server := NewServer(
@@ -56,6 +60,7 @@ func TestRunServer(t *testing.T) {
 		onIncomingTraffic,
 		onOutgoingTraffic,
 		proxy,
+		logger,
 	)
 	assert.NotNil(t, server)
 
@@ -76,7 +81,7 @@ func TestRunServer(t *testing.T) {
 
 		for {
 			if server.IsRunning() {
-				client := NewClient("tcp", "127.0.0.1:15432", DefaultBufferSize)
+				client := NewClient("tcp", "127.0.0.1:15432", DefaultBufferSize, logger)
 				defer client.Close()
 
 				assert.NotNil(t, client)

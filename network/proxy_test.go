@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
+	"github.com/gatewayd-io/gatewayd/logging"
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,12 +21,14 @@ func TestNewProxy(t *testing.T) {
 		}
 	}()
 
+	logger := logging.NewLogger(nil, zerolog.TimeFormatUnix, zerolog.DebugLevel, true)
+
 	// Create a connection pool
-	pool := NewPool()
-	assert.NoError(t, pool.Put(NewClient("tcp", "localhost:5432", DefaultBufferSize)))
+	pool := NewPool(logger)
+	assert.NoError(t, pool.Put(NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)))
 
 	// Create a proxy with a fixed buffer pool
-	proxy := NewProxy(pool, false, false, nil)
+	proxy := NewProxy(pool, false, false, nil, logger)
 
 	assert.NotNil(t, proxy)
 	assert.Equal(t, 0, proxy.Size(), "Proxy should have no connected clients")
@@ -37,15 +41,17 @@ func TestNewProxy(t *testing.T) {
 }
 
 func TestNewProxyElastic(t *testing.T) {
+	logger := logging.NewLogger(nil, zerolog.TimeFormatUnix, zerolog.DebugLevel, true)
+
 	// Create a connection pool
-	pool := NewPool()
+	pool := NewPool(logger)
 
 	// Create a proxy with an elastic buffer pool
 	proxy := NewProxy(pool, true, false, &Client{
 		Network:           "tcp",
 		Address:           "localhost:5432",
 		ReceiveBufferSize: DefaultBufferSize,
-	})
+	}, logger)
 
 	assert.NotNil(t, proxy)
 	assert.Equal(t, 0, proxy.Size())
@@ -60,15 +66,17 @@ func TestNewProxyElastic(t *testing.T) {
 }
 
 func TestNewProxyElasticReuse(t *testing.T) {
+	logger := logging.NewLogger(nil, zerolog.TimeFormatUnix, zerolog.DebugLevel, true)
+
 	// Create a connection pool
-	pool := NewPool()
+	pool := NewPool(logger)
 
 	// Create a proxy with an elastic buffer pool
 	proxy := NewProxy(pool, true, true, &Client{
 		Network:           "tcp",
 		Address:           "localhost:5432",
 		ReceiveBufferSize: DefaultBufferSize,
-	})
+	}, logger)
 
 	assert.NotNil(t, proxy)
 	assert.Equal(t, 0, proxy.Size())
