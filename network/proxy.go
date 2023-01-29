@@ -76,10 +76,14 @@ func NewProxy(
 					client.Close()
 					// Create a new client.
 					client = NewClient(proxy.ClientConfig, proxy.logger)
-					if err := proxy.availableConnections.Put(client.ID, client); err != nil {
-						proxy.logger.Err(err).Msg("Failed to update the client connection")
-						// Close the client, because we don't want to have orphaned connections.
-						client.Close()
+					if client != nil && client.ID != "" {
+						if err := proxy.availableConnections.Put(client.ID, client); err != nil {
+							proxy.logger.Err(err).Msg("Failed to update the client connection")
+							// Close the client, because we don't want to have orphaned connections.
+							client.Close()
+						}
+					} else {
+						proxy.logger.Error().Msg("Failed to create a new client connection")
 					}
 				}
 				return true
