@@ -13,6 +13,7 @@ type Pool interface {
 	ForEach(Callback)
 	Pool() *sync.Map
 	Put(key, value interface{})
+	Get(key interface{}) interface{}
 	Pop(key interface{}) interface{}
 	Size() int
 	Clear()
@@ -36,6 +37,14 @@ func (p *PoolImpl) Pool() *sync.Map {
 func (p *PoolImpl) Put(key, value interface{}) {
 	p.pool.Store(key, value)
 	p.logger.Debug().Msg("Item has been put on the pool")
+}
+
+func (p *PoolImpl) Get(key interface{}) interface{} {
+	if value, ok := p.pool.Load(key); ok {
+		return value
+	}
+
+	return nil
 }
 
 func (p *PoolImpl) Pop(key interface{}) interface{} {
