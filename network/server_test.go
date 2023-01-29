@@ -39,7 +39,7 @@ func TestRunServer(t *testing.T) {
 
 	logger := logging.NewLogger(cfg)
 
-	hooksConfig := hook.NewHookConfig()
+	hookRegistry := hook.NewRegistry()
 
 	onTrafficFromClient := func(
 		ctx context.Context,
@@ -67,7 +67,7 @@ func TestRunServer(t *testing.T) {
 		assert.Empty(t, paramsMap["error"])
 		return params, nil
 	}
-	hooksConfig.Add(hook.OnTrafficFromClient, 1, onTrafficFromClient)
+	hookRegistry.Add(hook.OnTrafficFromClient, 1, onTrafficFromClient)
 
 	onTrafficFromServer := func(
 		ctx context.Context,
@@ -92,7 +92,7 @@ func TestRunServer(t *testing.T) {
 		assert.Empty(t, paramsMap["error"])
 		return params, nil
 	}
-	hooksConfig.Add(hook.OnTrafficFromServer, 1, onTrafficFromServer)
+	hookRegistry.Add(hook.OnTrafficFromServer, 1, onTrafficFromServer)
 
 	clientConfig := config.Client{
 		Network:            "tcp",
@@ -116,7 +116,7 @@ func TestRunServer(t *testing.T) {
 
 	// Create a proxy with a fixed buffer pool.
 	proxy := NewProxy(
-		pool, hooksConfig, false, false, config.DefaultHealthCheckPeriod, &clientConfig, logger)
+		pool, hookRegistry, false, false, config.DefaultHealthCheckPeriod, &clientConfig, logger)
 
 	// Create a server.
 	server := NewServer(
@@ -132,7 +132,7 @@ func TestRunServer(t *testing.T) {
 		},
 		proxy,
 		logger,
-		hooksConfig,
+		hookRegistry,
 	)
 	assert.NotNil(t, server)
 

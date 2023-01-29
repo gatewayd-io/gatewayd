@@ -26,7 +26,7 @@ type Proxy struct {
 	availableConnections pool.IPool
 	busyConnections      pool.IPool
 	logger               zerolog.Logger
-	hookConfig           *hook.Config
+	hookConfig           *hook.Registry
 	scheduler            *gocron.Scheduler
 
 	Elastic             bool
@@ -41,7 +41,7 @@ var _ IProxy = &Proxy{}
 
 // NewProxy creates a new proxy.
 func NewProxy(
-	connPool pool.IPool, hookConfig *hook.Config,
+	connPool pool.IPool, hookConfig *hook.Registry,
 	elastic, reuseElasticClients bool,
 	healthCheckPeriod time.Duration,
 	clientConfig *config.Client, logger zerolog.Logger,

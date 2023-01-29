@@ -24,14 +24,14 @@ import (
 )
 
 var (
-	hooksConfig   = hook.NewHookConfig()
+	hookRegistry  = hook.NewRegistry()
 	DefaultLogger = logging.NewLogger(
 		logging.LoggerConfig{
 			Level:   zerolog.InfoLevel, // Default log level
 			NoColor: true,
 		},
 	)
-	pluginRegistry = plugin.NewRegistry(hooksConfig)
+	pluginRegistry = plugin.NewRegistry(hookRegistry)
 	// Global koanf instance. Using "." as the key path delimiter.
 	globalConfig = koanf.New(".")
 	// Plugin koanf instance. Using "." as the key path delimiter.
@@ -45,7 +45,7 @@ var runCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		// The plugins are loaded and hooks registered
 		// before the configuration is loaded.
-		hooksConfig.Logger = DefaultLogger
+		hookRegistry.Logger = DefaultLogger
 
 		// Load default plugin configuration.
 		config.LoadPluginConfigDefaults(pluginConfig)
@@ -90,7 +90,7 @@ var runCmd = &cobra.Command{
 		config.LoadEnvVars(globalConfig)
 
 		// Get hooks signature verification policy.
-		hooksConfig.Verification = pConfig.GetVerificationPolicy()
+		hookRegistry.Verification = pConfig.GetVerificationPolicy()
 
 		// Unmarshal the global configuration for easier access.
 		var gConfig config.GlobalConfig
@@ -102,11 +102,11 @@ var runCmd = &cobra.Command{
 
 		// The config will be passed to the plugins that register to the "OnConfigLoaded" hook.
 		// The plugins can modify the config and return it.
-		updatedGlobalConfig, err := hooksConfig.Run(
+		updatedGlobalConfig, err := hookRegistry.Run(
 			context.Background(),
 			globalConfig.All(),
 			hook.OnConfigLoaded,
-			hooksConfig.Verification)
+			hookRegistry.Verification)
 		if err != nil {
 			DefaultLogger.Error().Err(err).Msg("Failed to run OnConfigLoaded hooks")
 		}
@@ -139,7 +139,7 @@ var runCmd = &cobra.Command{
 		})
 
 		// Replace the default logger with the new one from the config.
-		hooksConfig.Logger = logger
+		hookRegistry.Logger = logger
 
 		// This is a notification hook, so we don't care about the result.
 		data := map[string]interface{}{
@@ -150,8 +150,8 @@ var runCmd = &cobra.Command{
 			"fileName":   loggerCfg.FileName,
 		}
 		// TODO: Use a context with a timeout
-		_, err = hooksConfig.Run(
-			context.Background(), data, hook.OnNewLogger, hooksConfig.Verification)
+		_, err = hookRegistry.Run(
+			context.Background(), data, hook.OnNewLogger, hookRegistry.Verification)
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to run OnNewLogger hooks")
 		}
@@ -179,11 +179,11 @@ var runCmd = &cobra.Command{
 					"tcpKeepAlive":       client.TCPKeepAlive,
 					"tcpKeepAlivePeriod": client.TCPKeepAlivePeriod.String(),
 				}
-				_, err := hooksConfig.Run(
+				_, err := hookRegistry.Run(
 					context.Background(),
 					clientCfg,
 					hook.OnNewClient,
-					hooksConfig.Verification)
+					hookRegistry.Verification)
 				if err != nil {
 					logger.Error().Err(err).Msg("Failed to run OnNewClient hooks")
 				}
@@ -207,11 +207,11 @@ var runCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		_, err = hooksConfig.Run(
+		_, err = hookRegistry.Run(
 			context.Background(),
 			map[string]interface{}{"size": poolSize},
 			hook.OnNewPool,
-			hooksConfig.Verification)
+			hookRegistry.Verification)
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to run OnNewPool hooks")
 		}
@@ -222,7 +222,7 @@ var runCmd = &cobra.Command{
 		healthCheckPeriod := gConfig.Proxy[config.Default].HealthCheckPeriod
 		proxy := network.NewProxy(
 			pool,
-			hooksConfig,
+			hookRegistry,
 			elastic,
 			reuseElasticClients,
 			healthCheckPeriod,
@@ -245,8 +245,8 @@ var runCmd = &cobra.Command{
 				"tcpKeepAlivePeriod": clientConfig.TCPKeepAlivePeriod.String(),
 			},
 		}
-		_, err = hooksConfig.Run(
-			context.Background(), proxyCfg, hook.OnNewProxy, hooksConfig.Verification)
+		_, err = hookRegistry.Run(
+			context.Background(), proxyCfg, hook.OnNewProxy, hookRegistry.Verification)
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to run OnNewProxy hooks")
 		}
@@ -285,7 +285,7 @@ var runCmd = &cobra.Command{
 			},
 			proxy,
 			logger,
-			hooksConfig,
+			hookRegistry,
 		)
 
 		serverCfg := map[string]interface{}{
@@ -307,8 +307,8 @@ var runCmd = &cobra.Command{
 			"tcpKeepAlive":     gConfig.Server.TCPKeepAlive.String(),
 			"tcpNoDelay":       gConfig.Server.TCPNoDelay,
 		}
-		_, err = hooksConfig.Run(
-			context.Background(), serverCfg, hook.OnNewServer, hooksConfig.Verification)
+		_, err = hookRegistry.Run(
+			context.Background(), serverCfg, hook.OnNewServer, hookRegistry.Verification)
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to run OnNewServer hooks")
 		}
@@ -326,16 +326,16 @@ var runCmd = &cobra.Command{
 		)
 		signalsCh := make(chan os.Signal, 1)
 		signal.Notify(signalsCh, signals...)
-		go func(hooksConfig *hook.Config) {
+		go func(hookRegistry *hook.Registry) {
 			for sig := range signalsCh {
 				for _, s := range signals {
 					if sig != s {
 						// Notify the hooks that the server is shutting down.
-						_, err := hooksConfig.Run(
+						_, err := hookRegistry.Run(
 							context.Background(),
 							map[string]interface{}{"signal": sig.String()},
 							hook.OnSignal,
-							hooksConfig.Verification,
+							hookRegistry.Verification,
 						)
 						if err != nil {
 							logger.Error().Err(err).Msg("Failed to run OnSignal hooks")
@@ -347,7 +347,7 @@ var runCmd = &cobra.Command{
 					}
 				}
 			}
-		}(hooksConfig)
+		}(hookRegistry)
 
 		// Run the server.
 		if err := server.Run(); err != nil {
