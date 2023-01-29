@@ -6,6 +6,7 @@ import (
 
 	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
 	"github.com/gatewayd-io/gatewayd/logging"
+	"github.com/gatewayd-io/gatewayd/pool"
 	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
@@ -64,7 +65,7 @@ func TestRunServer(t *testing.T) {
 	hooksConfig.Add(OnEgressTraffic, 1, onEgressTraffic)
 
 	// Create a connection pool
-	pool := NewEmptyPool(logger)
+	pool := pool.NewPool()
 	client1 := NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)
 	pool.Put(client1.ID, client1)
 	client2 := NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)
