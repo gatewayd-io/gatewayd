@@ -31,7 +31,7 @@ var runCmd = &cobra.Command{
 	Short: "Run a gatewayd instance",
 	Run: func(cmd *cobra.Command, args []string) {
 		if f, err := cmd.Flags().GetString("config"); err == nil {
-			if err := konfig.Load(file.Provider(f), yaml.Parser()); err != nil {
+			if err := globalConfig.Load(file.Provider(f), yaml.Parser()); err != nil {
 				panic(err)
 			}
 		}
@@ -43,7 +43,7 @@ var runCmd = &cobra.Command{
 		// register to this hook.
 		result := hooksConfig.Run(
 			network.OnConfigLoaded,
-			network.Signature{"config": konfig.All()},
+			network.Signature{"config": globalConfig.All()},
 			hooksConfig.Verification)
 		if result != nil {
 			var config map[string]interface{}
@@ -51,12 +51,20 @@ var runCmd = &cobra.Command{
 				config = cfg
 			}
 
-			// Merge the config with the one loaded from the file (in memory).
-			// The changes won't be persisted to disk.
 			if config != nil {
-				var in *koanf.Koanf
-				in.Load(confmap.Provider(config, "."), nil)
-				konfig.Merge(in)
+				// Load the config from the map emitted by the hook
+				var hookEmittedConfig *koanf.Koanf
+				if err := hookEmittedConfig.Load(confmap.Provider(config, "."), nil); err != nil {
+					// Since the logger is not yet initialized, we can't log the error.
+					// So we panic. Same happens in the next if statement.
+					panic(err)
+				}
+
+				// Merge the config with the one loaded from the file (in memory).
+				// The changes won't be persisted to disk.
+				if err := globalConfig.Merge(hookEmittedConfig); err != nil {
+					panic(err)
+				}
 			}
 		}
 
