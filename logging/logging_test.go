@@ -16,6 +16,7 @@ func TestNewLogger(t *testing.T) {
 			Output:     &buffer,
 			Level:      zerolog.DebugLevel,
 			TimeFormat: zerolog.TimeFormatUnix,
+			StartupMsg: true,
 			NoColor:    true,
 		},
 	)
