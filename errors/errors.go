@@ -27,56 +27,56 @@ const (
 )
 
 var (
-	ErrClientNotFound = NewGatewaydError(
+	ErrClientNotFound = NewGatewayDError(
 		ErrCodeClientNotFound, "client not found", nil)
-	ErrClientNotConnected = NewGatewaydError(
+	ErrClientNotConnected = NewGatewayDError(
 		ErrCodeClientNotConnected, "client is not connected", nil)
-	ErrClientConnectionFailed = NewGatewaydError(
+	ErrClientConnectionFailed = NewGatewayDError(
 		ErrCodeClientConnectionFailed, "failed to create a new connection", nil)
-	ErrNetworkNotSupported = NewGatewaydError(
+	ErrNetworkNotSupported = NewGatewayDError(
 		ErrCodeNetworkNotSupported, "network is not supported", nil)
-	ErrResolveFailed = NewGatewaydError(
+	ErrResolveFailed = NewGatewayDError(
 		ErrCodeResolveFailed, "failed to resolve address", nil)
-	ErrPoolExhausted = NewGatewaydError(
+	ErrPoolExhausted = NewGatewayDError(
 		ErrCodePoolExhausted, "pool is exhausted", nil)
-	ErrFailedToStartServer = NewGatewaydError(
+	ErrFailedToStartServer = NewGatewayDError(
 		ErrCodeStartServerFailed, "failed to start server", nil)
 
-	ErrPluginNotFound = NewGatewaydError(
+	ErrPluginNotFound = NewGatewayDError(
 		ErrCodePluginNotFound, "plugin not found", nil)
-	ErrPluginNotReady = NewGatewaydError(
+	ErrPluginNotReady = NewGatewayDError(
 		ErrCodePluginNotReady, "plugin is not ready", nil)
-	ErrFailedToStartPlugin = NewGatewaydError(
+	ErrFailedToStartPlugin = NewGatewayDError(
 		ErrCodeStartPluginFailed, "failed to start plugin", nil)
-	ErrFailedToGetRPCClient = NewGatewaydError(
+	ErrFailedToGetRPCClient = NewGatewayDError(
 		ErrCodeGetRPCClientFailed, "failed to get RPC client", nil)
-	ErrFailedToDispensePlugin = NewGatewaydError(
+	ErrFailedToDispensePlugin = NewGatewayDError(
 		ErrCodeDispensePluginFailed, "failed to dispense plugin", nil)
 
-	ErrClientReceiveFailed = NewGatewaydError(
+	ErrClientReceiveFailed = NewGatewayDError(
 		ErrCodeClientReceiveFailed, "couldn't receive data from the server", nil)
-	ErrClientSendFailed = NewGatewaydError(
+	ErrClientSendFailed = NewGatewayDError(
 		ErrCodeClientSendFailed, "couldn't send data to the server", nil)
 
-	ErrServerSendFailed = NewGatewaydError(
+	ErrServerSendFailed = NewGatewayDError(
 		ErrCodeServerSendFailed, "couldn't send data to the client", nil)
-	ErrServerReceiveFailed = NewGatewaydError(
+	ErrServerReceiveFailed = NewGatewayDError(
 		ErrCodeServerReceiveFailed, "couldn't receive data from the client", nil)
 
-	ErrPutFailed = NewGatewaydError(
+	ErrPutFailed = NewGatewayDError(
 		ErrCodePutFailed, "failed to put in pool", nil)
 
-	ErrCastFailed = NewGatewaydError(
+	ErrCastFailed = NewGatewayDError(
 		ErrCodeCastFailed, "failed to cast", nil)
 
-	ErrHookVerificationFailed = NewGatewaydError(
+	ErrHookVerificationFailed = NewGatewayDError(
 		ErrCodeHookVerificationFailed, "failed to verify hook", nil)
 
-	ErrFileNotFound = NewGatewaydError(
+	ErrFileNotFound = NewGatewayDError(
 		ErrCodeFileNotFound, "file not found", nil)
-	ErrFileOpenFailed = NewGatewaydError(
+	ErrFileOpenFailed = NewGatewayDError(
 		ErrCodeFileOpenFailed, "failed to open file", nil)
-	ErrFileReadFailed = NewGatewaydError(
+	ErrFileReadFailed = NewGatewayDError(
 		ErrCodeFileReadFailed, "failed to read file", nil)
 )
 

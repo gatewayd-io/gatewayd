@@ -10,7 +10,7 @@ type GatewayDError struct {
 	OriginalError error
 }
 
-func NewGatewaydError(code ErrCode, message string, err error) *GatewayDError {
+func NewGatewayDError(code ErrCode, message string, err error) *GatewayDError {
 	return &GatewayDError{
 		Code:          code,
 		Message:       message,
