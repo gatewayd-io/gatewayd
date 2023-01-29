@@ -31,6 +31,21 @@ func getPath(path string) string {
 // 	return nil
 // }
 
+func verificationPolicy() network.Policy {
+	vPolicy := konfig.String("plugins.verificationPolicy")
+	verificationPolicy := network.Ignore // default
+	switch vPolicy {
+	case "ignore":
+		verificationPolicy = network.Ignore
+	case "abort":
+		verificationPolicy = network.Abort
+	case "remove":
+		verificationPolicy = network.Remove
+	}
+
+	return verificationPolicy
+}
+
 func loggerConfig() logging.LoggerConfig {
 	cfg := logging.LoggerConfig{}
 	switch konfig.String("loggers.logger.output") {
