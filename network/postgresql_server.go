@@ -23,7 +23,8 @@ func (p *PostgreSQLServer) OnBoot(engine gnet.Engine) gnet.Action {
 
 func (p *PostgreSQLServer) OnTraffic(c gnet.Conn) gnet.Action {
 	buf, _ := c.Next(-1)
-	// c.Write(buf)
+	// TODO: parse the buffer and send the response or error
+	// The buffer is a PostgreSQL packet
 	c.Write([]byte("OK\n"))
 	logrus.Infof("Received data: %s", string(buf))
 	return gnet.None
@@ -45,7 +46,8 @@ func (p *PostgreSQLServer) OnClose(c gnet.Conn, err error) (action gnet.Action) 
 
 func (p *PostgreSQLServer) OnTick() (delay time.Duration, action gnet.Action) {
 	logrus.Println("PostgreSQL server is ticking...")
-	return time.Second, gnet.None
+	logrus.Printf("Active connections: %d", p.engine.CountConnections())
+	return time.Second * 5, gnet.None
 }
 
 func (p *PostgreSQLServer) Run() {
