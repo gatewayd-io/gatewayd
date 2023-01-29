@@ -14,7 +14,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-type PluginCompatPolicy uint
+type CompatPolicy uint
 
 const (
 	DefaultMinPort      uint   = 50000
@@ -25,7 +25,7 @@ const (
 )
 
 const (
-	Strict PluginCompatPolicy = iota
+	Strict CompatPolicy = iota
 	Loose
 )
 
@@ -33,7 +33,7 @@ type Registry interface {
 	Add(plugin *Impl) bool
 	Get(id Identifier) *Impl
 	List() []Identifier
-	Exists(name, version, remoteUrl string) bool
+	Exists(name, version, remoteURL string) bool
 	Remove(id Identifier)
 	Shutdown()
 	LoadPlugins(pluginConfig *koanf.Koanf)
@@ -43,7 +43,7 @@ type Registry interface {
 type RegistryImpl struct {
 	plugins      pool.Pool
 	hooksConfig  *HookConfig
-	CompatPolicy PluginCompatPolicy
+	CompatPolicy CompatPolicy
 }
 
 var _ Registry = &RegistryImpl{}
@@ -85,9 +85,9 @@ func (reg *RegistryImpl) List() []Identifier {
 }
 
 // Exists checks if a plugin exists in the registry.
-func (reg *RegistryImpl) Exists(name, version, remoteUrl string) bool {
+func (reg *RegistryImpl) Exists(name, version, remoteURL string) bool {
 	for _, plugin := range reg.List() {
-		if plugin.Name == name && plugin.RemoteURL == remoteUrl {
+		if plugin.Name == name && plugin.RemoteURL == remoteURL {
 			// Parse the supplied version and the version in the registry.
 			suppliedVer, err := semver.NewVersion(version)
 			if err != nil {
@@ -107,11 +107,11 @@ func (reg *RegistryImpl) Exists(name, version, remoteUrl string) bool {
 			// the version in the registry.
 			if suppliedVer.LessThan(registryVer) || suppliedVer.Equal(registryVer) {
 				return true
-			} else {
-				reg.hooksConfig.Logger.Debug().Str("name", name).Str("version", version).Msg(
-					"Supplied plugin version is greater than the version in registry")
-				return false
 			}
+
+			reg.hooksConfig.Logger.Debug().Str("name", name).Str("version", version).Msg(
+				"Supplied plugin version is greater than the version in registry")
+			return false
 		}
 	}
 
