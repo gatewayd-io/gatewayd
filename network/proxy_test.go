@@ -19,7 +19,7 @@ func TestNewProxy(t *testing.T) {
 		}
 	}()
 
-	proxy := NewProxy(1, false, false)
+	proxy := NewProxy(1, DefaultBufferSize, false, false)
 	assert.NotNil(t, proxy)
 	assert.Equal(t, 0, proxy.Size(), "Proxy should have no connected clients")
 	assert.Equal(t, 1, len(proxy.pool.ClientIDs()))
@@ -32,7 +32,7 @@ func TestNewProxy(t *testing.T) {
 }
 
 func TestNewProxyElastic(t *testing.T) {
-	proxy := NewProxy(1, true, false)
+	proxy := NewProxy(1, DefaultBufferSize, true, false)
 	assert.NotNil(t, proxy)
 	assert.Equal(t, 0, proxy.Size())
 	assert.Equal(t, 0, len(proxy.pool.ClientIDs()))
@@ -44,7 +44,7 @@ func TestNewProxyElastic(t *testing.T) {
 }
 
 func TestNewProxyElasticReuse(t *testing.T) {
-	proxy := NewProxy(1, true, true)
+	proxy := NewProxy(1, DefaultBufferSize, true, true)
 	assert.NotNil(t, proxy)
 	assert.Equal(t, 0, proxy.Size())
 	assert.Equal(t, 0, len(proxy.pool.ClientIDs()))

@@ -28,11 +28,12 @@ type ProxyImpl struct {
 	PoolSize            int
 	Elastic             bool
 	ReuseElasticClients bool
+	BufferSize          int
 }
 
 var _ Proxy = &ProxyImpl{}
 
-func NewProxy(size int, elastic, reuseElasticClients bool) *ProxyImpl {
+func NewProxy(size, bufferSize int, elastic, reuseElasticClients bool) *ProxyImpl {
 	proxy := ProxyImpl{
 		pool:        NewPool(),
 		connClients: sync.Map{},
@@ -43,8 +44,12 @@ func NewProxy(size int, elastic, reuseElasticClients bool) *ProxyImpl {
 	}
 
 	if !proxy.Elastic {
+		if bufferSize == 0 {
+			proxy.BufferSize = DefaultBufferSize
+		}
+
 		for i := 0; i < size; i++ {
-			client := NewClient("tcp", "localhost:5432", 4096)
+			client := NewClient("tcp", "localhost:5432", proxy.BufferSize)
 			if client != nil {
 				if err := proxy.pool.Put(client); err != nil {
 					logrus.Panic(err)
@@ -70,7 +75,7 @@ func (pr *ProxyImpl) Connect(gconn gnet.Conn) error {
 		// Pool is exhausted
 		if pr.Elastic {
 			// Create a new client
-			client = NewClient("tcp", "localhost:5432", 4096)
+			client = NewClient("tcp", "localhost:5432", pr.BufferSize)
 			logrus.Debugf("Reused the client %s by putting it back in the pool", client.ID)
 		} else {
 			return errors.New("pool is exhausted")
@@ -193,7 +198,7 @@ func (pr *ProxyImpl) Reconnect(cl *Client) *Client {
 	if cl != nil && cl.ID != "" {
 		cl.Close()
 	}
-	return NewClient("tcp", "localhost:5432", 4096)
+	return NewClient("tcp", "localhost:5432", pr.BufferSize)
 }
 
 func (pr *ProxyImpl) Shutdown() {

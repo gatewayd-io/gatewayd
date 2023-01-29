@@ -7,6 +7,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	DefaultSeed = 1000
+)
+
 type Client struct {
 	net.Conn
 
@@ -14,7 +18,6 @@ type Client struct {
 	ReceiveBufferSize int
 	Network           string // tcp/udp/unix
 	Address           string
-
 	// TODO: add read/write deadline and deal with timeouts
 }
 
@@ -52,10 +55,10 @@ func NewClient(network, address string, receiveBufferSize int) *Client {
 
 	client.Conn = conn
 	if client.ReceiveBufferSize == 0 {
-		client.ReceiveBufferSize = 4096
+		client.ReceiveBufferSize = DefaultBufferSize
 	}
 	logrus.Debugf("New client created: %s", client.Address)
-	client.ID = GetID(conn.LocalAddr().Network(), conn.LocalAddr().String(), 1000)
+	client.ID = GetID(conn.LocalAddr().Network(), conn.LocalAddr().String(), DefaultSeed)
 
 	return &client
 }
