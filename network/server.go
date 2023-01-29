@@ -39,7 +39,7 @@ type Server struct {
 func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 	s.logger.Debug().Msg("GatewayD is booting...")
 
-	s.hooksConfig.RunHooks(
+	s.hooksConfig.Run(
 		OnBooting,
 		Signature{
 			"server": s,
@@ -52,7 +52,7 @@ func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 	// Set the status to running
 	s.Status = Running
 
-	s.hooksConfig.RunHooks(
+	s.hooksConfig.Run(
 		OnBooted,
 		Signature{
 			"server": s,
@@ -68,7 +68,7 @@ func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 	s.logger.Debug().Msgf("GatewayD is opening a connection from %s", gconn.RemoteAddr().String())
 
-	s.hooksConfig.RunHooks(
+	s.hooksConfig.Run(
 		OnOpening,
 		Signature{
 			"server": s,
@@ -94,7 +94,7 @@ func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 		return nil, gnet.Close
 	}
 
-	s.hooksConfig.RunHooks(
+	s.hooksConfig.Run(
 		OnOpened,
 		Signature{
 			"server": s,
@@ -108,7 +108,7 @@ func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 	s.logger.Debug().Msgf("GatewayD is closing a connection from %s", gconn.RemoteAddr().String())
 
-	s.hooksConfig.RunHooks(
+	s.hooksConfig.Run(
 		OnClosing,
 		Signature{
 			"server": s,
@@ -125,7 +125,7 @@ func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 		return gnet.Shutdown
 	}
 
-	s.hooksConfig.RunHooks(
+	s.hooksConfig.Run(
 		OnClosed,
 		Signature{
 			"server": s,
@@ -138,7 +138,7 @@ func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 }
 
 func (s *Server) OnTraffic(gconn gnet.Conn) gnet.Action {
-	s.hooksConfig.RunHooks(
+	s.hooksConfig.Run(
 		OnTraffic,
 		Signature{
 			"server": s,
@@ -148,8 +148,8 @@ func (s *Server) OnTraffic(gconn gnet.Conn) gnet.Action {
 
 	if err := s.proxy.PassThrough(
 		gconn,
-		s.hooksConfig.GetHook(OnIncomingTraffic),
-		s.hooksConfig.GetHook(OnOutgoingTraffic)); err != nil {
+		s.hooksConfig.Get(OnIncomingTraffic),
+		s.hooksConfig.Get(OnOutgoingTraffic)); err != nil {
 		s.logger.Error().Err(err).Msg("Failed to pass through traffic")
 		// TODO: Close the connection *gracefully*
 		return gnet.Close
@@ -160,7 +160,7 @@ func (s *Server) OnTraffic(gconn gnet.Conn) gnet.Action {
 
 func (s *Server) OnShutdown(engine gnet.Engine) {
 	s.logger.Debug().Msg("GatewayD is shutting down...")
-	s.hooksConfig.RunHooks(
+	s.hooksConfig.Run(
 		OnShutdown,
 		Signature{
 			"server": s,
@@ -174,7 +174,7 @@ func (s *Server) OnShutdown(engine gnet.Engine) {
 func (s *Server) OnTick() (time.Duration, gnet.Action) {
 	s.logger.Debug().Msg("GatewayD is ticking...")
 	s.logger.Info().Msgf("Active connections: %d", s.engine.CountConnections())
-	s.hooksConfig.RunHooks(
+	s.hooksConfig.Run(
 		OnTick,
 		Signature{
 			"server": s,
@@ -193,7 +193,7 @@ func (s *Server) Run() error {
 	}
 
 	// Since gnet.Run is blocking, we need to run OnRun before it
-	s.hooksConfig.RunHooks(
+	s.hooksConfig.Run(
 		OnRun,
 		Signature{
 			"server": s,

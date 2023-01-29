@@ -42,7 +42,7 @@ var runCmd = &cobra.Command{
 		// TODO: RunHooks should return the result or error of the hook, so that
 		// we can merge the config or check if the config is valid. This should
 		// happen for all hooks.
-		hooksConfig.RunHooks(
+		hooksConfig.Run(
 			network.OnConfigLoaded,
 			network.Signature{"config": konfig.All()},
 			hooksConfig.Verification)
@@ -51,7 +51,7 @@ var runCmd = &cobra.Command{
 		logger := logging.NewLogger(loggerConfig())
 		hooksConfig.Logger = logger
 		// This is a notification hook, so we don't care about the result.
-		hooksConfig.RunHooks(
+		hooksConfig.Run(
 			network.OnNewLogger, network.Signature{"logger": logger}, hooksConfig.Verification)
 
 		// Create and initialize a pool of connections
@@ -60,15 +60,15 @@ var runCmd = &cobra.Command{
 			logger,
 			poolSize,
 			poolClientConfig,
-			hooksConfig.GetHook(network.OnNewClient),
+			hooksConfig.Get(network.OnNewClient),
 		)
-		hooksConfig.RunHooks(
+		hooksConfig.Run(
 			network.OnNewPool, network.Signature{"pool": pool}, hooksConfig.Verification)
 
 		// Create a prefork proxy with the pool of clients
 		elastic, reuseElasticClients, elasticClientConfig := proxyConfig()
 		proxy := network.NewProxy(pool, elastic, reuseElasticClients, elasticClientConfig, logger)
-		hooksConfig.RunHooks(
+		hooksConfig.Run(
 			network.OnNewProxy, network.Signature{"proxy": proxy}, hooksConfig.Verification)
 
 		// Create a server
@@ -116,7 +116,7 @@ var runCmd = &cobra.Command{
 			logger,
 			hooksConfig,
 		)
-		hooksConfig.RunHooks(
+		hooksConfig.Run(
 			network.OnNewServer, network.Signature{"server": server}, hooksConfig.Verification)
 
 		// TODO: Load plugins and register them to the hooks
@@ -138,7 +138,7 @@ var runCmd = &cobra.Command{
 			for sig := range signalsCh {
 				for _, s := range signals {
 					if sig != s {
-						hooksConfig.RunHooks(
+						hooksConfig.Run(
 							network.OnSignal, network.Signature{"signal": sig}, hooksConfig.Verification)
 
 						server.Shutdown()

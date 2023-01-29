@@ -48,7 +48,7 @@ func TestRunServer(t *testing.T) {
 		}
 		return nil
 	}
-	hooksConfig.AddHook(OnIncomingTraffic, 1, onIncomingTraffic)
+	hooksConfig.Add(OnIncomingTraffic, 1, onIncomingTraffic)
 
 	onOutgoingTraffic := func(params Signature) Signature {
 		if params["buffer"] == nil {
@@ -69,7 +69,7 @@ func TestRunServer(t *testing.T) {
 		}
 		return nil
 	}
-	hooksConfig.AddHook(OnOutgoingTraffic, 1, onOutgoingTraffic)
+	hooksConfig.Add(OnOutgoingTraffic, 1, onOutgoingTraffic)
 
 	// Create a connection pool
 	pool := NewEmptyPool(logger)
