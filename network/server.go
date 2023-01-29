@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/panjf2000/gnet/v2"
@@ -19,11 +20,6 @@ type Status string
 const (
 	Running Status = "running"
 	Stopped Status = "stopped"
-
-	DefaultTickInterval = 5 * time.Second
-	DefaultPoolSize     = 10
-	MinimumPoolSize     = 2
-	DefaultBufferSize   = 1 << 24 // 16777216 bytes
 )
 
 type Server struct {
@@ -392,7 +388,7 @@ func NewServer(
 	}
 
 	if tickInterval == 0 {
-		server.TickInterval = DefaultTickInterval
+		server.TickInterval = config.DefaultTickInterval
 		logger.Debug().Msg("Tick interval is not set, using the default value")
 	} else {
 		server.TickInterval = tickInterval

@@ -3,7 +3,9 @@ package plugin
 import (
 	"context"
 	"sort"
+	"time"
 
+	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
@@ -17,16 +19,6 @@ type (
 	HookType string
 	HookDef  func(
 		context.Context, *structpb.Struct, ...grpc.CallOption) (*structpb.Struct, error)
-	Policy int
-)
-
-const (
-	// Non-strict (permissive) mode.
-	PassDown Policy = iota // Pass down the extra keys/values in result to the next plugins
-	// Strict mode.
-	Ignore // Ignore errors and continue
-	Abort  // Abort on first error and return results
-	Remove // Remove the hook from the list on error and continue
 )
 
 const (
@@ -57,7 +49,7 @@ const (
 type HookConfig struct {
 	hooks        map[HookType]map[Priority]HookDef
 	Logger       zerolog.Logger
-	Verification Policy
+	Verification config.Policy
 }
 
 // NewHookConfig returns a new HookConfig.
@@ -112,7 +104,7 @@ func (h *HookConfig) Run(
 	ctx context.Context,
 	args map[string]interface{},
 	hookType HookType,
-	verification Policy,
+	verification config.Policy,
 	opts ...grpc.CallOption,
 ) (map[string]interface{}, *gerr.GatewayDError) {
 	if ctx == nil {
@@ -125,9 +117,19 @@ func (h *HookConfig) Run(
 
 	// Create structpb.Struct from args.
 	var params *structpb.Struct
-	if args == nil {
+	arguments := map[string]interface{}{}
+	for k, v := range args {
+		switch v := v.(type) {
+		case time.Duration:
+			arguments[k] = v.Seconds()
+		default:
+			arguments[k] = v
+		}
+	}
+
+	if len(arguments) == 0 {
 		params = &structpb.Struct{}
-	} else if casted, err := structpb.NewStruct(args); err == nil {
+	} else if casted, err := structpb.NewStruct(arguments); err == nil {
 		params = casted
 	} else {
 		return nil, gerr.ErrCastFailed.Wrap(err)
@@ -161,7 +163,7 @@ func (h *HookConfig) Run(
 		// and that the hook does not return any unexpected values.
 		// If the verification mode is non-strict (permissive), let the plugin pass
 		// extra keys/values to the next plugin in chain.
-		if Verify(params, result) || verification == PassDown {
+		if Verify(params, result) || verification == config.PassDown {
 			// Update the last return value with the current result
 			returnVal = result
 			continue
@@ -171,7 +173,7 @@ func (h *HookConfig) Run(
 		// The result of the current hook will be ignored, regardless of the policy.
 		switch verification {
 		// Ignore the result of this plugin, log an error and execute the next hook.
-		case Ignore:
+		case config.Ignore:
 			h.Logger.Error().Err(err).Fields(
 				map[string]interface{}{
 					"hookType": hookType,
@@ -182,7 +184,7 @@ func (h *HookConfig) Run(
 				returnVal = params
 			}
 		// Abort execution of the plugins, log the error and return the result of the last hook.
-		case Abort:
+		case config.Abort:
 			h.Logger.Error().Err(err).Fields(
 				map[string]interface{}{
 					"hookType": hookType,
@@ -194,7 +196,7 @@ func (h *HookConfig) Run(
 			}
 			return returnVal.AsMap(), nil
 		// Remove the hook from the registry, log the error and execute the next hook.
-		case Remove:
+		case config.Remove:
 			h.Logger.Error().Err(err).Fields(
 				map[string]interface{}{
 					"hookType": hookType,
@@ -205,7 +207,7 @@ func (h *HookConfig) Run(
 			if idx == 0 {
 				returnVal = params
 			}
-		case PassDown:
+		case config.PassDown:
 		default:
 			returnVal = result
 		}
