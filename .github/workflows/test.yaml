@@ -42,6 +42,8 @@ jobs:
       postgres:
         image: postgres
         env:
+          POSTGRES_HOST: postgres
+          POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
         options: >-
           --health-cmd pg_isready
@@ -80,6 +82,8 @@ jobs:
             localPath: ./gdp-test
             checksum: ${SHA256SUM}
           EOF
+          cat gatewayd.yaml
+          cat gatewayd_plugins.yaml
 
       - name: Run GatewayD with test plugin 🚀
         run: |
