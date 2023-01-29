@@ -3,10 +3,11 @@ package config
 import "time"
 
 type (
-	Status       uint
-	Policy       uint
-	CompatPolicy uint
-	LogOutput    uint
+	Status              uint
+	VerificationPolicy  uint
+	CompatibilityPolicy uint
+	AcceptancePolicy    uint
+	LogOutput           uint
 )
 
 // Status is the status of the server.
@@ -18,17 +19,23 @@ const (
 // Policy is the policy for hook verification.
 const (
 	// Non-strict (permissive) mode.
-	PassDown Policy = iota // Pass down the extra keys/values in result to the next plugins
+	PassDown VerificationPolicy = iota // Pass down the extra keys/values in result to the next plugins
 	// Strict mode.
 	Ignore // Ignore errors and continue
 	Abort  // Abort on first error and return results
 	Remove // Remove the hook from the list on error and continue
 )
 
-// CompatPolicy is the compatibility policy for plugins.
+// CompatibilityPolicy is the compatibility policy for plugins.
 const (
-	Strict CompatPolicy = iota
-	Loose
+	Strict CompatibilityPolicy = iota // Expect all required plugins to be loaded and present
+	Loose                             // Load the plugin, even if the requirements are not met
+)
+
+// AcceptancePolicy is the acceptance policy for custom hooks.
+const (
+	Accept AcceptancePolicy = iota // Accept all custom hooks
+	Reject                         // Reject all custom hooks
 )
 
 // LogOutput is the output type for the logger.

@@ -30,7 +30,7 @@ var (
 		},
 	)
 	// The plugins are loaded and hooks registered before the configuration is loaded.
-	pluginRegistry = plugin.NewRegistry(config.Loose, config.PassDown, DefaultLogger)
+	pluginRegistry = plugin.NewRegistry(config.Loose, config.PassDown, config.Accept, DefaultLogger)
 	// Global koanf instance. Using "." as the key path delimiter.
 	globalConfig = koanf.New(".")
 	// Plugin koanf instance. Using "." as the key path delimiter.
@@ -63,8 +63,12 @@ var runCmd = &cobra.Command{
 			os.Exit(gerr.FailedToLoadPluginConfig)
 		}
 
-		// Set the plugin compatibility policy.
-		pluginRegistry.CompatPolicy = pConfig.GetPluginCompatPolicy()
+		// Set the plugin requirement's compatibility policy.
+		pluginRegistry.Compatibility = pConfig.GetPluginCompatibilityPolicy()
+		// Set hooks' signature verification policy.
+		pluginRegistry.Verification = pConfig.GetVerificationPolicy()
+		// Set custom hook acceptance policy.
+		pluginRegistry.Acceptance = pConfig.GetAcceptancePolicy()
 
 		// Load plugins and register their hooks.
 		pluginRegistry.LoadPlugins(pConfig.Plugins)
@@ -84,9 +88,6 @@ var runCmd = &cobra.Command{
 		// Load environment variables for the global configuration.
 		config.LoadEnvVars(globalConfig)
 
-		// Get hooks signature verification policy.
-		pluginRegistry.Verification = pConfig.GetVerificationPolicy()
-
 		// Unmarshal the global configuration for easier access.
 		var gConfig config.GlobalConfig
 		if err := globalConfig.Unmarshal("", &gConfig); err != nil {
@@ -100,8 +101,7 @@ var runCmd = &cobra.Command{
 		updatedGlobalConfig, err := pluginRegistry.Run(
 			context.Background(),
 			globalConfig.All(),
-			plugin.OnConfigLoaded,
-			pluginRegistry.Verification)
+			plugin.OnConfigLoaded)
 		if err != nil {
 			DefaultLogger.Error().Err(err).Msg("Failed to run OnConfigLoaded hooks")
 		}
@@ -145,8 +145,7 @@ var runCmd = &cobra.Command{
 			"fileName":   loggerCfg.FileName,
 		}
 		// TODO: Use a context with a timeout
-		_, err = pluginRegistry.Run(
-			context.Background(), data, plugin.OnNewLogger, pluginRegistry.Verification)
+		_, err = pluginRegistry.Run(context.Background(), data, plugin.OnNewLogger)
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to run OnNewLogger hooks")
 		}
@@ -174,11 +173,7 @@ var runCmd = &cobra.Command{
 					"tcpKeepAlive":       client.TCPKeepAlive,
 					"tcpKeepAlivePeriod": client.TCPKeepAlivePeriod.String(),
 				}
-				_, err := pluginRegistry.Run(
-					context.Background(),
-					clientCfg,
-					plugin.OnNewClient,
-					pluginRegistry.Verification)
+				_, err := pluginRegistry.Run(context.Background(), clientCfg, plugin.OnNewClient)
 				if err != nil {
 					logger.Error().Err(err).Msg("Failed to run OnNewClient hooks")
 				}
@@ -205,8 +200,7 @@ var runCmd = &cobra.Command{
 		_, err = pluginRegistry.Run(
 			context.Background(),
 			map[string]interface{}{"size": poolSize},
-			plugin.OnNewPool,
-			pluginRegistry.Verification)
+			plugin.OnNewPool)
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to run OnNewPool hooks")
 		}
@@ -240,8 +234,7 @@ var runCmd = &cobra.Command{
 				"tcpKeepAlivePeriod": clientConfig.TCPKeepAlivePeriod.String(),
 			},
 		}
-		_, err = pluginRegistry.Run(
-			context.Background(), proxyCfg, plugin.OnNewProxy, pluginRegistry.Verification)
+		_, err = pluginRegistry.Run(context.Background(), proxyCfg, plugin.OnNewProxy)
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to run OnNewProxy hooks")
 		}
@@ -302,8 +295,7 @@ var runCmd = &cobra.Command{
 			"tcpKeepAlive":     gConfig.Server.TCPKeepAlive.String(),
 			"tcpNoDelay":       gConfig.Server.TCPNoDelay,
 		}
-		_, err = pluginRegistry.Run(
-			context.Background(), serverCfg, plugin.OnNewServer, pluginRegistry.Verification)
+		_, err = pluginRegistry.Run(context.Background(), serverCfg, plugin.OnNewServer)
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to run OnNewServer hooks")
 		}
@@ -330,7 +322,6 @@ var runCmd = &cobra.Command{
 							context.Background(),
 							map[string]interface{}{"signal": sig.String()},
 							plugin.OnSignal,
-							pluginRegistry.Verification,
 						)
 						if err != nil {
 							logger.Error().Err(err).Msg("Failed to run OnSignal hooks")

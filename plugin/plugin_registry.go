@@ -36,7 +36,6 @@ type IRegistry interface {
 		ctx context.Context,
 		args map[string]interface{},
 		hookName string,
-		verification config.Policy,
 		opts ...grpc.CallOption,
 	) (map[string]interface{}, *gerr.GatewayDError)
 }
@@ -45,25 +44,28 @@ type Registry struct {
 	plugins pool.IPool
 	hooks   map[string]map[Priority]Method
 
-	Logger       zerolog.Logger
-	CompatPolicy config.CompatPolicy
-	Verification config.Policy
+	Logger        zerolog.Logger
+	Compatibility config.CompatibilityPolicy
+	Verification  config.VerificationPolicy
+	Acceptance    config.AcceptancePolicy
 }
 
 var _ IRegistry = &Registry{}
 
 // NewRegistry creates a new plugin registry.
 func NewRegistry(
-	compatPolicy config.CompatPolicy,
-	verification config.Policy,
+	compatibility config.CompatibilityPolicy,
+	verification config.VerificationPolicy,
+	acceptance config.AcceptancePolicy,
 	logger zerolog.Logger,
 ) *Registry {
 	return &Registry{
-		plugins:      pool.NewPool(config.EmptyPoolCapacity),
-		hooks:        map[string]map[Priority]Method{},
-		Logger:       logger,
-		CompatPolicy: compatPolicy,
-		Verification: verification,
+		plugins:       pool.NewPool(config.EmptyPoolCapacity),
+		hooks:         map[string]map[Priority]Method{},
+		Logger:        logger,
+		Compatibility: compatibility,
+		Verification:  verification,
+		Acceptance:    acceptance,
 	}
 }
 
@@ -191,7 +193,6 @@ func (reg *Registry) Run(
 	ctx context.Context,
 	args map[string]interface{},
 	hookName string,
-	verification config.Policy,
 	opts ...grpc.CallOption,
 ) (map[string]interface{}, *gerr.GatewayDError) {
 	if ctx == nil {
@@ -241,7 +242,7 @@ func (reg *Registry) Run(
 		// and that the hook does not return any unexpected values.
 		// If the verification mode is non-strict (permissive), let the plugin pass
 		// extra keys/values to the next plugin in chain.
-		if Verify(params, result) || verification == config.PassDown {
+		if Verify(params, result) || reg.Verification == config.PassDown {
 			// Update the last return value with the current result
 			returnVal = result
 			continue
@@ -249,7 +250,7 @@ func (reg *Registry) Run(
 
 		// At this point, the hook returned an invalid value, so we need to handle it.
 		// The result of the current hook will be ignored, regardless of the policy.
-		switch verification {
+		switch reg.Verification {
 		// Ignore the result of this plugin, log an error and execute the next
 		case config.Ignore:
 			reg.Logger.Error().Err(err).Fields(
@@ -437,7 +438,7 @@ func (reg *Registry) LoadPlugins(plugins []config.Plugin) {
 						"requirement": req.Name,
 					},
 				).Msg("The plugin requirement is not met, so it won't work properly")
-				if reg.CompatPolicy == config.Strict {
+				if reg.Compatibility == config.Strict {
 					reg.Logger.Debug().Str("name", plugin.ID.Name).Msg(
 						"Registry is in strict compatibility mode, so the plugin won't be loaded")
 					plugin.Stop() // Stop the plugin.
@@ -488,6 +489,8 @@ func (reg *Registry) LoadPlugins(plugins []config.Plugin) {
 
 		reg.RegisterHooks(plugin.ID)
 		reg.Logger.Debug().Str("name", plugin.ID.Name).Msg("Plugin hooks registered")
+
+		reg.Logger.Info().Str("name", plugin.ID.Name).Msg("Plugin is ready")
 	}
 }
 
@@ -552,14 +555,26 @@ func (reg *Registry) RegisterHooks(id Identifier) {
 		case OnNewClient:
 			hookMethod = pluginV1.OnNewClient
 		default:
-			reg.Logger.Warn().Fields(map[string]interface{}{
-				"hook":     hookName,
-				"priority": pluginImpl.Priority,
-				"name":     pluginImpl.ID.Name,
-			}).Msg(
-				"Unknown hook, skipping")
+			switch reg.Acceptance {
+			case config.Reject:
+				reg.Logger.Warn().Fields(map[string]interface{}{
+					"hook":     hookName,
+					"priority": pluginImpl.Priority,
+					"name":     pluginImpl.ID.Name,
+				}).Msg("Unknown hook, skipping")
+			case config.Accept: // fallthrough
+			default:
+				// Default is to accept custom hooks.
+				reg.Logger.Debug().Fields(map[string]interface{}{
+					"hook":     hookName,
+					"priority": pluginImpl.Priority,
+					"name":     pluginImpl.ID.Name,
+				}).Msg("Registering a custom hook")
+				reg.AddHook(hookName, pluginImpl.Priority, pluginV1.OnHook)
+			}
 			continue
 		}
+
 		reg.Logger.Debug().Fields(map[string]interface{}{
 			"hook":     hookName,
 			"priority": pluginImpl.Priority,

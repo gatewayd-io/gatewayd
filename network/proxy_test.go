@@ -54,7 +54,7 @@ func TestNewProxy(t *testing.T) {
 
 	// Create a proxy with a fixed buffer pool
 	proxy := NewProxy(pool,
-		plugin.NewRegistry(config.Loose, config.PassDown, logger),
+		plugin.NewRegistry(config.Loose, config.PassDown, config.Accept, logger),
 		false,
 		false,
 		config.DefaultHealthCheckPeriod,
@@ -89,7 +89,7 @@ func TestNewProxyElastic(t *testing.T) {
 
 	// Create a proxy with an elastic buffer pool
 	proxy := NewProxy(pool,
-		plugin.NewRegistry(config.Loose, config.PassDown, logger),
+		plugin.NewRegistry(config.Loose, config.PassDown, config.Accept, logger),
 		true,
 		false,
 		config.DefaultHealthCheckPeriod,

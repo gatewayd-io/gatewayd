@@ -32,6 +32,7 @@ service GatewayDPluginService {
     rpc OnShutdown (google.protobuf.Struct) returns (google.protobuf.Struct);
     rpc OnTick (google.protobuf.Struct) returns (google.protobuf.Struct);
     rpc OnNewClient (google.protobuf.Struct) returns (google.protobuf.Struct);
+    rpc OnHook (google.protobuf.Struct) returns (google.protobuf.Struct); // Custom hook
 }
 
 message PluginID {
