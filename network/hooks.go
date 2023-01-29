@@ -20,9 +20,12 @@ type (
 )
 
 const (
-	Ignore Policy = iota // Ignore errors and continue
-	Abort                // Abort on first error and return results
-	Remove               // Remove the hook from the list on error and continue
+	// Non-strict (permissive) mode.
+	PassDown Policy = iota // Pass down the extra keys/values in result to the next plugins
+	// Strict mode.
+	Ignore // Ignore errors and continue
+	Abort  // Abort on first error and return results
+	Remove // Remove the hook from the list on error and continue
 )
 
 const (
@@ -113,7 +116,9 @@ func (h *HookConfig) Run(
 
 		// This is done to ensure that the return value of the hook is always valid,
 		// and that the hook does not return any unexpected values.
-		if verify(args, result) {
+		// If the verification mode is non-strict (permissive), let the plugin pass
+		// extra keys/values to the next plugin in chain.
+		if verify(args, result) || verification == PassDown {
 			// Update the last return value with the current result
 			returnVal = result
 			continue
@@ -122,6 +127,7 @@ func (h *HookConfig) Run(
 		// At this point, the hook returned an invalid value, so we need to handle it.
 		// The result of the current hook will be ignored, regardless of the policy.
 		switch verification {
+		// Ignore the result of this plugin, log an error and execute the next hook.
 		case Ignore:
 			errMsg := fmt.Sprintf(
 				"Hook %s (Prio %d) returned invalid value, ignoring", hookType, prio)
@@ -134,7 +140,7 @@ func (h *HookConfig) Run(
 			if idx == 0 {
 				returnVal = args
 			}
-			continue
+		// Abort execution of the plugins, log the error and return the result of the last hook.
 		case Abort:
 			errMsg := fmt.Sprintf(
 				"Hook %s (Prio %d) returned invalid value, aborting", hookType, prio)
@@ -147,6 +153,7 @@ func (h *HookConfig) Run(
 				return args
 			}
 			return returnVal
+		// Remove the hook from the registry, log the error and execute the next hook.
 		case Remove:
 			errMsg := fmt.Sprintf(
 				"Hook %s (Prio %d) returned invalid value, removing", hookType, prio)
@@ -159,7 +166,9 @@ func (h *HookConfig) Run(
 			if idx == 0 {
 				returnVal = args
 			}
-			continue
+		case PassDown:
+		default:
+			returnVal = result
 		}
 	}
 

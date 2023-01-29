@@ -33,7 +33,7 @@ func getPath(path string) string {
 
 func verificationPolicy() network.Policy {
 	vPolicy := globalConfig.String("plugins.verificationPolicy")
-	verificationPolicy := network.Ignore // default
+	verificationPolicy := network.PassDown // default
 	switch vPolicy {
 	case "ignore":
 		verificationPolicy = network.Ignore
