@@ -53,10 +53,10 @@ func (p *PoolImpl) Put(client *Client) error {
 	return nil
 }
 
-func (p *PoolImpl) Pop(ID string) *Client {
-	if client, ok := p.pool.Load(ID); ok {
-		p.pool.Delete(ID)
-		logrus.Debugf("Client %s has been popped from the pool", ID)
+func (p *PoolImpl) Pop(id string) *Client {
+	if client, ok := p.pool.Load(id); ok {
+		p.pool.Delete(id)
+		logrus.Debugf("Client %s has been popped from the pool", id)
 		return client.(*Client)
 	}
 
