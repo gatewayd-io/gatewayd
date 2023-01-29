@@ -335,50 +335,50 @@ func (reg *PluginRegistry) RegisterHooks(id Identifier) {
 	}
 
 	for _, hookName := range pluginImpl.Hooks {
-		var hookFunc hook.Method
+		var hookMethod hook.Method
 		switch hookName {
 		case hook.OnConfigLoaded:
-			hookFunc = pluginV1.OnConfigLoaded
+			hookMethod = pluginV1.OnConfigLoaded
 		case hook.OnNewLogger:
-			hookFunc = pluginV1.OnNewLogger
+			hookMethod = pluginV1.OnNewLogger
 		case hook.OnNewPool:
-			hookFunc = pluginV1.OnNewPool
+			hookMethod = pluginV1.OnNewPool
 		case hook.OnNewProxy:
-			hookFunc = pluginV1.OnNewProxy
+			hookMethod = pluginV1.OnNewProxy
 		case hook.OnNewServer:
-			hookFunc = pluginV1.OnNewServer
+			hookMethod = pluginV1.OnNewServer
 		case hook.OnSignal:
-			hookFunc = pluginV1.OnSignal
+			hookMethod = pluginV1.OnSignal
 		case hook.OnRun:
-			hookFunc = pluginV1.OnRun
+			hookMethod = pluginV1.OnRun
 		case hook.OnBooting:
-			hookFunc = pluginV1.OnBooting
+			hookMethod = pluginV1.OnBooting
 		case hook.OnBooted:
-			hookFunc = pluginV1.OnBooted
+			hookMethod = pluginV1.OnBooted
 		case hook.OnOpening:
-			hookFunc = pluginV1.OnOpening
+			hookMethod = pluginV1.OnOpening
 		case hook.OnOpened:
-			hookFunc = pluginV1.OnOpened
+			hookMethod = pluginV1.OnOpened
 		case hook.OnClosing:
-			hookFunc = pluginV1.OnClosing
+			hookMethod = pluginV1.OnClosing
 		case hook.OnClosed:
-			hookFunc = pluginV1.OnClosed
+			hookMethod = pluginV1.OnClosed
 		case hook.OnTraffic:
-			hookFunc = pluginV1.OnTraffic
+			hookMethod = pluginV1.OnTraffic
 		case hook.OnTrafficFromClient:
-			hookFunc = pluginV1.OnTrafficFromClient
+			hookMethod = pluginV1.OnTrafficFromClient
 		case hook.OnTrafficToServer:
-			hookFunc = pluginV1.OnTrafficToServer
+			hookMethod = pluginV1.OnTrafficToServer
 		case hook.OnTrafficFromServer:
-			hookFunc = pluginV1.OnTrafficFromServer
+			hookMethod = pluginV1.OnTrafficFromServer
 		case hook.OnTrafficToClient:
-			hookFunc = pluginV1.OnTrafficToClient
+			hookMethod = pluginV1.OnTrafficToClient
 		case hook.OnShutdown:
-			hookFunc = pluginV1.OnShutdown
+			hookMethod = pluginV1.OnShutdown
 		case hook.OnTick:
-			hookFunc = pluginV1.OnTick
+			hookMethod = pluginV1.OnTick
 		case hook.OnNewClient:
-			hookFunc = pluginV1.OnNewClient
+			hookMethod = pluginV1.OnNewClient
 		default:
 			reg.hookRegistry.Logger.Warn().Fields(map[string]interface{}{
 				"hook":     hookName,
@@ -393,6 +393,6 @@ func (reg *PluginRegistry) RegisterHooks(id Identifier) {
 			"priority": pluginImpl.Priority,
 			"name":     pluginImpl.ID.Name,
 		}).Msg("Registering hook")
-		reg.hookRegistry.Add(hookName, pluginImpl.Priority, hookFunc)
+		reg.hookRegistry.Add(hookName, pluginImpl.Priority, hookMethod)
 	}
 }
