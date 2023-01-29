@@ -50,12 +50,12 @@ func TestRunServer(t *testing.T) {
 	)
 	assert.NotNil(t, server)
 
-	var wg sync.WaitGroup
-	wg.Add(2)
+	var waitGroup sync.WaitGroup
+	waitGroup.Add(2)
 
 	go func(t *testing.T, server *Server) {
 		t.Helper()
-		defer wg.Done()
+		defer waitGroup.Done()
 
 		err := server.Run()
 		assert.Nil(t, err)
@@ -63,7 +63,7 @@ func TestRunServer(t *testing.T) {
 
 	go func(t *testing.T, server *Server) {
 		t.Helper()
-		defer wg.Done()
+		defer waitGroup.Done()
 
 		for {
 			if server.IsRunning() {
@@ -96,5 +96,5 @@ func TestRunServer(t *testing.T) {
 		}
 	}(t, server)
 
-	wg.Wait()
+	waitGroup.Wait()
 }
