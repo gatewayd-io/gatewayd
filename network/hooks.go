@@ -20,9 +20,12 @@ type (
 )
 
 const (
+	// Strict mode
 	Ignore Policy = iota // Ignore errors and continue
 	Abort                // Abort on first error and return results
 	Remove               // Remove the hook from the list on error and continue
+	// Non-strict (permissive) mode
+	PassDown // Pass down the extra keys/values in result to the next plugins
 )
 
 const (
@@ -113,7 +116,9 @@ func (h *HookConfig) Run(
 
 		// This is done to ensure that the return value of the hook is always valid,
 		// and that the hook does not return any unexpected values.
-		if verify(args, result) {
+		// If the verification mode is non-strict (permissive), let the plugin pass
+		// extra keys/values to the next plugin in chain.
+		if verify(args, result) || verification == PassDown {
 			// Update the last return value with the current result
 			returnVal = result
 			continue
