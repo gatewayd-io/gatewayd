@@ -258,6 +258,6 @@ func (reg *RegistryImpl) RegisterHooks(id Identifier) {
 			continue
 		}
 		reg.hooksConfig.Logger.Debug().Msgf("Registering hook: %s", hook)
-		reg.hooksConfig.Add(HookType(hook), pluginImpl.Priority, hookFunc)
+		reg.hooksConfig.Add(hook, pluginImpl.Priority, hookFunc)
 	}
 }
