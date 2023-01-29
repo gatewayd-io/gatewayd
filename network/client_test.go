@@ -65,20 +65,18 @@ func TestReceive(t *testing.T) {
 	defer client.Close()
 
 	assert.NotNil(t, client)
-	err := client.Send(CreatePostgreSQLPacket('Q', []byte("select 1;")))
+	err := client.Send(CreatePgStartupPacket())
 	assert.Nil(t, err)
 
 	size, data, err := client.Receive()
-	msg := "SFATAL\x00VFATAL\x00C0A000\x00Munsupported frontend protocol 0.0: " +
-		"server supports 3.0 to 3.0\x00Fpostmaster.c\x00L2138\x00R" +
-		"ProcessStartupPacket\x00\x00"
-	assert.Equal(t, 132, size)
+	msg := "\x00\x00\x00\x03"
+	assert.Equal(t, 9, size)
 	assert.Equal(t, len(data[:size]), size)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, data[:size])
 	assert.Equal(t, msg, string(data[5:size]))
-	assert.Equal(t, "E", string(data[0]))
-	assert.Equal(t, 83, int(data[5]))
+	// AuthenticationOk
+	assert.Equal(t, uint8(0x52), data[0])
 }
 
 func TestClose(t *testing.T) {
