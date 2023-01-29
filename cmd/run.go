@@ -73,9 +73,9 @@ var runCmd = &cobra.Command{
 			DefaultLogger.Error().Err(err).Msg("Failed to convert configuration to structpb")
 		} else {
 			updatedGlobalConfig, _ := hooksConfig.Run(
-				plugin.OnConfigLoaded,
 				context.Background(),
 				currentGlobalConfig,
+				plugin.OnConfigLoaded,
 				hooksConfig.Verification)
 
 			if updatedGlobalConfig != nil && plugin.Verify(updatedGlobalConfig, currentGlobalConfig) {
@@ -104,7 +104,7 @@ var runCmd = &cobra.Command{
 		} else {
 			// TODO: Use a context with a timeout
 			_, err := hooksConfig.Run(
-				plugin.OnNewLogger, context.Background(), data, hooksConfig.Verification)
+				context.Background(), data, plugin.OnNewLogger, hooksConfig.Verification)
 			if err != nil {
 				logger.Error().Err(err).Msg("Failed to run OnNewLogger hooks")
 			}
@@ -134,9 +134,9 @@ var runCmd = &cobra.Command{
 					logger.Error().Err(err).Msg("Failed to convert client config to structpb")
 				} else {
 					_, err := hooksConfig.Run(
-						plugin.OnNewClient,
 						context.Background(),
 						clientCfg,
+						plugin.OnNewClient,
 						hooksConfig.Verification)
 					if err != nil {
 						logger.Error().Err(err).Msg("Failed to run OnNewClient hooks")
@@ -166,7 +166,7 @@ var runCmd = &cobra.Command{
 			logger.Error().Err(err).Msg("Failed to convert pool config to structpb")
 		} else {
 			_, err := hooksConfig.Run(
-				plugin.OnNewPool, context.Background(), poolCfg, hooksConfig.Verification)
+				context.Background(), poolCfg, plugin.OnNewPool, hooksConfig.Verification)
 			if err != nil {
 				logger.Error().Err(err).Msg("Failed to run OnNewPool hooks")
 			}
@@ -186,7 +186,7 @@ var runCmd = &cobra.Command{
 			logger.Error().Err(err).Msg("Failed to convert proxy config to structpb")
 		} else {
 			_, err := hooksConfig.Run(
-				plugin.OnNewProxy, context.Background(), proxyCfg, hooksConfig.Verification)
+				context.Background(), proxyCfg, plugin.OnNewProxy, hooksConfig.Verification)
 			if err != nil {
 				logger.Error().Err(err).Msg("Failed to run OnNewProxy hooks")
 			}
@@ -259,7 +259,7 @@ var runCmd = &cobra.Command{
 			logger.Error().Err(err).Msg("Failed to convert server config to structpb")
 		} else {
 			_, err := hooksConfig.Run(
-				plugin.OnNewServer, context.Background(), serverCfg, hooksConfig.Verification)
+				context.Background(), serverCfg, plugin.OnNewServer, hooksConfig.Verification)
 			if err != nil {
 				logger.Error().Err(err).Msg("Failed to run OnNewServer hooks")
 			}
@@ -288,9 +288,9 @@ var runCmd = &cobra.Command{
 								"Failed to convert signal config to structpb")
 						} else {
 							_, err := hooksConfig.Run(
-								plugin.OnSignal,
 								context.Background(),
 								signalCfg,
+								plugin.OnSignal,
 								hooksConfig.Verification,
 							)
 							if err != nil {
