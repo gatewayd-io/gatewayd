@@ -138,15 +138,20 @@ func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 	s.logger.Debug().Msgf("GatewayD is closing a connection from %s", gconn.RemoteAddr().String())
 
-	onClosingData, err := structpb.NewStruct(map[string]interface{}{
+	data := map[string]interface{}{
 		"client": map[string]interface{}{
 			"local":  gconn.LocalAddr().String(),
 			"remote": gconn.RemoteAddr().String(),
 		},
-		"error": err,
-	})
+		"error": "",
+	}
 	if err != nil {
-		s.logger.Error().Err(err).Msg("Failed to create structpb")
+		data["error"] = err.Error()
+	}
+
+	onClosingData, intErr := structpb.NewStruct(data)
+	if intErr != nil {
+		s.logger.Error().Err(intErr).Msg("Failed to create structpb")
 	} else {
 		_, err := s.hooksConfig.Run(
 			context.Background(), onClosingData, plugin.OnClosing, s.hooksConfig.Verification)
@@ -163,15 +168,20 @@ func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 		return gnet.Shutdown
 	}
 
-	onClosedData, err := structpb.NewStruct(map[string]interface{}{
+	data = map[string]interface{}{
 		"client": map[string]interface{}{
 			"local":  gconn.LocalAddr().String(),
 			"remote": gconn.RemoteAddr().String(),
 		},
-		"error": err,
-	})
+		"error": "",
+	}
 	if err != nil {
-		s.logger.Error().Err(err).Msg("Failed to create structpb")
+		data["error"] = err.Error()
+	}
+
+	onClosedData, intErr := structpb.NewStruct(data)
+	if intErr != nil {
+		s.logger.Error().Err(intErr).Msg("Failed to create structpb")
 	} else {
 		_, err := s.hooksConfig.Run(
 			context.Background(), onClosedData, plugin.OnClosed, s.hooksConfig.Verification)
