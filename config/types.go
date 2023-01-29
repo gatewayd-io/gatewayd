@@ -63,23 +63,23 @@ type Proxy struct {
 }
 
 type Server struct {
-	Network          string        `koanf:"network"`
-	Address          string        `koanf:"address"`
-	SoftLimit        uint64        `koanf:"softLimit"`
-	HardLimit        uint64        `koanf:"hardLimit"`
 	EnableTicker     bool          `koanf:"enableTicker"`
 	MultiCore        bool          `koanf:"multiCore"`
 	LockOSThread     bool          `koanf:"lockOSThread"`
 	ReuseAddress     bool          `koanf:"reuseAddress"`
 	ReusePort        bool          `koanf:"reusePort"`
-	LoadBalancer     string        `koanf:"loadBalancer"`
-	TickInterval     time.Duration `koanf:"tickInterval"`
+	TCPNoDelay       bool          `koanf:"tcpNoDelay"`
 	ReadBufferCap    int           `koanf:"readBufferCap"`
 	WriteBufferCap   int           `koanf:"writeBufferCap"`
 	SocketRecvBuffer int           `koanf:"socketRecvBuffer"`
 	SocketSendBuffer int           `koanf:"socketSendBuffer"`
+	SoftLimit        uint64        `koanf:"softLimit"`
+	HardLimit        uint64        `koanf:"hardLimit"`
 	TCPKeepAlive     time.Duration `koanf:"tcpKeepAlive"`
-	TCPNoDelay       bool          `koanf:"tcpNoDelay"`
+	TickInterval     time.Duration `koanf:"tickInterval"`
+	Network          string        `koanf:"network"`
+	Address          string        `koanf:"address"`
+	LoadBalancer     string        `koanf:"loadBalancer"`
 }
 
 type GlobalConfig struct {
@@ -120,8 +120,8 @@ func LoadGlobalConfigDefaults(cfg *koanf.Koanf) {
 			},
 		},
 		"server": map[string]interface{}{
-			"network":          "tcp",
-			"address":          "0.0.0.0:15432",
+			"network":          DefaultListenNetwork,
+			"address":          DefaultListenAddress,
 			"softLimit":        0,
 			"hardLimit":        0,
 			"enableTicker":     false,
@@ -129,7 +129,7 @@ func LoadGlobalConfigDefaults(cfg *koanf.Koanf) {
 			"lockOSThread":     false,
 			"reuseAddress":     true,
 			"reusePort":        true,
-			"loadBalancer":     "roundrobin",
+			"loadBalancer":     DefaultLoadBalancer,
 			"readBufferCap":    DefaultBufferSize,
 			"writeBufferCap":   DefaultBufferSize,
 			"socketRecvBuffer": DefaultBufferSize,
