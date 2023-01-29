@@ -2,7 +2,7 @@ build:
 	go build -ldflags "-s -w"
 
 run:
-	go run main.go run
+	go mod tidy && go run main.go run
 
 protolint:
 	buf lint
