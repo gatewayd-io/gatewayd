@@ -8,8 +8,9 @@ import (
 
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/gatewayd-io/gatewayd/network"
+	"github.com/knadh/koanf/parsers/yaml"
+	"github.com/knadh/koanf/providers/file"
 	"github.com/panjf2000/gnet/v2"
-	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 )
 
@@ -17,63 +18,52 @@ const (
 	DefaultTCPKeepAlive = 3 * time.Second
 )
 
+var (
+	configFile string
+)
+
 // runCmd represents the run command.
 var runCmd = &cobra.Command{
 	Use:   "run",
 	Short: "Run a gatewayd instance",
 	Run: func(cmd *cobra.Command, args []string) {
-		// Create a logger
-		logger := logging.NewLogger(nil, zerolog.TimeFormatUnix, zerolog.InfoLevel, true)
-
-		// Create a pool
-		pool := network.NewPool(logger)
-
-		// Add a client to the pool
-		for i := 0; i < network.DefaultPoolSize; i++ {
-			client := network.NewClient("tcp", "localhost:5432", network.DefaultBufferSize, logger)
-			if client != nil {
-				if err := pool.Put(client); err != nil {
-					logger.Panic().Err(err).Msg("Failed to add client to pool")
-				}
+		if f, err := cmd.Flags().GetString("config"); err == nil {
+			if err := konfig.Load(file.Provider(f), yaml.Parser()); err != nil {
+				panic(err)
 			}
 		}
 
-		// Verify that the pool is properly populated
-		logger.Debug().Msgf("There are %d clients in the pool", len(pool.ClientIDs()))
-		if len(pool.ClientIDs()) != network.DefaultPoolSize {
-			logger.Error().Msg(
-				"The pool size is incorrect, either because " +
-					"the clients are cannot connect (no network connectivity) " +
-					"or the server is not running. Exiting...")
-			os.Exit(1)
-		}
+		// Create a new logger from the config
+		logger := logging.NewLogger(loggerConfig())
+
+		// Create and initialize a pool of connections
+		poolSize, poolClientConfig := poolConfig()
+		pool := network.NewPool(logger, poolSize, poolClientConfig)
 
 		// Create a prefork proxy with the pool of clients
-		proxy := network.NewProxy(pool, false, false, &network.Client{
-			Network:           "tcp",
-			Address:           "localhost:5432",
-			ReceiveBufferSize: network.DefaultBufferSize,
-		}, logger)
+		elastic, reuseElasticClients, elasticClientConfig := proxyConfig()
+		proxy := network.NewProxy(pool, elastic, reuseElasticClients, elasticClientConfig, logger)
 
 		// Create a server
+		serverConfig := serverConfig()
 		server := network.NewServer(
-			"tcp",
-			"0.0.0.0:15432",
-			0,
-			0,
-			network.DefaultTickInterval,
+			serverConfig.Network,
+			serverConfig.Address,
+			serverConfig.SoftLimit,
+			serverConfig.HardLimit,
+			serverConfig.TickInterval,
 			[]gnet.Option{
 				// Scheduling options
-				gnet.WithMulticore(true),
-				gnet.WithLockOSThread(false),
+				gnet.WithMulticore(serverConfig.MultiCore),
+				gnet.WithLockOSThread(serverConfig.LockOSThread),
 				// NumEventLoop overrides Multicore option.
 				// gnet.WithNumEventLoop(1),
 
 				// Can be used to send keepalive messages to the client.
-				gnet.WithTicker(false),
+				gnet.WithTicker(serverConfig.EnableTicker),
 
 				// Internal event-loop load balancing options
-				gnet.WithLoadBalancing(gnet.RoundRobin),
+				gnet.WithLoadBalancing(serverConfig.LoadBalancer),
 
 				// Logger options
 				// TODO: This is a temporary solution and will be replaced.
@@ -83,16 +73,16 @@ var runCmd = &cobra.Command{
 
 				// Buffer options
 				// TODO: This should be configurable and optimized.
-				gnet.WithReadBufferCap(network.DefaultBufferSize),
-				gnet.WithWriteBufferCap(network.DefaultBufferSize),
-				gnet.WithSocketRecvBuffer(network.DefaultBufferSize),
-				gnet.WithSocketSendBuffer(network.DefaultBufferSize),
+				gnet.WithReadBufferCap(serverConfig.ReadBufferCap),
+				gnet.WithWriteBufferCap(serverConfig.WriteBufferCap),
+				gnet.WithSocketRecvBuffer(serverConfig.SocketRecvBuffer),
+				gnet.WithSocketSendBuffer(serverConfig.SocketSendBuffer),
 
 				// TCP options
-				gnet.WithReuseAddr(true),
-				gnet.WithReusePort(true),
-				gnet.WithTCPKeepAlive(DefaultTCPKeepAlive),
-				gnet.WithTCPNoDelay(gnet.TCPNoDelay),
+				gnet.WithReuseAddr(serverConfig.ReuseAddress),
+				gnet.WithReusePort(serverConfig.ReusePort),
+				gnet.WithTCPKeepAlive(serverConfig.TCPKeepAlive),
+				gnet.WithTCPNoDelay(serverConfig.TCPNoDelay),
 			},
 			nil,
 			nil,
@@ -133,4 +123,7 @@ var runCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(runCmd)
+
+	runCmd.PersistentFlags().StringVarP(
+		&configFile, "config", "c", "./gatewayd.yaml", "config file (default is ./gatewayd.yaml)")
 }

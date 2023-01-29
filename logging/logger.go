@@ -7,30 +7,32 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func NewLogger(
-	writer io.Writer,
-	timeFieldFormat string,
-	level zerolog.Level,
-	timestamp bool,
-) zerolog.Logger {
-	// Create a new logger
-	consoleWriter := zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: timeFieldFormat}
+type LoggerConfig struct {
+	Output     io.Writer
+	TimeFormat string
+	Level      zerolog.Level
+	NoColor    bool
+}
 
-	if writer == nil {
+func NewLogger(cfg LoggerConfig) zerolog.Logger {
+	// Create a new logger
+	consoleWriter := zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: cfg.TimeFormat}
+
+	if cfg.Output == nil {
 		// Default to stdout
-		writer = consoleWriter
+		cfg.Output = consoleWriter
 	}
 
-	if timeFieldFormat == "" {
-		timeFieldFormat = zerolog.TimeFieldFormat
+	if cfg.TimeFormat == "" {
+		cfg.TimeFormat = zerolog.TimeFieldFormat
 	}
 
-	zerolog.SetGlobalLevel(level)
-	zerolog.TimeFieldFormat = timeFieldFormat
+	zerolog.SetGlobalLevel(cfg.Level)
+	zerolog.TimeFieldFormat = cfg.TimeFormat
 
 	// Create a new logger
-	logger := zerolog.New(writer)
-	if timestamp {
+	logger := zerolog.New(cfg.Output)
+	if cfg.TimeFormat != "" {
 		logger = logger.With().Timestamp().Logger()
 	}
 
