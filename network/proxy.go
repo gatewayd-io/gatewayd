@@ -2,11 +2,13 @@ package network
 
 import (
 	"context"
+	"time"
 
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/plugin/hook"
 	"github.com/gatewayd-io/gatewayd/pool"
+	"github.com/go-co-op/gocron"
 	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
 )
@@ -25,9 +27,11 @@ type Proxy struct {
 	busyConnections      pool.IPool
 	logger               zerolog.Logger
 	hookConfig           *hook.Config
+	scheduler            *gocron.Scheduler
 
 	Elastic             bool
 	ReuseElasticClients bool
+	HealthCheckPeriod   time.Duration
 
 	// ClientConfig is used for elastic proxy and reconnection
 	ClientConfig *config.Client
@@ -39,17 +43,63 @@ var _ IProxy = &Proxy{}
 func NewProxy(
 	p pool.IPool, hookConfig *hook.Config,
 	elastic, reuseElasticClients bool,
+	healthCheckPeriod time.Duration,
 	clientConfig *config.Client, logger zerolog.Logger,
 ) *Proxy {
-	return &Proxy{
+	proxy := Proxy{
 		availableConnections: p,
 		busyConnections:      pool.NewPool(config.EmptyPoolCapacity),
 		logger:               logger,
 		hookConfig:           hookConfig,
+		scheduler:            gocron.NewScheduler(time.UTC),
 		Elastic:              elastic,
 		ReuseElasticClients:  reuseElasticClients,
 		ClientConfig:         clientConfig,
 	}
+
+	if proxy.HealthCheckPeriod == 0 {
+		if healthCheck, err := time.ParseDuration(config.DefaultHealthCheckPeriod); err == nil {
+			proxy.HealthCheckPeriod = healthCheck
+		} else {
+			logger.Error().Err(err).Msg("Failed to parse the health check period")
+		}
+	} else {
+		proxy.HealthCheckPeriod = healthCheckPeriod
+	}
+
+	startDelay := time.Now().Add(proxy.HealthCheckPeriod)
+	// Schedule the client health check.
+	if _, err := proxy.scheduler.Every(proxy.HealthCheckPeriod).SingletonMode().StartAt(startDelay).Do(
+		func() {
+			logger.Debug().Msg("Running the client health check, and might recycle connection(s).")
+			proxy.availableConnections.ForEach(func(_, value interface{}) bool {
+				if client, ok := value.(*Client); ok {
+					// Connection is probably dead by now.
+					proxy.availableConnections.Remove(client.ID)
+					client.Close()
+					// Create a new client.
+					client = NewClient(proxy.ClientConfig, proxy.logger)
+					if err := proxy.availableConnections.Put(client.ID, client); err != nil {
+						proxy.logger.Err(err).Msg("Failed to update the client connection")
+					}
+				}
+				return true
+			})
+		},
+	); err != nil {
+		proxy.logger.Error().Err(err).Msg("Failed to schedule the client health check")
+	}
+
+	// Start the scheduler.
+	proxy.scheduler.StartAsync()
+	logger.Debug().Fields(
+		map[string]interface{}{
+			"startDelay":        startDelay,
+			"healthCheckPeriod": proxy.HealthCheckPeriod.String(),
+		},
+	).Msg("Started the client health check scheduler")
+
+	return &proxy
 }
 
 // Connect maps a server connection from the available connection pool to a incoming connection.
