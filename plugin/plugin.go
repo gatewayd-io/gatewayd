@@ -1,50 +1,79 @@
 package plugin
 
 import (
-	"os/exec"
+	"net"
 
+	gerr "github.com/gatewayd-io/gatewayd/errors"
+	plugin_v1 "github.com/gatewayd-io/gatewayd/plugin/v1"
 	goplugin "github.com/hashicorp/go-plugin"
 )
 
-const (
-	minPort uint = 50000
-	maxPort uint = 50002
-)
-
-type Clients struct {
-	Clients []*goplugin.Client
+type Plugin interface {
+	Start() (net.Addr, error)
+	Stop()
+	Dispense() (plugin_v1.GatewayDPluginServiceClient, error)
 }
 
-func NewPluginClient() *Clients {
-	return &Clients{
-		Clients: make([]*goplugin.Client, 0, 1),
+type Identifier struct {
+	Name      string
+	Version   string
+	RemoteURL string
+	Checksum  string
+}
+
+type PluginImpl struct {
+	goplugin.NetRPCUnsupportedPlugin
+	plugin_v1.GatewayDPluginServiceServer
+
+	client *goplugin.Client
+
+	ID          Identifier
+	Description string
+	Authors     []string
+	License     string
+	ProjectURL  string
+	LocalPath   string
+	Enabled     bool
+	// internal and external config options
+	Config map[string]string
+	// hooks it attaches to
+	Hooks    []HookType
+	Priority Priority
+	// required plugins to be loaded before this one
+	// Built-in plugins are always loaded first
+	Requires   []Identifier
+	Tags       []string
+	Categories []string
+}
+
+var _ Plugin = &PluginImpl{}
+
+func (p *PluginImpl) Start() (net.Addr, error) {
+	if addr, err := p.client.Start(); err != nil {
+		return nil, err
+	} else {
+		return addr, nil
 	}
 }
 
-func (p *Clients) Load() error {
-	client := goplugin.NewClient(&goplugin.ClientConfig{
-		HandshakeConfig: goplugin.HandshakeConfig{
-			ProtocolVersion: 1,
-			// MagicCookieKey:   "BASIC_PLUGIN",
-			// MagicCookieValue: "hello",
-		},
-		Managed:          true,
-		Plugins:          map[string]goplugin.Plugin{},
-		Cmd:              exec.Command("python", "pluginA/pluginA_server.py"),
-		AllowedProtocols: []goplugin.Protocol{goplugin.ProtocolGRPC, goplugin.ProtocolNetRPC},
-		// VersionedPlugins: nil,
-		// Logger:           nil,
-		// TLSConfig:        nil,
-		// Reattach:         nil,
-		// SecureConfig:     nil,
-		MinPort: minPort,
-		MaxPort: maxPort,
-		// StartTimeout: 10,
-		// AutoMTLS:        false,
-		// GRPCDialOptions: nil,
-	})
-	// defer client.Kill()
-	p.Clients = append(p.Clients, client)
+func (p *PluginImpl) Stop() {
+	p.client.Kill()
+}
 
-	return nil
+func (p *PluginImpl) Dispense() (plugin_v1.GatewayDPluginServiceClient, error) {
+	rpcClient, err := p.client.Client()
+	if err != nil {
+		return nil, err
+	}
+
+	raw, err := rpcClient.Dispense(p.ID.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	if gatewaydPlugin, ok := raw.(plugin_v1.GatewayDPluginServiceClient); ok {
+		return gatewaydPlugin, nil
+	}
+
+	return nil, gerr.ErrPluginNotReady
 }
