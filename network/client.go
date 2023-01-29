@@ -35,8 +35,6 @@ type Client struct {
 
 var _ IClient = &Client{}
 
-// TODO: implement a better connection management algorithm
-
 // NewClient creates a new client.
 //
 //nolint:funlen
