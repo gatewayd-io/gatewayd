@@ -230,6 +230,9 @@ func TestRunServer(t *testing.T) {
 				assert.Equal(t, 1, proxy.availableConnections.Size())
 				assert.Equal(t, 1, proxy.busyConnections.Size())
 
+				// Test Prometheus metrics.
+				CollectAndComparePrometheusMetrics(t)
+
 				// Clean up.
 				server.Shutdown()
 				client.Close()
