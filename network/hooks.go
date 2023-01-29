@@ -20,12 +20,12 @@ type (
 )
 
 const (
-	// Strict mode.
-	Ignore Policy = iota // Ignore errors and continue
-	Abort                // Abort on first error and return results
-	Remove               // Remove the hook from the list on error and continue
 	// Non-strict (permissive) mode.
-	PassDown // Pass down the extra keys/values in result to the next plugins
+	PassDown Policy = iota // Pass down the extra keys/values in result to the next plugins
+	// Strict mode.
+	Ignore // Ignore errors and continue
+	Abort  // Abort on first error and return results
+	Remove // Remove the hook from the list on error and continue
 )
 
 const (
