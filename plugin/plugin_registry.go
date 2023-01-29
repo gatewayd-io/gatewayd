@@ -36,7 +36,7 @@ type IRegistry interface {
 		ctx context.Context,
 		args map[string]interface{},
 		hookName string,
-		verification config.Policy,
+		verification config.VerificationPolicy,
 		opts ...grpc.CallOption,
 	) (map[string]interface{}, *gerr.GatewayDError)
 }
@@ -47,7 +47,7 @@ type Registry struct {
 
 	Logger       zerolog.Logger
 	CompatPolicy config.CompatPolicy
-	Verification config.Policy
+	Verification config.VerificationPolicy
 }
 
 var _ IRegistry = &Registry{}
@@ -55,7 +55,7 @@ var _ IRegistry = &Registry{}
 // NewRegistry creates a new plugin registry.
 func NewRegistry(
 	compatPolicy config.CompatPolicy,
-	verification config.Policy,
+	verification config.VerificationPolicy,
 	logger zerolog.Logger,
 ) *Registry {
 	return &Registry{
@@ -191,7 +191,7 @@ func (reg *Registry) Run(
 	ctx context.Context,
 	args map[string]interface{},
 	hookName string,
-	verification config.Policy,
+	verification config.VerificationPolicy,
 	opts ...grpc.CallOption,
 ) (map[string]interface{}, *gerr.GatewayDError) {
 	if ctx == nil {

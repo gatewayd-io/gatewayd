@@ -3,10 +3,10 @@ package config
 import "time"
 
 type (
-	Status       uint
-	Policy       uint
-	CompatPolicy uint
-	LogOutput    uint
+	Status             uint
+	VerificationPolicy uint
+	CompatPolicy       uint
+	LogOutput          uint
 )
 
 // Status is the status of the server.
@@ -18,7 +18,7 @@ const (
 // Policy is the policy for hook verification.
 const (
 	// Non-strict (permissive) mode.
-	PassDown Policy = iota // Pass down the extra keys/values in result to the next plugins
+	PassDown VerificationPolicy = iota // Pass down the extra keys/values in result to the next plugins
 	// Strict mode.
 	Ignore // Ignore errors and continue
 	Abort  // Abort on first error and return results
