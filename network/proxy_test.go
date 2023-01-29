@@ -42,6 +42,8 @@ func TestNewProxy(t *testing.T) {
 		DefaultChunkSize,
 		DefaultReceiveDeadline,
 		DefaultSendDeadline,
+		false,
+		DefaultTCPKeepAlivePeriod,
 		logger)
 	err := pool.Put(client.ID, client)
 	assert.Nil(t, err)

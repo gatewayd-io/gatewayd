@@ -100,6 +100,8 @@ func TestRunServer(t *testing.T) {
 		DefaultChunkSize,
 		DefaultReceiveDeadline,
 		DefaultSendDeadline,
+		false,
+		DefaultTCPKeepAlivePeriod,
 		logger)
 	err := pool.Put(client1.ID, client1)
 	assert.Nil(t, err)
@@ -110,6 +112,8 @@ func TestRunServer(t *testing.T) {
 		DefaultChunkSize,
 		DefaultReceiveDeadline,
 		DefaultSendDeadline,
+		false,
+		DefaultTCPKeepAlivePeriod,
 		logger)
 	err = pool.Put(client2.ID, client2)
 	assert.Nil(t, err)
@@ -166,6 +170,8 @@ func TestRunServer(t *testing.T) {
 					DefaultChunkSize,
 					DefaultReceiveDeadline,
 					DefaultSendDeadline,
+					false,
+					DefaultTCPKeepAlivePeriod,
 					logger)
 				defer client.Close()
 
