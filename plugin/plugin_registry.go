@@ -26,7 +26,7 @@ type IPluginRegistry interface {
 }
 
 type PluginRegistry struct {
-	plugins      pool.Pool
+	plugins      pool.IPool
 	hooksConfig  *HookConfig
 	CompatPolicy config.CompatPolicy
 }
