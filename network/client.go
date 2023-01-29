@@ -1,9 +1,11 @@
 package network
 
 import (
-	"fmt"
+	"errors"
+	"io"
 	"net"
 
+	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/rs/zerolog"
 )
 
@@ -58,33 +60,37 @@ func NewClient(network, address string, receiveBufferSize int, logger zerolog.Lo
 	}
 
 	client.Conn = conn
-	if client.ReceiveBufferSize == 0 {
+	if receiveBufferSize <= 0 {
 		client.ReceiveBufferSize = DefaultBufferSize
+	} else {
+		client.ReceiveBufferSize = receiveBufferSize
 	}
+
 	logger.Debug().Msgf("New client created: %s", client.Address)
 	client.ID = GetID(conn.LocalAddr().Network(), conn.LocalAddr().String(), DefaultSeed, logger)
 
 	return &client
 }
 
-func (c *Client) Send(data []byte) error {
-	if _, err := c.Write(data); err != nil {
+func (c *Client) Send(data []byte) (int, error) {
+	sent, err := c.Conn.Write(data)
+	if err != nil {
 		c.logger.Error().Err(err).Msgf("Couldn't send data to the server: %s", err)
-		return fmt.Errorf("couldn't send data to the server: %w", err)
+		// TODO: Wrap the original error
+		return 0, gerr.ErrClientSendFailed
 	}
 	c.logger.Debug().Msgf("Sent %d bytes to %s", len(data), c.Address)
-	return nil
+	return sent, nil
 }
 
 func (c *Client) Receive() (int, []byte, error) {
 	buf := make([]byte, c.ReceiveBufferSize)
-	read, err := c.Read(buf)
-	if err != nil {
-		c.logger.Error().Err(err).Msgf("Couldn't receive data from the server: %s", err)
-		return 0, nil, fmt.Errorf("couldn't receive data from the server: %w", err)
+	received, err := c.Conn.Read(buf)
+	if err != nil && errors.Is(err, io.EOF) {
+		c.logger.Error().Err(err).Msg("Couldn't receive data from the server")
+		return 0, nil, err //nolint:wrapcheck
 	}
-	c.logger.Debug().Msgf("Received %d bytes from %s", read, c.Address)
-	return read, buf, nil
+	return received, buf, err //nolint:wrapcheck
 }
 
 func (c *Client) Close() {
@@ -96,5 +102,26 @@ func (c *Client) Close() {
 	c.Conn = nil
 	c.Address = ""
 	c.Network = ""
-	c.ReceiveBufferSize = 0
+}
+
+// Go returns io.EOF when the server closes the connection.
+// So, if I read 0 bytes and the error is io.EOF or net.ErrClosed, I should reconnect.
+func (c *Client) IsConnected() bool {
+	if c == nil {
+		return false
+	}
+
+	if c != nil && c.Conn == nil || c.ID == "" {
+		c.Close()
+		return false
+	}
+
+	buf := make([]byte, 0)
+	if _, err := c.Read(buf); errors.Is(err, net.ErrClosed) || errors.Is(err, io.EOF) {
+		c.logger.Debug().Msgf("Connection to %s is closed", c.Address)
+		c.Close()
+		return false
+	}
+
+	return true
 }

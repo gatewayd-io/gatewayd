@@ -33,9 +33,10 @@ func TestNewProxy(t *testing.T) {
 	logger := logging.NewLogger(cfg)
 
 	// Create a connection pool
-	pool := pool.NewPool()
+	pool := pool.NewPool(EmptyPoolCapacity)
 	client := NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)
-	pool.Put(client.ID, client)
+	err := pool.Put(client.ID, client)
+	assert.Nil(t, err)
 
 	// Create a proxy with a fixed buffer pool
 	proxy := NewProxy(pool, plugin.NewHookConfig(), false, false, nil, logger)
@@ -63,7 +64,7 @@ func TestNewProxyElastic(t *testing.T) {
 	logger := logging.NewLogger(cfg)
 
 	// Create a connection pool
-	pool := pool.NewPool()
+	pool := pool.NewPool(EmptyPoolCapacity)
 
 	// Create a proxy with an elastic buffer pool
 	proxy := NewProxy(pool, plugin.NewHookConfig(), true, false, &Client{

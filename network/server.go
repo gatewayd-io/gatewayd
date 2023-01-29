@@ -2,10 +2,13 @@ package network
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"time"
 
+	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
@@ -21,7 +24,7 @@ const (
 	DefaultTickInterval = 5 * time.Second
 	DefaultPoolSize     = 10
 	MinimumPoolSize     = 2
-	DefaultBufferSize   = 4096
+	DefaultBufferSize   = 1 << 24 // 16777216 bytes
 )
 
 type Server struct {
@@ -113,7 +116,14 @@ func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 	}
 
 	if err := s.proxy.Connect(gconn); err != nil {
-		return nil, gnet.Close
+		if errors.Is(err, gerr.ErrPoolExhausted) {
+			return nil, gnet.Close
+		}
+
+		// This should never happen
+		// TODO: Send error to client or retry connection
+		s.logger.Error().Err(err).Msg("Failed to connect to proxy")
+		return nil, gnet.None
 	}
 
 	onOpenedData, err := structpb.NewStruct(map[string]interface{}{
@@ -160,12 +170,14 @@ func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 		}
 	}
 
-	if err := s.proxy.Disconnect(gconn); err != nil {
-		s.logger.Error().Err(err).Msg("Failed to disconnect from the client")
-	}
-
+	// Shutdown the server if there are no more connections and the server is stopped
 	if uint64(s.engine.CountConnections()) == 0 && s.Status == Stopped {
 		return gnet.Shutdown
+	}
+
+	if err := s.proxy.Disconnect(gconn); err != nil {
+		s.logger.Error().Err(err).Msg("Failed to disconnect the server connection")
+		return gnet.Close
 	}
 
 	data = map[string]interface{}{
@@ -213,8 +225,19 @@ func (s *Server) OnTraffic(gconn gnet.Conn) gnet.Action {
 	if err := s.proxy.PassThrough(gconn); err != nil {
 		s.logger.Error().Err(err).Msg("Failed to pass through traffic")
 		// TODO: Close the connection *gracefully*
-		return gnet.Close
+		switch {
+		case errors.Is(err, gerr.ErrPoolExhausted):
+		case errors.Is(err, gerr.ErrCastFailed):
+		case errors.Is(err, gerr.ErrClientNotFound):
+		case errors.Is(err, gerr.ErrClientNotConnected):
+		case errors.Is(err, gerr.ErrClientSendFailed):
+		case errors.Is(err, gerr.ErrClientReceiveFailed):
+		case errors.Is(err, io.EOF):
+			return gnet.Close
+		}
 	}
+	// Flush the connection to make sure all data is sent
+	gconn.Flush()
 
 	return gnet.None
 }
