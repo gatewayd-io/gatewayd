@@ -3,6 +3,7 @@ package logging
 import (
 	"bytes"
 	"io"
+	"log"
 	"log/syslog"
 	"os"
 
@@ -78,7 +79,7 @@ func NewLoggerWithBuffer(cfg LoggerConfig, buffer *bytes.Buffer) zerolog.Logger 
 		case config.Syslog:
 			syslogWriter, err := syslog.New(cfg.SyslogPriority, config.DefaultSyslogTag)
 			if err != nil {
-				panic(err)
+				log.Fatal(err)
 			}
 			output = append(output, syslogWriter)
 		case config.RSyslog:
@@ -87,7 +88,7 @@ func NewLoggerWithBuffer(cfg LoggerConfig, buffer *bytes.Buffer) zerolog.Logger 
 			rsyslogWriter, err := syslog.Dial(
 				cfg.RSyslogNetwork, cfg.RSyslogAddress, cfg.SyslogPriority, config.DefaultSyslogTag)
 			if err != nil {
-				panic(err)
+				log.Fatal(err)
 			}
 			output = append(output, zerolog.SyslogLevelWriter(rsyslogWriter))
 		default:
