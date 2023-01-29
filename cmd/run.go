@@ -7,11 +7,14 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 
+	"github.com/NYTimes/gziphandler"
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/logging"
+	"github.com/gatewayd-io/gatewayd/metrics"
 	"github.com/gatewayd-io/gatewayd/network"
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
@@ -20,6 +23,7 @@ import (
 	"github.com/knadh/koanf/providers/confmap"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/panjf2000/gnet/v2"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
@@ -76,6 +80,15 @@ var runCmd = &cobra.Command{
 		// Load plugins and register their hooks.
 		pluginRegistry.LoadPlugins(pConfig.Plugins)
 
+		// Start the metrics merger.
+		metricsMerger := metrics.NewMerger(pConfig.MetricsMergerPeriod, DefaultLogger)
+		pluginRegistry.ForEach(func(_ plugin.Identifier, plugin *plugin.Plugin) {
+			if metricsEnabled, err := strconv.ParseBool(plugin.Config["metricsEnabled"]); err == nil && metricsEnabled {
+				metricsMerger.Add(plugin.ID.Name, plugin.Config["metricsUnixDomainSocket"])
+			}
+		})
+		metricsMerger.Start()
+
 		// Load default global configuration.
 		config.LoadGlobalConfigDefaults(globalConfig)
 
@@ -126,39 +139,64 @@ var runCmd = &cobra.Command{
 			os.Exit(gerr.FailedToLoadGlobalConfig)
 		}
 
-		if gConfig.Metrics[config.Default].Enabled {
-			// Start the metrics server if enabled.
-			go func(
-				gConfig config.GlobalConfig,
-				logger zerolog.Logger,
-				pluginRegistry *plugin.Registry,
-			) {
-				http.Handle(gConfig.Metrics[config.Default].Path, promhttp.Handler())
+		// Start the metrics server if enabled.
+		go func(
+			metricsConfig config.Metrics,
+			pluginRegistry *plugin.Registry,
+			logger zerolog.Logger,
+		) {
+			// TODO: refactor this to a separate function.
+			if !metricsConfig.Enabled {
+				logger.Info().Msg("Metrics server is disabled")
+				return
+			}
 
-				fqdn, err := url.Parse("http://" + gConfig.Metrics[config.Default].Address)
-				if err != nil {
-					logger.Fatal().Err(err).Msg("Failed to parse metrics address")
-					pluginRegistry.Shutdown()
-					os.Exit(gerr.FailedToStartMetricsServer)
-				}
+			fqdn, err := url.Parse("http://" + metricsConfig.Address)
+			if err != nil {
+				logger.Error().Err(err).Msg("Failed to parse metrics address")
+				return
+			}
 
-				address, err := url.JoinPath(fqdn.String(), gConfig.Metrics[config.Default].Path)
-				if err != nil {
-					logger.Fatal().Err(err).Msg("Failed to parse metrics path")
-					pluginRegistry.Shutdown()
-					os.Exit(gerr.FailedToStartMetricsServer)
-				}
+			address, err := url.JoinPath(fqdn.String(), metricsConfig.Path)
+			if err != nil {
+				logger.Error().Err(err).Msg("Failed to parse metrics path")
+				return
+			}
 
-				logger.Info().Str("address", address).Msg("Metrics are exposed")
-				//nolint:gosec
-				if err = http.ListenAndServe(
-					gConfig.Metrics[config.Default].Address, nil); err != nil {
-					logger.Fatal().Err(err).Msg("Failed to start metrics server")
-					pluginRegistry.Shutdown()
-					os.Exit(gerr.FailedToStartMetricsServer)
+			// Merge the metrics from the plugins with the ones from GatewayD.
+			mergedMetricsHandler := func(next http.Handler) http.Handler {
+				handler := func(w http.ResponseWriter, r *http.Request) {
+					w.Write(metricsMerger.OutputMetrics)
+					next.ServeHTTP(w, r)
 				}
-			}(gConfig, DefaultLogger, pluginRegistry)
-		}
+				return http.HandlerFunc(handler)
+			}
+
+			decompressedGatewayDMetricsHandler := func() http.Handler {
+				return promhttp.InstrumentMetricHandler(
+					prometheus.DefaultRegisterer,
+					promhttp.HandlerFor(prometheus.DefaultGatherer, promhttp.HandlerOpts{
+						DisableCompression: true,
+					}),
+				)
+			}
+
+			logger.Info().Str("address", address).Msg("Metrics are exposed")
+			http.Handle(
+				metricsConfig.Path,
+				gziphandler.GzipHandler(
+					mergedMetricsHandler(
+						decompressedGatewayDMetricsHandler(),
+					),
+				),
+			)
+
+			//nolint:gosec
+			if err = http.ListenAndServe(
+				metricsConfig.Address, nil); err != nil {
+				logger.Error().Err(err).Msg("Failed to start metrics server")
+			}
+		}(gConfig.Metrics[config.Default], pluginRegistry, DefaultLogger)
 
 		// Create a new logger from the config.
 		loggerCfg := gConfig.Loggers[config.Default]
@@ -172,6 +210,7 @@ var runCmd = &cobra.Command{
 
 		// Replace the default logger with the new one from the config.
 		pluginRegistry.Logger = logger
+		metricsMerger.Logger = logger
 
 		// This is a notification hook, so we don't care about the result.
 		data := map[string]interface{}{
@@ -364,6 +403,7 @@ var runCmd = &cobra.Command{
 							logger.Error().Err(err).Msg("Failed to run OnSignal hooks")
 						}
 
+						metricsMerger.Stop()
 						server.Shutdown()
 						pluginRegistry.Shutdown()
 						os.Exit(0)
@@ -375,6 +415,7 @@ var runCmd = &cobra.Command{
 		// Run the server.
 		if err := server.Run(); err != nil {
 			logger.Error().Err(err).Msg("Failed to start server")
+			metricsMerger.Stop()
 			server.Shutdown()
 			pluginRegistry.Shutdown()
 			os.Exit(gerr.FailedToStartServer)
