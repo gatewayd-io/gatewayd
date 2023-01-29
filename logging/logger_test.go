@@ -15,10 +15,9 @@ func TestNewLogger_Console(t *testing.T) {
 	consoleStdout := capturer.CaptureStdout(func() {
 		logger := NewLogger(
 			LoggerConfig{
-				Output:     config.Console,
+				Output:     []config.LogOutput{config.Console},
 				Level:      zerolog.DebugLevel,
 				TimeFormat: zerolog.TimeFormatUnix,
-				StartupMsg: true,
 				NoColor:    true,
 			},
 		)
@@ -27,10 +26,8 @@ func TestNewLogger_Console(t *testing.T) {
 		logger.Error().Str("key", "value").Msg("This is an error")
 	})
 
-	assert.Contains(t, consoleStdout, "Created a new logger")
-	assert.Contains(t, consoleStdout, "DBG")
-	assert.Contains(t, consoleStdout, "This is an error")
 	assert.Contains(t, consoleStdout, "ERR")
+	assert.Contains(t, consoleStdout, "This is an error")
 	assert.Contains(t, consoleStdout, "key=value")
 }
 
@@ -38,16 +35,16 @@ func TestNewLogger_Console(t *testing.T) {
 func TestNewLogger_File(t *testing.T) {
 	logger := NewLogger(
 		LoggerConfig{
-			Output:     config.File,
-			FileName:   "gatewayd.log",
-			MaxSize:    config.DefaultMaxSize,
-			MaxBackups: config.DefaultMaxBackups,
-			MaxAge:     config.DefaultMaxAge,
-			Compress:   config.DefaultCompress,
-			Level:      zerolog.DebugLevel,
-			TimeFormat: zerolog.TimeFormatUnix,
-			StartupMsg: true,
-			NoColor:    true,
+			Output:            []config.LogOutput{config.File},
+			FileName:          "gatewayd.log",
+			ConsoleTimeFormat: config.DefaultConsoleTimeFormat,
+			MaxSize:           config.DefaultMaxSize,
+			MaxBackups:        config.DefaultMaxBackups,
+			MaxAge:            config.DefaultMaxAge,
+			Compress:          config.DefaultCompress,
+			Level:             zerolog.DebugLevel,
+			TimeFormat:        zerolog.TimeFormatUnix,
+			NoColor:           true,
 		},
 	)
 	assert.NotNil(t, logger)
@@ -57,7 +54,7 @@ func TestNewLogger_File(t *testing.T) {
 	f, err := os.ReadFile("gatewayd.log")
 	assert.NoError(t, err)
 	assert.NotEmpty(t, f)
-	assert.Containsf(t, string(f), "Created a new logger", "The logger did not write to the file")
+	assert.Contains(t, string(f), "This is an error")
 	os.Remove("gatewayd.log")
 }
 
@@ -66,10 +63,9 @@ func TestNewLogger_Stdout(t *testing.T) {
 	stdout := capturer.CaptureStdout(func() {
 		logger := NewLogger(
 			LoggerConfig{
-				Output:     config.Stdout,
+				Output:     []config.LogOutput{config.Stdout},
 				Level:      zerolog.DebugLevel,
 				TimeFormat: zerolog.TimeFormatUnix,
-				StartupMsg: true,
 				NoColor:    true,
 			},
 		)
@@ -78,10 +74,8 @@ func TestNewLogger_Stdout(t *testing.T) {
 		logger.Error().Str("key", "value").Msg("This is an error")
 	})
 
-	assert.Contains(t, stdout, "Created a new logger")
-	assert.Contains(t, stdout, `"level":"debug"`)
-	assert.Contains(t, stdout, "This is an error")
 	assert.Contains(t, stdout, `"level":"error"`)
+	assert.Contains(t, stdout, "This is an error")
 	assert.Contains(t, stdout, `"key":"value"`)
 }
 
@@ -90,10 +84,9 @@ func TestNewLogger_Stderr(t *testing.T) {
 	stderr := capturer.CaptureStderr(func() {
 		logger := NewLogger(
 			LoggerConfig{
-				Output:     config.Stderr,
+				Output:     []config.LogOutput{config.Stderr},
 				Level:      zerolog.DebugLevel,
 				TimeFormat: zerolog.TimeFormatUnix,
-				StartupMsg: true,
 				NoColor:    true,
 			},
 		)
@@ -102,9 +95,7 @@ func TestNewLogger_Stderr(t *testing.T) {
 		logger.Error().Str("key", "value").Msg("This is an error")
 	})
 
-	assert.Contains(t, stderr, "Created a new logger")
-	assert.Contains(t, stderr, `"level":"debug"`)
-	assert.Contains(t, stderr, "This is an error")
 	assert.Contains(t, stderr, `"level":"error"`)
+	assert.Contains(t, stderr, "This is an error")
 	assert.Contains(t, stderr, `"key":"value"`)
 }

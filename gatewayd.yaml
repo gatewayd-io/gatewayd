@@ -2,16 +2,18 @@
 
 loggers:
   default:
-    output: "console" # stdout, stderr or file
+    output: ["console", "file"] #, "stdout", "stderr", "file"]
     level: "debug" # panic, fatal, error, warn, info (default), debug, trace
     noColor: False
     timeFormat: "unix" # unixms, unixmicro and unixnano
+    consoleTimeFormat: "RFC3339" # Go time format string
     # If output is file, the following fields are used.
     fileName: "gatewayd.log"
     maxSize: 500 # MB
     maxBackups: 5
     maxAge: 30 # days
     compress: True
+    localTime: True
 
 clients:
   default:

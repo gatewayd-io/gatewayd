@@ -16,10 +16,11 @@ func NewPluginRegistry(t *testing.T) *Registry {
 	t.Helper()
 
 	cfg := logging.LoggerConfig{
-		Output:     config.Console,
-		TimeFormat: zerolog.TimeFormatUnix,
-		Level:      zerolog.DebugLevel,
-		NoColor:    true,
+		Output:            []config.LogOutput{config.Console},
+		TimeFormat:        zerolog.TimeFormatUnix,
+		ConsoleTimeFormat: config.DefaultConsoleTimeFormat,
+		Level:             zerolog.DebugLevel,
+		NoColor:           true,
 	}
 	logger := logging.NewLogger(cfg)
 	reg := NewRegistry(config.Loose, config.PassDown, config.Accept, logger)
