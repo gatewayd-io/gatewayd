@@ -31,6 +31,18 @@ func TestRunServer(t *testing.T) {
 		return nil
 	}
 
+	// Create a connection pool
+	pool := NewPool()
+	assert.NoError(t, pool.Put(NewClient("tcp", "localhost:5432", DefaultBufferSize)))
+	assert.NoError(t, pool.Put(NewClient("tcp", "localhost:5432", DefaultBufferSize)))
+
+	// Create a proxy with a fixed buffer pool
+	proxy := NewProxy(pool, false, false, &Client{
+		Network:           "tcp",
+		Address:           "localhost:5432",
+		ReceiveBufferSize: DefaultBufferSize,
+	})
+
 	// Create a server
 	server := NewServer(
 		"tcp",
@@ -38,15 +50,12 @@ func TestRunServer(t *testing.T) {
 		0,
 		0,
 		DefaultTickInterval,
-		2,
-		DefaultBufferSize,
-		false,
-		false,
 		[]gnet.Option{
 			gnet.WithMulticore(true),
 		},
 		onIncomingTraffic,
 		onOutgoingTraffic,
+		proxy,
 	)
 	assert.NotNil(t, server)
 
