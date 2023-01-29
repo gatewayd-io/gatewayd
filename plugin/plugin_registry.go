@@ -233,13 +233,13 @@ func (reg *PluginRegistry) LoadPlugins(plugins []config.Plugin) {
 				"Failed to dispense plugin")
 			continue
 		} else {
-			if md, origErr := pluginV1.GetPluginConfig(
+			if meta, origErr := pluginV1.GetPluginConfig(
 				context.Background(), &structpb.Struct{}); err != nil {
 				reg.hooksConfig.Logger.Debug().Str("name", plugin.ID.Name).Err(origErr).Msg(
 					"Failed to get plugin metadata")
 				continue
 			} else {
-				metadata = md
+				metadata = meta
 			}
 		}
 
