@@ -36,8 +36,16 @@ func TestRunServer(t *testing.T) {
 		}
 
 		logger.Info().Msg("Incoming traffic")
-		assert.Equal(t, CreatePgStartupPacket(), params["buffer"].([]byte))
-		assert.Nil(t, params["error"].(error))
+		if buf, ok := params["buffer"].([]byte); ok {
+			assert.Equal(t, CreatePgStartupPacket(), buf)
+		} else {
+			t.Fatal("buffer is not a []byte")
+		}
+		if err, ok := params["error"].(error); ok {
+			assert.Nil(t, err)
+		} else {
+			t.Fatal("error is not an instance of error")
+		}
 		return nil
 	}
 	hooksConfig.AddHook(OnIncomingTraffic, 1, onIncomingTraffic)
@@ -48,9 +56,17 @@ func TestRunServer(t *testing.T) {
 		}
 
 		logger.Info().Msg("Outgoing traffic")
-		assert.Equal(
-			t, CreatePostgreSQLPacket('R', []byte{0x0, 0x0, 0x0, 0x3}), params["buffer"].([]byte))
-		assert.Nil(t, params["error"].(error))
+		if buf, ok := params["buffer"].([]byte); ok {
+			assert.Equal(
+				t, CreatePostgreSQLPacket('R', []byte{0x0, 0x0, 0x0, 0x3}), buf)
+		} else {
+			t.Fatal("buffer is not a []byte")
+		}
+		if err, ok := params["error"].(error); ok {
+			assert.Nil(t, err)
+		} else {
+			t.Fatal("error is not an instance of error")
+		}
 		return nil
 	}
 	hooksConfig.AddHook(OnOutgoingTraffic, 1, onOutgoingTraffic)

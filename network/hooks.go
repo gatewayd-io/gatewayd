@@ -78,10 +78,12 @@ func verify(params, returnVal Signature) bool {
 	return true
 }
 
+//nolint:funlen
 func (h *HookConfig) RunHooks(
-	hookType HookType, args Signature, verification Policy) Signature {
+	hookType HookType, args Signature, verification Policy,
+) Signature {
 	// Sort hooks by priority
-	var priorities []Prio
+	priorities := make([]Prio, 0, len(h.hooks[hookType]))
 	for prio := range h.hooks[hookType] {
 		priorities = append(priorities, prio)
 	}
@@ -94,7 +96,7 @@ func (h *HookConfig) RunHooks(
 	var removeList []Prio
 	// The signature of parameters and args MUST be the same for this to work
 	for idx, prio := range priorities {
-		result := make(Signature)
+		var result Signature
 		if idx == 0 {
 			result = h.hooks[hookType][prio](args)
 		} else {
@@ -103,53 +105,54 @@ func (h *HookConfig) RunHooks(
 
 		// This is done to ensure that the return value of the hook is always valid,
 		// and that the hook does not return any unexpected values.
-		if !verify(args, result) {
-			// The result of the current hook will be ignored, regardless of the policy.
-			switch verification {
-			case Ignore:
-				errMsg := fmt.Sprintf(
-					"Hook %s (Prio %d) returned invalid value, ignoring", hookType, prio)
-				// Logger is not available when loading configuration, so we can't log anything
-				if hookType != OnConfigLoaded {
-					h.Logger.Error().Msgf(errMsg)
-				} else {
-					panic(errMsg)
-				}
-				if idx == 0 {
-					returnVal = args
-				}
-				continue
-			case Abort:
-				errMsg := fmt.Sprintf(
-					"Hook %s (Prio %d) returned invalid value, aborting", hookType, prio)
-				if hookType != OnConfigLoaded {
-					h.Logger.Error().Msgf(errMsg)
-				} else {
-					panic(errMsg)
-				}
-				if idx == 0 {
-					return args
-				} else {
-					return returnVal
-				}
-			case Remove:
-				errMsg := fmt.Sprintf(
-					"Hook %s (Prio %d) returned invalid value, removing", hookType, prio)
-				if hookType != OnConfigLoaded {
-					h.Logger.Error().Msgf(errMsg)
-				} else {
-					panic(errMsg)
-				}
-				removeList = append(removeList, prio)
-				if idx == 0 {
-					returnVal = args
-				}
-				continue
-			}
+		if verify(args, result) {
+			// Update the last return value with the current result
+			returnVal = result
+			continue
 		}
 
-		// Update the last return value with the current result
-		returnVal = result
+		// At this point, the hook returned an invalid value, so we need to handle it.
+		// The result of the current hook will be ignored, regardless of the policy.
+		switch verification {
+		case Ignore:
+			errMsg := fmt.Sprintf(
+				"Hook %s (Prio %d) returned invalid value, ignoring", hookType, prio)
+			// Logger is not available when loading configuration, so we can't log anything
+			if hookType != OnConfigLoaded {
+				h.Logger.Error().Msgf(errMsg)
+			} else {
+				panic(errMsg)
+			}
+			if idx == 0 {
+				returnVal = args
+			}
+			continue
+		case Abort:
+			errMsg := fmt.Sprintf(
+				"Hook %s (Prio %d) returned invalid value, aborting", hookType, prio)
+			if hookType != OnConfigLoaded {
+				h.Logger.Error().Msgf(errMsg)
+			} else {
+				panic(errMsg)
+			}
+			if idx == 0 {
+				return args
+			}
+			return returnVal
+		case Remove:
+			errMsg := fmt.Sprintf(
+				"Hook %s (Prio %d) returned invalid value, removing", hookType, prio)
+			if hookType != OnConfigLoaded {
+				h.Logger.Error().Msgf(errMsg)
+			} else {
+				panic(errMsg)
+			}
+			removeList = append(removeList, prio)
+			if idx == 0 {
+				returnVal = args
+			}
+			continue
+		}
 	}
 
 	// Remove hooks that failed verification
