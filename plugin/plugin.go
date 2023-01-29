@@ -16,6 +16,8 @@ type IPlugin interface {
 	Dispense() (v1.GatewayDPluginServiceClient, *gerr.GatewayDError)
 }
 
+var _ IPlugin = &Plugin{}
+
 // Start starts the plugin.
 func (p *Plugin) Start() (net.Addr, error) {
 	var addr net.Addr
