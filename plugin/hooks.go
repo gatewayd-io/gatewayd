@@ -107,7 +107,7 @@ func (h *HookConfig) Get(hookType HookType) map[Priority]HookDef {
 // are passed down to the next hook. The verification mode is set to PassDown by default.
 // The opts are passed to the hooks as well to allow them to use the grpc.CallOption.
 //
-//nolint:funlen,contextcheck
+//nolint:funlen
 func (h *HookConfig) Run(
 	ctx context.Context,
 	args map[string]interface{},
@@ -116,8 +116,12 @@ func (h *HookConfig) Run(
 	opts ...grpc.CallOption,
 ) (map[string]interface{}, *gerr.GatewayDError) {
 	if ctx == nil {
-		ctx = context.Background()
+		return nil, gerr.ErrNilContext
 	}
+
+	// Inherit context.
+	inheritedCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
 	// Create structpb.Struct from args.
 	var params *structpb.Struct
@@ -147,10 +151,10 @@ func (h *HookConfig) Run(
 		var err error
 		if idx == 0 {
 			// TODO: Run hooks from the registry
-			result, err = h.hooks[hookType][prio](ctx, params, opts...)
+			result, err = h.hooks[hookType][prio](inheritedCtx, params, opts...)
 		} else {
 			// TODO: Run hooks from the registry
-			result, err = h.hooks[hookType][prio](ctx, returnVal, opts...)
+			result, err = h.hooks[hookType][prio](inheritedCtx, returnVal, opts...)
 		}
 
 		// This is done to ensure that the return value of the hook is always valid,
