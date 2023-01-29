@@ -5,6 +5,7 @@ go 1.19
 require (
 	github.com/fergusstrange/embedded-postgres v1.19.0
 	github.com/google/go-cmp v0.5.9
+	github.com/hashicorp/go-hclog v1.4.0
 	github.com/hashicorp/go-plugin v1.4.8
 	github.com/knadh/koanf v1.4.4
 	github.com/mitchellh/mapstructure v1.5.0
@@ -21,7 +22,6 @@ require (
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/hashicorp/go-hclog v1.4.0 // indirect
 	github.com/hashicorp/yamux v0.1.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/lib/pq v1.10.7 // indirect
