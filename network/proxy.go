@@ -73,7 +73,7 @@ func (pr *ProxyImpl) Connect(gconn gnet.Conn) error {
 	} else {
 		// Get a client from the pool
 		pr.logger.Debug().Msgf("Available clients: %v", len(clientIDs))
-		if cl, ok := pr.availableConnections.Pop(clientIDs[0]).(*Client); !ok {
+		if cl, ok := pr.availableConnections.Pop(clientIDs[0]).(*Client); ok {
 			client = cl
 		}
 	}
