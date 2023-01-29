@@ -89,6 +89,8 @@ func (p *PoolImpl) Shutdown() {
 		p.pool.Delete(key)
 		return true
 	})
+
+	p.pool = sync.Map{}
 }
 
 func NewPool() *PoolImpl {
