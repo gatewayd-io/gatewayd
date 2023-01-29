@@ -218,7 +218,7 @@ func (s *Server) OnTraffic(gconn gnet.Conn) gnet.Action {
 	// Pass the traffic from the client to server and vice versa.
 	// If there is an error, log it and close the connection.
 	if err := s.proxy.PassThrough(gconn); err != nil {
-		s.logger.Error().Err(err).Msg("Failed to pass through traffic")
+		s.logger.Warn().Err(err).Msg("Failed to pass through traffic")
 		switch {
 		case errors.Is(err, gerr.ErrPoolExhausted),
 			errors.Is(err, gerr.ErrCastFailed),
