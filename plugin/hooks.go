@@ -93,6 +93,7 @@ func (h *HookConfig) Run(
 	verification Policy,
 	opts ...grpc.CallOption,
 ) (*structpb.Struct, error) {
+	// TODO: accept args as map[string]interface{} and convert to structpb.Struct
 	if ctx == nil {
 		ctx = context.Background()
 	}
