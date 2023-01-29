@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/gatewayd-io/gatewayd/config"
+	"github.com/gatewayd-io/gatewayd/plugin/hook"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -62,7 +63,7 @@ func Test_HookConfig_Get(t *testing.T) {
 	) (*structpb.Struct, error) {
 		return args, nil
 	}
-	prio := Priority(0)
+	prio := hook.Priority(0)
 	hooks.Add(OnNewLogger, prio, testFunc)
 	assert.NotNil(t, hooks.Get(OnNewLogger))
 	assert.ObjectsAreEqual(testFunc, hooks.Get(OnNewLogger)[prio])
