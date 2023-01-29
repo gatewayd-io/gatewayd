@@ -7,11 +7,14 @@ import (
 	"github.com/rs/zerolog"
 )
 
+type OnNewLogger func(zerolog.Logger)
+
 type LoggerConfig struct {
-	Output     io.Writer
-	TimeFormat string
-	Level      zerolog.Level
-	NoColor    bool
+	Output      io.Writer
+	TimeFormat  string
+	Level       zerolog.Level
+	NoColor     bool
+	OnNewLogger OnNewLogger
 }
 
 func NewLogger(cfg LoggerConfig) zerolog.Logger {

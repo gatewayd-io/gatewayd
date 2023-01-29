@@ -110,6 +110,7 @@ func NewPool(
 	logger zerolog.Logger,
 	poolSize int,
 	clientConfig *Client,
+	onNewClient map[Prio]HookDef,
 ) *PoolImpl {
 	pool := PoolImpl{
 		pool:   sync.Map{},
@@ -124,6 +125,11 @@ func NewPool(
 			clientConfig.ReceiveBufferSize,
 			logger,
 		)
+
+		for _, hook := range onNewClient {
+			hook(client)
+		}
+
 		if client != nil {
 			if err := pool.Put(client); err != nil {
 				logger.Panic().Err(err).Msg("Failed to add client to pool")

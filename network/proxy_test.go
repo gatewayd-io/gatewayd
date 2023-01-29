@@ -31,7 +31,7 @@ func TestNewProxy(t *testing.T) {
 	logger := logging.NewLogger(cfg)
 
 	// Create a connection pool
-	pool := NewPool(logger, 0, nil)
+	pool := NewPool(logger, 0, nil, nil)
 	assert.NoError(t, pool.Put(NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)))
 
 	// Create a proxy with a fixed buffer pool
@@ -58,7 +58,7 @@ func TestNewProxyElastic(t *testing.T) {
 	logger := logging.NewLogger(cfg)
 
 	// Create a connection pool
-	pool := NewPool(logger, 0, nil)
+	pool := NewPool(logger, 0, nil, nil)
 
 	// Create a proxy with an elastic buffer pool
 	proxy := NewProxy(pool, true, false, &Client{
