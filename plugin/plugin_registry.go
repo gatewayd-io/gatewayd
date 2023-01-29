@@ -247,6 +247,7 @@ func (reg *Registry) Run(
 	// The signature of parameters and args MUST be the same for this to work.
 	for idx, priority := range priorities {
 		var result *structpb.Struct
+		// TODO: Handle errors properly.
 		var err error
 		if idx == 0 {
 			result, err = reg.hooks[hookName][priority](inheritedCtx, params, opts...)
