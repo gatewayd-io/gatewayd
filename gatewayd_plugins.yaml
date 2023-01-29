@@ -1,5 +1,11 @@
 # Plugin configuration file for GatewayD
 
+plugins:
+  # Possible values: "passdown" (default), "ignore", "abort" and "remove"
+  verificationPolicy: "passdown"
+  # Possible values: "strict" (default) and "loose"
+  compatibilityPolicy: "strict"
+
 # Plugin name
 gatewayd-plugin-test:
   # whether to enable or disable the plugin on the next run
