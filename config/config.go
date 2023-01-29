@@ -77,6 +77,9 @@ func (c *Config) LoadDefaults() {
 				"maxAge":            DefaultMaxAge,
 				"compress":          DefaultCompress,
 				"localTime":         DefaultLocalTime,
+				"rsyslogNetwork":    DefaultRSyslogNetwork,
+				"rsyslogAddress":    DefaultRSyslogAddress,
+				"syslogPriority":    DefaultSyslogPriority,
 			},
 		},
 		"clients": map[string]interface{}{

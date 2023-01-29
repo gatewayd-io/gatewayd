@@ -54,8 +54,8 @@ const (
 )
 
 var (
-	DefaultLogOutput       = [...]string{"console"}
-	DefaultRSyslogPriority = syslog.LOG_LOCAL0 | syslog.LOG_DEBUG //nolint:nosnakecase
+	DefaultLogOutput      = [...]string{"console"}
+	DefaultSyslogPriority = syslog.LOG_LOCAL0 | syslog.LOG_DEBUG //nolint:nosnakecase
 )
 
 const (
@@ -75,7 +75,7 @@ const (
 	DefaultLocalTime         = false
 	DefaultSyslogTag         = "gatewayd"
 	DefaultRSyslogNetwork    = "tcp"
-	DefaultRSyslogRAddress   = "localhost:514"
+	DefaultRSyslogAddress    = "localhost:514"
 
 	// Plugin constants.
 	DefaultMinPort             = 50000

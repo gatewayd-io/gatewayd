@@ -26,7 +26,7 @@ type LoggerConfig struct {
 	NoColor           bool
 	ConsoleTimeFormat string
 
-	// Syslog configuration.
+	// (R)Syslog configuration.
 	RSyslogNetwork string
 	RSyslogAddress string
 	SyslogPriority syslog.Priority
