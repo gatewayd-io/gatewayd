@@ -329,7 +329,7 @@ func (reg *PluginRegistry) RegisterHooks(id Identifier) {
 	}
 
 	for _, hookType := range pluginImpl.Hooks {
-		var hookFunc hook.HookDef
+		var hookFunc hook.FunctionType
 		switch hookType {
 		case hook.OnConfigLoaded:
 			hookFunc = pluginV1.OnConfigLoaded

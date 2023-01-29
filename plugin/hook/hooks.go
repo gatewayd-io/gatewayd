@@ -38,7 +38,7 @@ const (
 )
 
 type Config struct {
-	hooks        map[Type]map[Priority]HookDef
+	hooks        map[Type]map[Priority]FunctionType
 	Logger       zerolog.Logger
 	Verification config.Policy
 }
@@ -46,19 +46,19 @@ type Config struct {
 // NewHookConfig returns a new Config.
 func NewHookConfig() *Config {
 	return &Config{
-		hooks: map[Type]map[Priority]HookDef{},
+		hooks: map[Type]map[Priority]FunctionType{},
 	}
 }
 
 // Hooks returns the hooks.
-func (h *Config) Hooks() map[Type]map[Priority]HookDef {
+func (h *Config) Hooks() map[Type]map[Priority]FunctionType {
 	return h.hooks
 }
 
 // Add adds a hook with a priority to the hooks map.
-func (h *Config) Add(hookType Type, prio Priority, hookFunc HookDef) {
+func (h *Config) Add(hookType Type, prio Priority, hookFunc FunctionType) {
 	if len(h.hooks[hookType]) == 0 {
-		h.hooks[hookType] = map[Priority]HookDef{prio: hookFunc}
+		h.hooks[hookType] = map[Priority]FunctionType{prio: hookFunc}
 	} else {
 		if _, ok := h.hooks[hookType][prio]; ok {
 			h.Logger.Warn().Fields(
@@ -73,7 +73,7 @@ func (h *Config) Add(hookType Type, prio Priority, hookFunc HookDef) {
 }
 
 // Get returns the hooks of a specific type.
-func (h *Config) Get(hookType Type) map[Priority]HookDef {
+func (h *Config) Get(hookType Type) map[Priority]FunctionType {
 	return h.hooks[hookType]
 }
 
