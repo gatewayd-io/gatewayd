@@ -70,13 +70,15 @@ func NewClient(network, address string, receiveBufferSize int, logger zerolog.Lo
 	return &client
 }
 
-func (c *Client) Send(data []byte) error {
-	if _, err := c.Write(data); err != nil {
+func (c *Client) Send(data []byte) (int, error) {
+	if sent, err := c.Conn.Write(data); err != nil {
 		c.logger.Error().Err(err).Msgf("Couldn't send data to the server: %s", err)
-		return fmt.Errorf("couldn't send data to the server: %w", err)
+		// TODO: Wrap the original error
+		return 0, gerr.ErrClientSendFailed
+	} else {
+		c.logger.Debug().Msgf("Sent %d bytes to %s", len(data), c.Address)
+		return sent, nil
 	}
-	c.logger.Debug().Msgf("Sent %d bytes to %s", len(data), c.Address)
-	return nil
 }
 
 func (c *Client) Receive() (int, []byte, error) {
