@@ -40,8 +40,6 @@ func NewLogger(cfg LoggerConfig) zerolog.Logger {
 }
 
 // NewLoggerWithBuffer creates a new logger with the given configuration.
-//
-//nolint:funlen
 func NewLoggerWithBuffer(cfg LoggerConfig, buffer ...*bytes.Buffer) zerolog.Logger {
 	// Create a new logger.
 	consoleWriter := zerolog.ConsoleWriter{
