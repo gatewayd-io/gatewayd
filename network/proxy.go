@@ -140,8 +140,8 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 	}
 
 	result := pr.hookConfig.Run(
-		OnIngressTraffic,
-		Signature{
+		plugin.OnIngressTraffic,
+		plugin.Signature{
 			"gconn":  gconn,
 			"client": client,
 			"buffer": buf,
@@ -172,8 +172,8 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 	// Receive the response from the server
 	size, response, err := client.Receive()
 	result = pr.hookConfig.Run(
-		OnEgressTraffic,
-		Signature{
+		plugin.OnEgressTraffic,
+		plugin.Signature{
 			"gconn":    gconn,
 			"client":   client,
 			"response": response[:size],

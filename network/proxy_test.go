@@ -5,6 +5,7 @@ import (
 
 	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
 	"github.com/gatewayd-io/gatewayd/logging"
+	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
@@ -37,7 +38,7 @@ func TestNewProxy(t *testing.T) {
 	pool.Put(client.ID, client)
 
 	// Create a proxy with a fixed buffer pool
-	proxy := NewProxy(pool, NewHookConfig(), false, false, nil, logger)
+	proxy := NewProxy(pool, plugin.NewHookConfig(), false, false, nil, logger)
 
 	assert.NotNil(t, proxy)
 	assert.Equal(t, 0, proxy.busyConnections.Size(), "Proxy should have no connected clients")
@@ -65,7 +66,7 @@ func TestNewProxyElastic(t *testing.T) {
 	pool := pool.NewPool()
 
 	// Create a proxy with an elastic buffer pool
-	proxy := NewProxy(pool, NewHookConfig(), true, false, &Client{
+	proxy := NewProxy(pool, plugin.NewHookConfig(), true, false, &Client{
 		Network:           "tcp",
 		Address:           "localhost:5432",
 		ReceiveBufferSize: DefaultBufferSize,
