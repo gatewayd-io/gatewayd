@@ -144,7 +144,7 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 			&goplugin.ClientConfig{
 				HandshakeConfig: handshakeConfig,
 				Plugins:         pluginV1.GetPluginMap(plugin.ID.Name),
-				Cmd:             exec.Command(plugin.LocalPath),
+				Cmd:             exec.Command(plugin.LocalPath), //nolint:gosec
 				AllowedProtocols: []goplugin.Protocol{
 					goplugin.ProtocolGRPC,
 				},
