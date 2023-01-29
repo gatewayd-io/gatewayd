@@ -9,7 +9,6 @@ import (
 	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
 	"golang.org/x/exp/maps"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 const (
@@ -198,26 +197,21 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 	}
 	maps.Copy(ingress, addresses)
 
-	//nolint:nestif
-	if ingressData, intErr := structpb.NewStruct(ingress); intErr != nil {
-		pr.logger.Error().Err(intErr).Msgf("Error creating ingress data: %v", err)
-	} else {
-		result, err := pr.hookConfig.Run(
-			context.Background(),
-			ingressData,
-			plugin.OnIngressTraffic,
-			pr.hookConfig.Verification)
-		if err != nil {
-			pr.logger.Error().Err(err).Msgf("Error running hook: %v", err)
-		}
+	result, err := pr.hookConfig.Run(
+		context.Background(),
+		ingress,
+		plugin.OnIngressTraffic,
+		pr.hookConfig.Verification)
+	if err != nil {
+		pr.logger.Error().Err(err).Msgf("Error running hook: %v", err)
+	}
 
-		if result != nil {
-			if buffer, ok := result.AsMap()["buffer"].([]byte); ok {
-				buf = buffer
-			}
-			if errMsg, ok := result.AsMap()["error"].(string); ok && errMsg != "" {
-				pr.logger.Error().Msgf("Error in hook: %s", errMsg)
-			}
+	if result != nil {
+		if buffer, ok := result["buffer"].([]byte); ok {
+			buf = buffer
+		}
+		if errMsg, ok := result["error"].(string); ok && errMsg != "" {
+			pr.logger.Error().Msgf("Error in hook: %s", errMsg)
 		}
 	}
 
@@ -255,26 +249,21 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 	}
 	maps.Copy(egress, addresses)
 
-	//nolint:nestif
-	if egressData, intErr := structpb.NewStruct(egress); intErr != nil {
-		pr.logger.Error().Err(intErr).Msgf("Error creating egress data: %v", err)
-	} else {
-		result, err := pr.hookConfig.Run(
-			context.Background(),
-			egressData,
-			plugin.OnEgressTraffic,
-			pr.hookConfig.Verification)
-		if err != nil {
-			pr.logger.Error().Err(err).Msgf("Error running hook: %v", err)
-		}
+	result, err = pr.hookConfig.Run(
+		context.Background(),
+		egress,
+		plugin.OnEgressTraffic,
+		pr.hookConfig.Verification)
+	if err != nil {
+		pr.logger.Error().Err(err).Msgf("Error running hook: %v", err)
+	}
 
-		if result != nil {
-			if resp, ok := result.AsMap()["response"].([]byte); ok {
-				response = resp
-			}
-			if errMsg, ok := result.AsMap()["error"].(string); ok && errMsg != "" {
-				pr.logger.Error().Msgf("Error in hook: %s", errMsg)
-			}
+	if result != nil {
+		if resp, ok := result["response"].([]byte); ok {
+			response = resp
+		}
+		if errMsg, ok := result["error"].(string); ok && errMsg != "" {
+			pr.logger.Error().Msgf("Error in hook: %s", errMsg)
 		}
 	}
 
