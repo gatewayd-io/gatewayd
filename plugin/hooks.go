@@ -1,22 +1,24 @@
 package plugin
 
 import (
+	"context"
 	"fmt"
 	"sort"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/rs/zerolog"
+	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type (
-	// Prio is the priority of a hook.
+	// Priority is the priority of a hook.
 	// Smaller values are executed first (higher priority).
-	Prio      uint
+	Priority  uint
 	HookType  string
 	Signature map[string]interface{}
-	HookDef   func(Signature) Signature
-	Policy    int
+	HookDef   func(
+		context.Context, *structpb.Struct, ...grpc.CallOption) (*structpb.Struct, error)
+	Policy int
 )
 
 const (
@@ -51,29 +53,27 @@ const (
 	OnTick           HookType = "onTick"
 	// Pool hooks (network/pool.go).
 	OnNewClient HookType = "onNewClient"
-	// Plugin hooks (plugin/plugin.go).
-	OnNewPlugin HookType = "onNewPlugin"
 )
 
 type HookConfig struct {
-	hooks        map[HookType]map[Prio]HookDef
+	hooks        map[HookType]map[Priority]HookDef
 	Logger       zerolog.Logger
 	Verification Policy
 }
 
 func NewHookConfig() *HookConfig {
 	return &HookConfig{
-		hooks: map[HookType]map[Prio]HookDef{},
+		hooks: map[HookType]map[Priority]HookDef{},
 	}
 }
 
-func (h *HookConfig) Hooks() map[HookType]map[Prio]HookDef {
+func (h *HookConfig) Hooks() map[HookType]map[Priority]HookDef {
 	return h.hooks
 }
 
-func (h *HookConfig) Add(hookType HookType, prio Prio, hook HookDef) {
+func (h *HookConfig) Add(hookType HookType, prio Priority, hook HookDef) {
 	if len(h.hooks[hookType]) == 0 {
-		h.hooks[hookType] = map[Prio]HookDef{prio: hook}
+		h.hooks[hookType] = map[Priority]HookDef{prio: hook}
 	} else {
 		if _, ok := h.hooks[hookType][prio]; ok {
 			h.Logger.Warn().Msgf("Hook %s replaced with priority %d.", hookType, prio)
@@ -82,25 +82,24 @@ func (h *HookConfig) Add(hookType HookType, prio Prio, hook HookDef) {
 	}
 }
 
-func (h *HookConfig) Get(hookType HookType) map[Prio]HookDef {
+func (h *HookConfig) Get(hookType HookType) map[Priority]HookDef {
 	return h.hooks[hookType]
-}
-
-func Verify(params, returnVal Signature) bool {
-	return cmp.Equal(params, returnVal, cmp.Options{
-		cmpopts.SortMaps(func(a, b string) bool {
-			return a < b
-		}),
-		cmpopts.EquateEmpty(),
-	})
 }
 
 //nolint:funlen
 func (h *HookConfig) Run(
-	hookType HookType, args Signature, verification Policy,
-) Signature {
+	hookType HookType,
+	ctx context.Context,
+	args *structpb.Struct,
+	verification Policy,
+	opts ...grpc.CallOption,
+) (*structpb.Struct, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	// Sort hooks by priority
-	priorities := make([]Prio, 0, len(h.hooks[hookType]))
+	priorities := make([]Priority, 0, len(h.hooks[hookType]))
 	for prio := range h.hooks[hookType] {
 		priorities = append(priorities, prio)
 	}
@@ -109,17 +108,18 @@ func (h *HookConfig) Run(
 	})
 
 	// Run hooks, passing the result of the previous hook to the next one
-	returnVal := make(Signature)
-	var removeList []Prio
+	returnVal := &structpb.Struct{}
+	var removeList []Priority
 	// The signature of parameters and args MUST be the same for this to work
 	for idx, prio := range priorities {
-		var result Signature
+		var result *structpb.Struct
+		var err error
 		if idx == 0 {
 			// TODO: Run hooks from the registry
-			result = h.hooks[hookType][prio](args)
+			result, err = h.hooks[hookType][prio](ctx, args, opts...)
 		} else {
 			// TODO: Run hooks from the registry
-			result = h.hooks[hookType][prio](returnVal)
+			result, err = h.hooks[hookType][prio](ctx, returnVal, opts...)
 		}
 
 		// This is done to ensure that the return value of the hook is always valid,
@@ -158,9 +158,9 @@ func (h *HookConfig) Run(
 				panic(errMsg)
 			}
 			if idx == 0 {
-				return args
+				return args, err
 			}
-			return returnVal
+			return returnVal, err
 		// Remove the hook from the registry, log the error and execute the next hook.
 		case Remove:
 			errMsg := fmt.Sprintf(
@@ -185,5 +185,5 @@ func (h *HookConfig) Run(
 		delete(h.hooks[hookType], prio)
 	}
 
-	return returnVal
+	return returnVal, nil
 }
