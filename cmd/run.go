@@ -30,8 +30,12 @@ var (
 )
 
 var (
-	hooksConfig    = plugin.NewHookConfig()
-	DefaultLogger  = logging.NewLogger(logging.LoggerConfig{Level: zerolog.DebugLevel})
+	hooksConfig   = plugin.NewHookConfig()
+	DefaultLogger = logging.NewLogger(
+		logging.LoggerConfig{
+			Level:   zerolog.DebugLevel,
+			NoColor: true,
+		})
 	pluginRegistry = plugin.NewRegistry(hooksConfig)
 )
 
