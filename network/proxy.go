@@ -158,25 +158,23 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 	})
 	if err != nil {
 		pr.logger.Error().Err(err).Msgf("Error creating ingress data: %v", err)
-	}
-
-	result, err := pr.hookConfig.Run(
-		plugin.OnIngressTraffic,
-		context.Background(),
-		ingressData,
-		pr.hookConfig.Verification)
-	if err != nil {
-		pr.logger.Error().Err(err).Msgf("Error running hook: %v", err)
-	}
-
-	if result != nil {
-		// TODO: Not sure if the gconn and client can be modified in the hook,
-		// so I'm not using the modified values here
-		if buffer, ok := result.AsMap()["buffer"].([]byte); ok {
-			buf = buffer
+	} else {
+		result, err := pr.hookConfig.Run(
+			plugin.OnIngressTraffic,
+			context.Background(),
+			ingressData,
+			pr.hookConfig.Verification)
+		if err != nil {
+			pr.logger.Error().Err(err).Msgf("Error running hook: %v", err)
 		}
-		if err, ok := result.AsMap()["error"].(error); ok && err != nil {
-			pr.logger.Error().Err(err).Msg("Error in hook")
+
+		if result != nil {
+			if buffer, ok := result.AsMap()["buffer"].([]byte); ok {
+				buf = buffer
+			}
+			if err, ok := result.AsMap()["error"].(error); ok && err != nil {
+				pr.logger.Error().Err(err).Msg("Error in hook")
+			}
 		}
 	}
 
@@ -207,25 +205,24 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 	})
 	if err != nil {
 		pr.logger.Error().Err(err).Msgf("Error creating egress data: %v", err)
-	}
+	} else {
 
-	result, err = pr.hookConfig.Run(
-		plugin.OnEgressTraffic,
-		context.Background(),
-		egressData,
-		pr.hookConfig.Verification)
-	if err != nil {
-		pr.logger.Error().Err(err).Msgf("Error running hook: %v", err)
-	}
-
-	if result != nil {
-		// TODO: Not sure if the gconn and client can be modified in the hook,
-		// so I'm not using the modified values here
-		if resp, ok := result.AsMap()["response"].([]byte); ok {
-			response = resp
+		result, err := pr.hookConfig.Run(
+			plugin.OnEgressTraffic,
+			context.Background(),
+			egressData,
+			pr.hookConfig.Verification)
+		if err != nil {
+			pr.logger.Error().Err(err).Msgf("Error running hook: %v", err)
 		}
-		if err, ok := result.AsMap()["error"].(error); ok && err != nil {
-			pr.logger.Error().Err(err).Msg("Error in hook")
+
+		if result != nil {
+			if resp, ok := result.AsMap()["response"].([]byte); ok {
+				response = resp
+			}
+			if err, ok := result.AsMap()["error"].(error); ok && err != nil {
+				pr.logger.Error().Err(err).Msg("Error in hook")
+			}
 		}
 	}
 
