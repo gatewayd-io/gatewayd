@@ -1,5 +1,12 @@
+# Plugin configuration file for GatewayD
+
+# Plugin name
 gatewayd-plugin-test:
+  # whether to enable or disable the plugin on the next run
   enabled: True
+  # path to the plugin's binary file
   localPath: ../gatewayd-plugin-test/gatewayd-plugin-test
+  # Pass cmdline args to the plugin
   args: ["--log-level", "info"]
+  # Checksum hash to verify the binary before loading
   checksum: a20e3a1529f4460ad24416a055d599f6f55f42ead836345a4bf0a17d056abb45
