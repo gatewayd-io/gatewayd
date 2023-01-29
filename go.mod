@@ -9,7 +9,7 @@ require (
 	github.com/hashicorp/go-plugin v1.4.8
 	github.com/knadh/koanf v1.4.4
 	github.com/mitchellh/mapstructure v1.5.0
-	github.com/panjf2000/gnet/v2 v2.2.1
+	github.com/panjf2000/gnet/v2 v2.2.2
 	github.com/rs/zerolog v1.28.0
 	github.com/spf13/cobra v1.6.1
 	github.com/stretchr/testify v1.8.1
