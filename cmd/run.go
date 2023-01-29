@@ -24,11 +24,6 @@ import (
 )
 
 var (
-	globalConfigFile string
-	pluginConfigFile string
-)
-
-var (
 	hooksConfig   = hook.NewHookConfig()
 	DefaultLogger = logging.NewLogger(
 		logging.LoggerConfig{
@@ -364,12 +359,10 @@ var runCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(runCmd)
 
-	runCmd.Flags().StringVarP(
-		&globalConfigFile,
+	runCmd.Flags().StringP(
 		"config", "c", "./gatewayd.yaml",
 		"config file (default is ./gatewayd.yaml)")
-	runCmd.Flags().StringVarP(
-		&pluginConfigFile,
+	runCmd.Flags().StringP(
 		"plugin-config", "p", "./gatewayd_plugins.yaml",
 		"plugin config file (default is ./gatewayd_plugins.yaml)")
 }
