@@ -182,7 +182,7 @@ func Test_HookConfig_Run_PassDown_2(t *testing.T) {
 		opts ...grpc.CallOption,
 	) (*structpb.Struct, error) {
 		args.Fields["test1"] = &structpb.Value{
-			Kind: &structpb.Value_StringValue{
+			Kind: &structpb.Value_StringValue{ //nolint:nosnakecase
 				StringValue: "test1",
 			},
 		}
@@ -195,7 +195,7 @@ func Test_HookConfig_Run_PassDown_2(t *testing.T) {
 		opts ...grpc.CallOption,
 	) (*structpb.Struct, error) {
 		args.Fields["test2"] = &structpb.Value{
-			Kind: &structpb.Value_StringValue{
+			Kind: &structpb.Value_StringValue{ //nolint:nosnakecase
 				StringValue: "test2",
 			},
 		}
@@ -232,7 +232,7 @@ func Test_HookConfig_Run_Ignore(t *testing.T) {
 		opts ...grpc.CallOption,
 	) (*structpb.Struct, error) {
 		args.Fields["test"] = &structpb.Value{
-			Kind: &structpb.Value_StringValue{
+			Kind: &structpb.Value_StringValue{ //nolint:nosnakecase
 				StringValue: "test",
 			},
 		}
