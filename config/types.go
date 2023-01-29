@@ -90,12 +90,19 @@ type Server struct {
 	LoadBalancer     string        `koanf:"loadBalancer"`
 }
 
+type Metrics struct {
+	Enabled bool   `koanf:"enabled"`
+	Address string `koanf:"address"`
+	Path    string `koanf:"path"`
+}
+
 type GlobalConfig struct {
-	Loggers map[string]Logger `koanf:"loggers"`
-	Clients map[string]Client `koanf:"clients"`
-	Pools   map[string]Pool   `koanf:"pools"`
-	Proxy   map[string]Proxy  `koanf:"proxy"`
-	Server  Server            `koanf:"server"`
+	Loggers map[string]Logger  `koanf:"loggers"`
+	Clients map[string]Client  `koanf:"clients"`
+	Pools   map[string]Pool    `koanf:"pools"`
+	Proxy   map[string]Proxy   `koanf:"proxy"`
+	Server  Server             `koanf:"server"`
+	Metrics map[string]Metrics `koanf:"metrics"`
 }
 
 // LoadDefaultConfig loads the default configuration before loading the config file.
@@ -146,6 +153,13 @@ func LoadGlobalConfigDefaults(cfg *koanf.Koanf) {
 			"writeBufferCap":   DefaultBufferSize,
 			"socketRecvBuffer": DefaultBufferSize,
 			"socketSendBuffer": DefaultBufferSize,
+		},
+		"metrics": map[string]interface{}{
+			"default": map[string]interface{}{
+				"enabled": true,
+				"address": DefaultMetricsAddress,
+				"path":    DefaultMetricsPath,
+			},
 		},
 	}, "")
 
