@@ -199,7 +199,7 @@ var runCmd = &cobra.Command{
 			}
 		}
 
-		// Verify that the pool is properly populated
+		// Verify that the pool is properly populated.
 		logger.Info().Str("count", fmt.Sprint(pool.Size())).Msg(
 			"There are clients available in the pool")
 		if pool.Size() != poolSize {
@@ -223,12 +223,21 @@ var runCmd = &cobra.Command{
 		// Create a prefork proxy with the pool of clients.
 		elastic := gConfig.Proxy[config.Default].Elastic
 		reuseElasticClients := gConfig.Proxy[config.Default].ReuseElasticClients
+		healthCheckPeriod := gConfig.Proxy[config.Default].HealthCheckPeriod
 		proxy := network.NewProxy(
-			pool, hooksConfig, elastic, reuseElasticClients, &clientConfig, logger)
+			pool,
+			hooksConfig,
+			elastic,
+			reuseElasticClients,
+			healthCheckPeriod,
+			&clientConfig,
+			logger,
+		)
 
 		proxyCfg := map[string]interface{}{
 			"elastic":             elastic,
 			"reuseElasticClients": reuseElasticClients,
+			"healthCheckPeriod":   healthCheckPeriod.String(),
 			"clientConfig": map[string]interface{}{
 				"network":            clientConfig.Network,
 				"address":            clientConfig.Address,
