@@ -99,6 +99,45 @@ func Test_verify_fail(t *testing.T) {
 	}
 }
 
+func Test_HookConfig_Run_PassDown(t *testing.T) {
+	hooks := NewHookConfig()
+	// The result of the hook will be nil and will be passed down to the next hook.
+	hooks.Add(OnNewLogger, 0, func(s Signature) Signature {
+		return nil
+	})
+	// The consolidated result should be Signature{"test": "test"}.
+	hooks.Add(OnNewLogger, 1, func(s Signature) Signature {
+		return Signature{
+			"test": "test",
+		}
+	})
+	// Although the first hook returns nil, and its Signature doesn't match the params,
+	// so its result (nil) is passed down to the next hook in chain (prio 2).
+	// Then the second hook runs and returns a Signature with a "test" key and value.
+	assert.NotNil(t, hooks.Run(OnNewLogger, Signature{"test": "test"}, PassDown))
+}
+
+func Test_HookConfig_Run_PassDown_2(t *testing.T) {
+	hooks := NewHookConfig()
+	// The result of the hook will be nil and will be passed down to the next hook.
+	hooks.Add(OnNewLogger, 0, func(s Signature) Signature {
+		return Signature{
+			"test1": "test1",
+		}
+	})
+	// The consolidated result should be Signature{"test1": "test1", "test2": "test2"}.
+	hooks.Add(OnNewLogger, 1, func(s Signature) Signature {
+		return Signature{
+			"test2": "test2",
+		}
+	})
+	// Although the first hook returns nil, and its Signature doesn't match the params,
+	// so its result (nil) is passed down to the next hook in chain (prio 2).
+	// Then the second hook runs and returns a Signature with a "test1" and "test2" key and value.
+	assert.NotNil(t, hooks.Run(
+		OnNewLogger, Signature{"test1": "test1", "test2": "test2"}, PassDown))
+}
+
 func Test_HookConfig_Run_Ignore(t *testing.T) {
 	hooks := NewHookConfig()
 	// This should not run, because the return value is not the same as the params
