@@ -48,12 +48,16 @@ type Logger struct {
 	Level             string   `koanf:"level"`
 	ConsoleTimeFormat string   `koanf:"consoleTimeFormat"`
 	NoColor           bool     `koanf:"noColor"`
-	StartupMsg        bool     `koanf:"startupMsg"`
-	FileName          string   `koanf:"fileName"`
-	MaxSize           int      `koanf:"maxSize"`
-	MaxBackups        int      `koanf:"maxBackups"`
-	MaxAge            int      `koanf:"maxAge"`
-	Compress          bool     `koanf:"compress"`
+
+	FileName   string `koanf:"fileName"`
+	MaxSize    int    `koanf:"maxSize"`
+	MaxBackups int    `koanf:"maxBackups"`
+	MaxAge     int    `koanf:"maxAge"`
+	Compress   bool   `koanf:"compress"`
+
+	RSyslogNetwork string `koanf:"rSyslogNetwork"`
+	RSyslogAddress string `koanf:"rSyslogAddress"`
+	SyslogPriority string `koanf:"syslogPriority"`
 }
 
 type Pool struct {
