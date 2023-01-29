@@ -30,7 +30,7 @@ func TestNewClient(t *testing.T) {
 
 	logger := logging.NewLogger(cfg)
 
-	client := NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)
+	client := NewClient("tcp", "localhost:5432", DefaultBufferSize, DefaultChunkSize, logger)
 	defer client.Close()
 
 	assert.Equal(t, "tcp", client.Network)
@@ -61,7 +61,7 @@ func TestSend(t *testing.T) {
 
 	logger := logging.NewLogger(cfg)
 
-	client := NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)
+	client := NewClient("tcp", "localhost:5432", DefaultBufferSize, DefaultChunkSize, logger)
 	defer client.Close()
 
 	assert.NotNil(t, client)
@@ -92,7 +92,7 @@ func TestReceive(t *testing.T) {
 
 	logger := logging.NewLogger(cfg)
 
-	client := NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)
+	client := NewClient("tcp", "localhost:5432", DefaultBufferSize, DefaultChunkSize, logger)
 	defer client.Close()
 
 	assert.NotNil(t, client)
@@ -133,7 +133,7 @@ func TestClose(t *testing.T) {
 
 	logger := logging.NewLogger(cfg)
 
-	client := NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)
+	client := NewClient("tcp", "localhost:5432", DefaultBufferSize, DefaultChunkSize, logger)
 	assert.NotNil(t, client)
 	client.Close()
 	assert.Equal(t, "", client.ID)
