@@ -51,9 +51,9 @@ message PluginID {
 message PluginConfig {
     PluginID id = 1;
     string description = 2;
+    repeated string authors = 3;
     string license = 4;
     string project_url = 5;
-    repeated string authors = 3;
     // internal and external config options
     map<string, string> config = 6;
     // hooks it attaches to
