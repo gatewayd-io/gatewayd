@@ -3,12 +3,12 @@ version: v1
 #   enabled: true
 plugins:
   - name: go-grpc
-    out: gen/proto/go
+    out: .
     opt: paths=source_relative
   - name: go
-    out: gen/proto/go
+    out: .
     opt: paths=source_relative
   # - name: python_betterproto
-  #   out: gen/proto/python_betterproto
+  #   out: .
   # - name: java
-  #   out: gen/proto/java
+  #   out: .

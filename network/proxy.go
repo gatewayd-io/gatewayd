@@ -1,14 +1,17 @@
 package network
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
 
+	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
 	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type Proxy interface {
@@ -74,7 +77,7 @@ func (pr *ProxyImpl) Connect(gconn gnet.Conn) error {
 			)
 			pr.logger.Debug().Msgf("Reused the client %s by putting it back in the pool", client.ID)
 		} else {
-			return ErrPoolExhausted
+			return gerr.ErrPoolExhausted
 		}
 	} else {
 		// Get a client from the pool
@@ -88,7 +91,7 @@ func (pr *ProxyImpl) Connect(gconn gnet.Conn) error {
 		pr.busyConnections.Put(gconn, client)
 		pr.logger.Debug().Msgf("Client %s has been assigned to %s", client.ID, gconn.RemoteAddr().String())
 	} else {
-		return ErrClientNotConnected
+		return gerr.ErrClientNotConnected
 	}
 
 	pr.logger.Debug().Msgf("[C] There are %d clients in the pool", pr.availableConnections.Size())
@@ -132,7 +135,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 	if cl, ok := pr.busyConnections.Get(gconn).(*Client); ok {
 		client = cl
 	} else {
-		return ErrClientNotFound
+		return gerr.ErrClientNotFound
 	}
 
 	// buf contains the data from the client (<type>, length, query)
@@ -141,23 +144,37 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 		pr.logger.Error().Err(err).Msgf("Error reading from client: %v", err)
 	}
 
-	result := pr.hookConfig.Run(
-		plugin.OnIngressTraffic,
-		plugin.Signature{
-			"gconn":  gconn,
-			"client": client,
-			"buffer": buf,
-			"error":  err,
+	//nolint:nestif
+	if ingressData, err := structpb.NewStruct(map[string]interface{}{
+		"client": map[string]interface{}{
+			"local":  gconn.LocalAddr().String(),
+			"remote": gconn.RemoteAddr().String(),
 		},
-		pr.hookConfig.Verification)
-	if result != nil {
-		// TODO: Not sure if the gconn and client can be modified in the hook,
-		// so I'm not using the modified values here
-		if buffer, ok := result["buffer"].([]byte); ok {
-			buf = buffer
+		"server": map[string]interface{}{
+			"local":  client.Conn.LocalAddr().String(),
+			"remote": client.Conn.RemoteAddr().String(),
+		},
+		"buffer": buf, // Will be converted to base64-encoded string
+		"error":  err,
+	}); err != nil {
+		pr.logger.Error().Err(err).Msgf("Error creating ingress data: %v", err)
+	} else {
+		result, err := pr.hookConfig.Run(
+			context.Background(),
+			ingressData,
+			plugin.OnIngressTraffic,
+			pr.hookConfig.Verification)
+		if err != nil {
+			pr.logger.Error().Err(err).Msgf("Error running hook: %v", err)
 		}
-		if err, ok := result["error"].(error); ok && err != nil {
-			pr.logger.Error().Err(err).Msg("Error in hook")
+
+		if result != nil {
+			if buffer, ok := result.AsMap()["buffer"].([]byte); ok {
+				buf = buffer
+			}
+			if err, ok := result.AsMap()["error"].(error); ok && err != nil {
+				pr.logger.Error().Err(err).Msg("Error in hook")
+			}
 		}
 	}
 
@@ -173,23 +190,38 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 
 	// Receive the response from the server
 	size, response, err := client.Receive()
-	result = pr.hookConfig.Run(
-		plugin.OnEgressTraffic,
-		plugin.Signature{
-			"gconn":    gconn,
-			"client":   client,
-			"response": response[:size],
-			"error":    err,
+
+	//nolint:nestif
+	if egressData, err := structpb.NewStruct(map[string]interface{}{
+		"client": map[string]interface{}{
+			"local":  gconn.LocalAddr().String(),
+			"remote": gconn.RemoteAddr().String(),
 		},
-		pr.hookConfig.Verification)
-	if result != nil {
-		// TODO: Not sure if the gconn and client can be modified in the hook,
-		// so I'm not using the modified values here
-		if resp, ok := result["response"].([]byte); ok {
-			response = resp
+		"server": map[string]interface{}{
+			"local":  client.Conn.LocalAddr().String(),
+			"remote": client.Conn.RemoteAddr().String(),
+		},
+		"response": response[:size], // Will be converted to base64-encoded string
+		"error":    err,
+	}); err != nil {
+		pr.logger.Error().Err(err).Msgf("Error creating egress data: %v", err)
+	} else {
+		result, err := pr.hookConfig.Run(
+			context.Background(),
+			egressData,
+			plugin.OnEgressTraffic,
+			pr.hookConfig.Verification)
+		if err != nil {
+			pr.logger.Error().Err(err).Msgf("Error running hook: %v", err)
 		}
-		if err, ok := result["error"].(error); ok && err != nil {
-			pr.logger.Error().Err(err).Msg("Error in hook")
+
+		if result != nil {
+			if resp, ok := result.AsMap()["response"].([]byte); ok {
+				response = resp
+			}
+			if err, ok := result.AsMap()["error"].(error); ok && err != nil {
+				pr.logger.Error().Err(err).Msg("Error in hook")
+			}
 		}
 	}
 

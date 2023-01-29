@@ -1,21 +1,25 @@
 package cmd
 
 import (
+	"context"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/gatewayd-io/gatewayd/network"
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
-	"github.com/knadh/koanf"
+	goplugin "github.com/hashicorp/go-plugin"
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/confmap"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/panjf2000/gnet/v2"
+	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 const (
@@ -23,8 +27,14 @@ const (
 )
 
 var (
-	configFile  string
-	hooksConfig = plugin.NewHookConfig()
+	globalConfigFile string
+	pluginConfigFile string
+)
+
+var (
+	hooksConfig    = plugin.NewHookConfig()
+	DefaultLogger  = logging.NewLogger(logging.LoggerConfig{Level: zerolog.DebugLevel})
+	pluginRegistry = plugin.NewRegistry(hooksConfig)
 )
 
 // runCmd represents the run command.
@@ -32,9 +42,25 @@ var runCmd = &cobra.Command{
 	Use:   "run",
 	Short: "Run a gatewayd instance",
 	Run: func(cmd *cobra.Command, args []string) {
+		// The plugins are loaded and hooks registered
+		// before the configuration is loaded.
+		hooksConfig.Logger = DefaultLogger
+
+		// Load the plugin configuration file
+		if f, err := cmd.Flags().GetString("plugin-config"); err == nil {
+			if err := pluginConfig.Load(file.Provider(f), yaml.Parser()); err != nil {
+				DefaultLogger.Fatal().Err(err).Msg("Failed to load plugin configuration")
+				os.Exit(gerr.FailedToLoadPluginConfig)
+			}
+		}
+
+		// Load plugins and register their hooks
+		pluginRegistry.LoadPlugins(pluginConfig)
+
 		if f, err := cmd.Flags().GetString("config"); err == nil {
 			if err := globalConfig.Load(file.Provider(f), yaml.Parser()); err != nil {
-				panic(err)
+				DefaultLogger.Fatal().Err(err).Msg("Failed to load configuration")
+				os.Exit(gerr.FailedToLoadGlobalConfig)
 			}
 		}
 
@@ -43,39 +69,47 @@ var runCmd = &cobra.Command{
 
 		// The config will be passed to the hooks, and in turn to the plugins that
 		// register to this hook.
-		result := hooksConfig.Run(
-			plugin.OnConfigLoaded,
-			plugin.Signature{"config": globalConfig.All()},
-			hooksConfig.Verification)
-		if result != nil {
-			var config map[string]interface{}
-			if cfg, ok := result["config"].(map[string]interface{}); ok {
-				config = cfg
-			}
+		currentGlobalConfig, err := structpb.NewStruct(globalConfig.All())
+		if err != nil {
+			DefaultLogger.Error().Err(err).Msg("Failed to convert configuration to structpb")
+		} else {
+			updatedGlobalConfig, _ := hooksConfig.Run(
+				context.Background(),
+				currentGlobalConfig,
+				plugin.OnConfigLoaded,
+				hooksConfig.Verification)
 
-			if config != nil {
-				// Load the config from the map emitted by the hook
-				var hookEmittedConfig *koanf.Koanf
-				if err := hookEmittedConfig.Load(confmap.Provider(config, "."), nil); err != nil {
-					// Since the logger is not yet initialized, we can't log the error.
-					// So we panic. Same happens in the next if statement.
-					panic(err)
-				}
-
+			if updatedGlobalConfig != nil && plugin.Verify(updatedGlobalConfig, currentGlobalConfig) {
 				// Merge the config with the one loaded from the file (in memory).
 				// The changes won't be persisted to disk.
-				if err := globalConfig.Merge(hookEmittedConfig); err != nil {
-					panic(err)
+				if err := globalConfig.Load(
+					confmap.Provider(updatedGlobalConfig.AsMap(), "."), nil); err != nil {
+					DefaultLogger.Fatal().Err(err).Msg("Failed to merge configuration")
 				}
 			}
 		}
 
 		// Create a new logger from the config
-		logger := logging.NewLogger(loggerConfig())
-		hooksConfig.Logger = logger
+		loggerCfg := loggerConfig()
+		logger := logging.NewLogger(loggerCfg)
+		// TODO: Use https://github.com/dcarbone/zadapters to adapt hclog to zerolog
 		// This is a notification hook, so we don't care about the result.
-		hooksConfig.Run(
-			plugin.OnNewLogger, plugin.Signature{"logger": logger}, hooksConfig.Verification)
+		data, err := structpb.NewStruct(map[string]interface{}{
+			"timeFormat": loggerCfg.TimeFormat,
+			"level":      loggerCfg.Level,
+			"output":     loggerCfg.Output,
+			"noColor":    loggerCfg.NoColor,
+		})
+		if err != nil {
+			logger.Error().Err(err).Msg("Failed to convert logger config to structpb")
+		} else {
+			// TODO: Use a context with a timeout
+			_, err := hooksConfig.Run(
+				context.Background(), data, plugin.OnNewLogger, hooksConfig.Verification)
+			if err != nil {
+				logger.Error().Err(err).Msg("Failed to run OnNewLogger hooks")
+			}
+		}
 
 		// Create and initialize a pool of connections
 		pool := pool.NewPool()
@@ -90,15 +124,26 @@ var runCmd = &cobra.Command{
 				logger,
 			)
 
-			hooksConfig.Run(
-				plugin.OnNewClient,
-				plugin.Signature{
-					"client": client,
-				},
-				hooksConfig.Verification,
-			)
-
 			if client != nil {
+				clientCfg, err := structpb.NewStruct(map[string]interface{}{
+					"id":                client.ID,
+					"network":           clientConfig.Network,
+					"address":           clientConfig.Address,
+					"receiveBufferSize": clientConfig.ReceiveBufferSize,
+				})
+				if err != nil {
+					logger.Error().Err(err).Msg("Failed to convert client config to structpb")
+				} else {
+					_, err := hooksConfig.Run(
+						context.Background(),
+						clientCfg,
+						plugin.OnNewClient,
+						hooksConfig.Verification)
+					if err != nil {
+						logger.Error().Err(err).Msg("Failed to run OnNewClient hooks")
+					}
+				}
+
 				pool.Put(client.ID, client)
 			}
 		}
@@ -113,15 +158,38 @@ var runCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		hooksConfig.Run(
-			plugin.OnNewPool, plugin.Signature{"pool": pool}, hooksConfig.Verification)
+		poolCfg, err := structpb.NewStruct(map[string]interface{}{
+			"size": poolSize,
+		})
+		if err != nil {
+			logger.Error().Err(err).Msg("Failed to convert pool config to structpb")
+		} else {
+			_, err := hooksConfig.Run(
+				context.Background(), poolCfg, plugin.OnNewPool, hooksConfig.Verification)
+			if err != nil {
+				logger.Error().Err(err).Msg("Failed to run OnNewPool hooks")
+			}
+		}
 
 		// Create a prefork proxy with the pool of clients
 		elastic, reuseElasticClients, elasticClientConfig := proxyConfig()
 		proxy := network.NewProxy(
 			pool, hooksConfig, elastic, reuseElasticClients, elasticClientConfig, logger)
-		hooksConfig.Run(
-			plugin.OnNewProxy, plugin.Signature{"proxy": proxy}, hooksConfig.Verification)
+
+		proxyCfg, err := structpb.NewStruct(map[string]interface{}{
+			"elastic":             elastic,
+			"reuseElasticClients": reuseElasticClients,
+			"clientConfig":        elasticClientConfig,
+		})
+		if err != nil {
+			logger.Error().Err(err).Msg("Failed to convert proxy config to structpb")
+		} else {
+			_, err := hooksConfig.Run(
+				context.Background(), proxyCfg, plugin.OnNewProxy, hooksConfig.Verification)
+			if err != nil {
+				logger.Error().Err(err).Msg("Failed to run OnNewProxy hooks")
+			}
+		}
 
 		// Create a server
 		serverConfig := serverConfig()
@@ -166,9 +234,35 @@ var runCmd = &cobra.Command{
 			logger,
 			hooksConfig,
 		)
-		hooksConfig.Run(
-			plugin.OnNewServer, plugin.Signature{"server": server}, hooksConfig.Verification)
 
+		serverCfg, err := structpb.NewStruct(map[string]interface{}{
+			"network":          serverConfig.Network,
+			"address":          serverConfig.Address,
+			"softLimit":        serverConfig.SoftLimit,
+			"hardLimit":        serverConfig.HardLimit,
+			"tickInterval":     serverConfig.TickInterval,
+			"multiCore":        serverConfig.MultiCore,
+			"lockOSThread":     serverConfig.LockOSThread,
+			"enableTicker":     serverConfig.EnableTicker,
+			"loadBalancer":     serverConfig.LoadBalancer,
+			"readBufferCap":    serverConfig.ReadBufferCap,
+			"writeBufferCap":   serverConfig.WriteBufferCap,
+			"socketRecvBuffer": serverConfig.SocketRecvBuffer,
+			"socketSendBuffer": serverConfig.SocketSendBuffer,
+			"reuseAddress":     serverConfig.ReuseAddress,
+			"reusePort":        serverConfig.ReusePort,
+			"tcpKeepAlive":     serverConfig.TCPKeepAlive,
+			"tcpNoDelay":       serverConfig.TCPNoDelay,
+		})
+		if err != nil {
+			logger.Error().Err(err).Msg("Failed to convert server config to structpb")
+		} else {
+			_, err := hooksConfig.Run(
+				context.Background(), serverCfg, plugin.OnNewServer, hooksConfig.Verification)
+			if err != nil {
+				logger.Error().Err(err).Msg("Failed to run OnNewServer hooks")
+			}
+		}
 		// Shutdown the server gracefully
 		var signals []os.Signal
 		signals = append(signals,
@@ -187,10 +281,25 @@ var runCmd = &cobra.Command{
 				for _, s := range signals {
 					if sig != s {
 						// Notify the hooks that the server is shutting down
-						hooksConfig.Run(
-							plugin.OnSignal, plugin.Signature{"signal": sig}, hooksConfig.Verification)
+						signalCfg, err := structpb.NewStruct(map[string]interface{}{"signal": sig})
+						if err != nil {
+							logger.Error().Err(err).Msg(
+								"Failed to convert signal config to structpb")
+						} else {
+							_, err := hooksConfig.Run(
+								context.Background(),
+								signalCfg,
+								plugin.OnSignal,
+								hooksConfig.Verification,
+							)
+							if err != nil {
+								logger.Error().Err(err).Msg("Failed to run OnSignal hooks")
+							}
+						}
 
 						server.Shutdown()
+						pluginRegistry.Shutdown()
+						goplugin.CleanupClients()
 						os.Exit(0)
 					}
 				}
@@ -208,5 +317,11 @@ func init() {
 	rootCmd.AddCommand(runCmd)
 
 	runCmd.PersistentFlags().StringVarP(
-		&configFile, "config", "c", "./gatewayd.yaml", "config file (default is ./gatewayd.yaml)")
+		&globalConfigFile,
+		"config", "c", "./gatewayd.yaml",
+		"config file (default is ./gatewayd.yaml)")
+	runCmd.PersistentFlags().StringVarP(
+		&pluginConfigFile,
+		"plugin-config", "p", "./gatewayd_plugins.yaml",
+		"plugin config file (default is ./gatewayd_plugins.yaml)")
 }
