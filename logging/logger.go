@@ -25,6 +25,7 @@ type LoggerConfig struct {
 	NoColor    bool
 	StartupMsg bool
 
+	// File output configuration.
 	FileName   string
 	MaxSize    int
 	MaxBackups int
