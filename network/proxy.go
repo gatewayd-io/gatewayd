@@ -46,11 +46,7 @@ func NewProxy(
 		ClientConfig:        clientConfig,
 	}
 
-	if pool != nil {
-		proxy.pool = pool
-	} else {
-		proxy.pool = NewPool(logger)
-	}
+	proxy.pool = pool
 
 	return &proxy
 }

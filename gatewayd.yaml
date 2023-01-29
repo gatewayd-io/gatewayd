@@ -1,0 +1,65 @@
+# Gatewayd config
+# This file is used to configure the gatewayd daemon.
+
+# Loggers config
+loggers:
+  logger:
+    output: "null" # stdout or file or console
+    # Implementing file output
+    # file : ./logs/gatewayd.log
+    level: "debug" # panic, fatal, error, warn, info, debug, trace
+    noColor: True
+    timeFormat: "unix"
+
+clients:
+  client1:
+    network: tcp
+    address: localhost:5432
+    receiveBufferSize: 4096
+
+# Pool config
+pool:
+  # Use the logger config passed here
+  # i.e. don't assume it's the same as the logger config above
+  logger: loggers.logger
+  size: 10
+  # Database configs for the connection pool
+  client: clients.client1
+
+# Proxy config
+proxy:
+  # Use the logger config passed here
+  # i.e. don't assume it's the same as the logger config above
+  logger: loggers.logger
+    # Use the pool config passed here
+  # i.e. don't assume it's the same as the pool config above
+  pool: pool
+  elastic: False
+  reuseElasticClients: False
+  elasticClient: clients.client1
+
+server:
+  network: tcp
+  address: 0.0.0.0:15432
+  # softLimit: 0
+  # hardLimit: 0
+
+  logger: loggers.logger
+  proxy: proxy
+
+  enableTicker: False
+  tickInterval: 5 # seconds
+  multiCore: True
+  lockOSThread: False
+  loadBalancer: roundrobin
+  readBufferCap: 4096
+  writeBufferCap: 4096
+  socketRecvBuffer: 4096
+  socketSendBuffer: 4096
+  reuseAddress: True
+  reusePort: True
+  tcpKeepAlive: 3 # seconds
+  tcpNoDelay: True
+
+  incomingTrafficHandler: "null"
+  outgoingTrafficHandler: "null"

@@ -1,6 +1,7 @@
 package network
 
 import (
+	"os"
 	"sync"
 
 	"github.com/rs/zerolog"
@@ -105,6 +106,40 @@ func (p *PoolImpl) Shutdown() {
 	p.pool = sync.Map{}
 }
 
-func NewPool(logger zerolog.Logger) *PoolImpl {
-	return &PoolImpl{pool: sync.Map{}, logger: logger}
+func NewPool(
+	logger zerolog.Logger,
+	poolSize int,
+	clientConfig *Client,
+) *PoolImpl {
+	pool := PoolImpl{
+		pool:   sync.Map{},
+		logger: logger,
+	}
+
+	// Add a client to the pool
+	for i := 0; i < poolSize; i++ {
+		client := NewClient(
+			clientConfig.Network,
+			clientConfig.Address,
+			clientConfig.ReceiveBufferSize,
+			logger,
+		)
+		if client != nil {
+			if err := pool.Put(client); err != nil {
+				logger.Panic().Err(err).Msg("Failed to add client to pool")
+			}
+		}
+	}
+
+	// Verify that the pool is properly populated
+	logger.Debug().Msgf("There are %d clients in the pool", len(pool.ClientIDs()))
+	if len(pool.ClientIDs()) != poolSize {
+		logger.Error().Msg(
+			"The pool size is incorrect, either because " +
+				"the clients are cannot connect (no network connectivity) " +
+				"or the server is not running. Exiting...")
+		os.Exit(1)
+	}
+
+	return &pool
 }

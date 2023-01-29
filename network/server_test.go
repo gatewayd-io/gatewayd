@@ -19,7 +19,14 @@ func TestRunServer(t *testing.T) {
 	}
 
 	// Create a logger
-	logger := logging.NewLogger(nil, zerolog.TimeFormatUnix, zerolog.DebugLevel, true)
+	cfg := logging.LoggerConfig{
+		Output:     nil,
+		TimeFormat: zerolog.TimeFormatUnix,
+		Level:      zerolog.DebugLevel,
+		NoColor:    true,
+	}
+
+	logger := logging.NewLogger(cfg)
 
 	onIncomingTraffic := func(gconn gnet.Conn, cl *Client, buf []byte, err error) error {
 		logger.Info().Msg("Incoming traffic")
@@ -36,7 +43,7 @@ func TestRunServer(t *testing.T) {
 	}
 
 	// Create a connection pool
-	pool := NewPool(logger)
+	pool := NewPool(logger, 0, nil)
 	assert.NoError(t, pool.Put(NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)))
 	assert.NoError(t, pool.Put(NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)))
 
