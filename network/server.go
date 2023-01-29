@@ -215,6 +215,7 @@ func (s *Server) OnTraffic(gconn gnet.Conn) gnet.Action {
 			errors.Is(err, gerr.ErrClientNotConnected),
 			errors.Is(err, gerr.ErrClientSendFailed),
 			errors.Is(err, gerr.ErrClientReceiveFailed),
+			errors.Is(err, gerr.ErrHookTerminatedConnection),
 			errors.Is(err.Unwrap(), io.EOF):
 			return gnet.Close
 		}
