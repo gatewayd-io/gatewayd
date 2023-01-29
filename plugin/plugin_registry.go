@@ -17,14 +17,19 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
+//nolint:interfacebloat
 type IRegistry interface {
+	// Plugin management
 	Add(plugin *Plugin) bool
 	Get(id Identifier) *Plugin
 	List() []Identifier
 	Exists(name, version, remoteURL string) bool
 	Remove(id Identifier)
 	Shutdown()
+	LoadPlugins(plugins []config.Plugin)
+	RegisterHooks(id Identifier)
 
+	// Hook management
 	AddHook(hookName string, priority Priority, hookMethod Method)
 	Hooks() map[string]map[Priority]Method
 	Run(
@@ -34,12 +39,9 @@ type IRegistry interface {
 		verification config.Policy,
 		opts ...grpc.CallOption,
 	) (map[string]interface{}, *gerr.GatewayDError)
-
-	LoadPlugins(plugins []config.Plugin)
-	RegisterHooks(id Identifier)
 }
 
-type Registry struct { //nolint:golint,revive
+type Registry struct {
 	plugins pool.IPool
 	hooks   map[string]map[Priority]Method
 
