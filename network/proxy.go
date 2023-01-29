@@ -152,12 +152,14 @@ func (pr *ProxyImpl) PassThrough(c gnet.Conn) error {
 			client = pr.Reconnect(client)
 			// Store the client in the map, replacing the old one
 			pr.connClients.Store(c, client)
+		} else {
+			// Write the error to the client
+			c.Write(response[:size])
 		}
-		// return err
+	} else {
+		// Write the response to the incoming connection
+		c.Write(response[:size])
 	}
-
-	// Write the response to the incoming connection
-	c.Write(response[:size])
 
 	return nil
 }
