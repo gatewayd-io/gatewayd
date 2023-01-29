@@ -12,7 +12,7 @@ import (
 
 func GetRLimit() syscall.Rlimit {
 	var limits syscall.Rlimit
-	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &limits); err != nil {
+	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &limits); err != nil { //nolint:nosnakecase
 		logrus.Error(err)
 	}
 	logrus.Debugf("Current system soft limit: %d", limits.Cur)
