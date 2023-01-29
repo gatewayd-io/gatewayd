@@ -38,15 +38,12 @@ func TestRunServer(t *testing.T) {
 		0,
 		0,
 		DefaultTickInterval,
-		2,
-		DefaultBufferSize,
-		false,
-		false,
 		[]gnet.Option{
 			gnet.WithMulticore(true),
 		},
 		onIncomingTraffic,
 		onOutgoingTraffic,
+		NewProxy(2, DefaultBufferSize, false, false),
 	)
 	assert.NotNil(t, server)
 
