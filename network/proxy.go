@@ -59,7 +59,7 @@ func NewProxy(
 		ClientConfig:         clientConfig,
 	}
 
-	if proxy.HealthCheckPeriod == 0 {
+	if healthCheckPeriod == 0 {
 		proxy.HealthCheckPeriod = config.DefaultHealthCheckPeriod
 	} else {
 		proxy.HealthCheckPeriod = healthCheckPeriod
