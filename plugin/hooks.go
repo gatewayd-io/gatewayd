@@ -3,7 +3,6 @@ package plugin
 import (
 	"context"
 	"sort"
-	"time"
 
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
@@ -115,21 +114,14 @@ func (h *HookConfig) Run(
 	inheritedCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
+	// Cast custom fields to their primitive types, like time.Duration to float64.
+	args = CastToPrimitiveTypes(args)
+
 	// Create structpb.Struct from args.
 	var params *structpb.Struct
-	arguments := map[string]interface{}{}
-	for k, v := range args {
-		switch v := v.(type) {
-		case time.Duration:
-			arguments[k] = v.Seconds()
-		default:
-			arguments[k] = v
-		}
-	}
-
-	if len(arguments) == 0 {
+	if len(args) == 0 {
 		params = &structpb.Struct{}
-	} else if casted, err := structpb.NewStruct(arguments); err == nil {
+	} else if casted, err := structpb.NewStruct(args); err == nil {
 		params = casted
 	} else {
 		return nil, gerr.ErrCastFailed.Wrap(err)
