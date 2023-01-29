@@ -45,6 +45,8 @@ jobs:
           POSTGRES_HOST: postgres
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -71,7 +73,6 @@ jobs:
       - name: Build test plugin 🏗️
         run: |
           # Build GatewayD
-          sed -i 's/localhost:5432/postgres:5432/g' gatewayd.yaml
           make build
           # Build test plugin
           cd gatewayd-plugin-test && make build && cp gatewayd-plugin-test ../gdp-test && cd ..
