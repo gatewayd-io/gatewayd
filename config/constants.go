@@ -53,10 +53,13 @@ const (
 	EnvPrefix = "GATEWAYD_"
 
 	// Logger constants.
-	DefaultLogFileName       = "gatewayd.log"
-	DefaultLogFilePermission = 0o660
-	DefaultLogOutput         = "console"
-	DefaultLogLevel          = "info"
+	DefaultLogFileName = "gatewayd.log"
+	DefaultLogOutput   = "console"
+	DefaultLogLevel    = "info"
+	DefaultMaxSize     = 500 // megabytes
+	DefaultMaxBackups  = 5
+	DefaultMaxAge      = 30 // days
+	DefaultCompress    = true
 
 	// Plugin constants.
 	DefaultMinPort      = 50000

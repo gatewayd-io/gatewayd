@@ -7,6 +7,7 @@ import (
 
 	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/rs/zerolog"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 // TODO: Remove this once we have a proper hooks package.
@@ -19,13 +20,18 @@ type (
 
 type LoggerConfig struct {
 	Output     config.LogOutput
-	FileName   string
-	Permission os.FileMode // Log file permission
 	TimeFormat string
 	Level      zerolog.Level
 	NoColor    bool
 	StartupMsg bool
-	hook       OnNewLogger
+
+	FileName   string
+	MaxSize    int
+	MaxBackups int
+	MaxAge     int
+	Compress   bool
+
+	hook OnNewLogger
 }
 
 // NewLogger creates a new logger with the given configuration.
@@ -34,8 +40,6 @@ func NewLogger(cfg LoggerConfig) zerolog.Logger {
 }
 
 // NewLoggerWithBuffer creates a new logger with the given configuration.
-//
-//nolint:funlen
 func NewLoggerWithBuffer(cfg LoggerConfig, buffer ...*bytes.Buffer) zerolog.Logger {
 	// Create a new logger.
 	consoleWriter := zerolog.ConsoleWriter{
@@ -58,14 +62,12 @@ func NewLoggerWithBuffer(cfg LoggerConfig, buffer ...*bytes.Buffer) zerolog.Logg
 	case config.Stderr:
 		output = os.Stderr
 	case config.File:
-		if logFile, err := os.OpenFile(
-			cfg.FileName,
-			os.O_CREATE|os.O_WRONLY|os.O_APPEND, //nolint:nosnakecase
-			cfg.Permission); err == nil {
-			output = logFile
-		} else {
-			// If we can't open the file, we'll just log to stdout.
-			output = os.Stdout
+		output = &lumberjack.Logger{
+			Filename:   cfg.FileName,
+			MaxSize:    cfg.MaxSize,
+			MaxBackups: cfg.MaxBackups,
+			MaxAge:     cfg.MaxAge,
+			Compress:   cfg.Compress,
 		}
 	case config.Buffer:
 		if len(buffer) == 0 {
