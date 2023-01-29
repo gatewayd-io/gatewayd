@@ -12,18 +12,17 @@ type Callback func(key, value interface{}) bool
 type Pool interface {
 	ForEach(Callback)
 	Pool() *sync.Map
-	// ClientIDs() []string
 	Put(key, value interface{})
+	Get(key interface{}) interface{}
 	Pop(key interface{}) interface{}
 	Size() int
 	Clear()
-	// Close() error
-	// Shutdown()
 }
 
 type PoolImpl struct {
-	pool   sync.Map
-	logger zerolog.Logger
+	pool       sync.Map
+	logger     zerolog.Logger
+	hookConfig *HookConfig
 }
 
 var _ Pool = &PoolImpl{}
@@ -39,6 +38,14 @@ func (p *PoolImpl) Pool() *sync.Map {
 func (p *PoolImpl) Put(key, value interface{}) {
 	p.pool.Store(key, value)
 	p.logger.Debug().Msg("Item has been put on the pool")
+}
+
+func (p *PoolImpl) Get(key interface{}) interface{} {
+	if value, ok := p.pool.Load(key); ok {
+		return value
+	}
+
+	return nil
 }
 
 func (p *PoolImpl) Pop(key interface{}) interface{} {
@@ -74,11 +81,12 @@ func NewPool(
 	logger zerolog.Logger,
 	poolSize int,
 	clientConfig *Client,
-	onNewClient map[Prio]HookDef,
+	hookConfig *HookConfig,
 ) *PoolImpl {
 	pool := PoolImpl{
-		pool:   sync.Map{},
-		logger: logger,
+		pool:       sync.Map{},
+		logger:     logger,
+		hookConfig: hookConfig,
 	}
 
 	// Add a client to the pool
@@ -90,9 +98,13 @@ func NewPool(
 			logger,
 		)
 
-		for _, hook := range onNewClient {
-			hook(client)
-		}
+		hookConfig.Run(
+			OnNewClient,
+			Signature{
+				"client": client,
+			},
+			hookConfig.Verification,
+		)
 
 		if client != nil {
 			pool.Put(client.ID, client)
@@ -104,8 +116,8 @@ func NewPool(
 	if pool.Size() != poolSize {
 		logger.Error().Msg(
 			"The pool size is incorrect, either because " +
-				"the clients are cannot connect (no network connectivity) " +
-				"or the server is not running. Exiting...")
+				"the clients cannot connect due to no network connectivity " +
+				"or the server is not running. exiting...")
 		os.Exit(1)
 	}
 

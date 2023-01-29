@@ -30,21 +30,38 @@ func TestRunServer(t *testing.T) {
 
 	hooksConfig := NewHookConfig()
 
-	onIncomingTraffic := func(gconn gnet.Conn, cl *Client, buf []byte, err error) error {
-		logger.Info().Msg("Incoming traffic")
-		assert.Equal(t, CreatePgStartupPacket(), buf)
-		assert.Nil(t, err)
-		return nil
-	}
-	hooksConfig.AddHook(OnIncomingTraffic, 1, onIncomingTraffic)
+	onIngressTraffic := func(params Signature) Signature {
+		if params["buffer"] == nil {
+			t.Fatal("buffer is nil")
+		}
 
-	onOutgoingTraffic := func(gconn gnet.Conn, cl *Client, buf []byte, err error) error {
-		logger.Info().Msg("Outgoing traffic")
-		assert.Equal(t, CreatePostgreSQLPacket('R', []byte{0x0, 0x0, 0x0, 0x3}), buf)
-		assert.Nil(t, err)
+		logger.Info().Msg("Incoming traffic")
+		if buf, ok := params["buffer"].([]byte); ok {
+			assert.Equal(t, CreatePgStartupPacket(), buf)
+		} else {
+			t.Fatal("buffer is not a []byte")
+		}
+		assert.Nil(t, params["error"])
 		return nil
 	}
-	hooksConfig.AddHook(OnOutgoingTraffic, 1, onOutgoingTraffic)
+	hooksConfig.Add(OnIngressTraffic, 1, onIngressTraffic)
+
+	onEgressTraffic := func(params Signature) Signature {
+		if params["buffer"] == nil {
+			t.Fatal("buffer is nil")
+		}
+
+		logger.Info().Msg("Outgoing traffic")
+		if buf, ok := params["buffer"].([]byte); ok {
+			assert.Equal(
+				t, CreatePostgreSQLPacket('R', []byte{0x0, 0x0, 0x0, 0x3}), buf)
+		} else {
+			t.Fatal("buffer is not a []byte")
+		}
+		assert.Nil(t, params["error"])
+		return nil
+	}
+	hooksConfig.Add(OnEgressTraffic, 1, onEgressTraffic)
 
 	// Create a connection pool
 	pool := NewEmptyPool(logger)
@@ -54,7 +71,7 @@ func TestRunServer(t *testing.T) {
 	pool.Put(client2.ID, client2)
 
 	// Create a proxy with a fixed buffer pool
-	proxy := NewProxy(pool, false, false, &Client{
+	proxy := NewProxy(pool, NewHookConfig(), false, false, &Client{
 		Network:           "tcp",
 		Address:           "localhost:5432",
 		ReceiveBufferSize: DefaultBufferSize,
@@ -70,8 +87,6 @@ func TestRunServer(t *testing.T) {
 		[]gnet.Option{
 			gnet.WithMulticore(true),
 		},
-		onIncomingTraffic,
-		onOutgoingTraffic,
 		proxy,
 		logger,
 		hooksConfig,

@@ -8,7 +8,9 @@ import (
 
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/gatewayd-io/gatewayd/network"
+	"github.com/knadh/koanf"
 	"github.com/knadh/koanf/parsers/yaml"
+	"github.com/knadh/koanf/providers/confmap"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/panjf2000/gnet/v2"
 	"github.com/spf13/cobra"
@@ -29,25 +31,67 @@ var runCmd = &cobra.Command{
 	Short: "Run a gatewayd instance",
 	Run: func(cmd *cobra.Command, args []string) {
 		if f, err := cmd.Flags().GetString("config"); err == nil {
-			if err := konfig.Load(file.Provider(f), yaml.Parser()); err != nil {
+			if err := globalConfig.Load(file.Provider(f), yaml.Parser()); err != nil {
 				panic(err)
 			}
 		}
-		hooksConfig.RunHooks(network.OnConfigLoaded, konfig)
+
+		// Get hooks signature verification policy
+		hooksConfig.Verification = verificationPolicy()
+
+		// The config will be passed to the hooks, and in turn to the plugins that
+		// register to this hook.
+		result := hooksConfig.Run(
+			network.OnConfigLoaded,
+			network.Signature{"config": globalConfig.All()},
+			hooksConfig.Verification)
+		if result != nil {
+			var config map[string]interface{}
+			if cfg, ok := result["config"].(map[string]interface{}); ok {
+				config = cfg
+			}
+
+			if config != nil {
+				// Load the config from the map emitted by the hook
+				var hookEmittedConfig *koanf.Koanf
+				if err := hookEmittedConfig.Load(confmap.Provider(config, "."), nil); err != nil {
+					// Since the logger is not yet initialized, we can't log the error.
+					// So we panic. Same happens in the next if statement.
+					panic(err)
+				}
+
+				// Merge the config with the one loaded from the file (in memory).
+				// The changes won't be persisted to disk.
+				if err := globalConfig.Merge(hookEmittedConfig); err != nil {
+					panic(err)
+				}
+			}
+		}
 
 		// Create a new logger from the config
 		logger := logging.NewLogger(loggerConfig())
-		hooksConfig.RunHooks(network.OnNewLogger, logger)
+		hooksConfig.Logger = logger
+		// This is a notification hook, so we don't care about the result.
+		hooksConfig.Run(
+			network.OnNewLogger, network.Signature{"logger": logger}, hooksConfig.Verification)
 
 		// Create and initialize a pool of connections
 		poolSize, poolClientConfig := poolConfig()
-		pool := network.NewPool(logger, poolSize, poolClientConfig, hooksConfig.OnNewClient())
-		hooksConfig.RunHooks(network.OnNewPool, pool)
+		pool := network.NewPool(
+			logger,
+			poolSize,
+			poolClientConfig,
+			hooksConfig,
+		)
+		hooksConfig.Run(
+			network.OnNewPool, network.Signature{"pool": pool}, hooksConfig.Verification)
 
 		// Create a prefork proxy with the pool of clients
 		elastic, reuseElasticClients, elasticClientConfig := proxyConfig()
-		proxy := network.NewProxy(pool, elastic, reuseElasticClients, elasticClientConfig, logger)
-		hooksConfig.RunHooks(network.OnNewProxy, proxy)
+		proxy := network.NewProxy(
+			pool, hooksConfig, elastic, reuseElasticClients, elasticClientConfig, logger)
+		hooksConfig.Run(
+			network.OnNewProxy, network.Signature{"proxy": proxy}, hooksConfig.Verification)
 
 		// Create a server
 		serverConfig := serverConfig()
@@ -88,13 +132,14 @@ var runCmd = &cobra.Command{
 				gnet.WithTCPKeepAlive(serverConfig.TCPKeepAlive),
 				gnet.WithTCPNoDelay(serverConfig.TCPNoDelay),
 			},
-			nil,
-			nil,
 			proxy,
 			logger,
 			hooksConfig,
 		)
-		hooksConfig.RunHooks(network.OnNewServer, server)
+		hooksConfig.Run(
+			network.OnNewServer, network.Signature{"server": server}, hooksConfig.Verification)
+
+		// TODO: Load plugins and register them to the hooks
 
 		// Shutdown the server gracefully
 		var signals []os.Signal
@@ -113,7 +158,9 @@ var runCmd = &cobra.Command{
 			for sig := range signalsCh {
 				for _, s := range signals {
 					if sig != s {
-						hooksConfig.RunHooks(network.OnSignal, sig)
+						// Notify the hooks that the server is shutting down
+						hooksConfig.Run(
+							network.OnSignal, network.Signature{"signal": sig}, hooksConfig.Verification)
 
 						server.Shutdown()
 						os.Exit(0)

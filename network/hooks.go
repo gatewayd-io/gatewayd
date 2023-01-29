@@ -1,381 +1,172 @@
 package network
 
 import (
-	"os"
+	"fmt"
+	"sort"
 
-	"github.com/knadh/koanf"
-	"github.com/panjf2000/gnet/v2"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/rs/zerolog"
 )
 
 type (
-	Prio     uint
-	HookType string
+	// Prio is the priority of a hook.
+	// Smaller values are executed first (higher priority).
+	Prio      uint
+	HookType  string
+	Signature map[string]interface{}
+	HookDef   func(Signature) Signature
+	Policy    int
 )
 
-type HookDef func(...interface{})
+const (
+	Ignore Policy = iota // Ignore errors and continue
+	Abort                // Abort on first error and return results
+	Remove               // Remove the hook from the list on error and continue
+)
 
 const (
-	OnConfigLoaded    HookType = "onConfigLoaded"
-	OnNewLogger       HookType = "onNewLogger"
-	OnNewPool         HookType = "onNewPool"
-	OnNewProxy        HookType = "onNewProxy"
-	OnNewServer       HookType = "onNewServer"
-	OnSignal          HookType = "onSignal"
-	OnRun             HookType = "onRun"
-	OnBooting         HookType = "onBooting"
-	OnBooted          HookType = "onBooted"
-	OnOpening         HookType = "onOpening"
-	OnOpened          HookType = "onOpened"
-	OnClosing         HookType = "onClosing"
-	OnClosed          HookType = "onClosed"
-	OnTraffic         HookType = "onTraffic"
-	OnIncomingTraffic HookType = "onIncomingTraffic"
-	OnOutgoingTraffic HookType = "onOutgoingTraffic"
-	OnShutdown        HookType = "onShutdown"
-	OnTick            HookType = "onTick"
-	OnNewClient       HookType = "onNewClient"
+	// Run command hooks (cmd/run.go).
+	OnConfigLoaded HookType = "onConfigLoaded"
+	OnNewLogger    HookType = "onNewLogger"
+	OnNewPool      HookType = "onNewPool"
+	OnNewProxy     HookType = "onNewProxy"
+	OnNewServer    HookType = "onNewServer"
+	OnSignal       HookType = "onSignal"
+	// Server hooks (network/server.go).
+	OnRun            HookType = "onRun"
+	OnBooting        HookType = "onBooting"
+	OnBooted         HookType = "onBooted"
+	OnOpening        HookType = "onOpening"
+	OnOpened         HookType = "onOpened"
+	OnClosing        HookType = "onClosing"
+	OnClosed         HookType = "onClosed"
+	OnTraffic        HookType = "onTraffic"
+	OnIngressTraffic HookType = "onIngressTraffic"
+	OnEgressTraffic  HookType = "onEgressTraffic"
+	OnShutdown       HookType = "onShutdown"
+	OnTick           HookType = "onTick"
+	// Pool hooks (network/pool.go).
+	OnNewClient HookType = "onNewClient"
 )
 
 type HookConfig struct {
-	onConfigLoaded map[Prio]HookDef
-	onNewLogger    map[Prio]HookDef
-	onNewPool      map[Prio]HookDef
-	onNewProxy     map[Prio]HookDef
-	onNewServer    map[Prio]HookDef
-	onSignal       map[Prio]HookDef
-
-	onRun map[Prio]HookDef
-
-	onBooting map[Prio]HookDef
-	onBooted  map[Prio]HookDef
-
-	onOpening map[Prio]HookDef
-	onOpened  map[Prio]HookDef
-
-	onClosing map[Prio]HookDef
-	onClosed  map[Prio]HookDef
-
-	onTraffic         map[Prio]HookDef
-	onIncomingTraffic map[Prio]Traffic
-	onOutgoingTraffic map[Prio]Traffic
-
-	onShutdown map[Prio]HookDef
-	onTick     map[Prio]HookDef
-
-	onNewClient map[Prio]HookDef
+	hooks        map[HookType]map[Prio]HookDef
+	Logger       zerolog.Logger
+	Verification Policy
 }
 
 func NewHookConfig() *HookConfig {
 	return &HookConfig{
-		onConfigLoaded:    make(map[Prio]HookDef),
-		onNewLogger:       make(map[Prio]HookDef),
-		onNewPool:         make(map[Prio]HookDef),
-		onNewProxy:        make(map[Prio]HookDef),
-		onNewServer:       make(map[Prio]HookDef),
-		onSignal:          make(map[Prio]HookDef),
-		onRun:             make(map[Prio]HookDef),
-		onBooting:         make(map[Prio]HookDef),
-		onBooted:          make(map[Prio]HookDef),
-		onOpening:         make(map[Prio]HookDef),
-		onOpened:          make(map[Prio]HookDef),
-		onClosing:         make(map[Prio]HookDef),
-		onClosed:          make(map[Prio]HookDef),
-		onTraffic:         make(map[Prio]HookDef),
-		onIncomingTraffic: make(map[Prio]Traffic),
-		onOutgoingTraffic: make(map[Prio]Traffic),
-		onShutdown:        make(map[Prio]HookDef),
-		onTick:            make(map[Prio]HookDef),
-		onNewClient:       make(map[Prio]HookDef),
+		hooks: map[HookType]map[Prio]HookDef{},
 	}
+}
+
+func (h *HookConfig) Add(hookType HookType, prio Prio, hook HookDef) {
+	if len(h.hooks[hookType]) == 0 {
+		h.hooks[hookType] = map[Prio]HookDef{prio: hook}
+	} else {
+		if _, ok := h.hooks[hookType][prio]; ok {
+			h.Logger.Warn().Msgf("Hook %s replaced with priority %d.", hookType, prio)
+		}
+		h.hooks[hookType][prio] = hook
+	}
+}
+
+func (h *HookConfig) Get(hookType HookType) map[Prio]HookDef {
+	return h.hooks[hookType]
+}
+
+func verify(params, returnVal Signature) bool {
+	return cmp.Equal(params, returnVal, cmp.Options{
+		cmpopts.SortMaps(func(a, b string) bool {
+			return a < b
+		}),
+		cmpopts.EquateEmpty(),
+	})
 }
 
 //nolint:funlen
-func (h *HookConfig) AddHook(hookType HookType, prio Prio, hook interface{}) {
-	switch hookType {
-	case OnConfigLoaded:
-		if hookDef, ok := hook.(HookDef); ok {
-			h.onConfigLoaded[prio] = hookDef
+func (h *HookConfig) Run(
+	hookType HookType, args Signature, verification Policy,
+) Signature {
+	// Sort hooks by priority
+	priorities := make([]Prio, 0, len(h.hooks[hookType]))
+	for prio := range h.hooks[hookType] {
+		priorities = append(priorities, prio)
+	}
+	sort.SliceStable(priorities, func(i, j int) bool {
+		return priorities[i] < priorities[j]
+	})
+
+	// Run hooks, passing the result of the previous hook to the next one
+	returnVal := make(Signature)
+	var removeList []Prio
+	// The signature of parameters and args MUST be the same for this to work
+	for idx, prio := range priorities {
+		var result Signature
+		if idx == 0 {
+			result = h.hooks[hookType][prio](args)
+		} else {
+			result = h.hooks[hookType][prio](returnVal)
 		}
-	case OnNewLogger:
-		if hookDef, ok := hook.(HookDef); ok {
-			h.onNewLogger[prio] = hookDef
+
+		// This is done to ensure that the return value of the hook is always valid,
+		// and that the hook does not return any unexpected values.
+		if verify(args, result) {
+			// Update the last return value with the current result
+			returnVal = result
+			continue
 		}
-	case OnNewPool:
-		if hookDef, ok := hook.(HookDef); ok {
-			h.onNewPool[prio] = hookDef
-		}
-	case OnNewProxy:
-		if hookDef, ok := hook.(HookDef); ok {
-			h.onNewProxy[prio] = hookDef
-		}
-	case OnNewServer:
-		if hookDef, ok := hook.(HookDef); ok {
-			h.onNewServer[prio] = hookDef
-		}
-	case OnSignal:
-		if hookDef, ok := hook.(HookDef); ok {
-			h.onSignal[prio] = hookDef
-		}
-	case OnRun:
-		if hookDef, ok := hook.(HookDef); ok {
-			h.onRun[prio] = hookDef
-		}
-	case OnBooting:
-		if hookDef, ok := hook.(HookDef); ok {
-			h.onBooting[prio] = hookDef
-		}
-	case OnBooted:
-		if hookDef, ok := hook.(HookDef); ok {
-			h.onBooted[prio] = hookDef
-		}
-	case OnOpening:
-		if hookDef, ok := hook.(HookDef); ok {
-			h.onOpening[prio] = hookDef
-		}
-	case OnOpened:
-		if hookDef, ok := hook.(HookDef); ok {
-			h.onOpened[prio] = hookDef
-		}
-	case OnClosing:
-		if hookDef, ok := hook.(HookDef); ok {
-			h.onClosing[prio] = hookDef
-		}
-	case OnClosed:
-		if hookDef, ok := hook.(HookDef); ok {
-			h.onClosed[prio] = hookDef
-		}
-	case OnTraffic:
-		if hookDef, ok := hook.(HookDef); ok {
-			h.onTraffic[prio] = hookDef
-		}
-	case OnIncomingTraffic:
-		if traffic, ok := hook.(Traffic); ok {
-			h.onIncomingTraffic[prio] = traffic
-		}
-	case OnOutgoingTraffic:
-		if traffic, ok := hook.(Traffic); ok {
-			h.onOutgoingTraffic[prio] = traffic
-		}
-	case OnShutdown:
-		if hookDef, ok := hook.(HookDef); ok {
-			h.onShutdown[prio] = hookDef
-		}
-	case OnTick:
-		if hookDef, ok := hook.(HookDef); ok {
-			h.onTick[prio] = hookDef
-		}
-	case OnNewClient:
-		if hookDef, ok := hook.(HookDef); ok {
-			h.onNewClient[prio] = hookDef
+
+		// At this point, the hook returned an invalid value, so we need to handle it.
+		// The result of the current hook will be ignored, regardless of the policy.
+		switch verification {
+		case Ignore:
+			errMsg := fmt.Sprintf(
+				"Hook %s (Prio %d) returned invalid value, ignoring", hookType, prio)
+			// Logger is not available when loading configuration, so we can't log anything
+			if hookType != OnConfigLoaded {
+				h.Logger.Error().Msgf(errMsg)
+			} else {
+				panic(errMsg)
+			}
+			if idx == 0 {
+				returnVal = args
+			}
+			continue
+		case Abort:
+			errMsg := fmt.Sprintf(
+				"Hook %s (Prio %d) returned invalid value, aborting", hookType, prio)
+			if hookType != OnConfigLoaded {
+				h.Logger.Error().Msgf(errMsg)
+			} else {
+				panic(errMsg)
+			}
+			if idx == 0 {
+				return args
+			}
+			return returnVal
+		case Remove:
+			errMsg := fmt.Sprintf(
+				"Hook %s (Prio %d) returned invalid value, removing", hookType, prio)
+			if hookType != OnConfigLoaded {
+				h.Logger.Error().Msgf(errMsg)
+			} else {
+				panic(errMsg)
+			}
+			removeList = append(removeList, prio)
+			if idx == 0 {
+				returnVal = args
+			}
+			continue
 		}
 	}
-}
 
-//nolint:funlen,maintidx
-func (h *HookConfig) RunHooks(hookType HookType, params ...interface{}) {
-	switch hookType {
-	case OnConfigLoaded:
-		for _, hookDef := range h.onConfigLoaded {
-			if konfig, ok := params[0].(*koanf.Koanf); ok {
-				hookDef(konfig)
-			}
-		}
-	case OnNewLogger:
-		for _, hookDef := range h.onNewLogger {
-			if logger, ok := params[0].(zerolog.Logger); ok {
-				hookDef(logger)
-			}
-		}
-	case OnNewPool:
-		for _, hookDef := range h.onNewPool {
-			if pool, ok := params[0].(*Pool); ok {
-				hookDef(pool)
-			}
-		}
-	case OnNewProxy:
-		for _, hookDef := range h.onNewProxy {
-			if proxy, ok := params[0].(*Proxy); ok {
-				hookDef(proxy)
-			}
-		}
-	case OnNewServer:
-		for _, hookDef := range h.onNewServer {
-			if server, ok := params[0].(*Server); ok {
-				hookDef(server)
-			}
-		}
-	case OnSignal:
-		for _, hookDef := range h.onSignal {
-			if signal, ok := params[0].(os.Signal); ok {
-				hookDef(signal)
-			}
-		}
-	case OnRun:
-		for _, hookDef := range h.onRun {
-			if server, ok := params[0].(*Server); ok {
-				hookDef(server)
-			}
-		}
-	case OnBooting:
-		for _, hookDef := range h.onBooting {
-			if server, ok := params[0].(*Server); ok {
-				if engine, ok := params[1].(gnet.Engine); ok {
-					hookDef(server, engine)
-				}
-			}
-		}
-	case OnBooted:
-		for _, hookDef := range h.onBooted {
-			if server, ok := params[0].(*Server); ok {
-				if engine, ok := params[1].(gnet.Engine); ok {
-					hookDef(server, engine)
-				}
-			}
-		}
-	case OnOpening:
-		for _, hookDef := range h.onOpening {
-			if server, ok := params[0].(*Server); ok {
-				if conn, ok := params[1].(gnet.Conn); ok {
-					hookDef(server, conn)
-				}
-			}
-		}
-	case OnOpened:
-		for _, hookDef := range h.onOpened {
-			if server, ok := params[0].(*Server); ok {
-				if conn, ok := params[1].(gnet.Conn); ok {
-					hookDef(server, conn)
-				}
-			}
-		}
-	case OnClosing:
-		for _, hookDef := range h.onClosing {
-			if server, ok := params[0].(*Server); ok {
-				if conn, ok := params[1].(gnet.Conn); ok {
-					if err, ok := params[2].(error); ok {
-						hookDef(server, conn, err)
-					}
-				}
-			}
-		}
-	case OnClosed:
-		for _, hookDef := range h.onClosed {
-			if server, ok := params[0].(*Server); ok {
-				if conn, ok := params[1].(gnet.Conn); ok {
-					if err, ok := params[2].(error); ok {
-						hookDef(server, conn, err)
-					}
-				}
-			}
-		}
-	case OnTraffic:
-		for _, hookDef := range h.onTraffic {
-			if server, ok := params[0].(*Server); ok {
-				if conn, ok := params[1].(gnet.Conn); ok {
-					hookDef(server, conn)
-				}
-			}
-		}
-	case OnIncomingTraffic:
-		for _, traffic := range h.onIncomingTraffic {
-			var conn gnet.Conn
-			var client *Client
-			var data []byte
-			var err error
-
-			if c, ok := params[0].(gnet.Conn); !ok {
-				continue
-			} else {
-				conn = c
-			}
-
-			if c, ok := params[1].(*Client); !ok {
-				continue
-			} else {
-				client = c
-			}
-
-			if d, ok := params[2].([]byte); !ok {
-				continue
-			} else {
-				data = d
-			}
-
-			if e, ok := params[3].(error); ok {
-				continue
-			} else {
-				err = e
-			}
-
-			err = traffic(conn, client, data, err)
-			if err != nil {
-				// TODO: handle error
-				continue // stop processing
-			}
-		}
-	case OnOutgoingTraffic:
-		for _, traffic := range h.onOutgoingTraffic {
-			var conn gnet.Conn
-			var client *Client
-			var data []byte
-			var err error
-
-			if c, ok := params[0].(gnet.Conn); !ok {
-				continue
-			} else {
-				conn = c
-			}
-
-			if c, ok := params[1].(*Client); !ok {
-				continue
-			} else {
-				client = c
-			}
-
-			if d, ok := params[2].([]byte); !ok {
-				continue
-			} else {
-				data = d
-			}
-
-			if e, ok := params[3].(error); ok {
-				continue
-			} else {
-				err = e
-			}
-
-			err = traffic(conn, client, data, err)
-			if err != nil {
-				// TODO: handle error
-				continue // stop processing
-			}
-		}
-	case OnShutdown:
-		for _, hookDef := range h.onShutdown {
-			if server, ok := params[0].(*Server); ok {
-				if engine, ok := params[1].(gnet.Engine); ok {
-					hookDef(server, engine)
-				}
-			}
-		}
-	case OnTick:
-		for _, hookDef := range h.onTick {
-			if server, ok := params[0].(*Server); ok {
-				if engine, ok := params[1].(gnet.Engine); ok {
-					hookDef(server, engine)
-				}
-			}
-		}
-	case OnNewClient:
-		for _, hookDef := range h.onNewClient {
-			if client, ok := params[0].(*Client); ok {
-				hookDef(client)
-			}
-		}
+	// Remove hooks that failed verification
+	for _, prio := range removeList {
+		delete(h.hooks[hookType], prio)
 	}
-}
 
-func (h *HookConfig) OnNewClient() map[Prio]HookDef {
-	return h.onNewClient
+	return returnVal
 }

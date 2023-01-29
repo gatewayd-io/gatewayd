@@ -7,14 +7,19 @@ import (
 	"github.com/rs/zerolog"
 )
 
-type OnNewLogger func(zerolog.Logger)
+// This is duplicated from the network package, because import cycles are not allowed.
+type (
+	Signature   map[string]interface{}
+	HookDef     func(Signature) Signature
+	OnNewLogger HookDef
+)
 
 type LoggerConfig struct {
-	Output      io.Writer
-	TimeFormat  string
-	Level       zerolog.Level
-	NoColor     bool
-	OnNewLogger OnNewLogger
+	Output     io.Writer
+	TimeFormat string
+	Level      zerolog.Level
+	NoColor    bool
+	hook       OnNewLogger
 }
 
 func NewLogger(cfg LoggerConfig) zerolog.Logger {
@@ -40,6 +45,10 @@ func NewLogger(cfg LoggerConfig) zerolog.Logger {
 	}
 
 	logger.Debug().Msg("Created a new logger")
+
+	if cfg.hook != nil {
+		cfg.hook(Signature{"logger": logger})
+	}
 
 	return logger
 }
