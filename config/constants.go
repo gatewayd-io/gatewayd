@@ -43,8 +43,10 @@ const (
 	Default = "default"
 
 	// Logger constants.
-	DefaultLogOutput   = "console"
-	DefaultLogFileName = "gatewayd.log"
+	DefaultLogFileName       = "gatewayd.log"
+	DefaultLogFilePermission = 0o660
+	DefaultLogOutput         = "console"
+	DefaultLogLevel          = "info"
 
 	// Plugin constants.
 	DefaultMinPort      = 50000

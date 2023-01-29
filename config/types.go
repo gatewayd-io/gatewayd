@@ -48,7 +48,9 @@ type Logger struct {
 	FileName   string `koanf:"fileName"`
 	TimeFormat string `koanf:"timeFormat"`
 	Level      string `koanf:"level"`
+	Permission uint32 `koanf:"permission"`
 	NoColor    bool   `koanf:"noColor"`
+	StartupMsg bool   `koanf:"startupMsg"`
 }
 
 type Pool struct {
@@ -93,8 +95,10 @@ func LoadGlobalConfigDefaults(cfg *koanf.Koanf) {
 	defaultValues := confmap.Provider(map[string]interface{}{
 		"loggers": map[string]interface{}{
 			"default": map[string]interface{}{
-				"output": DefaultLogOutput,
-				"level":  "info",
+				"output":     DefaultLogOutput,
+				"level":      DefaultLogLevel,
+				"fileName":   DefaultLogFileName,
+				"permission": DefaultLogFilePermission,
 			},
 		},
 		"clients": map[string]interface{}{
