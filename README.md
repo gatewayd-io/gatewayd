@@ -1,96 +1,57 @@
 # <img src="https://github.com/gatewayd-io/gatewayd/blob/main/assets/gatewayd-logo.png" alt="gatewayd logo" style="height: 48px; width: 48px;"/> GatewayD
 
-GatewayD is a cloud-native database gateway and framework for building data-driven applications. It sits in between your database(s) and your database client(s) and proxies all queries to and their responses from the database. While doing so, it supports the following features:
-
-- Manage authentication, authorization and access
-- Support multiple database backends (SQL and NoSQL)
-- Manage queries, connections and clusters
-- Secure and encrypt everything AMAP with different security protocols
-- Observe, monitor, analyze and control traffic
-- Transform queries, results, schemas and data
-- Inject data into queries and results
-- Deploy anywhere: on-premise, SaaS, Cloud, CI/CD and Serverless
-- Cache queries and their results
-- And a bunch of other things
+GatewayD is a cloud-native database gateway and framework for building data-driven applications. It sits between your database(s) and your database client(s) and proxies all queries and their responses from the database.
 
 ## Architecture
 
-The architecture of the GatewayD consists of a core part and the plugins. The core includes network and connection management components. Any other functionality in the system are served by plugins. Then there are core plugins, always shipped with each binary and community-supported plugins.
+The GatewayD architecture consists of a core and plugins. The core enables basic functionality for:
 
-The ultimate goal is to be able to replace everything, even the core parts, with plugins. The plugin system uses the [Go plugin system over RPC](https://github.com/hashicorp/go-plugin) by HashiCorp. Thus, the core and the plugins talk over RPC.
+- **Proxying connections** between clients and server(s)
+- **Connection pooling**, health check and management
+- **Configuration management** for the core and plugins (YAML, env and runtime)
+- **Logging** to console, stdout/stderr, file and (r)syslog
+- **Plugin system and hooks**
+- **Metric aggregation and emission**
+
+Then, plugins are loaded on startup to add tons of functionality, for example:
+
+- **Query parsing and processing**
+- **Caching**
+- **Schema and data** management and transformation
+- Many other possibilities
+
+Plugins talk over **gRPC** using **protocol buffers** with the core. The core exposes a long list of hooks. Upon loading a plugin, the plugin can register to those hooks. When specific events happen in the core, like `onTrafficFromClient`, the plugins registered to that hook will be called with the parameters available in that hook, like the client request, that is, the query. Plugins can terminate client connections and return a response immediately without consulting the database server. Plugins can also emit Prometheus metrics via HTTP over UDS to the core. Then, the core aggregates, relabels and emits those metrics over an HTTP endpoint to be scraped by Prometheus.
+
+<!--
+ADD A DIAGRAM HERE.
 
 The high-level component architecture diagram is depicted below:
 
-![Architecture diagrams](assets/architecture-diagram-v0.0.1.png)
-
-## Run GatewayD for development
-
-You can build and run gatewayd by running the following commands. You must have Go and git installed.
-
-```bash
-git clone git@github.com:gatewayd-io/gatewayd.git && cd gatewayd
-❯ make run
-go mod tidy && go run main.go run
-11:21PM DBG Loading plugin: gatewayd-plugin-test
-11:21PM DBG Plugin loaded: gatewayd-plugin-test
-11:21PM WRN plugin configured with a nil SecureConfig
-11:21PM INF configuring client automatic mTLS
-11:21PM DBG starting plugin args=["../gatewayd-plugin-test/gatewayd-plugin-test"] path=../gatewayd-plugin-test/gatewayd-plugin-test
-11:21PM DBG plugin started path=../gatewayd-plugin-test/gatewayd-plugin-test pid=9937
-11:21PM DBG waiting for RPC address path=../gatewayd-plugin-test/gatewayd-plugin-test
-11:21PM INF configuring server automatic mTLS timestamp=2022-12-21T23:21:02.345+0100
-11:21PM DBG using plugin version=1
-11:21PM DBG plugin address address=/tmp/plugin1231501310 network=unix timestamp=2022-12-21T23:21:02.381+0100
-11:21PM DBG Registering hooks for plugin: gatewayd-plugin-test
-11:21PM DBG Registering hook: onConfigLoaded
-11:21PM WRN Unknown hook type: onPluginConfigLoaded
-11:21PM DBG Plugin metadata loaded: gatewayd-plugin-test
-11:21PM DBG Created a new logger
-11:21PM DBG New client created: 127.0.0.1:5432
-11:21PM DBG New client created: 127.0.0.1:5432
-11:21PM DBG New client created: 127.0.0.1:5432
-11:21PM DBG New client created: 127.0.0.1:5432
-11:21PM DBG New client created: 127.0.0.1:5432
-11:21PM DBG New client created: 127.0.0.1:5432
-11:21PM DBG New client created: 127.0.0.1:5432
-11:21PM DBG New client created: 127.0.0.1:5432
-11:21PM DBG New client created: 127.0.0.1:5432
-11:21PM DBG New client created: 127.0.0.1:5432
-11:21PM INF There are 10 clients in the pool
-11:21PM DBG Resolved address to 0.0.0.0:15432
-11:21PM INF GatewayD is listening on 0.0.0.0:15432
-11:21PM DBG Current system soft limit: 1048576
-11:21PM DBG Current system hard limit: 1048576
-11:21PM DBG Soft limit is not set, using the current system soft limit
-11:21PM DBG Hard limit is not set, using the current system hard limit
-11:21PM INF GatewayD is running with PID 9931
-11:21PM DBG GatewayD is booting...
-11:21PM DBG GatewayD booted
-```
-
-## Run tests
-
-The server will start listening on the default 15432 port and will proxy any clients that connects to its port to a PostgreSQL server running on port 5432. While the server is running, run the following commands to test the proxy feature(s). You must have Docker and `psql` installed.
-
-```bash
-# This run a PostgreSQL server as a Docker container
-docker run --rm --name postgres-test -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres
-# This will try to connect to the PostgreSQL server via GatewayD
-psql postgresql://postgres:postgres@localhost:15432/postgres
-```
-
-You can use `psql` as you used to do before, to query or insert data into PostgreSQL. You can remove the Docker container by stopping it:
-
-```bash
-docker stop postgres-test
-```
-
-<!--
-## Support
-
-The support section.
-
-## Contributing
-
-The contributing section.
+![Architecture diagrams](https://github.com/gatewayd-io/gatewayd/blob/main/assets/architecture-diagram-v0.0.1.png)
 -->
+
+## Run
+
+To run GatewayD, you need to download the latest version from the [releases](https://github.com/gatewayd-io/gatewayd/releases) page. Then extract it somewhere in your `PATH` and run it like below:
+
+```bash
+# Run PostgreSQL in the background via Docker
+$ docker run --rm --name postgres-test -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres
+# Run Redis if you want to cache queries and their results (optional)
+$ ./redis-server &
+# Run GatewayD
+$ ./gatewayd run
+2023-01-24T22:57:27+01:00 WRN plugin configured with a nil SecureConfig
+2023-01-24T22:57:27+01:00 INF configuring client automatic mTLS
+2023-01-24T22:57:27+01:00 INF Starting metrics server via HTTP over Unix domain socket endpoint=/metrics timestamp=2023-01-24T22:57:27.848+0100 unixDomainSocket=/tmp/gatewayd-plugin-cache.sock
+2023-01-24T22:57:27+01:00 INF configuring server automatic mTLS  timestamp=2023-01-24T22:57:27.849+0100
+2023-01-24T22:57:27+01:00 INF Plugin is ready name=gatewayd-plugin-cache
+2023-01-24T22:57:27+01:00 INF Started the metrics merger scheduler metricsMergerPeriod=5s startDelay=1674597452
+2023-01-24T22:57:27+01:00 INF Metrics are exposed address=http://localhost:2112/metrics
+2023-01-24T22:57:27+01:00 INF There are clients available in the pool count=10
+2023-01-24T22:57:27+01:00 INF Started the client health check scheduler healthCheckPeriod=1m0s startDelay=1674597507
+2023-01-24T22:57:27+01:00 INF GatewayD is listening address=0.0.0.0:15432
+2023-01-24T22:57:27+01:00 INF GatewayD is running pid=4823
+```
+
+As shown above in the console logs, the `gatewayd-plugin-cache` loads and exposes metrics over HTTP via `/tmp/gatewayd-plugin-cache.sock`. The metrics merger is started and collects, aggregates and relabels metrics from plugins, and merges them with metrics emitted from the core. It'll then expose those metrics over HTTP via `http://localhost:2112/metrics`. Ten connections are connected to the PostgreSQL on port 5432 and are put in the pool, ready to serve incoming connections from clients. Next, a connection health check is run to recycle connections when no authenticated client exists - This is to deal with timeout on the database server. When all the above is set up, GatewayD starts listening on port 15432. The clients can point to GatewayD's address and start working as before while GatewayD is proxying calls. If you run Redis, `SELECT` queries sent through GatewayD will end up being cached along with their response from PostgreSQL. The next time another client runs the same query, the response will be read from the cache and returned to the client, without touching server. When done testing, you should be able to gracefully stop GatewayD using `CTRL+C`. In the above example, only one plugin, `gatewayd-plugin-cache`, is loaded, but GatewayD is perfectly capable of handling multiple plugins.
