@@ -2,9 +2,7 @@ package network
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"io"
+	"time"
 
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/plugin"
@@ -15,12 +13,17 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
+const (
+	EmptyPoolCapacity int = 0
+)
+
 type Proxy interface {
 	Connect(gconn gnet.Conn) error
 	Disconnect(gconn gnet.Conn) error
 	PassThrough(gconn gnet.Conn) error
-	Reconnect(cl *Client) *Client
+	TryReconnect(cl *Client) (*Client, error)
 	Shutdown()
+	IsExhausted() bool
 }
 
 type ProxyImpl struct {
@@ -45,7 +48,7 @@ func NewProxy(
 ) *ProxyImpl {
 	return &ProxyImpl{
 		availableConnections: p,
-		busyConnections:      pool.NewPool(),
+		busyConnections:      pool.NewPool(EmptyPoolCapacity),
 		logger:               logger,
 		hookConfig:           hookConfig,
 		Elastic:              elastic,
@@ -66,8 +69,8 @@ func (pr *ProxyImpl) Connect(gconn gnet.Conn) error {
 	})
 
 	var client *Client
-	if pr.availableConnections.Size() == 0 {
-		// Pool is exhausted
+	if pr.IsExhausted() {
+		// Pool is exhausted or is elastic
 		if pr.Elastic {
 			// Create a new client
 			client = NewClient(
@@ -81,45 +84,59 @@ func (pr *ProxyImpl) Connect(gconn gnet.Conn) error {
 			return gerr.ErrPoolExhausted
 		}
 	} else {
-		// Get a client from the pool
-		pr.logger.Debug().Msgf("Available clients: %v", pr.availableConnections.Size())
+		// Get the client from the pool with the given clientID
 		if cl, ok := pr.availableConnections.Pop(clientID).(*Client); ok {
 			client = cl
 		}
 	}
 
-	if clientID != "" || client.ID != "" {
-		pr.busyConnections.Put(gconn, client)
-		pr.logger.Debug().Msgf("Client %s has been assigned to %s", client.ID, gconn.RemoteAddr().String())
-	} else {
-		return gerr.ErrClientNotConnected
+	client, err := pr.TryReconnect(client)
+	if err != nil {
+		return err
 	}
 
-	pr.logger.Debug().Msgf("[C] There are %d clients in the pool", pr.availableConnections.Size())
-	pr.logger.Debug().Msgf("[C] There are %d clients in use", pr.busyConnections.Size())
+	if err := pr.busyConnections.Put(gconn, client); err != nil {
+		// This should never happen
+		return gerr.ErrPutFailed
+	}
+	pr.logger.Debug().Msgf(
+		"Client %s has been assigned to %s", client.ID, gconn.RemoteAddr().String())
+
+	pr.logger.Debug().Str("function", "Proxy.Connect").Msgf(
+		"There are %d available clients", pr.availableConnections.Size())
+	pr.logger.Debug().Str("function", "Proxy.Connect").Msgf(
+		"There are %d busy clients", pr.busyConnections.Size())
 
 	return nil
 }
 
 func (pr *ProxyImpl) Disconnect(gconn gnet.Conn) error {
-	var client *Client
-	if cl, ok := pr.busyConnections.Pop(gconn).(*Client); !ok {
-		client = cl
-	}
-
-	// TODO: The connection is unstable when I put the client back in the pool
-	// If the client is not in the pool, put it back
-	if pr.Elastic && pr.ReuseElasticClients || !pr.Elastic {
-		client = pr.Reconnect(client)
-		if client != nil && client.ID != "" {
-			pr.availableConnections.Put(client.ID, client)
+	client := pr.busyConnections.Pop(gconn)
+	if client != nil {
+		if cl, ok := client.(*Client); ok {
+			if (pr.Elastic && pr.ReuseElasticClients) || !pr.Elastic {
+				cl, err := pr.TryReconnect(cl)
+				if err != nil {
+					return err
+				}
+				// If the client is not in the pool, put it back
+				pr.availableConnections.Put(cl.ID, cl)
+			} else {
+				return gerr.ErrClientNotConnected
+			}
+		} else {
+			// This should never happen, but if it does,
+			// then there are some serious issues with the pool
+			return gerr.ErrCastFailed
 		}
 	} else {
-		client.Close()
+		return gerr.ErrClientNotFound
 	}
 
-	pr.logger.Debug().Msgf("[D] There are %d clients in the pool", pr.availableConnections.Size())
-	pr.logger.Debug().Msgf("[D] There are %d clients in use", pr.busyConnections.Size())
+	pr.logger.Debug().Str("function", "Proxy.Disconnect").Msgf(
+		"There are %d available clients", pr.availableConnections.Size())
+	pr.logger.Debug().Str("function", "Proxy.Disconnect").Msgf(
+		"There are %d busy clients", pr.busyConnections.Size())
 
 	return nil
 }
@@ -133,10 +150,14 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 	// that listens for data from the server and sends it to the client
 
 	var client *Client
+	if pr.busyConnections.Get(gconn) == nil {
+		return gerr.ErrClientNotFound
+	}
+
 	if cl, ok := pr.busyConnections.Get(gconn).(*Client); ok {
 		client = cl
 	} else {
-		return gerr.ErrClientNotFound
+		return gerr.ErrCastFailed
 	}
 
 	// buf contains the data from the client (<type>, length, query)
@@ -144,6 +165,13 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 	if err != nil {
 		pr.logger.Error().Err(err).Msgf("Error reading from client: %v", err)
 	}
+	pr.logger.Debug().Fields(
+		map[string]interface{}{
+			"length": len(buf),
+			"local":  gconn.LocalAddr().String(),
+			"remote": gconn.RemoteAddr().String(),
+		},
+	).Msg("Received data from client")
 
 	addresses := map[string]interface{}{
 		"client": map[string]interface{}{
@@ -188,21 +216,37 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 		}
 	}
 
-	// TODO: This is a very basic implementation of the gateway
-	// and it is synchronous. I should make it asynchronous.
-	pr.logger.Debug().Msgf("Received %d bytes from %s", len(buf), gconn.RemoteAddr().String())
-
 	// Send the query to the server
-	err = client.Send(buf)
+	sent, err := client.Send(buf)
 	if err != nil {
-		return err
+		// return err
+		pr.logger.Error().Err(err).Msgf("Error sending data to database")
 	}
+	pr.logger.Debug().Fields(
+		map[string]interface{}{
+			"function": "Proxy.PassThrough",
+			"length":   sent,
+			"local":    client.Conn.LocalAddr().String(),
+			"remote":   client.Conn.RemoteAddr().String(),
+		},
+	).Msg("Sent data to database")
+
+	// This is a hack to make sure the server has time to respond
+	time.Sleep(time.Millisecond * 100)
 
 	// Receive the response from the server
-	size, response, err := client.Receive()
+	received, response, err := client.Receive()
+	pr.logger.Debug().Fields(
+		map[string]interface{}{
+			"function": "Proxy.PassThrough",
+			"length":   received,
+			"local":    client.Conn.LocalAddr().String(),
+			"remote":   client.Conn.RemoteAddr().String(),
+		},
+	).Msg("Received data from database")
 
 	egress := map[string]interface{}{
-		"response": response[:size], // Will be converted to base64-encoded string
+		"response": response[:received], // Will be converted to base64-encoded string
 		"error":    "",
 	}
 	if err != nil {
@@ -233,46 +277,39 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 		}
 	}
 
-	//nolint:gocritic
-	if err != nil && errors.Is(err, io.EOF) {
-		// The server has closed the connection
-		pr.logger.Error().Err(err).Msg("The client is not connected to the server anymore")
-		// Either the client is not connected to the server anymore or
-		// server forceful closed the connection
-		// Reconnect the client
-		client = pr.Reconnect(client)
-		// Put the client in the busy connections pool, effectively replacing the old one
-		pr.busyConnections.Put(gconn, client)
+	err = gconn.AsyncWrite(response[:received], func(gconn gnet.Conn, err error) error {
+		pr.logger.Debug().Fields(
+			map[string]interface{}{
+				"function": "Proxy.PassThrough",
+				"length":   received,
+				"local":    gconn.LocalAddr().String(),
+				"remote":   gconn.RemoteAddr().String(),
+			},
+		).Msg("Sent data to client")
 		return err
-	} else if err != nil {
-		// Write the error to the client
-		_, err := gconn.Write(response[:size])
-		if err != nil {
-			pr.logger.Error().Err(err).Msgf("Error writing the error to client: %v", err)
-		}
-		return fmt.Errorf("error receiving data from server: %w", err)
-	} else {
-		// Write the response to the incoming connection
-		_, err = gconn.Write(response[:size])
-		if err != nil {
-			pr.logger.Error().Err(err).Msgf("Error writing to client: %v", err)
-		}
+	})
+	if err != nil {
+		pr.logger.Error().Err(err).Msgf("Error writing to client")
+		return err
 	}
 
 	return nil
 }
 
-func (pr *ProxyImpl) Reconnect(cl *Client) *Client {
-	// Close the client
-	if cl != nil && cl.ID != "" {
-		cl.Close()
+func (pr *ProxyImpl) TryReconnect(cl *Client) (*Client, error) {
+	// TODO: try retriable connection?
+
+	if pr.IsExhausted() {
+		pr.logger.Error().Msg("No more available connections :: TryReconnect")
+		return cl, gerr.ErrPoolExhausted
 	}
-	return NewClient(
-		pr.ClientConfig.Network,
-		pr.ClientConfig.Address,
-		pr.ClientConfig.ReceiveBufferSize,
-		pr.logger,
-	)
+
+	if !cl.IsConnected() {
+		pr.logger.Error().Msg("Client is disconnected")
+		return cl, gerr.ErrClientNotConnected
+	}
+
+	return cl, nil
 }
 
 func (pr *ProxyImpl) Shutdown() {
@@ -296,4 +333,12 @@ func (pr *ProxyImpl) Shutdown() {
 	})
 	pr.busyConnections.Clear()
 	pr.logger.Debug().Msg("All busy connections have been closed")
+}
+
+func (pr *ProxyImpl) IsExhausted() bool {
+	if pr.Elastic {
+		return false
+	}
+
+	return pr.availableConnections.Size() == 0 && pr.availableConnections.Cap() > 0
 }
