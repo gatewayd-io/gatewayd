@@ -37,6 +37,6 @@ jobs:
             dist/checksums.txt
           draft: false
           prerelease: false
-          tag_name: ${{ github.ref }}
-          name: ${{ github.ref }}
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
           generate_release_notes: true
