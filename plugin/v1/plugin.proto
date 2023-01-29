@@ -25,20 +25,13 @@ service GatewayDPluginService {
     rpc OnClosing (google.protobuf.Struct) returns (google.protobuf.Struct);
     rpc OnClosed (google.protobuf.Struct) returns (google.protobuf.Struct);
     rpc OnTraffic (google.protobuf.Struct) returns (google.protobuf.Struct);
-    rpc OnIngressTraffic (google.protobuf.Struct) returns (google.protobuf.Struct);
-    rpc OnEgressTraffic (google.protobuf.Struct) returns (google.protobuf.Struct);
+    rpc OnTrafficFromClient (google.protobuf.Struct) returns (google.protobuf.Struct);
+    rpc OnTrafficToServer (google.protobuf.Struct) returns (google.protobuf.Struct);
+    rpc OnTrafficFromServer (google.protobuf.Struct) returns (google.protobuf.Struct);
+    rpc OnTrafficToClient (google.protobuf.Struct) returns (google.protobuf.Struct);
     rpc OnShutdown (google.protobuf.Struct) returns (google.protobuf.Struct);
     rpc OnTick (google.protobuf.Struct) returns (google.protobuf.Struct);
     rpc OnNewClient (google.protobuf.Struct) returns (google.protobuf.Struct);
-}
-
-message Version {
-    uint64 major = 1;
-    uint64 minor = 2;
-    uint64 patch = 3;
-    string pre = 4;
-	string metadata = 5;
-	string original = 6;
 }
 
 message PluginID {
