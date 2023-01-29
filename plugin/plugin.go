@@ -48,6 +48,7 @@ type Impl struct {
 
 var _ Plugin = &Impl{}
 
+// Start starts the plugin.
 func (p *Impl) Start() (net.Addr, error) {
 	var addr net.Addr
 	var err error
@@ -57,10 +58,12 @@ func (p *Impl) Start() (net.Addr, error) {
 	return addr, nil
 }
 
+// Stop kills the plugin.
 func (p *Impl) Stop() {
 	p.client.Kill()
 }
 
+// Dispense returns the plugin client.
 func (p *Impl) Dispense() (pluginV1.GatewayDPluginServiceClient, *gerr.GatewayDError) {
 	rpcClient, err := p.client.Client()
 	if err != nil {
