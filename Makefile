@@ -1,17 +1,17 @@
 build:
-	go build -ldflags "-s -w"
+	@go build -ldflags "-s -w"
 
 run:
-	go mod tidy && go run main.go run
+	@go mod tidy && go run main.go run
 
 clean:
-	go clean -testcache
+	@go clean -testcache
 
 test:
-	go test -v ./...
+	@go test -v ./...
 
 protolint:
-	buf lint
+	@buf lint
 
 protogen:
-	buf generate
+	@buf generate
