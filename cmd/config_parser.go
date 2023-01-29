@@ -115,12 +115,16 @@ func poolConfig() (int, *network.Client) {
 	address := globalConfig.String(ref + ".address")
 	receiveBufferSize := globalConfig.Int(ref + ".receiveBufferSize")
 	receiveChunkSize := globalConfig.Int(ref + ".receiveChunkSize")
+	receiveDeadline := globalConfig.Duration(ref + ".receiveDeadline")
+	sendDeadline := globalConfig.Duration(ref + ".sendDeadline")
 
 	return poolSize, &network.Client{
 		Network:           net,
 		Address:           address,
 		ReceiveBufferSize: receiveBufferSize,
 		ReceiveChunkSize:  receiveChunkSize,
+		ReceiveDeadline:   receiveDeadline,
+		SendDeadline:      sendDeadline,
 	}
 }
 
