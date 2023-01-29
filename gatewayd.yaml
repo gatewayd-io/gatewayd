@@ -62,4 +62,4 @@ server:
   tcpNoDelay: True
 
 plugins:
-  verificationPolicy: "ignore"
+  verificationPolicy: "passdown"
