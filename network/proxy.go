@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"sync"
 
 	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
@@ -18,13 +17,12 @@ type Proxy interface {
 	PassThrough(gconn gnet.Conn, onIncomingTraffic, onOutgoingTraffic map[Prio]Traffic) error
 	Reconnect(cl *Client) *Client
 	Shutdown()
-	Size() int
 }
 
 type ProxyImpl struct {
-	pool    Pool
-	clients sync.Map
-	logger  zerolog.Logger
+	availableConnections Pool
+	busyConnections      Pool
+	logger               zerolog.Logger
 
 	Elastic             bool
 	ReuseElasticClients bool
@@ -38,21 +36,24 @@ var _ Proxy = &ProxyImpl{}
 func NewProxy(
 	pool Pool, elastic, reuseElasticClients bool, clientConfig *Client, logger zerolog.Logger,
 ) *ProxyImpl {
-	proxy := ProxyImpl{
-		clients:             sync.Map{},
-		logger:              logger,
-		Elastic:             elastic,
-		ReuseElasticClients: reuseElasticClients,
-		ClientConfig:        clientConfig,
+	return &ProxyImpl{
+		availableConnections: pool,
+		busyConnections:      NewEmptyPool(logger),
+		logger:               logger,
+		Elastic:              elastic,
+		ReuseElasticClients:  reuseElasticClients,
+		ClientConfig:         clientConfig,
 	}
-
-	proxy.pool = pool
-
-	return &proxy
 }
 
 func (pr *ProxyImpl) Connect(gconn gnet.Conn) error {
-	clientIDs := pr.pool.ClientIDs()
+	var clientIDs []string
+	pr.availableConnections.ForEach(func(key, _ interface{}) bool {
+		if clientID, ok := key.(string); ok {
+			clientIDs = append(clientIDs, clientID)
+		}
+		return true
+	})
 
 	var client *Client
 	if len(clientIDs) == 0 {
@@ -72,47 +73,43 @@ func (pr *ProxyImpl) Connect(gconn gnet.Conn) error {
 	} else {
 		// Get a client from the pool
 		pr.logger.Debug().Msgf("Available clients: %v", len(clientIDs))
-		client = pr.pool.Pop(clientIDs[0])
+		if cl, ok := pr.availableConnections.Pop(clientIDs[0]).(*Client); ok {
+			client = cl
+		}
 	}
 
 	if client.ID != "" {
-		pr.clients.Store(gconn, client)
+		pr.busyConnections.Put(gconn, client)
 		pr.logger.Debug().Msgf("Client %s has been assigned to %s", client.ID, gconn.RemoteAddr().String())
 	} else {
 		return ErrClientNotConnected
 	}
 
-	pr.logger.Debug().Msgf("[C] There are %d clients in the pool", len(pr.pool.ClientIDs()))
-	pr.logger.Debug().Msgf("[C] There are %d clients in use", pr.Size())
+	pr.logger.Debug().Msgf("[C] There are %d clients in the pool", pr.availableConnections.Size())
+	pr.logger.Debug().Msgf("[C] There are %d clients in use", pr.busyConnections.Size())
 
 	return nil
 }
 
 func (pr *ProxyImpl) Disconnect(gconn gnet.Conn) error {
 	var client *Client
-	if cl, ok := pr.clients.Load(gconn); ok {
-		if c, ok := cl.(*Client); ok {
-			client = c
-		}
+	if cl, ok := pr.busyConnections.Pop(gconn).(*Client); !ok {
+		client = cl
 	}
-	pr.clients.Delete(gconn)
 
 	// TODO: The connection is unstable when I put the client back in the pool
 	// If the client is not in the pool, put it back
 	if pr.Elastic && pr.ReuseElasticClients || !pr.Elastic {
 		client = pr.Reconnect(client)
 		if client != nil && client.ID != "" {
-			if err := pr.pool.Put(client); err != nil {
-				pr.logger.Error().Err(err).Msgf("Failed to put the client %s back in the pool", client.ID)
-				return fmt.Errorf("failed to put the client back in the pool: %w", err)
-			}
+			pr.availableConnections.Put(client.ID, client)
 		}
 	} else {
 		client.Close()
 	}
 
-	pr.logger.Debug().Msgf("[D] There are %d clients in the pool", len(pr.pool.ClientIDs()))
-	pr.logger.Debug().Msgf("[D] There are %d clients in use", pr.Size())
+	pr.logger.Debug().Msgf("[D] There are %d clients in the pool", pr.availableConnections.Size())
+	pr.logger.Debug().Msgf("[D] There are %d clients in use", pr.busyConnections.Size())
 
 	return nil
 }
@@ -130,10 +127,8 @@ func (pr *ProxyImpl) PassThrough(
 	// that listens for data from the server and sends it to the client
 
 	var client *Client
-	if c, ok := pr.clients.Load(gconn); ok {
-		if cl, ok := c.(*Client); ok {
-			client = cl
-		}
+	if cl, ok := pr.busyConnections.Pop(gconn).(*Client); ok {
+		client = cl
 	} else {
 		return ErrClientNotFound
 	}
@@ -175,8 +170,8 @@ func (pr *ProxyImpl) PassThrough(
 		// server forceful closed the connection
 		// Reconnect the client
 		client = pr.Reconnect(client)
-		// Store the client in the map, replacing the old one
-		pr.clients.Store(gconn, client)
+		// Put the client in the busy connections pool, effectively replacing the old one
+		pr.busyConnections.Put(gconn, client)
 		return err
 	}
 
@@ -212,23 +207,24 @@ func (pr *ProxyImpl) Reconnect(cl *Client) *Client {
 }
 
 func (pr *ProxyImpl) Shutdown() {
-	pr.pool.Shutdown()
-	pr.logger.Debug().Msg("All busy client connections have been closed")
-
-	availableClients := pr.pool.ClientIDs()
-	for _, clientID := range availableClients {
-		client := pr.pool.Pop(clientID)
-		client.Close()
-	}
-	pr.logger.Debug().Msg("All available client connections have been closed")
-}
-
-func (pr *ProxyImpl) Size() int {
-	var size int
-	pr.clients.Range(func(_, _ interface{}) bool {
-		size++
+	pr.availableConnections.ForEach(func(key, value interface{}) bool {
+		if cl, ok := value.(*Client); ok {
+			cl.Close()
+		}
 		return true
 	})
+	pr.availableConnections.Clear()
+	pr.logger.Debug().Msg("All available connections have been closed")
 
-	return size
+	pr.busyConnections.ForEach(func(key, value interface{}) bool {
+		if gconn, ok := key.(gnet.Conn); ok {
+			gconn.Close()
+		}
+		if cl, ok := value.(*Client); ok {
+			cl.Close()
+		}
+		return true
+	})
+	pr.busyConnections.Clear()
+	pr.logger.Debug().Msg("All busy connections have been closed")
 }
