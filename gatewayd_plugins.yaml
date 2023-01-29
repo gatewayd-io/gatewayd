@@ -26,9 +26,9 @@ plugins:
       - MAGIC_COOKIE_KEY=GATEWAYD_PLUGIN
       - MAGIC_COOKIE_VALUE=5712b87aa5d7e9f9e9ab643e6603181c5b796015cb1c09d6f5ada882bf2a1872
     # Checksum hash to verify the binary before loading
-    checksum: 87ec8ea49300f2f5848532ebece5c70ac0aacbdc92b0b909cc5ad72d58e236db
+    checksum: f69cfe091f75cd0597005357216507affae20e69845b9f4980999db97e5487e4
   - name: gatewayd-plugin-cache
-    enabled: True
+    enabled: False
     localPath: ../gatewayd-plugin-cache/gatewayd-plugin-cache
     args: ["--log-level", "debug"]
     env:
@@ -36,3 +36,11 @@ plugins:
       - MAGIC_COOKIE_VALUE=5712b87aa5d7e9f9e9ab643e6603181c5b796015cb1c09d6f5ada882bf2a1872
       - REDIS_ADDR=localhost:6379
     checksum: c6cf26a4ec2d2a4496e1634692d306c518e36cf55f139d2d47ff554594c7252b
+  - name: gatewayd-plugin-postgres-wire
+    enabled: True
+    localPath: ../gatewayd-plugin-postgres-wire/gatewayd-plugin-postgres-wire
+    args: ["--log-level", "debug"]
+    env:
+      - MAGIC_COOKIE_KEY=GATEWAYD_PLUGIN
+      - MAGIC_COOKIE_VALUE=5712b87aa5d7e9f9e9ab643e6603181c5b796015cb1c09d6f5ada882bf2a1872
+    checksum: a1927a00e54def281adc8f43dc624a5260a1cbb8415ea2ebc24ef734617417a9
