@@ -112,40 +112,31 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 			},
 		}
 
-		if enabled, ok := pluginConfig.Get(name + ".enabled").(bool); !ok || !enabled {
-			reg.hooksConfig.Logger.Debug().Str("name", name).Msg("Plugin is disabled or is not set")
+		// Is the plugin enabled?
+		plugin.Enabled = pluginConfig.Bool(name + ".enabled")
+		if !plugin.Enabled {
+			reg.hooksConfig.Logger.Debug().Str("name", name).Msg("Plugin is disabled")
 			continue
-		} else {
-			plugin.Enabled = enabled
 		}
 
-		if localPath, ok := pluginConfig.Get(
-			name + ".localPath").(string); !ok || localPath == "" {
+		// File path of the plugin on disk.
+		plugin.LocalPath = pluginConfig.String(name + ".localPath")
+		if plugin.LocalPath == "" {
 			reg.hooksConfig.Logger.Debug().Str("name", name).Msg(
-				"Local file of plugin doesn't exist or is not set")
+				"Local file of the plugin doesn't exist or is not set")
 			continue
-		} else {
-			plugin.LocalPath = localPath
 		}
 
-		if args := pluginConfig.Strings(name + ".args"); len(args) > 0 {
-			plugin.Args = args
-		}
-
-		if env := pluginConfig.Strings(name + ".env"); len(env) > 0 {
-			plugin.Env = append(plugin.Env, env...)
-		}
-
-		if checksum, ok := pluginConfig.Get(name + ".checksum").(string); !ok || checksum == "" {
+		// Checksum of the plugin.
+		plugin.ID.Checksum = pluginConfig.String(name + ".checksum")
+		if plugin.ID.Checksum == "" {
 			reg.hooksConfig.Logger.Debug().Str("name", name).Msg(
 				"Checksum of plugin doesn't exist or is not set")
 			continue
-		} else {
-			plugin.ID.Checksum = checksum
 		}
 
 		// Verify the checksum.
-		// TODO: Load the plugin from a remote location if the checksum doesn't match
+		// TODO: Load the plugin from a remote location if the checksum didn't match?
 		if sum, err := sha256sum(plugin.LocalPath); err != nil {
 			reg.hooksConfig.Logger.Debug().Err(err).Msg("Failed to calculate checksum")
 			continue
@@ -159,9 +150,20 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 			continue
 		}
 
-		// Plugin priority is determined by the order in which it is listed in the config file
-		// Built-in plugins are loaded first, followed by user-defined plugins. Built-in plugins
-		// have a priority of 0 to 999, and user-defined plugins have a priority of 1000 or greater.
+		// Commandline arguments to pass to the plugin.
+		if args := pluginConfig.Strings(name + ".args"); len(args) > 0 {
+			plugin.Args = args
+		}
+
+		// Custom environment variables to pass to the plugin.
+		if env := pluginConfig.Strings(name + ".env"); len(env) > 0 {
+			plugin.Env = append(plugin.Env, env...)
+		}
+
+		// Plugin priority is determined by the order in which the plugin is listed
+		// in the config file. Built-in plugins are loaded first, followed by user-defined
+		// plugins. Built-in plugins have a priority of 0 to 999, and user-defined plugins
+		// have a priority of 1000 or greater.
 		plugin.Priority = Priority(PluginPriorityStart + uint(priority))
 
 		logAdapter := logging.NewHcLogAdapter(&reg.hooksConfig.Logger, LoggerName)
