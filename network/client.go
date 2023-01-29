@@ -26,6 +26,7 @@ type Client struct {
 
 	ID                string
 	ReceiveBufferSize int
+	ReceiveChunkSize  int
 	Network           string // tcp/udp/unix
 	Address           string
 	// TODO: add read/write deadline and deal with timeouts
@@ -35,7 +36,11 @@ var _ ClientInterface = &Client{}
 
 // TODO: implement a better connection management algorithm
 
-func NewClient(network, address string, receiveBufferSize int, logger zerolog.Logger) *Client {
+func NewClient(
+	network, address string,
+	receiveBufferSize int,
+	receiveChunkSize int,
+	logger zerolog.Logger) *Client {
 	var client Client
 
 	client.logger = logger
@@ -75,6 +80,12 @@ func NewClient(network, address string, receiveBufferSize int, logger zerolog.Lo
 		client.ReceiveBufferSize = receiveBufferSize
 	}
 
+	if receiveChunkSize <= 0 {
+		client.ReceiveChunkSize = DefaultChunkSize
+	} else {
+		client.ReceiveChunkSize = receiveChunkSize
+	}
+
 	logger.Debug().Msgf("New client created: %s", client.Address)
 	client.ID = GetID(conn.LocalAddr().Network(), conn.LocalAddr().String(), DefaultSeed, logger)
 
@@ -95,7 +106,7 @@ func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 	var received int
 	buffer := make([]byte, 0, c.ReceiveBufferSize)
 	for {
-		smallBuf := make([]byte, DefaultChunkSize)
+		smallBuf := make([]byte, c.ReceiveChunkSize)
 		read, err := c.Conn.Read(smallBuf)
 		switch {
 		case read > 0 && err != nil:
@@ -111,7 +122,7 @@ func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 			buffer = append(buffer, smallBuf[:read]...)
 		}
 
-		if read == 0 || read < DefaultChunkSize {
+		if read == 0 || read < c.ReceiveChunkSize {
 			break
 		}
 	}
