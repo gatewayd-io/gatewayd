@@ -31,6 +31,18 @@ func (p PluginConfig) GetPluginCompatibilityPolicy() CompatibilityPolicy {
 	}
 }
 
+// GetAcceptancePolicy returns the acceptance policy from plugin config file.
+func (p PluginConfig) GetAcceptancePolicy() AcceptancePolicy {
+	switch p.AcceptancePolicy {
+	case "accept":
+		return Accept
+	case "reject":
+		return Reject
+	default:
+		return Accept
+	}
+}
+
 // GetLoadBalancer returns the load balancing algorithm to use.
 func (s Server) GetLoadBalancer() gnet.LoadBalancing {
 	switch s.LoadBalancer {

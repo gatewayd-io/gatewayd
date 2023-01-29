@@ -32,6 +32,7 @@ type Plugin struct {
 type PluginConfig struct {
 	VerificationPolicy  string   `koanf:"verificationPolicy"`
 	CompatibilityPolicy string   `koanf:"compatibilityPolicy"`
+	AcceptancePolicy    string   `koanf:"acceptancePolicy"`
 	Plugins             []Plugin `koanf:"plugins"`
 }
 
