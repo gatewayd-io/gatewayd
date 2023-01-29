@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TestNewClient tests the NewClient function.
 func TestNewClient(t *testing.T) {
 	postgres := embeddedpostgres.NewDatabase()
 	if err := postgres.Start(); err != nil {
@@ -47,6 +48,7 @@ func TestNewClient(t *testing.T) {
 	assert.NotNil(t, client.Conn)
 }
 
+// TestSend tests the Send function.
 func TestSend(t *testing.T) {
 	postgres := embeddedpostgres.NewDatabase()
 	if err := postgres.Start(); err != nil {
@@ -85,6 +87,7 @@ func TestSend(t *testing.T) {
 	assert.Equal(t, len(packet), sent)
 }
 
+// TestReceive tests the Receive function.
 func TestReceive(t *testing.T) {
 	postgres := embeddedpostgres.NewDatabase()
 	if err := postgres.Start(); err != nil {
@@ -133,6 +136,7 @@ func TestReceive(t *testing.T) {
 	assert.Equal(t, uint8(0x52), data[0])
 }
 
+// TestClose tests the Close function.
 func TestClose(t *testing.T) {
 	postgres := embeddedpostgres.NewDatabase()
 	if err := postgres.Start(); err != nil {
