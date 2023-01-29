@@ -105,9 +105,9 @@ func CollectAndComparePrometheusMetrics(t *testing.T) {
 		want = metadata + `
 			gatewayd_bytes_received_from_client_sum 67
 			gatewayd_bytes_received_from_client_count 1
-			gatewayd_bytes_received_from_server_sum 36
+			gatewayd_bytes_received_from_server_sum 96
 			gatewayd_bytes_received_from_server_count 4
-			gatewayd_bytes_sent_to_client_sum 9
+			gatewayd_bytes_sent_to_client_sum 24
 			gatewayd_bytes_sent_to_client_count 1
 			gatewayd_bytes_sent_to_server_sum 282
 			gatewayd_bytes_sent_to_server_count 5
@@ -120,7 +120,7 @@ func CollectAndComparePrometheusMetrics(t *testing.T) {
 			gatewayd_proxy_passthrough_terminations_total 0
 			gatewayd_proxy_passthroughs_total 1
 			gatewayd_server_connections 4
-			gatewayd_traffic_bytes_sum 152
+			gatewayd_traffic_bytes_sum 182
 			gatewayd_traffic_bytes_count 4
 		`
 
