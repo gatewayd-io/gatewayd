@@ -10,10 +10,11 @@ import (
 )
 
 const (
-	DefaultSeed            = 1000
-	DefaultChunkSize       = 4096
-	DefaultReceiveDeadline = 0 // 0 means no deadline (timeout)
-	DefaultSendDeadline    = 0
+	DefaultSeed               = 1000
+	DefaultChunkSize          = 4096
+	DefaultReceiveDeadline    = 0 // 0 means no deadline (timeout)
+	DefaultSendDeadline       = 0
+	DefaultTCPKeepAlivePeriod = 30 * time.Second
 )
 
 type ClientInterface interface {
@@ -28,13 +29,15 @@ type Client struct {
 
 	logger zerolog.Logger
 
-	ReceiveBufferSize int
-	ReceiveChunkSize  int
-	ReceiveDeadline   time.Duration
-	SendDeadline      time.Duration
-	ID                string
-	Network           string // tcp/udp/unix
-	Address           string
+	TCPKeepAlive       bool
+	TCPKeepAlivePeriod time.Duration
+	ReceiveBufferSize  int
+	ReceiveChunkSize   int
+	ReceiveDeadline    time.Duration
+	SendDeadline       time.Duration
+	ID                 string
+	Network            string // tcp/udp/unix
+	Address            string
 }
 
 var _ ClientInterface = &Client{}
@@ -48,6 +51,7 @@ func NewClient(
 	network, address string,
 	receiveBufferSize, receiveChunkSize int,
 	receiveDeadline, sendDeadline time.Duration,
+	tcpKeepAlive bool, tcpKeepAlivePeriod time.Duration,
 	logger zerolog.Logger,
 ) *Client {
 	var client Client
@@ -83,6 +87,24 @@ func NewClient(
 	}
 
 	client.Conn = conn
+
+	// Set the TCP keep alive.
+	client.TCPKeepAlive = tcpKeepAlive
+	if tcpKeepAlivePeriod <= 0 {
+		client.TCPKeepAlivePeriod = DefaultTCPKeepAlivePeriod
+	} else {
+		client.TCPKeepAlivePeriod = tcpKeepAlivePeriod
+	}
+
+	if c, ok := client.Conn.(*net.TCPConn); ok {
+		if err := c.SetKeepAlive(client.TCPKeepAlive); err != nil {
+			logger.Error().Err(err).Msg("Failed to set keep alive")
+		} else {
+			if err := c.SetKeepAlivePeriod(client.TCPKeepAlivePeriod); err != nil {
+				logger.Error().Err(err).Msg("Failed to set keep alive period")
+			}
+		}
+	}
 
 	// Set the receive deadline (timeout).
 	if receiveDeadline <= 0 {
