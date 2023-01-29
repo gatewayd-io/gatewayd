@@ -17,3 +17,6 @@
 # Binaries
 gatewayd
 k6
+
+# Editor files
+.vscode
