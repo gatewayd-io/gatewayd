@@ -110,8 +110,6 @@ var runCmd = &cobra.Command{
 				gnet.WithTCPKeepAlive(serverConfig.TCPKeepAlive),
 				gnet.WithTCPNoDelay(serverConfig.TCPNoDelay),
 			},
-			nil,
-			nil,
 			proxy,
 			logger,
 			hooksConfig,
