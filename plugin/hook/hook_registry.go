@@ -14,12 +14,12 @@ import (
 
 type IRegistry interface {
 	Hooks() map[string]map[Priority]Method
-	Add(hookType string, prio Priority, hookFunc Method)
-	Get(hookType string) map[Priority]Method
+	Add(hookName string, prio Priority, hookFunc Method)
+	Get(hookName string) map[Priority]Method
 	Run(
 		ctx context.Context,
 		args map[string]interface{},
-		hookType string,
+		hookName string,
 		verification config.Policy,
 		opts ...grpc.CallOption,
 	) (map[string]interface{}, *gerr.GatewayDError)
@@ -47,25 +47,25 @@ func (h *Registry) Hooks() map[string]map[Priority]Method {
 }
 
 // Add adds a hook with a priority to the hooks map.
-func (h *Registry) Add(hookType string, prio Priority, hookFunc Method) {
-	if len(h.hooks[hookType]) == 0 {
-		h.hooks[hookType] = map[Priority]Method{prio: hookFunc}
+func (h *Registry) Add(hookName string, prio Priority, hookFunc Method) {
+	if len(h.hooks[hookName]) == 0 {
+		h.hooks[hookName] = map[Priority]Method{prio: hookFunc}
 	} else {
-		if _, ok := h.hooks[hookType][prio]; ok {
+		if _, ok := h.hooks[hookName][prio]; ok {
 			h.Logger.Warn().Fields(
 				map[string]interface{}{
-					"hookType": hookType,
+					"hookName": hookName,
 					"priority": prio,
 				},
 			).Msg("Hook is replaced")
 		}
-		h.hooks[hookType][prio] = hookFunc
+		h.hooks[hookName][prio] = hookFunc
 	}
 }
 
 // Get returns the hooks of a specific type.
-func (h *Registry) Get(hookType string) map[Priority]Method {
-	return h.hooks[hookType]
+func (h *Registry) Get(hookName string) map[Priority]Method {
+	return h.hooks[hookName]
 }
 
 // Run runs the hooks of a specific type. The result of the previous hook is passed
@@ -85,7 +85,7 @@ func (h *Registry) Get(hookType string) map[Priority]Method {
 func (h *Registry) Run(
 	ctx context.Context,
 	args map[string]interface{},
-	hookType string,
+	hookName string,
 	verification config.Policy,
 	opts ...grpc.CallOption,
 ) (map[string]interface{}, *gerr.GatewayDError) {
@@ -111,8 +111,8 @@ func (h *Registry) Run(
 	}
 
 	// Sort hooks by priority.
-	priorities := make([]Priority, 0, len(h.hooks[hookType]))
-	for prio := range h.hooks[hookType] {
+	priorities := make([]Priority, 0, len(h.hooks[hookName]))
+	for prio := range h.hooks[hookName] {
 		priorities = append(priorities, prio)
 	}
 	sort.SliceStable(priorities, func(i, j int) bool {
@@ -127,9 +127,9 @@ func (h *Registry) Run(
 		var result *structpb.Struct
 		var err error
 		if idx == 0 {
-			result, err = h.hooks[hookType][prio](inheritedCtx, params, opts...)
+			result, err = h.hooks[hookName][prio](inheritedCtx, params, opts...)
 		} else {
-			result, err = h.hooks[hookType][prio](inheritedCtx, returnVal, opts...)
+			result, err = h.hooks[hookName][prio](inheritedCtx, returnVal, opts...)
 		}
 
 		// This is done to ensure that the return value of the hook is always valid,
@@ -149,7 +149,7 @@ func (h *Registry) Run(
 		case config.Ignore:
 			h.Logger.Error().Err(err).Fields(
 				map[string]interface{}{
-					"hookType": hookType,
+					"hookName": hookName,
 					"priority": prio,
 				},
 			).Msg("Hook returned invalid value, ignoring")
@@ -160,7 +160,7 @@ func (h *Registry) Run(
 		case config.Abort:
 			h.Logger.Error().Err(err).Fields(
 				map[string]interface{}{
-					"hookType": hookType,
+					"hookName": hookName,
 					"priority": prio,
 				},
 			).Msg("Hook returned invalid value, aborting")
@@ -172,7 +172,7 @@ func (h *Registry) Run(
 		case config.Remove:
 			h.Logger.Error().Err(err).Fields(
 				map[string]interface{}{
-					"hookType": hookType,
+					"hookName": hookName,
 					"priority": prio,
 				},
 			).Msg("Hook returned invalid value, removing")
@@ -188,7 +188,7 @@ func (h *Registry) Run(
 
 	// Remove hooks that failed verification.
 	for _, prio := range removeList {
-		delete(h.hooks[hookType], prio)
+		delete(h.hooks[hookName], prio)
 	}
 
 	return returnVal.AsMap(), nil
