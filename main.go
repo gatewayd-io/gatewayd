@@ -8,15 +8,27 @@ import (
 
 	"github.com/gatewayd-io/gatewayd/network"
 	"github.com/panjf2000/gnet/v2"
+	"github.com/sirupsen/logrus"
 )
 
+const (
+	DefaultTCPKeepAlive = 3 * time.Second
+)
+
+//nolint:funlen
 func main() {
 	// Create a server
-	server := &network.Server{
-		Network: "tcp",
-		Address: "0.0.0.0:15432",
-		Status:  network.Stopped,
-		Options: []gnet.Option{
+	server := network.NewServer(
+		"tcp",
+		"0.0.0.0:15432",
+		0,
+		0,
+		network.DefaultTickInterval,
+		network.DefaultPoolSize,
+		network.DefaultBufferSize,
+		false,
+		false,
+		[]gnet.Option{
 			// Scheduling options
 			gnet.WithMulticore(true),
 			gnet.WithLockOSThread(false),
@@ -37,18 +49,20 @@ func main() {
 
 			// Buffer options
 			// TODO: This should be configurable and optimized.
-			gnet.WithReadBufferCap(4096),
-			gnet.WithWriteBufferCap(4096),
-			gnet.WithSocketRecvBuffer(4096),
-			gnet.WithSocketSendBuffer(4096),
+			gnet.WithReadBufferCap(network.DefaultBufferSize),
+			gnet.WithWriteBufferCap(network.DefaultBufferSize),
+			gnet.WithSocketRecvBuffer(network.DefaultBufferSize),
+			gnet.WithSocketSendBuffer(network.DefaultBufferSize),
 
 			// TCP options
 			gnet.WithReuseAddr(true),
 			gnet.WithReusePort(true),
-			gnet.WithTCPKeepAlive(time.Second * 3),
+			gnet.WithTCPKeepAlive(DefaultTCPKeepAlive),
 			gnet.WithTCPNoDelay(gnet.TCPNoDelay),
 		},
-	}
+		nil,
+		nil,
+	)
 
 	// Shutdown the server gracefully
 	var signals []os.Signal
@@ -75,5 +89,7 @@ func main() {
 	}()
 
 	// Run the server
-	server.Run()
+	if err := server.Run(); err != nil {
+		logrus.Error(err)
+	}
 }

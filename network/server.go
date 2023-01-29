@@ -1,6 +1,7 @@
 package network
 
 import (
+	"fmt"
 	"os"
 	"time"
 
@@ -13,6 +14,10 @@ type Status string
 const (
 	Running Status = "running"
 	Stopped Status = "stopped"
+
+	DefaultTickInterval = 5
+	DefaultPoolSize     = 10
+	DefaultBufferSize   = 4096
 )
 
 type Server struct {
@@ -20,90 +25,71 @@ type Server struct {
 	engine gnet.Engine
 	proxy  Proxy
 
-	Network   string // tcp/udp/unix
-	Address   string
-	Options   []gnet.Option
-	SoftLimit int
-	HardLimit int
-	Status    Status
+	Network             string // tcp/udp/unix
+	Address             string
+	Options             []gnet.Option
+	SoftLimit           uint64
+	HardLimit           uint64
+	Status              Status
+	TickInterval        int
+	PoolSize            int
+	ElasticPool         bool
+	ReuseElasticClients bool
+	BufferSize          int
+	OnIncomingTraffic   Traffic
+	OnOutgoingTraffic   Traffic
 }
 
 func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 	s.engine = engine
 
-	// Get the current limits
-	limits := GetRLimit()
-
-	// Set the soft and hard limits if they are not set
-	if s.SoftLimit == 0 {
-		s.SoftLimit = int(limits.Cur)
-		logrus.Debugf("Soft limit is not set, using the current system soft limit")
-	}
-
-	if s.HardLimit == 0 {
-		s.HardLimit = int(limits.Max)
-		logrus.Debugf("Hard limit is not set, using the current system hard limit")
-	}
-
 	// Create a proxy with a fixed/elastic buffer pool
-	s.proxy = NewProxy(10, false, false)
+	s.proxy = NewProxy(s.PoolSize, s.BufferSize, s.ElasticPool, s.ReuseElasticClients)
 
-	// Try to resolve the address and log an error if it can't be resolved
-	addr, err := Resolve(s.Network, s.Address)
-	if err != nil {
-		logrus.Error(err)
-	}
-
-	if addr != "" {
-		logrus.Infof("GatewayD is listening on %s", addr)
-	} else {
-		logrus.Warnf("GatewayD is listening on %s (cannot resolve address)", addr)
-	}
-
+	// Set the status to running
 	s.Status = Running
 
 	return gnet.None
 }
 
-func (s *Server) OnOpen(c gnet.Conn) (out []byte, action gnet.Action) {
-	logrus.Debugf("GatewayD is opening a connection from %s", c.RemoteAddr().String())
-	if s.engine.CountConnections() >= s.SoftLimit {
+func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
+	logrus.Debugf("GatewayD is opening a connection from %s", gconn.RemoteAddr().String())
+	if uint64(s.engine.CountConnections()) >= s.SoftLimit {
 		logrus.Warn("Soft limit reached")
 	}
-	if s.engine.CountConnections() >= s.HardLimit {
+	if uint64(s.engine.CountConnections()) >= s.HardLimit {
 		logrus.Error("Hard limit reached")
-		c.Write([]byte("Hard limit reached\n"))
-		c.Close()
+		_, err := gconn.Write([]byte("Hard limit reached\n"))
+		if err != nil {
+			logrus.Error(err)
+		}
+		gconn.Close()
 		return nil, gnet.Close
 	}
 
-	if err := s.proxy.Connect(c); err != nil {
+	if err := s.proxy.Connect(gconn); err != nil {
 		return nil, gnet.Close
 	}
 
 	return nil, gnet.None
 }
 
-func (s *Server) OnClose(c gnet.Conn, err error) (action gnet.Action) {
-	logrus.Debugf("GatewayD is closing a connection from %s", c.RemoteAddr().String())
+func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
+	logrus.Debugf("GatewayD is closing a connection from %s", gconn.RemoteAddr().String())
 
-	if err := s.proxy.Disconnect(c); err != nil {
+	if err := s.proxy.Disconnect(gconn); err != nil {
 		logrus.Error(err)
+	}
+
+	if uint64(s.engine.CountConnections()) == 0 && s.Status == Stopped {
+		return gnet.Shutdown
 	}
 
 	return gnet.Close
 }
 
-func (s *Server) OnTraffic(c gnet.Conn) gnet.Action {
-	if err := s.proxy.PassThrough(c, func(buf []byte, err error) error {
-		// TODO: Implement the traffic handler
-		logrus.Infof("GatewayD is passing traffic from %s to %s", c.RemoteAddr().String(), c.LocalAddr().String())
-		return nil
-	}, func(buf []byte, err error) error {
-		// TODO: Implement the traffic handler
-		logrus.Infof("GatewayD is passing traffic from %s to %s", c.LocalAddr().String(), c.RemoteAddr().String())
-		return nil
-	}); err != nil {
+func (s *Server) OnTraffic(gconn gnet.Conn) gnet.Action {
+	if err := s.proxy.PassThrough(gconn, s.OnIncomingTraffic, s.OnOutgoingTraffic); err != nil {
 		logrus.Error(err)
 		// TODO: Close the connection *gracefully*
 		return gnet.Close
@@ -118,13 +104,13 @@ func (s *Server) OnShutdown(engine gnet.Engine) {
 	s.Status = Stopped
 }
 
-func (s *Server) OnTick() (delay time.Duration, action gnet.Action) {
+func (s *Server) OnTick() (time.Duration, gnet.Action) {
 	logrus.Println("GatewayD is ticking...")
 	logrus.Infof("Active connections: %d", s.engine.CountConnections())
-	return time.Second * 5, gnet.None
+	return time.Duration(s.TickInterval * int(time.Second)), gnet.None
 }
 
-func (s *Server) Run() {
+func (s *Server) Run() error {
 	logrus.Infof("GatewayD is running with PID %d", os.Getpid())
 
 	// Try to resolve the address and log an error if it can't be resolved
@@ -136,9 +122,114 @@ func (s *Server) Run() {
 	err = gnet.Run(s, s.Network+"://"+addr, s.Options...)
 	if err != nil {
 		logrus.Error(err)
+		return fmt.Errorf("failed to start server: %w", err)
 	}
+
+	return nil
 }
 
 func (s *Server) Shutdown() {
 	s.proxy.Shutdown()
+	s.Status = Stopped
+}
+
+func (s *Server) IsRunning() bool {
+	return s.Status == Running
+}
+
+//nolint:funlen
+func NewServer(
+	network, address string,
+	softLimit, hardLimit uint64,
+	tickInterval, poolSize, bufferSize int,
+	elasticPool, reuseElasticClients bool,
+	options []gnet.Option,
+	onIncomingTraffic, onOutgoingTraffic Traffic,
+) *Server {
+	server := Server{
+		Network:      network,
+		Address:      address,
+		Options:      options,
+		TickInterval: tickInterval,
+		Status:       Stopped,
+	}
+
+	// Try to resolve the address and log an error if it can't be resolved
+	addr, err := Resolve(server.Network, server.Address)
+	if err != nil {
+		logrus.Error(err)
+	}
+
+	if addr != "" {
+		server.Address = addr
+		logrus.Infof("GatewayD is listening on %s", addr)
+	} else {
+		logrus.Warnf("GatewayD is listening on %s (cannot resolve address)", server.Address)
+	}
+
+	// Get the current limits
+	limits := GetRLimit()
+
+	// Set the soft and hard limits if they are not set
+	if softLimit == 0 {
+		server.SoftLimit = limits.Cur
+		logrus.Debugf("Soft limit is not set, using the current system soft limit")
+	} else {
+		server.SoftLimit = softLimit
+		logrus.Debugf("Soft limit is set to %d", softLimit)
+	}
+
+	if hardLimit == 0 {
+		server.HardLimit = limits.Max
+		logrus.Debugf("Hard limit is not set, using the current system hard limit")
+	} else {
+		server.HardLimit = hardLimit
+		logrus.Debugf("Hard limit is set to %d", hardLimit)
+	}
+
+	if tickInterval == 0 {
+		server.TickInterval = int(DefaultTickInterval)
+		logrus.Debugf("Tick interval is not set, using the default value")
+	} else {
+		server.TickInterval = tickInterval
+	}
+
+	if poolSize == 0 {
+		server.PoolSize = DefaultPoolSize
+		logrus.Debugf("Client connections is not set, using the default value")
+	} else {
+		server.PoolSize = poolSize
+	}
+
+	if bufferSize == 0 {
+		server.BufferSize = DefaultBufferSize
+		logrus.Debugf("Buffer size is not set, using the default value")
+	} else {
+		server.BufferSize = bufferSize
+	}
+
+	server.ElasticPool = elasticPool
+	server.ReuseElasticClients = reuseElasticClients
+
+	if onIncomingTraffic == nil {
+		server.OnIncomingTraffic = func(gconn gnet.Conn, cl *Client, buf []byte, err error) error {
+			// TODO: Implement the traffic handler
+			logrus.Infof("GatewayD is passing traffic from %s to %s", gconn.RemoteAddr().String(), gconn.LocalAddr().String())
+			return nil
+		}
+	} else {
+		server.OnIncomingTraffic = onIncomingTraffic
+	}
+
+	if onOutgoingTraffic == nil {
+		server.OnOutgoingTraffic = func(gconn gnet.Conn, cl *Client, buf []byte, err error) error {
+			// TODO: Implement the traffic handler
+			logrus.Infof("GatewayD is passing traffic from %s to %s", gconn.LocalAddr().String(), gconn.RemoteAddr().String())
+			return nil
+		}
+	} else {
+		server.OnOutgoingTraffic = onOutgoingTraffic
+	}
+
+	return &server
 }

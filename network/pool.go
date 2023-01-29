@@ -8,7 +8,7 @@ import (
 
 type Pool interface {
 	ForEach(callback func(client *Client) error)
-	Pool() sync.Map
+	Pool() *sync.Map
 	ClientIDs() []string
 	Put(client *Client) error
 	Pop(ID string) *Client
@@ -25,23 +25,30 @@ var _ Pool = &PoolImpl{}
 
 func (p *PoolImpl) ForEach(callback func(client *Client) error) {
 	p.pool.Range(func(key, value interface{}) bool {
-		err := callback(value.(*Client))
-		if err != nil {
-			logrus.Errorf("an error occurred running the callback: %v", err)
+		if c, ok := value.(*Client); ok {
+			err := callback(c)
+			if err != nil {
+				logrus.Errorf("an error occurred running the callback: %v", err)
+			}
+			return true
 		}
-		return true
+
+		return false
 	})
 }
 
-func (p *PoolImpl) Pool() sync.Map {
-	return p.pool
+func (p *PoolImpl) Pool() *sync.Map {
+	return &p.pool
 }
 
 func (p *PoolImpl) ClientIDs() []string {
 	var ids []string
 	p.pool.Range(func(key, _ interface{}) bool {
-		ids = append(ids, key.(string))
-		return true
+		if id, ok := key.(string); ok {
+			ids = append(ids, id)
+			return true
+		}
+		return false
 	})
 	return ids
 }
@@ -53,11 +60,14 @@ func (p *PoolImpl) Put(client *Client) error {
 	return nil
 }
 
-func (p *PoolImpl) Pop(ID string) *Client {
-	if client, ok := p.pool.Load(ID); ok {
-		p.pool.Delete(ID)
-		logrus.Debugf("Client %s has been popped from the pool", ID)
-		return client.(*Client)
+func (p *PoolImpl) Pop(id string) *Client {
+	if client, ok := p.pool.Load(id); ok {
+		p.pool.Delete(id)
+		logrus.Debugf("Client %s has been popped from the pool", id)
+		if c, ok := client.(*Client); ok {
+			return c
+		}
+		return nil
 	}
 
 	return nil
@@ -84,8 +94,9 @@ func (p *PoolImpl) Close() error {
 
 func (p *PoolImpl) Shutdown() {
 	p.pool.Range(func(key, value interface{}) bool {
-		client := value.(*Client)
-		client.Close()
+		if cl, ok := value.(*Client); ok {
+			cl.Close()
+		}
 		p.pool.Delete(key)
 		return true
 	})
