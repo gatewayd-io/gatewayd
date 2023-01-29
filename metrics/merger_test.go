@@ -28,6 +28,11 @@ func TestMerger(t *testing.T) {
 	go merger.Start()
 	time.Sleep(1 * time.Second)
 
+	// We expect the metrics to be merged into a single output.
+	// Also, we don't need to test the actual metrics from GatewayD,
+	// so the output only contains the metrics from the test plugin.
+	// All the plugin's metrics are prefixed with "gatewayd_" and labeled
+	// with the plugin name, i.e. "test" during merging.
 	want := `# HELP gatewayd_test_total Test counter
 # TYPE gatewayd_test_total counter
 gatewayd_test_total{plugin="test"} 1`
