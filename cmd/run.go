@@ -24,7 +24,7 @@ const (
 
 var (
 	configFile  string
-	hooksConfig = network.NewHookConfig()
+	hooksConfig = plugin.NewHookConfig()
 )
 
 // runCmd represents the run command.
