@@ -28,7 +28,7 @@ jobs:
           TOKEN: ${{ secrets.GH_SDK_TOKEN }}
           GOPRIVATE: github.com/gatewayd-io/gatewayd-*
       - name: Build and release binaries
-        run: make build-relase
+        run: make build-release
       - name: Create release and add artifacts
         uses: softprops/action-gh-release@v1
         with:

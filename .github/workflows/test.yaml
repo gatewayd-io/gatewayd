@@ -104,7 +104,7 @@ jobs:
       - name: Build test plugin 🏗️
         run: |
           # Build GatewayD
-          make build
+          make build-dev
           # Build test plugin
           cd gatewayd-plugin-test && make build && cp gatewayd-plugin-test ../gdp-test && cd ..
           export SHA256SUM=$(sha256sum gdp-test | awk '{print $1}')
