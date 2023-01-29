@@ -1,6 +1,7 @@
 package network
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -10,6 +11,7 @@ import (
 	"github.com/gatewayd-io/gatewayd/pool"
 	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type Proxy interface {
@@ -142,22 +144,29 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 		pr.logger.Error().Err(err).Msgf("Error reading from client: %v", err)
 	}
 
-	result := pr.hookConfig.Run(
+	ingressData, _ := structpb.NewStruct(map[string]interface{}{
+		"gconn":  gconn,
+		"client": client,
+		"buffer": buf,
+		"error":  err,
+	})
+
+	result, err := pr.hookConfig.Run(
 		plugin.OnIngressTraffic,
-		plugin.Signature{
-			"gconn":  gconn,
-			"client": client,
-			"buffer": buf,
-			"error":  err,
-		},
+		context.Background(),
+		ingressData,
 		pr.hookConfig.Verification)
+	if err != nil {
+		pr.logger.Error().Err(err).Msgf("Error running hook: %v", err)
+	}
+
 	if result != nil {
 		// TODO: Not sure if the gconn and client can be modified in the hook,
 		// so I'm not using the modified values here
-		if buffer, ok := result["buffer"].([]byte); ok {
+		if buffer, ok := result.AsMap()["buffer"].([]byte); ok {
 			buf = buffer
 		}
-		if err, ok := result["error"].(error); ok && err != nil {
+		if err, ok := result.AsMap()["error"].(error); ok && err != nil {
 			pr.logger.Error().Err(err).Msg("Error in hook")
 		}
 	}
@@ -174,22 +183,30 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 
 	// Receive the response from the server
 	size, response, err := client.Receive()
-	result = pr.hookConfig.Run(
+
+	egressData, _ := structpb.NewStruct(map[string]interface{}{
+		"gconn":    gconn,
+		"client":   client,
+		"response": response[:size],
+		"error":    err,
+	})
+
+	result, err = pr.hookConfig.Run(
 		plugin.OnEgressTraffic,
-		plugin.Signature{
-			"gconn":    gconn,
-			"client":   client,
-			"response": response[:size],
-			"error":    err,
-		},
+		context.Background(),
+		egressData,
 		pr.hookConfig.Verification)
+	if err != nil {
+		pr.logger.Error().Err(err).Msgf("Error running hook: %v", err)
+	}
+
 	if result != nil {
 		// TODO: Not sure if the gconn and client can be modified in the hook,
 		// so I'm not using the modified values here
-		if resp, ok := result["response"].([]byte); ok {
+		if resp, ok := result.AsMap()["response"].([]byte); ok {
 			response = resp
 		}
-		if err, ok := result["error"].(error); ok && err != nil {
+		if err, ok := result.AsMap()["error"].(error); ok && err != nil {
 			pr.logger.Error().Err(err).Msg("Error in hook")
 		}
 	}

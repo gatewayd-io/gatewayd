@@ -1,6 +1,7 @@
 package network
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
@@ -8,6 +9,7 @@ import (
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type Status string
@@ -41,26 +43,24 @@ type Server struct {
 func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 	s.logger.Debug().Msg("GatewayD is booting...")
 
+	onBootingData, _ := structpb.NewStruct(map[string]interface{}{
+		"server": s,
+		"engine": engine,
+	})
 	s.hooksConfig.Run(
-		plugin.OnBooting,
-		plugin.Signature{
-			"server": s,
-			"engine": engine,
-		},
-		s.hooksConfig.Verification)
+		plugin.OnBooting, context.Background(), onBootingData, s.hooksConfig.Verification)
 
 	s.engine = engine
 
 	// Set the status to running
 	s.Status = Running
 
+	onBootedData, _ := structpb.NewStruct(map[string]interface{}{
+		"server": s,
+		"engine": engine,
+	})
 	s.hooksConfig.Run(
-		plugin.OnBooted,
-		plugin.Signature{
-			"server": s,
-			"engine": engine,
-		},
-		s.hooksConfig.Verification)
+		plugin.OnBooted, context.Background(), onBootedData, s.hooksConfig.Verification)
 
 	s.logger.Debug().Msg("GatewayD booted")
 
@@ -70,13 +70,12 @@ func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 	s.logger.Debug().Msgf("GatewayD is opening a connection from %s", gconn.RemoteAddr().String())
 
+	onOpeningData, _ := structpb.NewStruct(map[string]interface{}{
+		"server": s,
+		"gconn":  gconn,
+	})
 	s.hooksConfig.Run(
-		plugin.OnOpening,
-		plugin.Signature{
-			"server": s,
-			"gconn":  gconn,
-		},
-		s.hooksConfig.Verification)
+		plugin.OnOpening, context.Background(), onOpeningData, s.hooksConfig.Verification)
 
 	if uint64(s.engine.CountConnections()) >= s.SoftLimit {
 		s.logger.Warn().Msg("Soft limit reached")
@@ -96,13 +95,12 @@ func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 		return nil, gnet.Close
 	}
 
+	onOpenedData, _ := structpb.NewStruct(map[string]interface{}{
+		"server": s,
+		"gconn":  gconn,
+	})
 	s.hooksConfig.Run(
-		plugin.OnOpened,
-		plugin.Signature{
-			"server": s,
-			"gconn":  gconn,
-		},
-		s.hooksConfig.Verification)
+		plugin.OnOpened, context.Background(), onOpenedData, s.hooksConfig.Verification)
 
 	return nil, gnet.None
 }
@@ -110,14 +108,13 @@ func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 	s.logger.Debug().Msgf("GatewayD is closing a connection from %s", gconn.RemoteAddr().String())
 
+	onClosingData, _ := structpb.NewStruct(map[string]interface{}{
+		"server": s,
+		"gconn":  gconn,
+		"error":  err,
+	})
 	s.hooksConfig.Run(
-		plugin.OnClosing,
-		plugin.Signature{
-			"server": s,
-			"gconn":  gconn,
-			"error":  err,
-		},
-		s.hooksConfig.Verification)
+		plugin.OnClosing, context.Background(), onClosingData, s.hooksConfig.Verification)
 
 	if err := s.proxy.Disconnect(gconn); err != nil {
 		s.logger.Error().Err(err).Msg("Failed to disconnect from the client")
@@ -127,26 +124,24 @@ func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 		return gnet.Shutdown
 	}
 
+	onClosedData, _ := structpb.NewStruct(map[string]interface{}{
+		"server": s,
+		"gconn":  gconn,
+		"error":  err,
+	})
 	s.hooksConfig.Run(
-		plugin.OnClosed,
-		plugin.Signature{
-			"server": s,
-			"gconn":  gconn,
-			"error":  err,
-		},
-		s.hooksConfig.Verification)
+		plugin.OnClosed, context.Background(), onClosedData, s.hooksConfig.Verification)
 
 	return gnet.Close
 }
 
 func (s *Server) OnTraffic(gconn gnet.Conn) gnet.Action {
+	onTrafficData, _ := structpb.NewStruct(map[string]interface{}{
+		"server": s,
+		"gconn":  gconn,
+	})
 	s.hooksConfig.Run(
-		plugin.OnTraffic,
-		plugin.Signature{
-			"server": s,
-			"gconn":  gconn,
-		},
-		s.hooksConfig.Verification)
+		plugin.OnTraffic, context.Background(), onTrafficData, s.hooksConfig.Verification)
 
 	if err := s.proxy.PassThrough(gconn); err != nil {
 		s.logger.Error().Err(err).Msg("Failed to pass through traffic")
@@ -159,13 +154,14 @@ func (s *Server) OnTraffic(gconn gnet.Conn) gnet.Action {
 
 func (s *Server) OnShutdown(engine gnet.Engine) {
 	s.logger.Debug().Msg("GatewayD is shutting down...")
+
+	onShutdownData, _ := structpb.NewStruct(map[string]interface{}{
+		"server": s,
+		"engine": engine,
+	})
 	s.hooksConfig.Run(
-		plugin.OnShutdown,
-		plugin.Signature{
-			"server": s,
-			"engine": engine,
-		},
-		s.hooksConfig.Verification)
+		plugin.OnShutdown, context.Background(), onShutdownData, s.hooksConfig.Verification)
+
 	s.proxy.Shutdown()
 	s.Status = Stopped
 }
@@ -173,12 +169,13 @@ func (s *Server) OnShutdown(engine gnet.Engine) {
 func (s *Server) OnTick() (time.Duration, gnet.Action) {
 	s.logger.Debug().Msg("GatewayD is ticking...")
 	s.logger.Info().Msgf("Active connections: %d", s.engine.CountConnections())
+
+	onTickData, _ := structpb.NewStruct(map[string]interface{}{
+		"server": s,
+	})
 	s.hooksConfig.Run(
-		plugin.OnTick,
-		plugin.Signature{
-			"server": s,
-		},
-		s.hooksConfig.Verification)
+		plugin.OnTick, context.Background(), onTickData, s.hooksConfig.Verification)
+
 	return s.TickInterval, gnet.None
 }
 
@@ -192,21 +189,23 @@ func (s *Server) Run() error {
 	}
 
 	// Since gnet.Run is blocking, we need to run OnRun before it
-	result := s.hooksConfig.Run(
-		plugin.OnRun,
-		plugin.Signature{
-			"server":  s,
-			"address": addr,
-			"error":   err,
-		},
-		s.hooksConfig.Verification)
+	onRunData, _ := structpb.NewStruct(map[string]interface{}{
+		"server":  s,
+		"address": addr,
+		"error":   err,
+	})
+	result, err := s.hooksConfig.Run(
+		plugin.OnRun, context.Background(), onRunData, s.hooksConfig.Verification)
+	if err != nil {
+		s.logger.Error().Err(err).Msg("Failed to run the hook")
+	}
 
 	if result != nil {
-		if err, ok := result["error"].(error); ok && err != nil {
+		if err, ok := result.AsMap()["error"].(error); ok && err != nil {
 			s.logger.Err(err).Msg("The hook returned an error")
 		}
 
-		if address, ok := result["address"].(string); ok {
+		if address, ok := result.AsMap()["address"].(string); ok {
 			addr = address
 		}
 	}
