@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -19,6 +20,7 @@ import (
 	"github.com/gatewayd-io/gatewayd/network"
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
+	"github.com/getsentry/sentry-go"
 	"github.com/panjf2000/gnet/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -27,6 +29,7 @@ import (
 )
 
 var (
+	enableSentry     bool
 	pluginConfigFile string
 	globalConfigFile string
 	conf             *config.Config
@@ -38,6 +41,22 @@ var runCmd = &cobra.Command{
 	Use:   "run",
 	Short: "Run a gatewayd instance",
 	Run: func(cmd *cobra.Command, args []string) {
+		// Enable Sentry.
+		if enableSentry {
+			// Initialize Sentry.
+			err := sentry.Init(sentry.ClientOptions{
+				Dsn:              "https://e22f42dbb3e0433fbd9ea32453faa598@o4504550475038720.ingest.sentry.io/4504550481723392",
+				TracesSampleRate: config.DefaultTraceSampleRate,
+				AttachStacktrace: config.DefaultAttachStacktrace,
+			})
+			if err != nil {
+				log.Fatalf("sentry.Init: %s", err)
+			}
+
+			// Flush buffered events before the program terminates.
+			defer sentry.Flush(config.DefaultFlushTimeout)
+		}
+
 		// Load global and plugin configuration.
 		conf = config.NewConfig(globalConfigFile, pluginConfigFile)
 
@@ -381,4 +400,6 @@ func init() {
 		&pluginConfigFile,
 		"plugin-config", "p", "./gatewayd_plugins.yaml",
 		"Plugin config file")
+	rootCmd.PersistentFlags().BoolVar(
+		&enableSentry, "sentry", true, "Enable Sentry")
 }
