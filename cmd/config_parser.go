@@ -18,6 +18,7 @@ var globalConfig = koanf.New(".")
 // Plugin koanf instance. Using "." as the key path delimiter.
 var pluginConfig = koanf.New(".")
 
+// getPath returns the path to the referenced config value.
 func getPath(path string) string {
 	ref := globalConfig.String(path)
 	if globalConfig.Exists(path) && globalConfig.StringMap(ref) != nil {
@@ -35,6 +36,7 @@ func getPath(path string) string {
 // 	return nil
 // }
 
+// verificationPolicy returns the verification policy for the plugin from config file.
 func verificationPolicy() plugin.Policy {
 	vPolicy := globalConfig.String("plugins.verificationPolicy")
 	verificationPolicy := plugin.PassDown // default
@@ -50,6 +52,7 @@ func verificationPolicy() plugin.Policy {
 	return verificationPolicy
 }
 
+// loggerConfig returns the logger config from config file.
 func loggerConfig() logging.LoggerConfig {
 	cfg := logging.LoggerConfig{StartupMsg: true}
 	switch globalConfig.String("loggers.logger.output") {
@@ -99,6 +102,7 @@ func loggerConfig() logging.LoggerConfig {
 	return cfg
 }
 
+// serverConfig returns the pool config from config file.
 func poolConfig() (int, *network.Client) {
 	poolSize := globalConfig.Int("pool.size")
 	if poolSize == 0 {
@@ -128,6 +132,7 @@ func poolConfig() (int, *network.Client) {
 	}
 }
 
+// proxyConfig returns the proxy config from config file.
 func proxyConfig() (bool, bool, *network.Client) {
 	elastic := globalConfig.Bool("proxy.elastic")
 	reuseElasticClients := globalConfig.Bool("proxy.reuseElasticClients")
@@ -174,6 +179,7 @@ var loadBalancer = map[string]gnet.LoadBalancing{
 	"sourceaddrhash":   gnet.SourceAddrHash,
 }
 
+// getLoadBalancer returns the load balancer from config file.
 func getLoadBalancer(name string) gnet.LoadBalancing {
 	if lb, ok := loadBalancer[name]; ok {
 		return lb
@@ -182,6 +188,7 @@ func getLoadBalancer(name string) gnet.LoadBalancing {
 	return gnet.RoundRobin
 }
 
+// getTCPNoDelay returns the TCP no delay option from config file.
 func getTCPNoDelay() gnet.TCPSocketOpt {
 	if globalConfig.Bool("server.tcpNoDelay") {
 		return gnet.TCPNoDelay
@@ -190,6 +197,7 @@ func getTCPNoDelay() gnet.TCPSocketOpt {
 	return gnet.TCPDelay
 }
 
+// serverConfig returns the server config from config file.
 func serverConfig() *ServerConfig {
 	readBufferCap := globalConfig.Int("server.readBufferCap")
 	if readBufferCap <= 0 {
