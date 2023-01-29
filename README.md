@@ -29,10 +29,43 @@ You can build and run gatewayd by running the following commands. You must have 
 
 ```bash
 git clone git@github.com:gatewayd-io/gatewayd.git && cd gatewayd
-go mod tidy && go run main.go
-INFO[0000] GatewayD is running with PID 31403
-INFO[0000] There are 10 clients in the pool
-INFO[0000] GatewayD is listening on 0.0.0.0:15432
+❯ make run
+go mod tidy && go run main.go run
+11:21PM DBG Loading plugin: gatewayd-plugin-test
+11:21PM DBG Plugin loaded: gatewayd-plugin-test
+11:21PM WRN plugin configured with a nil SecureConfig
+11:21PM INF configuring client automatic mTLS
+11:21PM DBG starting plugin args=["../gatewayd-plugin-test/gatewayd-plugin-test"] path=../gatewayd-plugin-test/gatewayd-plugin-test
+11:21PM DBG plugin started path=../gatewayd-plugin-test/gatewayd-plugin-test pid=9937
+11:21PM DBG waiting for RPC address path=../gatewayd-plugin-test/gatewayd-plugin-test
+11:21PM INF configuring server automatic mTLS timestamp=2022-12-21T23:21:02.345+0100
+11:21PM DBG using plugin version=1
+11:21PM DBG plugin address address=/tmp/plugin1231501310 network=unix timestamp=2022-12-21T23:21:02.381+0100
+11:21PM DBG Registering hooks for plugin: gatewayd-plugin-test
+11:21PM DBG Registering hook: onConfigLoaded
+11:21PM WRN Unknown hook type: onPluginConfigLoaded
+11:21PM DBG Plugin metadata loaded: gatewayd-plugin-test
+11:21PM DBG Created a new logger
+11:21PM DBG New client created: 127.0.0.1:5432
+11:21PM DBG New client created: 127.0.0.1:5432
+11:21PM DBG New client created: 127.0.0.1:5432
+11:21PM DBG New client created: 127.0.0.1:5432
+11:21PM DBG New client created: 127.0.0.1:5432
+11:21PM DBG New client created: 127.0.0.1:5432
+11:21PM DBG New client created: 127.0.0.1:5432
+11:21PM DBG New client created: 127.0.0.1:5432
+11:21PM DBG New client created: 127.0.0.1:5432
+11:21PM DBG New client created: 127.0.0.1:5432
+11:21PM INF There are 10 clients in the pool
+11:21PM DBG Resolved address to 0.0.0.0:15432
+11:21PM INF GatewayD is listening on 0.0.0.0:15432
+11:21PM DBG Current system soft limit: 1048576
+11:21PM DBG Current system hard limit: 1048576
+11:21PM DBG Soft limit is not set, using the current system soft limit
+11:21PM DBG Hard limit is not set, using the current system hard limit
+11:21PM INF GatewayD is running with PID 9931
+11:21PM DBG GatewayD is booting...
+11:21PM DBG GatewayD booted
 ```
 
 ## Run tests
@@ -42,20 +75,11 @@ The server will start listening on the default 15432 port and will proxy any cli
 ```bash
 # This run a PostgreSQL server as a Docker container
 docker run --rm --name postgres-test -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres
-# This will try to connect to the PostgreSQL server via gatewayd
-psql -U postgres -p 15432 -h localhost
+# This will try to connect to the PostgreSQL server via GatewayD
+psql postgresql://postgres:postgres@localhost:15432/postgres
 ```
 
-After entering the password, `postgres`, you can see the messages being passed between the PostgreSQL and the `psql` client in the terminal the gatewayd is running in. The `psql` command will work normally.
-
-Another way to test it is to install the `psycopg` package and run the `client_test.py` script. It'll connect to a PostgreSQL server via GatewayD with SSL disabled, and then creates a table, insert one row and then selects and prints it.
-
-```bash
-pip install "psycopg[binary]"
-python client_test.py
-```
-
-You can remove the Docker container by stopping it:
+You can use `psql` as you used to do before, to query or insert data into PostgreSQL. You can remove the Docker container by stopping it:
 
 ```bash
 docker stop postgres-test
