@@ -23,7 +23,7 @@ jobs:
       - name: Install Go 🧑‍💻
         uses: actions/setup-go@v3
         with:
-          go-version: '1.18'
+          go-version: '1.19'
 
       - name: Lint code issues 🚨
         uses: golangci/golangci-lint-action@v3
@@ -70,7 +70,7 @@ jobs:
       - name: Install Go 🧑‍💻
         uses: actions/setup-go@v3
         with:
-          go-version: '1.18'
+          go-version: '1.19'
 
       - name: Build test plugin 🏗️
         run: |
