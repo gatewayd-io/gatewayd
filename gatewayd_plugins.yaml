@@ -31,4 +31,5 @@ plugins:
     env:
       - MAGIC_COOKIE_KEY=GATEWAYD_PLUGIN
       - MAGIC_COOKIE_VALUE=5712b87aa5d7e9f9e9ab643e6603181c5b796015cb1c09d6f5ada882bf2a1872
-    checksum: 7cd1ed288bb4c24088e99ae3c9acf60cf766cd5967824d063b052338c4aad6b2
+      - REDIS_ADDR=localhost:6379
+    checksum: a0b62927f8330638a2b9a36d843580b784b927a12addb76eabb25d0cec7c6b57
