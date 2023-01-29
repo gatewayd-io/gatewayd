@@ -26,7 +26,7 @@ plugins:
       - MAGIC_COOKIE_KEY=GATEWAYD_PLUGIN
       - MAGIC_COOKIE_VALUE=5712b87aa5d7e9f9e9ab643e6603181c5b796015cb1c09d6f5ada882bf2a1872
     # Checksum hash to verify the binary before loading
-    checksum: f69cfe091f75cd0597005357216507affae20e69845b9f4980999db97e5487e4
+    checksum: 01c300d950d24c00f28c9b3658d7705af093c3ff4a38dad6caf81e26bd6fb655
   - name: gatewayd-plugin-cache
     enabled: True
     localPath: ../gatewayd-plugin-cache/gatewayd-plugin-cache
