@@ -113,16 +113,16 @@ func (pr *ProxyImpl) Disconnect(gconn gnet.Conn) error {
 	client := pr.busyConnections.Pop(gconn)
 	//nolint:nestif
 	if client != nil {
-		if cl, ok := client.(*Client); ok {
+		if client, ok := client.(*Client); ok {
 			if (pr.Elastic && pr.ReuseElasticClients) || !pr.Elastic {
-				if !cl.IsConnected() {
-					_, err := pr.TryReconnect(cl)
+				if !client.IsConnected() {
+					_, err := pr.TryReconnect(client)
 					if err != nil {
 						pr.logger.Error().Err(err).Msgf("Failed to reconnect to the client")
 					}
 				}
 				// If the client is not in the pool, put it back
-				err := pr.availableConnections.Put(cl.ID, cl)
+				err := pr.availableConnections.Put(client.ID, client)
 				if err != nil {
 					pr.logger.Error().Err(err).Msgf("Failed to put the client back in the pool")
 				}
