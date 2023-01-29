@@ -2,14 +2,17 @@ package network
 
 import (
 	"net"
+	"time"
 
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/rs/zerolog"
 )
 
 const (
-	DefaultSeed      = 1000
-	DefaultChunkSize = 4096
+	DefaultSeed            = 1000
+	DefaultChunkSize       = 4096
+	DefaultReceiveDeadline = 0 // 0 means no deadline (timeout)
+	DefaultSendDeadline    = 0
 )
 
 type ClientInterface interface {
@@ -24,18 +27,26 @@ type Client struct {
 
 	logger zerolog.Logger
 
-	ID                string
 	ReceiveBufferSize int
+	ReceiveChunkSize  int
+	ReceiveDeadline   time.Duration
+	SendDeadline      time.Duration
+	ID                string
 	Network           string // tcp/udp/unix
 	Address           string
-	// TODO: add read/write deadline and deal with timeouts
 }
 
 var _ ClientInterface = &Client{}
 
 // TODO: implement a better connection management algorithm
 
-func NewClient(network, address string, receiveBufferSize int, logger zerolog.Logger) *Client {
+//nolint:funlen
+func NewClient(
+	network, address string,
+	receiveBufferSize, receiveChunkSize int,
+	receiveDeadline, sendDeadline time.Duration,
+	logger zerolog.Logger,
+) *Client {
 	var client Client
 
 	client.logger = logger
@@ -69,10 +80,39 @@ func NewClient(network, address string, receiveBufferSize int, logger zerolog.Lo
 	}
 
 	client.Conn = conn
+
+	if receiveDeadline <= 0 {
+		client.ReceiveDeadline = DefaultReceiveDeadline
+	} else {
+		client.ReceiveDeadline = receiveDeadline
+		if err := client.Conn.SetReadDeadline(time.Now().Add(client.ReceiveDeadline)); err != nil {
+			logger.Error().Err(err).Msg("Failed to set receive deadline")
+		} else {
+			logger.Debug().Msgf("Receive deadline set to %s", client.ReceiveDeadline)
+		}
+	}
+
+	if sendDeadline <= 0 {
+		client.SendDeadline = DefaultSendDeadline
+	} else {
+		client.SendDeadline = sendDeadline
+		if err := client.Conn.SetWriteDeadline(time.Now().Add(client.SendDeadline)); err != nil {
+			logger.Error().Err(err).Msg("Failed to set send deadline")
+		} else {
+			logger.Debug().Msgf("Send deadline set to %s", client.SendDeadline)
+		}
+	}
+
 	if receiveBufferSize <= 0 {
 		client.ReceiveBufferSize = DefaultBufferSize
 	} else {
 		client.ReceiveBufferSize = receiveBufferSize
+	}
+
+	if receiveChunkSize <= 0 {
+		client.ReceiveChunkSize = DefaultChunkSize
+	} else {
+		client.ReceiveChunkSize = receiveChunkSize
 	}
 
 	logger.Debug().Msgf("New client created: %s", client.Address)
@@ -95,7 +135,7 @@ func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 	var received int
 	buffer := make([]byte, 0, c.ReceiveBufferSize)
 	for {
-		smallBuf := make([]byte, DefaultChunkSize)
+		smallBuf := make([]byte, c.ReceiveChunkSize)
 		read, err := c.Conn.Read(smallBuf)
 		switch {
 		case read > 0 && err != nil:
@@ -111,7 +151,7 @@ func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 			buffer = append(buffer, smallBuf[:read]...)
 		}
 
-		if read == 0 || read < DefaultChunkSize {
+		if read == 0 || read < c.ReceiveChunkSize {
 			break
 		}
 	}
