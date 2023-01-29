@@ -55,6 +55,7 @@ var runCmd = &cobra.Command{
 
 			// Flush buffered events before the program terminates.
 			defer sentry.Flush(config.DefaultFlushTimeout)
+			defer sentry.Recover()
 		}
 
 		// Load global and plugin configuration.
