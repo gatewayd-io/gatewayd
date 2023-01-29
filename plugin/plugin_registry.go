@@ -567,7 +567,7 @@ func (reg *Registry) RegisterHooks(id Identifier) {
 			case config.Accept: // fallthrough
 			default:
 				// Default is to accept custom hooks.
-				reg.Logger.Warn().Fields(map[string]interface{}{
+				reg.Logger.Debug().Fields(map[string]interface{}{
 					"hook":     hookName,
 					"priority": pluginImpl.Priority,
 					"name":     pluginImpl.ID.Name,
