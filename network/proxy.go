@@ -2,6 +2,8 @@ package network
 
 import (
 	"context"
+	"errors"
+	"io"
 
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/plugin"
@@ -93,7 +95,7 @@ func (pr *ProxyImpl) Connect(gconn gnet.Conn) *gerr.GatewayDError {
 
 	client, err := pr.TryReconnect(client)
 	if err != nil {
-		pr.logger.Error().Err(err).Msgf("Failed to connect to the client")
+		pr.logger.Error().Err(err).Msg("Failed to connect to the client")
 	}
 
 	if err := pr.busyConnections.Put(gconn, client); err != nil {
@@ -120,13 +122,13 @@ func (pr *ProxyImpl) Disconnect(gconn gnet.Conn) *gerr.GatewayDError {
 				if !client.IsConnected() {
 					_, err := pr.TryReconnect(client)
 					if err != nil {
-						pr.logger.Error().Err(err).Msgf("Failed to reconnect to the client")
+						pr.logger.Error().Err(err).Msg("Failed to reconnect to the client")
 					}
 				}
 				// If the client is not in the pool, put it back
 				err := pr.availableConnections.Put(client.ID, client)
 				if err != nil {
-					pr.logger.Error().Err(err).Msgf("Failed to put the client back in the pool")
+					pr.logger.Error().Err(err).Msg("Failed to put the client back in the pool")
 				}
 			} else {
 				return gerr.ErrClientNotConnected
@@ -223,7 +225,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	// Send the query to the server
 	sent, err := client.Send(request)
 	if err != nil {
-		pr.logger.Error().Err(err).Msgf("Error sending data to database")
+		pr.logger.Error().Err(err).Msg("Error sending data to database")
 	}
 	pr.logger.Debug().Fields(
 		map[string]interface{}{
@@ -244,6 +246,33 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 			"remote":   client.Conn.RemoteAddr().String(),
 		},
 	).Msg("Received data from database")
+
+	// The connection to the server is closed, so we MUST reconnect,
+	// otherwise the client will be stuck.
+	if received == 0 && err != nil && errors.Is(err.Unwrap(), io.EOF) {
+		pr.logger.Debug().Fields(
+			map[string]interface{}{
+				"function": "proxy.passthrough",
+				"local":    client.Conn.LocalAddr().String(),
+				"remote":   client.Conn.RemoteAddr().String(),
+			}).Msgf("Client disconnected")
+
+		client.Close()
+		client = NewClient(
+			pr.ClientConfig.Network,
+			pr.ClientConfig.Address,
+			pr.ClientConfig.ReceiveBufferSize,
+			pr.ClientConfig.ReceiveChunkSize,
+			pr.ClientConfig.ReceiveDeadline,
+			pr.ClientConfig.SendDeadline,
+			pr.logger,
+		)
+		pr.busyConnections.Remove(gconn)
+		if err := pr.busyConnections.Put(gconn, client); err != nil {
+			// This should never happen
+			return err
+		}
+	}
 
 	egress := map[string]interface{}{
 		"response": response[:received], // Will be converted to base64-encoded string
@@ -286,7 +315,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 		return err
 	})
 	if origErr != nil {
-		pr.logger.Error().Err(err).Msgf("Error writing to client")
+		pr.logger.Error().Err(err).Msg("Error writing to client")
 		return gerr.ErrServerSendFailed.Wrap(err)
 	}
 

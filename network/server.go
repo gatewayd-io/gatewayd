@@ -196,7 +196,7 @@ func (s *Server) OnTraffic(gconn gnet.Conn) gnet.Action {
 		case errors.Is(err, gerr.ErrClientNotConnected):
 		case errors.Is(err, gerr.ErrClientSendFailed):
 		case errors.Is(err, gerr.ErrClientReceiveFailed):
-		case errors.Is(err, io.EOF):
+		case errors.Is(err.Unwrap(), io.EOF):
 			return gnet.Close
 		}
 	}
@@ -333,7 +333,7 @@ func NewServer(
 
 	if hardLimit == 0 {
 		server.HardLimit = limits.Max
-		logger.Debug().Msgf("Hard limit is not set, using the current system hard limit")
+		logger.Debug().Msg("Hard limit is not set, using the current system hard limit")
 	} else {
 		server.HardLimit = hardLimit
 		logger.Debug().Msgf("Hard limit is set to %d", hardLimit)
@@ -341,7 +341,7 @@ func NewServer(
 
 	if tickInterval == 0 {
 		server.TickInterval = DefaultTickInterval
-		logger.Debug().Msgf("Tick interval is not set, using the default value")
+		logger.Debug().Msg("Tick interval is not set, using the default value")
 	} else {
 		server.TickInterval = tickInterval
 	}
