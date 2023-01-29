@@ -8,6 +8,7 @@ import (
 
 	"github.com/gatewayd-io/gatewayd/network"
 	"github.com/panjf2000/gnet/v2"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -88,5 +89,8 @@ func main() {
 	}()
 
 	// Run the server
-	server.Run()
+	err := server.Run()
+	if err != nil {
+		logrus.Error(err)
+	}
 }
