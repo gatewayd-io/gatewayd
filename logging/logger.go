@@ -23,8 +23,9 @@ type LoggerConfig struct {
 	hook       OnNewLogger
 }
 
+// NewLogger creates a new logger with the given configuration.
 func NewLogger(cfg LoggerConfig) zerolog.Logger {
-	// Create a new logger
+	// Create a new logger.
 	consoleWriter := zerolog.ConsoleWriter{
 		Out:        os.Stdout,
 		TimeFormat: cfg.TimeFormat,
@@ -32,7 +33,7 @@ func NewLogger(cfg LoggerConfig) zerolog.Logger {
 	}
 
 	if cfg.Output == nil {
-		// Default to stdout
+		// Default to stdout.
 		cfg.Output = consoleWriter
 	}
 
@@ -43,7 +44,7 @@ func NewLogger(cfg LoggerConfig) zerolog.Logger {
 	zerolog.SetGlobalLevel(cfg.Level)
 	zerolog.TimeFieldFormat = cfg.TimeFormat
 
-	// Create a new logger
+	// Create a new logger.
 	logger := zerolog.New(cfg.Output)
 	if cfg.TimeFormat != "" {
 		logger = logger.With().Timestamp().Logger()

@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TestNewLogger tests the creation of a new logger.
 func TestNewLogger(t *testing.T) {
 	var buffer bytes.Buffer
 	logger := NewLogger(
