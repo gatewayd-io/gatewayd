@@ -15,8 +15,8 @@ import (
 )
 
 type IPluginRegistry interface {
-	Add(plugin *Impl) bool
-	Get(id Identifier) *Impl
+	Add(plugin *Plugin) bool
+	Get(id Identifier) *Plugin
 	List() []Identifier
 	Exists(name, version, remoteURL string) bool
 	Remove(id Identifier)
@@ -39,7 +39,7 @@ func NewRegistry(hooksConfig *HookConfig) *PluginRegistry {
 }
 
 // Add adds a plugin to the registry.
-func (reg *PluginRegistry) Add(plugin *Impl) bool {
+func (reg *PluginRegistry) Add(plugin *Plugin) bool {
 	_, loaded, err := reg.plugins.GetOrPut(plugin.ID, plugin)
 	if err != nil {
 		reg.hooksConfig.Logger.Error().Err(err).Msg("Failed to add plugin to registry")
@@ -49,8 +49,8 @@ func (reg *PluginRegistry) Add(plugin *Impl) bool {
 }
 
 // Get returns a plugin from the registry.
-func (reg *PluginRegistry) Get(id Identifier) *Impl {
-	if plugin, ok := reg.plugins.Get(id).(*Impl); ok {
+func (reg *PluginRegistry) Get(id Identifier) *Plugin {
+	if plugin, ok := reg.plugins.Get(id).(*Plugin); ok {
 		return plugin
 	}
 
@@ -112,7 +112,7 @@ func (reg *PluginRegistry) Remove(id Identifier) {
 func (reg *PluginRegistry) Shutdown() {
 	reg.plugins.ForEach(func(key, value interface{}) bool {
 		if id, ok := key.(Identifier); ok {
-			if plugin, ok := value.(*Impl); ok {
+			if plugin, ok := value.(*Plugin); ok {
 				plugin.Stop()
 				reg.Remove(id)
 			}
@@ -137,7 +137,7 @@ func (reg *PluginRegistry) LoadPlugins(plugins []config.Plugin) {
 		}
 
 		reg.hooksConfig.Logger.Debug().Str("name", pCfg.Name).Msg("Loading plugin")
-		plugin := &Impl{
+		plugin := &Plugin{
 			ID: Identifier{
 				Name:     pCfg.Name,
 				Checksum: pCfg.Checksum,
