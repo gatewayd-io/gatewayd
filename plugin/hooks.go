@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"sort"
 
+	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/structpb"
-
-	gerr "github.com/gatewayd-io/gatewayd/errors"
 )
 
 type (
