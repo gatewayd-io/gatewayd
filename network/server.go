@@ -252,12 +252,12 @@ func (s *Server) Run() error {
 	}
 
 	// Since gnet.Run is blocking, we need to run OnRun before it
-	onRunData, err := structpb.NewStruct(map[string]interface{}{
+	//nolint:nestif
+	if onRunData, err := structpb.NewStruct(map[string]interface{}{
 		"server":  s,
 		"address": addr,
 		"error":   err,
-	})
-	if err != nil {
+	}); err != nil {
 		s.logger.Error().Err(err).Msg("Failed to create structpb")
 	} else {
 		result, err := s.hooksConfig.Run(
