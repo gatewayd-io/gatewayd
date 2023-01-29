@@ -87,7 +87,6 @@ jobs:
       - name: Run GatewayD with test plugin 🚀
         run: |
           ./gatewayd run &
-          sleep 5s
 
       - name: Run a test with PSQL 🧪
         run: |
@@ -100,5 +99,5 @@ jobs:
         env:
           PGUSER: postgres
           PGPASSWORD: postgres
-          PGHOST: postgres
+          PGHOST: localhost
           PGPORT: 15432
