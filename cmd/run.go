@@ -344,7 +344,7 @@ var runCmd = &cobra.Command{
 		)
 		signalsCh := make(chan os.Signal, 1)
 		signal.Notify(signalsCh, signals...)
-		go func(pluginRegistry *plugin.Registry) {
+		go func(pluginRegistry *plugin.Registry, logger zerolog.Logger, server *network.Server) {
 			for sig := range signalsCh {
 				for _, s := range signals {
 					if sig != s {
@@ -364,11 +364,14 @@ var runCmd = &cobra.Command{
 					}
 				}
 			}
-		}(pluginRegistry)
+		}(pluginRegistry, logger, server)
 
 		// Run the server.
 		if err := server.Run(); err != nil {
 			logger.Error().Err(err).Msg("Failed to start server")
+			server.Shutdown()
+			pluginRegistry.Shutdown()
+			os.Exit(gerr.FailedToStartServer)
 		}
 	},
 }
