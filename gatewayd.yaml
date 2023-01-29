@@ -16,6 +16,7 @@ clients:
     network: tcp
     address: localhost:5432
     # receiveBufferSize: 16777216
+    # receiveChunkSize: 4096
 
 # Pool config
 pool:
