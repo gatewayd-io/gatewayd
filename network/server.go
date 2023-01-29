@@ -97,7 +97,6 @@ func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 		if err != nil {
 			s.logger.Error().Err(err).Msg("Failed to write to connection")
 		}
-		gconn.Close()
 		return nil, gnet.Close
 	}
 
