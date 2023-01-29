@@ -119,6 +119,7 @@ func (h *HookConfig) Run(
 		ctx = context.Background()
 	}
 
+	// Create structpb.Struct from args.
 	var params *structpb.Struct
 	if args == nil {
 		params = &structpb.Struct{}
