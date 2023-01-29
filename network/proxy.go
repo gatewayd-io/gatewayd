@@ -6,6 +6,7 @@ import (
 
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
+	"github.com/gatewayd-io/gatewayd/metrics"
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
 	"github.com/go-co-op/gocron"
@@ -92,6 +93,7 @@ func NewProxy(
 			})
 			logger.Debug().Str("duration", time.Since(now).String()).Msg(
 				"Finished the client health check")
+			metrics.ProxyHealthChecks.Inc()
 		},
 	); err != nil {
 		proxy.logger.Error().Err(err).Msg("Failed to schedule the client health check")
@@ -140,7 +142,6 @@ func (pr *Proxy) Connect(gconn gnet.Conn) *gerr.GatewayDError {
 		}
 	}
 
-	//
 	client, err := pr.IsHealty(client)
 	if err != nil {
 		pr.logger.Error().Err(err).Msg("Failed to connect to the client")
@@ -150,6 +151,9 @@ func (pr *Proxy) Connect(gconn gnet.Conn) *gerr.GatewayDError {
 		// This should never happen.
 		return err
 	}
+
+	metrics.ProxiedConnections.Inc()
+
 	pr.logger.Debug().Fields(
 		map[string]interface{}{
 			"function": "proxy.connect",
@@ -202,6 +206,8 @@ func (pr *Proxy) Disconnect(gconn gnet.Conn) *gerr.GatewayDError {
 	} else {
 		return gerr.ErrClientNotFound
 	}
+
+	metrics.ProxiedConnections.Dec()
 
 	pr.logger.Debug().Fields(
 		map[string]interface{}{
@@ -258,6 +264,9 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 			},
 		).Msg("Received data from client")
 
+		metrics.BytesReceivedFromClient.Observe(float64(len(request)))
+		metrics.TotalTrafficBytes.Observe(float64(len(request)))
+
 		//nolint:wrapcheck
 		return request, err
 	}
@@ -278,6 +287,9 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 			},
 		).Msg("Sent data to database")
 
+		metrics.BytesSentToServer.Observe(float64(sent))
+		metrics.TotalTrafficBytes.Observe(float64(sent))
+
 		return sent, err
 	}
 
@@ -293,6 +305,9 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 				"remote":   client.Conn.RemoteAddr().String(),
 			},
 		).Msg("Received data from database")
+
+		metrics.BytesReceivedFromServer.Observe(float64(received))
+		metrics.TotalTrafficBytes.Observe(float64(received))
 
 		return received, response, err
 	}
@@ -315,6 +330,9 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 			pr.logger.Error().Err(origErr).Msg("Error writing to client")
 			return gerr.ErrServerSendFailed.Wrap(origErr)
 		}
+
+		metrics.BytesSentToClient.Observe(float64(received))
+		metrics.TotalTrafficBytes.Observe(float64(received))
 
 		return nil
 	}
@@ -388,6 +406,11 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	// If the hook wants to terminate the connection, do it.
 	if shouldTerminate(result) {
 		if modResponse, modReceived := getPluginModifiedResponse(result); modResponse != nil {
+			metrics.ProxyPassThroughs.Inc()
+			metrics.ProxyPassThroughTerminations.Inc()
+			metrics.BytesSentToClient.Observe(float64(modReceived))
+			metrics.TotalTrafficBytes.Observe(float64(modReceived))
+
 			return sendTrafficToClient(modResponse, modReceived)
 		}
 		return gerr.ErrHookTerminatedConnection
@@ -505,6 +528,8 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	if err != nil {
 		pr.logger.Error().Err(err).Msg("Error running hook")
 	}
+
+	metrics.ProxyPassThroughs.Inc()
 
 	return errVerdict
 }
