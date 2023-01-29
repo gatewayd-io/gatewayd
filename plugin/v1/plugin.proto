@@ -61,8 +61,8 @@ message PluginConfigResponse {
 // 	OnClosing         HookType = "onClosing"
 // 	OnClosed          HookType = "onClosed"
 // 	OnTraffic         HookType = "onTraffic"
-// 	OnIncomingTraffic HookType = "onIncomingTraffic"
-// 	OnOutgoingTraffic HookType = "onOutgoingTraffic"
+// 	OnIngressTraffic HookType = "onIngressTraffic"
+// 	OnEgressTraffic HookType = "onEgressTraffic"
 // 	OnShutdown        HookType = "onShutdown"
 // 	OnTick            HookType = "onTick"
 // 	OnNewClient       HookType = "onNewClient"
@@ -181,19 +181,19 @@ message OnTrafficResponse {
     google.protobuf.Empty empty = 1;
 }
 
-message OnIncomingTrafficRequest {
+message OnIngressTrafficRequest {
     google.protobuf.Any traffic = 1;
 }
 
-message OnIncomingTrafficResponse {
+message OnIngressTrafficResponse {
     google.protobuf.Empty empty = 1;
 }
 
-message OnOutgoingTrafficRequest {
+message OnEgressTrafficRequest {
     google.protobuf.Any traffic = 1;
 }
 
-message OnOutgoingTrafficResponse {
+message OnEgressTrafficResponse {
     google.protobuf.Empty empty = 1;
 }
 
@@ -240,8 +240,8 @@ service GDPService {
     rpc OnClosing (OnClosingRequest) returns (OnClosingResponse);
     rpc OnClosed (OnClosedRequest) returns (OnClosedResponse);
     rpc OnTraffic (OnTrafficRequest) returns (OnTrafficResponse);
-    rpc OnIncomingTraffic (OnIncomingTrafficRequest) returns (OnIncomingTrafficResponse);
-    rpc OnOutgoingTraffic (OnOutgoingTrafficRequest) returns (OnOutgoingTrafficResponse);
+    rpc OnIngressTraffic (OnIngressTrafficRequest) returns (OnIngressTrafficResponse);
+    rpc OnEgressTraffic (OnEgressTrafficRequest) returns (OnEgressTrafficResponse);
     rpc OnShutdown (OnShutdownRequest) returns (OnShutdownResponse);
     rpc OnTick (OnTickRequest) returns (OnTickResponse);
     rpc OnNewClient (OnNewClientRequest) returns (OnNewClientResponse);
