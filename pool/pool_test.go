@@ -7,7 +7,7 @@ import (
 )
 
 func TestNewPool(t *testing.T) {
-	pool := NewPool()
+	pool := NewPool(EmptyPoolCapacity)
 	defer pool.Clear()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
@@ -15,7 +15,7 @@ func TestNewPool(t *testing.T) {
 }
 
 func TestPool_Put(t *testing.T) {
-	pool := NewPool()
+	pool := NewPool(EmptyPoolCapacity)
 	defer pool.Clear()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
@@ -28,7 +28,7 @@ func TestPool_Put(t *testing.T) {
 
 //nolint:dupl
 func TestPool_Pop(t *testing.T) {
-	pool := NewPool()
+	pool := NewPool(EmptyPoolCapacity)
 	defer pool.Clear()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
@@ -52,7 +52,7 @@ func TestPool_Pop(t *testing.T) {
 }
 
 func TestPool_Clear(t *testing.T) {
-	pool := NewPool()
+	pool := NewPool(EmptyPoolCapacity)
 	defer pool.Clear()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
@@ -66,7 +66,7 @@ func TestPool_Clear(t *testing.T) {
 }
 
 func TestPool_ForEach(t *testing.T) {
-	pool := NewPool()
+	pool := NewPool(EmptyPoolCapacity)
 	defer pool.Clear()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
@@ -85,7 +85,7 @@ func TestPool_ForEach(t *testing.T) {
 
 //nolint:dupl
 func TestPool_Get(t *testing.T) {
-	pool := NewPool()
+	pool := NewPool(EmptyPoolCapacity)
 	defer pool.Clear()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
@@ -109,7 +109,7 @@ func TestPool_Get(t *testing.T) {
 }
 
 func TestPool_GetOrPut(t *testing.T) {
-	pool := NewPool()
+	pool := NewPool(EmptyPoolCapacity)
 	defer pool.Clear()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
@@ -118,7 +118,7 @@ func TestPool_GetOrPut(t *testing.T) {
 	assert.Equal(t, 1, pool.Size())
 	pool.Put("client2.ID", "client2")
 	assert.Equal(t, 2, pool.Size())
-	c1, loaded := pool.GetOrPut("client1.ID", "client1")
+	c1, loaded, err := pool.GetOrPut("client1.ID", "client1")
 	assert.True(t, loaded)
 	if c1, ok := c1.(string); !ok {
 		assert.Equal(t, c1, "client1")
@@ -126,7 +126,8 @@ func TestPool_GetOrPut(t *testing.T) {
 		assert.Equal(t, "client1", c1)
 		assert.Equal(t, 2, pool.Size())
 	}
-	c2, loaded := pool.GetOrPut("client2.ID", "client2")
+	assert.Nil(t, err)
+	c2, loaded, err := pool.GetOrPut("client2.ID", "client2")
 	assert.True(t, loaded)
 	if c2, ok := c2.(string); !ok {
 		assert.Equal(t, c2, "client2")
@@ -134,10 +135,11 @@ func TestPool_GetOrPut(t *testing.T) {
 		assert.Equal(t, "client2", c2)
 		assert.Equal(t, 2, pool.Size())
 	}
+	assert.Nil(t, err)
 }
 
 func TestPool_Remove(t *testing.T) {
-	pool := NewPool()
+	pool := NewPool(EmptyPoolCapacity)
 	defer pool.Clear()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
@@ -153,7 +155,7 @@ func TestPool_Remove(t *testing.T) {
 }
 
 func TestPool_GetClientIDs(t *testing.T) {
-	pool := NewPool()
+	pool := NewPool(EmptyPoolCapacity)
 	defer pool.Clear()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
