@@ -143,6 +143,8 @@ func LoadGlobalConfigDefaults(cfg *koanf.Koanf) {
 	}
 }
 
+// LoadPluginConfigDefaults loads the default plugin configuration
+// before loading the plugin config file.
 func LoadPluginConfigDefaults(cfg *koanf.Koanf) {
 	defaultValues := confmap.Provider(map[string]interface{}{
 		"plugins": map[string]interface{}{
