@@ -35,7 +35,9 @@ type ProxyImpl struct {
 var _ Proxy = &ProxyImpl{}
 
 func NewProxy(
-	p pool.Pool, hookConfig *plugin.HookConfig, elastic, reuseElasticClients bool, clientConfig *Client, logger zerolog.Logger,
+	p pool.Pool, hookConfig *plugin.HookConfig,
+	elastic, reuseElasticClients bool,
+	clientConfig *Client, logger zerolog.Logger,
 ) *ProxyImpl {
 	return &ProxyImpl{
 		availableConnections: p,
