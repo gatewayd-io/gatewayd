@@ -13,6 +13,13 @@ const (
 	DefaultSeed = 1000
 )
 
+type ClientInterface interface {
+	Send(data []byte) (int, *gerr.GatewayDError)
+	Receive() (int, []byte, *gerr.GatewayDError)
+	Close()
+	IsConnected() bool
+}
+
 type Client struct {
 	net.Conn
 
@@ -24,6 +31,8 @@ type Client struct {
 	Address           string
 	// TODO: add read/write deadline and deal with timeouts
 }
+
+var _ ClientInterface = &Client{}
 
 // TODO: implement a better connection management algorithm
 
