@@ -81,7 +81,7 @@ var runCmd = &cobra.Command{
 			logger,
 			poolSize,
 			poolClientConfig,
-			hooksConfig.Get(network.OnNewClient),
+			hooksConfig,
 		)
 		hooksConfig.Run(
 			network.OnNewPool, network.Signature{"pool": pool}, hooksConfig.Verification)
