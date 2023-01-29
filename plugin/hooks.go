@@ -1,4 +1,4 @@
-package network
+package plugin
 
 import (
 	"fmt"
@@ -51,6 +51,8 @@ const (
 	OnTick           HookType = "onTick"
 	// Pool hooks (network/pool.go).
 	OnNewClient HookType = "onNewClient"
+	// Plugin hooks (plugin/plugin.go).
+	OnNewPlugin HookType = "onNewPlugin"
 )
 
 type HookConfig struct {
@@ -63,6 +65,10 @@ func NewHookConfig() *HookConfig {
 	return &HookConfig{
 		hooks: map[HookType]map[Prio]HookDef{},
 	}
+}
+
+func (h *HookConfig) Hooks() map[HookType]map[Prio]HookDef {
+	return h.hooks
 }
 
 func (h *HookConfig) Add(hookType HookType, prio Prio, hook HookDef) {
@@ -80,7 +86,7 @@ func (h *HookConfig) Get(hookType HookType) map[Prio]HookDef {
 	return h.hooks[hookType]
 }
 
-func verify(params, returnVal Signature) bool {
+func Verify(params, returnVal Signature) bool {
 	return cmp.Equal(params, returnVal, cmp.Options{
 		cmpopts.SortMaps(func(a, b string) bool {
 			return a < b
@@ -109,8 +115,10 @@ func (h *HookConfig) Run(
 	for idx, prio := range priorities {
 		var result Signature
 		if idx == 0 {
+			// TODO: Run hooks from the registry
 			result = h.hooks[hookType][prio](args)
 		} else {
+			// TODO: Run hooks from the registry
 			result = h.hooks[hookType][prio](returnVal)
 		}
 
@@ -118,7 +126,7 @@ func (h *HookConfig) Run(
 		// and that the hook does not return any unexpected values.
 		// If the verification mode is non-strict (permissive), let the plugin pass
 		// extra keys/values to the next plugin in chain.
-		if verify(args, result) || verification == PassDown {
+		if Verify(args, result) || verification == PassDown {
 			// Update the last return value with the current result
 			returnVal = result
 			continue

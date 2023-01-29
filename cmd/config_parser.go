@@ -6,6 +6,7 @@ import (
 
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/gatewayd-io/gatewayd/network"
+	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/knadh/koanf"
 	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
@@ -31,16 +32,16 @@ func getPath(path string) string {
 // 	return nil
 // }
 
-func verificationPolicy() network.Policy {
+func verificationPolicy() plugin.Policy {
 	vPolicy := globalConfig.String("plugins.verificationPolicy")
-	verificationPolicy := network.PassDown // default
+	verificationPolicy := plugin.PassDown // default
 	switch vPolicy {
 	case "ignore":
-		verificationPolicy = network.Ignore
+		verificationPolicy = plugin.Ignore
 	case "abort":
-		verificationPolicy = network.Abort
+		verificationPolicy = plugin.Abort
 	case "remove":
-		verificationPolicy = network.Remove
+		verificationPolicy = plugin.Remove
 	}
 
 	return verificationPolicy
@@ -99,6 +100,11 @@ func poolConfig() (int, *network.Client) {
 	poolSize := globalConfig.Int("pool.size")
 	if poolSize == 0 {
 		poolSize = network.DefaultPoolSize
+	}
+
+	// Minimum pool size is 2.
+	if poolSize < network.MinimumPoolSize {
+		poolSize = network.MinimumPoolSize
 	}
 
 	ref := getPath("pool.client")

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/gatewayd-io/gatewayd/plugin"
+	"github.com/gatewayd-io/gatewayd/pool"
 	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
 )
@@ -18,10 +20,10 @@ type Proxy interface {
 }
 
 type ProxyImpl struct {
-	availableConnections Pool
-	busyConnections      Pool
+	availableConnections pool.Pool
+	busyConnections      pool.Pool
 	logger               zerolog.Logger
-	hookConfig           *HookConfig
+	hookConfig           *plugin.HookConfig
 
 	Elastic             bool
 	ReuseElasticClients bool
@@ -33,11 +35,13 @@ type ProxyImpl struct {
 var _ Proxy = &ProxyImpl{}
 
 func NewProxy(
-	pool Pool, hookConfig *HookConfig, elastic, reuseElasticClients bool, clientConfig *Client, logger zerolog.Logger,
+	p pool.Pool, hookConfig *plugin.HookConfig,
+	elastic, reuseElasticClients bool,
+	clientConfig *Client, logger zerolog.Logger,
 ) *ProxyImpl {
 	return &ProxyImpl{
-		availableConnections: pool,
-		busyConnections:      NewEmptyPool(logger),
+		availableConnections: p,
+		busyConnections:      pool.NewPool(),
 		logger:               logger,
 		hookConfig:           hookConfig,
 		Elastic:              elastic,
@@ -138,8 +142,8 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 	}
 
 	result := pr.hookConfig.Run(
-		OnIngressTraffic,
-		Signature{
+		plugin.OnIngressTraffic,
+		plugin.Signature{
 			"gconn":  gconn,
 			"client": client,
 			"buffer": buf,
@@ -170,8 +174,8 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) error {
 	// Receive the response from the server
 	size, response, err := client.Receive()
 	result = pr.hookConfig.Run(
-		OnEgressTraffic,
-		Signature{
+		plugin.OnEgressTraffic,
+		plugin.Signature{
 			"gconn":    gconn,
 			"client":   client,
 			"response": response[:size],
