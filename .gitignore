@@ -21,3 +21,6 @@ __pycache__/
 
 # Editor files
 .vscode
+
+# Logs
+*.log
