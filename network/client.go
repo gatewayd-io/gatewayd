@@ -18,8 +18,6 @@ type Client struct {
 }
 
 // TODO: implement a better connection management algorithm
-// TODO: Fix the connection leak:
-// unexpected EOF on client connection with an open transaction
 
 func NewClient(network, address string, receiveBufferSize int) *Client {
 	var client Client
@@ -55,7 +53,7 @@ func NewClient(network, address string, receiveBufferSize int) *Client {
 	if client.ReceiveBufferSize == 0 {
 		client.ReceiveBufferSize = 4096
 	}
-	logrus.Infof("New client created: %s", client.Address)
+	logrus.Debugf("New client created: %s", client.Address)
 	client.ID = GetID(conn.LocalAddr().Network(), conn.LocalAddr().String(), 1000)
 
 	return &client
@@ -67,7 +65,7 @@ func (c Client) Send(data []byte) error {
 		logrus.Errorf("Couldn't send data to the server: %s", err)
 		return err
 	}
-	logrus.Infof("Sent %d bytes to %s", len(data), c.Address)
+	logrus.Debugf("Sent %d bytes to %s", len(data), c.Address)
 	// logrus.Infof("Sent data: %s", data)
 	return nil
 }
@@ -79,13 +77,13 @@ func (c Client) Receive() (int, []byte, error) {
 		logrus.Errorf("Couldn't receive data from the server: %s", err)
 		return 0, nil, err
 	}
-	logrus.Infof("Received %d bytes from %s", read, c.Address)
+	logrus.Debugf("Received %d bytes from %s", read, c.Address)
 	// logrus.Infof("Received data: %s", buf[:read])
 	return read, buf, nil
 }
 
 func (c Client) Close() {
-	logrus.Infof("Closing connection to %s", c.Address)
+	logrus.Debugf("Closing connection to %s", c.Address)
 	if c.Conn != nil {
 		c.Conn.Close()
 	}

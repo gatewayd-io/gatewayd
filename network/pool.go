@@ -48,7 +48,7 @@ func (p *PoolImpl) ClientIDs() []string {
 
 func (p *PoolImpl) Put(client *Client) error {
 	p.pool.Store(client.ID, client)
-	logrus.Infof("Client %s has been put on the pool", client.ID)
+	logrus.Debugf("Client %s has been put on the pool", client.ID)
 
 	return nil
 }
@@ -56,7 +56,7 @@ func (p *PoolImpl) Put(client *Client) error {
 func (p *PoolImpl) Pop(ID string) *Client {
 	if client, ok := p.pool.Load(ID); ok {
 		p.pool.Delete(ID)
-		logrus.Infof("Client %s has been popped from the pool", ID)
+		logrus.Debugf("Client %s has been popped from the pool", ID)
 		return client.(*Client)
 	}
 

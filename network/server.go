@@ -29,12 +29,12 @@ func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 	// Set the soft and hard limits if they are not set
 	if s.SoftLimit == 0 {
 		s.SoftLimit = int(limits.Cur)
-		logrus.Info("Soft limit is not set, using the current system soft limit")
+		logrus.Debugf("Soft limit is not set, using the current system soft limit")
 	}
 
 	if s.HardLimit == 0 {
 		s.HardLimit = int(limits.Max)
-		logrus.Info("Hard limit is not set, using the current system hard limit")
+		logrus.Debugf("Hard limit is not set, using the current system hard limit")
 	}
 
 	// Create a proxy with a fixed/elastic buffer pool
@@ -49,14 +49,14 @@ func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 	if addr != "" {
 		logrus.Infof("GatewayD is listening on %s", addr)
 	} else {
-		logrus.Error("GatewayD is listening on %s (cannot resolve address)", addr)
+		logrus.Warnf("GatewayD is listening on %s (cannot resolve address)", addr)
 	}
 
 	return gnet.None
 }
 
 func (s *Server) OnOpen(c gnet.Conn) (out []byte, action gnet.Action) {
-	logrus.Infof("GatewayD is opening a connection from %s", c.RemoteAddr().String())
+	logrus.Debugf("GatewayD is opening a connection from %s", c.RemoteAddr().String())
 	if s.engine.CountConnections() >= s.SoftLimit {
 		logrus.Warn("Soft limit reached")
 	}
@@ -75,7 +75,7 @@ func (s *Server) OnOpen(c gnet.Conn) (out []byte, action gnet.Action) {
 }
 
 func (s *Server) OnClose(c gnet.Conn, err error) (action gnet.Action) {
-	logrus.Infof("GatewayD is closing a connection from %s", c.RemoteAddr().String())
+	logrus.Debugf("GatewayD is closing a connection from %s", c.RemoteAddr().String())
 
 	if err := s.proxy.Disconnect(c); err != nil {
 		logrus.Error(err)
@@ -99,7 +99,6 @@ func (s *Server) OnTraffic(c gnet.Conn) gnet.Action {
 		return gnet.Close
 	}
 
-	// logrus.Infof("Received data: %s", string(buf))
 	return gnet.None
 }
 

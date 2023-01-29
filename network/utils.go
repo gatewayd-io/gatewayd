@@ -15,8 +15,8 @@ func GetRLimit() syscall.Rlimit {
 	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &limits); err != nil {
 		logrus.Error(err)
 	}
-	logrus.Infof("Current system soft limit: %d", limits.Cur)
-	logrus.Infof("Current system hard limit: %d", limits.Max)
+	logrus.Debugf("Current system soft limit: %d", limits.Cur)
+	logrus.Debugf("Current system hard limit: %d", limits.Max)
 	return limits
 }
 
