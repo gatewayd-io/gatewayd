@@ -21,7 +21,14 @@ func TestNewClient(t *testing.T) {
 		}
 	}()
 
-	logger := logging.NewLogger(nil, zerolog.TimeFormatUnix, zerolog.DebugLevel, true)
+	cfg := logging.LoggerConfig{
+		Output:     nil,
+		TimeFormat: zerolog.TimeFormatUnix,
+		Level:      zerolog.DebugLevel,
+		NoColor:    true,
+	}
+
+	logger := logging.NewLogger(cfg)
 
 	client := NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)
 	defer client.Close()
@@ -45,7 +52,14 @@ func TestSend(t *testing.T) {
 		}
 	}()
 
-	logger := logging.NewLogger(nil, zerolog.TimeFormatUnix, zerolog.DebugLevel, true)
+	cfg := logging.LoggerConfig{
+		Output:     nil,
+		TimeFormat: zerolog.TimeFormatUnix,
+		Level:      zerolog.DebugLevel,
+		NoColor:    true,
+	}
+
+	logger := logging.NewLogger(cfg)
 
 	client := NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)
 	defer client.Close()
@@ -67,7 +81,14 @@ func TestReceive(t *testing.T) {
 		}
 	}()
 
-	logger := logging.NewLogger(nil, zerolog.TimeFormatUnix, zerolog.DebugLevel, true)
+	cfg := logging.LoggerConfig{
+		Output:     nil,
+		TimeFormat: zerolog.TimeFormatUnix,
+		Level:      zerolog.DebugLevel,
+		NoColor:    true,
+	}
+
+	logger := logging.NewLogger(cfg)
 
 	client := NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)
 	defer client.Close()
@@ -99,7 +120,14 @@ func TestClose(t *testing.T) {
 		}
 	}()
 
-	logger := logging.NewLogger(nil, zerolog.TimeFormatUnix, zerolog.DebugLevel, true)
+	cfg := logging.LoggerConfig{
+		Output:     nil,
+		TimeFormat: zerolog.TimeFormatUnix,
+		Level:      zerolog.DebugLevel,
+		NoColor:    true,
+	}
+
+	logger := logging.NewLogger(cfg)
 
 	client := NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)
 	assert.NotNil(t, client)

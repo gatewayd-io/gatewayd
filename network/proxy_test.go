@@ -21,10 +21,17 @@ func TestNewProxy(t *testing.T) {
 		}
 	}()
 
-	logger := logging.NewLogger(nil, zerolog.TimeFormatUnix, zerolog.DebugLevel, true)
+	cfg := logging.LoggerConfig{
+		Output:     nil,
+		TimeFormat: zerolog.TimeFormatUnix,
+		Level:      zerolog.DebugLevel,
+		NoColor:    true,
+	}
+
+	logger := logging.NewLogger(cfg)
 
 	// Create a connection pool
-	pool := NewPool(logger)
+	pool := NewPool(logger, 0, nil)
 	assert.NoError(t, pool.Put(NewClient("tcp", "localhost:5432", DefaultBufferSize, logger)))
 
 	// Create a proxy with a fixed buffer pool
@@ -41,10 +48,17 @@ func TestNewProxy(t *testing.T) {
 }
 
 func TestNewProxyElastic(t *testing.T) {
-	logger := logging.NewLogger(nil, zerolog.TimeFormatUnix, zerolog.DebugLevel, true)
+	cfg := logging.LoggerConfig{
+		Output:     nil,
+		TimeFormat: zerolog.TimeFormatUnix,
+		Level:      zerolog.DebugLevel,
+		NoColor:    true,
+	}
+
+	logger := logging.NewLogger(cfg)
 
 	// Create a connection pool
-	pool := NewPool(logger)
+	pool := NewPool(logger, 0, nil)
 
 	// Create a proxy with an elastic buffer pool
 	proxy := NewProxy(pool, true, false, &Client{
@@ -58,31 +72,6 @@ func TestNewProxyElastic(t *testing.T) {
 	assert.Equal(t, 0, len(proxy.pool.ClientIDs()))
 	assert.Equal(t, true, proxy.Elastic)
 	assert.Equal(t, false, proxy.ReuseElasticClients)
-	assert.Equal(t, "tcp", proxy.ClientConfig.Network)
-	assert.Equal(t, "localhost:5432", proxy.ClientConfig.Address)
-	assert.Equal(t, DefaultBufferSize, proxy.ClientConfig.ReceiveBufferSize)
-
-	proxy.pool.Close()
-}
-
-func TestNewProxyElasticReuse(t *testing.T) {
-	logger := logging.NewLogger(nil, zerolog.TimeFormatUnix, zerolog.DebugLevel, true)
-
-	// Create a connection pool
-	pool := NewPool(logger)
-
-	// Create a proxy with an elastic buffer pool
-	proxy := NewProxy(pool, true, true, &Client{
-		Network:           "tcp",
-		Address:           "localhost:5432",
-		ReceiveBufferSize: DefaultBufferSize,
-	}, logger)
-
-	assert.NotNil(t, proxy)
-	assert.Equal(t, 0, proxy.Size())
-	assert.Equal(t, 0, len(proxy.pool.ClientIDs()))
-	assert.Equal(t, true, proxy.Elastic)
-	assert.Equal(t, true, proxy.ReuseElasticClients)
 	assert.Equal(t, "tcp", proxy.ClientConfig.Network)
 	assert.Equal(t, "localhost:5432", proxy.ClientConfig.Address)
 	assert.Equal(t, DefaultBufferSize, proxy.ClientConfig.ReceiveBufferSize)

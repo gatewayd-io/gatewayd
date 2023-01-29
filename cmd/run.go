@@ -18,9 +18,7 @@ const (
 	DefaultTCPKeepAlive = 3 * time.Second
 )
 
-var (
-	configFile string
-)
+var configFile string
 
 // runCmd represents the run command.
 var runCmd = &cobra.Command{
