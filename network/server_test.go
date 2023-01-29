@@ -91,10 +91,24 @@ func TestRunServer(t *testing.T) {
 
 	// Create a connection pool
 	pool := pool.NewPool(2)
-	client1 := NewClient("tcp", "localhost:5432", DefaultBufferSize, DefaultChunkSize, logger)
+	client1 := NewClient(
+		"tcp",
+		"localhost:5432",
+		DefaultBufferSize,
+		DefaultChunkSize,
+		DefaultReceiveDeadline,
+		DefaultSendDeadline,
+		logger)
 	err := pool.Put(client1.ID, client1)
 	assert.Nil(t, err)
-	client2 := NewClient("tcp", "localhost:5432", DefaultBufferSize, DefaultChunkSize, logger)
+	client2 := NewClient(
+		"tcp",
+		"localhost:5432",
+		DefaultBufferSize,
+		DefaultChunkSize,
+		DefaultReceiveDeadline,
+		DefaultSendDeadline,
+		logger)
 	err = pool.Put(client2.ID, client2)
 	assert.Nil(t, err)
 
@@ -138,7 +152,7 @@ func TestRunServer(t *testing.T) {
 
 		for {
 			if server.IsRunning() {
-				client := NewClient("tcp", "127.0.0.1:15432", DefaultBufferSize, DefaultChunkSize, logger)
+				client := NewClient("tcp", "127.0.0.1:15432", DefaultBufferSize, DefaultChunkSize, DefaultReceiveDeadline, DefaultSendDeadline, logger)
 				defer client.Close()
 
 				assert.NotNil(t, client)
