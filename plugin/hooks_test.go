@@ -72,7 +72,7 @@ func Test_HookConfig_Run(t *testing.T) {
 	) (*structpb.Struct, error) {
 		return args, nil
 	})
-	result, err := hooks.Run(context.Background(), &structpb.Struct{}, OnNewLogger, Ignore)
+	result, err := hooks.Run(context.Background(), map[string]interface{}{}, OnNewLogger, Ignore)
 	assert.NotNil(t, result)
 	assert.Nil(t, err)
 }
@@ -100,16 +100,14 @@ func Test_HookConfig_Run_PassDown(t *testing.T) {
 		return output, nil
 	})
 
-	data, err := structpb.NewStruct(
-		map[string]interface{}{
-			"test": "test",
-		},
-	)
-	assert.Nil(t, err)
 	// Although the first hook returns nil, and its signature doesn't match the params,
 	// so its result (nil) is passed down to the next hook in chain (prio 2).
 	// Then the second hook runs and returns a signature with a "test" key and value.
-	result, err := hooks.Run(context.Background(), data, OnNewLogger, PassDown)
+	result, err := hooks.Run(
+		context.Background(),
+		map[string]interface{}{"test": "test"},
+		OnNewLogger,
+		PassDown)
 	assert.Nil(t, err)
 	assert.NotNil(t, result)
 }
@@ -145,13 +143,11 @@ func Test_HookConfig_Run_PassDown_2(t *testing.T) {
 	// Although the first hook returns nil, and its signature doesn't match the params,
 	// so its result (nil) is passed down to the next hook in chain (prio 2).
 	// Then the second hook runs and returns a signature with a "test1" and "test2" key and value.
-	data, err := structpb.NewStruct(
-		map[string]interface{}{
-			"test": "test",
-		},
-	)
-	assert.Nil(t, err)
-	result, err := hooks.Run(context.Background(), data, OnNewLogger, PassDown)
+	result, err := hooks.Run(
+		context.Background(),
+		map[string]interface{}{"test": "test"},
+		OnNewLogger,
+		PassDown)
 	assert.Nil(t, err)
 	assert.NotNil(t, result)
 }
@@ -182,13 +178,11 @@ func Test_HookConfig_Run_Ignore(t *testing.T) {
 	// The first hook returns nil, and its signature doesn't match the params,
 	// so its result is ignored.
 	// Then the second hook runs and returns a signature with a "test" key and value.
-	data, err := structpb.NewStruct(
-		map[string]interface{}{
-			"test": "test",
-		},
-	)
-	assert.Nil(t, err)
-	result, err := hooks.Run(context.Background(), data, OnNewLogger, Ignore)
+	result, err := hooks.Run(
+		context.Background(),
+		map[string]interface{}{"test": "test"},
+		OnNewLogger,
+		Ignore)
 	assert.Nil(t, err)
 	assert.NotNil(t, result)
 }
@@ -216,9 +210,9 @@ func Test_HookConfig_Run_Abort(t *testing.T) {
 		return output, nil
 	})
 	// The first hook returns nil, and it aborts the execution of the rest of the hook.
-	result, err := hooks.Run(context.Background(), &structpb.Struct{}, OnNewLogger, Abort)
+	result, err := hooks.Run(context.Background(), map[string]interface{}{}, OnNewLogger, Abort)
 	assert.Nil(t, err)
-	assert.Nil(t, result)
+	assert.Equal(t, map[string]interface{}{}, result)
 }
 
 func Test_HookConfig_Run_Remove(t *testing.T) {
@@ -246,8 +240,8 @@ func Test_HookConfig_Run_Remove(t *testing.T) {
 	// The first hook returns nil, and its signature doesn't match the params,
 	// so its result is ignored. The failing hook is removed from the list and
 	// the execution continues with the next hook in the list.
-	result, err := hooks.Run(context.Background(), &structpb.Struct{}, OnNewLogger, Remove)
+	result, err := hooks.Run(context.Background(), map[string]interface{}{}, OnNewLogger, Remove)
 	assert.Nil(t, err)
-	assert.Nil(t, result)
+	assert.Equal(t, map[string]interface{}{}, result)
 	assert.Equal(t, 1, len(hooks.Hooks()[OnNewLogger]))
 }
