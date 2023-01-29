@@ -80,17 +80,18 @@ jobs:
           cd gatewayd-plugin-test && make build && cp gatewayd-plugin-test ../gdp-test && cd ..
           export SHA256SUM=$(sha256sum gdp-test | awk '{print $1}')
           cat <<EOF > gatewayd_plugins.yaml
+          verificationPolicy: "passdown"
+          compatibilityPolicy: "strict"
+
           plugins:
-            verificationPolicy: "passdown"
-            compatibilityPolicy: "strict"
-          gatewayd-plugin-test:
-            enabled: True
-            localPath: ./gdp-test
-            args: ["--log-level", "info"]
-            env:
-              - MAGIC_COOKIE_KEY=GATEWAYD_PLUGIN
-              - MAGIC_COOKIE_VALUE=5712b87aa5d7e9f9e9ab643e6603181c5b796015cb1c09d6f5ada882bf2a1872
-            checksum: ${SHA256SUM}
+            - name: gatewayd-plugin-test
+              enabled: True
+              localPath: ./gdp-test
+              args: ["--log-level", "info"]
+              env:
+                - MAGIC_COOKIE_KEY=GATEWAYD_PLUGIN
+                - MAGIC_COOKIE_VALUE=5712b87aa5d7e9f9e9ab643e6603181c5b796015cb1c09d6f5ada882bf2a1872
+              checksum: ${SHA256SUM}
           EOF
 
       - name: Run GatewayD with test plugin 🚀
