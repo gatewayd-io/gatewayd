@@ -92,7 +92,7 @@ var runCmd = &cobra.Command{
 		// Create a new logger from the config
 		loggerCfg := loggerConfig()
 		logger := logging.NewLogger(loggerCfg)
-		// TODO: Use https://github.com/dcarbone/zadapters to adapt hclog to zerolog
+
 		// This is a notification hook, so we don't care about the result.
 		data, err := structpb.NewStruct(map[string]interface{}{
 			"timeFormat": loggerCfg.TimeFormat,
@@ -214,12 +214,6 @@ var runCmd = &cobra.Command{
 
 				// Internal event-loop load balancing options
 				gnet.WithLoadBalancing(serverConfig.LoadBalancer),
-
-				// Logger options
-				// TODO: This is a temporary solution and will be replaced.
-				// gnet.WithLogger(logrus.New()),
-				// gnet.WithLogPath("./gnet.log"),
-				// gnet.WithLogLevel(zapcore.DebugLevel),
 
 				// Buffer options
 				gnet.WithReadBufferCap(serverConfig.ReadBufferCap),
