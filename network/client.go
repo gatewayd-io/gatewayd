@@ -40,6 +40,7 @@ var _ ClientInterface = &Client{}
 
 // TODO: implement a better connection management algorithm
 
+//nolint:funlen
 func NewClient(
 	network, address string,
 	receiveBufferSize, receiveChunkSize int,
