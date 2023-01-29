@@ -74,7 +74,15 @@ func (s *Server) OnClose(c gnet.Conn, err error) (action gnet.Action) {
 }
 
 func (s *Server) OnTraffic(c gnet.Conn) gnet.Action {
-	if err := s.proxy.PassThrough(c); err != nil {
+	if err := s.proxy.PassThrough(c, func(buf []byte, err error) error {
+		// TODO: Implement the traffic handler
+		logrus.Infof("GatewayD is passing traffic from %s to %s", c.RemoteAddr().String(), c.LocalAddr().String())
+		return nil
+	}, func(buf []byte, err error) error {
+		// TODO: Implement the traffic handler
+		logrus.Infof("GatewayD is passing traffic from %s to %s", c.LocalAddr().String(), c.RemoteAddr().String())
+		return nil
+	}); err != nil {
 		logrus.Error(err)
 		// TODO: Close the connection *gracefully*
 		return gnet.Close

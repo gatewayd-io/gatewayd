@@ -9,10 +9,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type Traffic func(buf []byte, err error) error
+
 type Proxy interface {
 	Connect(c gnet.Conn) error
 	Disconnect(c gnet.Conn) error
-	PassThrough(c gnet.Conn) error
+	PassThrough(c gnet.Conn, incoming, outgoing Traffic) error
 	Reconnect(cl *Client) *Client
 	Shutdown()
 	Size() int
@@ -118,7 +120,7 @@ func (pr *ProxyImpl) Disconnect(c gnet.Conn) error {
 	return nil
 }
 
-func (pr *ProxyImpl) PassThrough(c gnet.Conn) error {
+func (pr *ProxyImpl) PassThrough(c gnet.Conn, incoming, outgoing Traffic) error {
 	var client *Client
 	if c, ok := pr.connClients.Load(c); !ok {
 		return errors.New("client is not connected (passthrough)")
@@ -127,7 +129,20 @@ func (pr *ProxyImpl) PassThrough(c gnet.Conn) error {
 	}
 
 	// buf contains the data from the client (query)
-	buf, _ := c.Next(-1)
+	buf, err := c.Next(-1)
+	if err != nil {
+		logrus.Errorf("Error reading from client: %v", err)
+	}
+	if err = incoming(buf, err); err != nil {
+		logrus.Errorf("Error processing data from client: %v", err)
+	}
+
+	// // Parse the query
+	// pkt := wire.NewPacket()
+	// pkt = pkt.Unmarshal(buf)
+	// if pkt.Message != nil {
+	// 	logrus.Infof("Query: %s", pkt.Message)
+	// }
 
 	// TODO: parse the buffer and send the response or error
 	// TODO: This is a very basic implementation of the gateway
@@ -135,13 +150,17 @@ func (pr *ProxyImpl) PassThrough(c gnet.Conn) error {
 	logrus.Infof("Received %d bytes from %s", len(buf), c.RemoteAddr().String())
 
 	// Send the query to the server
-	err := client.Send(buf)
+	err = client.Send(buf)
 	if err != nil {
 		return err
 	}
 
 	// Receive the response from the server
 	size, response, err := client.Receive()
+	if err := outgoing(response[:size], err); err != nil {
+		logrus.Errorf("Error processing data from server: %v", err)
+	}
+
 	if err != nil {
 		// FIXME: Is this the right way to handle this error?
 		if err.Error() == "EOF" {
