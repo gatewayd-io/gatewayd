@@ -8,7 +8,9 @@ import (
 
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/gatewayd-io/gatewayd/network"
+	"github.com/knadh/koanf"
 	"github.com/knadh/koanf/parsers/yaml"
+	"github.com/knadh/koanf/providers/confmap"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/panjf2000/gnet/v2"
 	"github.com/spf13/cobra"
@@ -39,13 +41,24 @@ var runCmd = &cobra.Command{
 
 		// The config will be passed to the hooks, and in turn to the plugins that
 		// register to this hook.
-		// TODO: RunHooks should return the result or error of the hook, so that
-		// we can merge the config or check if the config is valid. This should
-		// happen for all hooks.
-		hooksConfig.Run(
+		result := hooksConfig.Run(
 			network.OnConfigLoaded,
 			network.Signature{"config": konfig.All()},
 			hooksConfig.Verification)
+		if result != nil {
+			var config map[string]interface{}
+			if cfg, ok := result["config"].(map[string]interface{}); ok {
+				config = cfg
+			}
+
+			// Merge the config with the one loaded from the file (in memory).
+			// The changes won't be persisted to disk.
+			if config != nil {
+				var in *koanf.Koanf
+				in.Load(confmap.Provider(config, "."), nil)
+				konfig.Merge(in)
+			}
+		}
 
 		// Create a new logger from the config
 		logger := logging.NewLogger(loggerConfig())
