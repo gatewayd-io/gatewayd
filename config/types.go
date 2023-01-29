@@ -61,8 +61,9 @@ type Pool struct {
 }
 
 type Proxy struct {
-	Elastic             bool `koanf:"elastic"`
-	ReuseElasticClients bool `koanf:"reuseElasticClients"`
+	Elastic             bool          `koanf:"elastic"`
+	ReuseElasticClients bool          `koanf:"reuseElasticClients"`
+	HealthCheckPeriod   time.Duration `koanf:"healthCheckPeriod"`
 }
 
 type Server struct {

@@ -167,7 +167,7 @@ var runCmd = &cobra.Command{
 		// Get client config from the config file.
 		clientConfig := gConfig.Clients[config.Default]
 
-		// Add clients to the pool
+		// Add clients to the pool.
 		for i := 0; i < poolSize; i++ {
 			client := network.NewClient(&clientConfig, logger)
 
@@ -178,10 +178,10 @@ var runCmd = &cobra.Command{
 					"address":            client.Address,
 					"receiveBufferSize":  client.ReceiveBufferSize,
 					"receiveChunkSize":   client.ReceiveChunkSize,
-					"receiveDeadline":    client.ReceiveDeadline.Seconds(),
-					"sendDeadline":       client.SendDeadline.Seconds(),
+					"receiveDeadline":    client.ReceiveDeadline.String(),
+					"sendDeadline":       client.SendDeadline.String(),
 					"tcpKeepAlive":       client.TCPKeepAlive,
-					"tcpKeepAlivePeriod": client.TCPKeepAlivePeriod.Seconds(),
+					"tcpKeepAlivePeriod": client.TCPKeepAlivePeriod.String(),
 				}
 				_, err := hooksConfig.Run(
 					context.Background(),
@@ -199,7 +199,7 @@ var runCmd = &cobra.Command{
 			}
 		}
 
-		// Verify that the pool is properly populated
+		// Verify that the pool is properly populated.
 		logger.Info().Str("count", fmt.Sprint(pool.Size())).Msg(
 			"There are clients available in the pool")
 		if pool.Size() != poolSize {
@@ -223,21 +223,30 @@ var runCmd = &cobra.Command{
 		// Create a prefork proxy with the pool of clients.
 		elastic := gConfig.Proxy[config.Default].Elastic
 		reuseElasticClients := gConfig.Proxy[config.Default].ReuseElasticClients
+		healthCheckPeriod := gConfig.Proxy[config.Default].HealthCheckPeriod
 		proxy := network.NewProxy(
-			pool, hooksConfig, elastic, reuseElasticClients, &clientConfig, logger)
+			pool,
+			hooksConfig,
+			elastic,
+			reuseElasticClients,
+			healthCheckPeriod,
+			&clientConfig,
+			logger,
+		)
 
 		proxyCfg := map[string]interface{}{
 			"elastic":             elastic,
 			"reuseElasticClients": reuseElasticClients,
+			"healthCheckPeriod":   healthCheckPeriod.String(),
 			"clientConfig": map[string]interface{}{
 				"network":            clientConfig.Network,
 				"address":            clientConfig.Address,
 				"receiveBufferSize":  clientConfig.ReceiveBufferSize,
 				"receiveChunkSize":   clientConfig.ReceiveChunkSize,
-				"receiveDeadline":    clientConfig.ReceiveDeadline.Seconds(),
-				"sendDeadline":       clientConfig.SendDeadline.Seconds(),
+				"receiveDeadline":    clientConfig.ReceiveDeadline.String(),
+				"sendDeadline":       clientConfig.SendDeadline.String(),
 				"tcpKeepAlive":       clientConfig.TCPKeepAlive,
-				"tcpKeepAlivePeriod": clientConfig.TCPKeepAlivePeriod.Seconds(),
+				"tcpKeepAlivePeriod": clientConfig.TCPKeepAlivePeriod.String(),
 			},
 		}
 		_, err = hooksConfig.Run(
@@ -288,7 +297,7 @@ var runCmd = &cobra.Command{
 			"address":          gConfig.Server.Address,
 			"softLimit":        gConfig.Server.SoftLimit,
 			"hardLimit":        gConfig.Server.HardLimit,
-			"tickInterval":     gConfig.Server.TickInterval.Seconds(),
+			"tickInterval":     gConfig.Server.TickInterval.String(),
 			"multiCore":        gConfig.Server.MultiCore,
 			"lockOSThread":     gConfig.Server.LockOSThread,
 			"enableTicker":     gConfig.Server.EnableTicker,
@@ -299,7 +308,7 @@ var runCmd = &cobra.Command{
 			"socketSendBuffer": gConfig.Server.SocketSendBuffer,
 			"reuseAddress":     gConfig.Server.ReuseAddress,
 			"reusePort":        gConfig.Server.ReusePort,
-			"tcpKeepAlive":     gConfig.Server.TCPKeepAlive.Seconds(),
+			"tcpKeepAlive":     gConfig.Server.TCPKeepAlive.String(),
 			"tcpNoDelay":       gConfig.Server.TCPNoDelay,
 		}
 		_, err = hooksConfig.Run(

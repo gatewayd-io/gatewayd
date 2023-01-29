@@ -72,7 +72,7 @@ func CastToPrimitiveTypes(args map[string]interface{}) map[string]interface{} {
 	for key, value := range args {
 		switch value := value.(type) {
 		case time.Duration:
-			args[key] = value.Seconds()
+			args[key] = value.String()
 		// TODO: Add more types here as needed.
 		default:
 			args[key] = value
