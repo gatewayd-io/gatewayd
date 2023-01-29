@@ -17,6 +17,7 @@
 # Binaries
 gatewayd
 k6
+__pycache__/
 
 # Editor files
 .vscode
