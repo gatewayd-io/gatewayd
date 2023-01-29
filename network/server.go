@@ -250,9 +250,9 @@ func (s *Server) Run() error {
 	}
 
 	// Since gnet.Run is blocking, we need to run OnRun before it
-	onRunData := map[string]interface{}{
-		"address": addr,
-		"error":   err,
+	onRunData := map[string]interface{}{"address": addr}
+	if err != nil && err.Unwrap() != nil {
+		onRunData["error"] = err.OriginalError.Error()
 	}
 	result, err := s.hooksConfig.Run(
 		context.Background(), onRunData, plugin.OnRun, s.hooksConfig.Verification)
