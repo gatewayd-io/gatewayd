@@ -25,7 +25,7 @@ type IPluginRegistry interface {
 	RegisterHooks(id Identifier)
 }
 
-type PluginRegistry struct {
+type PluginRegistry struct { //nolint:golint,revive
 	plugins      pool.IPool
 	hooksConfig  *HookConfig
 	CompatPolicy config.CompatPolicy
