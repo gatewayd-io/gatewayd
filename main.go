@@ -10,8 +10,8 @@ import (
 )
 
 func main() {
-	// Create a PostgreSQL server.
-	server := &network.PostgreSQLServer{
+	// Create a server
+	server := &network.Server{
 		Address: ":15432",
 		Options: []gnet.Option{
 			// Scheduling options
