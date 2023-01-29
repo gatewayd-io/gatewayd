@@ -35,7 +35,8 @@ type ProxyImpl struct {
 var _ Proxy = &ProxyImpl{}
 
 func NewProxy(
-	pool Pool, elastic, reuseElasticClients bool, clientConfig *Client) *ProxyImpl {
+	pool Pool, elastic, reuseElasticClients bool, clientConfig *Client,
+) *ProxyImpl {
 	proxy := ProxyImpl{
 		clients:             sync.Map{},
 		Elastic:             elastic,
