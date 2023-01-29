@@ -61,6 +61,8 @@ func NewProxy(
 // Connect maps a server connection from the available connection pool to a incoming connection.
 // It returns an error if the pool is exhausted. If the pool is elastic, it creates a new client
 // and maps it to the incoming connection.
+//
+//nolint:funlen
 func (pr *ProxyImpl) Connect(gconn gnet.Conn) *gerr.GatewayDError {
 	var clientID string
 	// Get the first available client from the pool.
@@ -86,7 +88,7 @@ func (pr *ProxyImpl) Connect(gconn gnet.Conn) *gerr.GatewayDError {
 				pr.ClientConfig.SendDeadline,
 				pr.logger,
 			)
-			pr.logger.Debug().Msgf("Reused the client %s by putting it back in the pool", client.ID)
+			pr.logger.Debug().Str("id", client.ID[:7]).Msg("Reused the client connection")
 		} else {
 			return gerr.ErrPoolExhausted
 		}
@@ -107,13 +109,26 @@ func (pr *ProxyImpl) Connect(gconn gnet.Conn) *gerr.GatewayDError {
 		// This should never happen.
 		return err
 	}
-	pr.logger.Debug().Msgf(
-		"Client %s has been assigned to %s", client.ID, gconn.RemoteAddr().String())
+	pr.logger.Debug().Fields(
+		map[string]interface{}{
+			"function": "proxy.connect",
+			"client":   client.ID[:7],
+			"server":   gconn.RemoteAddr().String(),
+		},
+	).Msg("Client has been assigned")
 
-	pr.logger.Debug().Str("function", "proxy.connect").Msgf(
-		"There are %d available clients", pr.availableConnections.Size())
-	pr.logger.Debug().Str("function", "proxy.connect").Msgf(
-		"There are %d busy clients", pr.busyConnections.Size())
+	pr.logger.Debug().Fields(
+		map[string]interface{}{
+			"function": "proxy.connect",
+			"count":    pr.availableConnections.Size(),
+		},
+	).Msg("Available client connections")
+	pr.logger.Debug().Fields(
+		map[string]interface{}{
+			"function": "proxy.connect",
+			"count":    pr.availableConnections.Size(),
+		},
+	).Msg("Busy client connections")
 
 	return nil
 }
@@ -147,10 +162,18 @@ func (pr *ProxyImpl) Disconnect(gconn gnet.Conn) *gerr.GatewayDError {
 		return gerr.ErrClientNotFound
 	}
 
-	pr.logger.Debug().Str("function", "proxy.disconnect").Msgf(
-		"There are %d available clients", pr.availableConnections.Size())
-	pr.logger.Debug().Str("function", "proxy.disconnect").Msgf(
-		"There are %d busy clients", pr.busyConnections.Size())
+	pr.logger.Debug().Fields(
+		map[string]interface{}{
+			"function": "proxy.disconnect",
+			"count":    pr.availableConnections.Size(),
+		},
+	).Msg("Available client connections")
+	pr.logger.Debug().Fields(
+		map[string]interface{}{
+			"function": "proxy.disconnect",
+			"count":    pr.availableConnections.Size(),
+		},
+	).Msg("Busy client connections")
 
 	return nil
 }
@@ -224,12 +247,17 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	// If the hook modified the request, use the modified request.
 	if result != nil {
 		if req, ok := result["request"].([]byte); ok {
-			pr.logger.Debug().Msgf(
-				"Hook modified request from %d to %d bytes", len(request), len(req))
+			pr.logger.Debug().Fields(
+				map[string]interface{}{
+					"function": "proxy.passthrough",
+					"from":     len(request),
+					"to":       len(req),
+				},
+			).Msg("Hook modified request")
 			request = req
 		}
 		if errMsg, ok := result["error"].(string); ok && errMsg != "" {
-			pr.logger.Error().Msgf("Error in hook: %s", errMsg)
+			pr.logger.Error().Str("error", errMsg).Msg("Error in hook")
 		}
 	}
 
@@ -266,7 +294,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 				"function": "proxy.passthrough",
 				"local":    client.Conn.LocalAddr().String(),
 				"remote":   client.Conn.RemoteAddr().String(),
-			}).Msgf("Client disconnected")
+			}).Msg("Client disconnected")
 
 		client.Close()
 		client = NewClient(
@@ -302,17 +330,22 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 		plugin.OnEgressTraffic,
 		pr.hookConfig.Verification)
 	if err != nil {
-		pr.logger.Error().Err(err).Msgf("Error running hook: %v", err)
+		pr.logger.Error().Err(err).Msg("Error running hook")
 	}
 	// If the hook returns a response, use it instead of the original response.
 	if result != nil {
 		if resp, ok := result["response"].([]byte); ok {
-			pr.logger.Debug().Msgf(
-				"Hook modified response from %d to %d bytes", len(response), len(resp))
+			pr.logger.Debug().Fields(
+				map[string]interface{}{
+					"function": "proxy.passthrough",
+					"from":     len(response),
+					"to":       len(resp),
+				},
+			).Msg("Hook modified response")
 			response = resp
 		}
 		if errMsg, ok := result["error"].(string); ok && errMsg != "" {
-			pr.logger.Error().Msgf("Error in hook: %s", errMsg)
+			pr.logger.Error().Str("error", errMsg).Msg("Error in hook")
 		}
 	}
 
