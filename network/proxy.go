@@ -42,25 +42,27 @@ func NewProxy(size, bufferSize int, elastic, reuseElasticClients bool) *ProxyImp
 		ReuseElasticClients: reuseElasticClients,
 	}
 
-	if !proxy.Elastic {
-		if bufferSize == 0 {
-			proxy.BufferSize = DefaultBufferSize
-		}
+	if proxy.Elastic {
+		return &proxy
+	}
 
-		for i := 0; i < size; i++ {
-			client := NewClient("tcp", "localhost:5432", proxy.BufferSize)
-			if client != nil {
-				if err := proxy.pool.Put(client); err != nil {
-					logrus.Panic(err)
-				}
+	if bufferSize == 0 {
+		proxy.BufferSize = DefaultBufferSize
+	}
+
+	for i := 0; i < size; i++ {
+		client := NewClient("tcp", "localhost:5432", proxy.BufferSize)
+		if client != nil {
+			if err := proxy.pool.Put(client); err != nil {
+				logrus.Panic(err)
 			}
 		}
+	}
 
-		logrus.Infof("There are %d clients in the pool", len(proxy.pool.ClientIDs()))
-		if len(proxy.pool.ClientIDs()) != size {
-			logrus.Error("The pool size is incorrect, either because the clients are cannot connect (no network connectivity) or the server is not running")
-			os.Exit(1)
-		}
+	logrus.Infof("There are %d clients in the pool", len(proxy.pool.ClientIDs()))
+	if len(proxy.pool.ClientIDs()) != size {
+		logrus.Error("The pool size is incorrect, either because the clients are cannot connect (no network connectivity) or the server is not running")
+		os.Exit(1)
 	}
 
 	return &proxy
@@ -165,7 +167,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn, onIncomingTraffic, onOutgoingT
 	// Receive the response from the server
 	size, response, err := client.Receive()
 	if err := onOutgoingTraffic(response[:size], err); err != nil {
-		logrus.Errorf("Error processing data from server: %v", err)
+		logrus.Errorf("Error processing data from server: %w", err)
 	}
 
 	if err != nil {
