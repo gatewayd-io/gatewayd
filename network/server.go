@@ -50,20 +50,6 @@ func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 	return gnet.None
 }
 
-func (s *Server) OnTraffic(c gnet.Conn) gnet.Action {
-	// buf contains the data from the client (query)
-	buf, _ := c.Next(-1)
-	// TODO: parse the buffer and send the response or error
-	// Write writes the response to the client
-	c.Write([]byte("OK\n"))
-	logrus.Infof("Received data: %s", string(buf))
-	return gnet.None
-}
-
-func (s *Server) OnShutdown(engine gnet.Engine) {
-	logrus.Println("PostgreSQL server is shutting down...")
-}
-
 func (s *Server) OnOpen(c gnet.Conn) (out []byte, action gnet.Action) {
 	if s.engine.CountConnections() >= s.SoftLimit {
 		logrus.Warn("Soft limit reached")
@@ -81,6 +67,20 @@ func (s *Server) OnOpen(c gnet.Conn) (out []byte, action gnet.Action) {
 func (s *Server) OnClose(c gnet.Conn, err error) (action gnet.Action) {
 	logrus.Infof("PostgreSQL server is closing a connection from %s", c.RemoteAddr().String())
 	return gnet.None
+}
+
+func (s *Server) OnTraffic(c gnet.Conn) gnet.Action {
+	// buf contains the data from the client (query)
+	buf, _ := c.Next(-1)
+	// TODO: parse the buffer and send the response or error
+	// Write writes the response to the client
+	c.Write([]byte("OK\n"))
+	logrus.Infof("Received data: %s", string(buf))
+	return gnet.None
+}
+
+func (s *Server) OnShutdown(engine gnet.Engine) {
+	logrus.Println("PostgreSQL server is shutting down...")
 }
 
 func (s *Server) OnTick() (delay time.Duration, action gnet.Action) {
