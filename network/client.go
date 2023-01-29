@@ -96,21 +96,22 @@ func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 	buffer := make([]byte, 0, c.ReceiveBufferSize)
 	for {
 		smallBuf := make([]byte, DefaultChunkSize)
-		n, err := c.Conn.Read(smallBuf)
-		if n > 0 && err != nil {
-			received += n
-			buffer = append(buffer, smallBuf[:n]...)
+		read, err := c.Conn.Read(smallBuf)
+		switch {
+		case read > 0 && err != nil:
+			received += read
+			buffer = append(buffer, smallBuf[:read]...)
 			c.logger.Error().Err(err).Msg("Couldn't receive data from the server")
 			return received, buffer, gerr.ErrClientReceiveFailed.Wrap(err)
-		} else if err != nil {
+		case err != nil:
 			c.logger.Error().Err(err).Msg("Couldn't receive data from the server")
 			return received, buffer, gerr.ErrClientReceiveFailed.Wrap(err)
-		} else {
-			received += n
-			buffer = append(buffer, smallBuf[:n]...)
+		default:
+			received += read
+			buffer = append(buffer, smallBuf[:read]...)
 		}
 
-		if n == 0 || n < DefaultChunkSize {
+		if read == 0 || read < DefaultChunkSize {
 			break
 		}
 	}
