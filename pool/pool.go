@@ -6,10 +6,6 @@ import (
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 )
 
-const (
-	EmptyPoolCapacity = 0
-)
-
 type Callback func(key, value interface{}) bool
 
 type Pool interface {

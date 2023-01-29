@@ -3,15 +3,12 @@ package network
 import (
 	"context"
 
+	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
 	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
-)
-
-const (
-	EmptyPoolCapacity int = 0
 )
 
 type Proxy interface {
@@ -33,7 +30,7 @@ type ProxyImpl struct {
 	ReuseElasticClients bool
 
 	// ClientConfig is used for elastic proxy and reconnection
-	ClientConfig *Client
+	ClientConfig *config.Client
 }
 
 var _ Proxy = &ProxyImpl{}
@@ -42,11 +39,11 @@ var _ Proxy = &ProxyImpl{}
 func NewProxy(
 	p pool.Pool, hookConfig *plugin.HookConfig,
 	elastic, reuseElasticClients bool,
-	clientConfig *Client, logger zerolog.Logger,
+	clientConfig *config.Client, logger zerolog.Logger,
 ) *ProxyImpl {
 	return &ProxyImpl{
 		availableConnections: p,
-		busyConnections:      pool.NewPool(EmptyPoolCapacity),
+		busyConnections:      pool.NewPool(config.EmptyPoolCapacity),
 		logger:               logger,
 		hookConfig:           hookConfig,
 		Elastic:              elastic,
@@ -58,8 +55,6 @@ func NewProxy(
 // Connect maps a server connection from the available connection pool to a incoming connection.
 // It returns an error if the pool is exhausted. If the pool is elastic, it creates a new client
 // and maps it to the incoming connection.
-//
-//nolint:funlen
 func (pr *ProxyImpl) Connect(gconn gnet.Conn) *gerr.GatewayDError {
 	var clientID string
 	// Get the first available client from the pool.
@@ -76,17 +71,7 @@ func (pr *ProxyImpl) Connect(gconn gnet.Conn) *gerr.GatewayDError {
 		// Pool is exhausted or is elastic.
 		if pr.Elastic {
 			// Create a new client.
-			client = NewClient(
-				pr.ClientConfig.Network,
-				pr.ClientConfig.Address,
-				pr.ClientConfig.ReceiveBufferSize,
-				pr.ClientConfig.ReceiveChunkSize,
-				pr.ClientConfig.ReceiveDeadline,
-				pr.ClientConfig.SendDeadline,
-				pr.ClientConfig.TCPKeepAlive,
-				pr.ClientConfig.TCPKeepAlivePeriod,
-				pr.logger,
-			)
+			client = NewClient(pr.ClientConfig, pr.logger)
 			pr.logger.Debug().Str("id", client.ID[:7]).Msg("Reused the client connection")
 		} else {
 			return gerr.ErrPoolExhausted
@@ -269,17 +254,7 @@ func (pr *ProxyImpl) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 			}).Msg("Client disconnected")
 
 		client.Close()
-		client = NewClient(
-			pr.ClientConfig.Network,
-			pr.ClientConfig.Address,
-			pr.ClientConfig.ReceiveBufferSize,
-			pr.ClientConfig.ReceiveChunkSize,
-			pr.ClientConfig.ReceiveDeadline,
-			pr.ClientConfig.SendDeadline,
-			pr.ClientConfig.TCPKeepAlive,
-			pr.ClientConfig.TCPKeepAlivePeriod,
-			pr.logger,
-		)
+		client = NewClient(pr.ClientConfig, pr.logger)
 		pr.busyConnections.Remove(gconn)
 		if err := pr.busyConnections.Put(gconn, client); err != nil {
 			// This should never happen

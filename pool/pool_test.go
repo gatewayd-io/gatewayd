@@ -3,12 +3,13 @@ package pool
 import (
 	"testing"
 
+	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/stretchr/testify/assert"
 )
 
 // TestNewPool tests the NewPool function.
 func TestNewPool(t *testing.T) {
-	pool := NewPool(EmptyPoolCapacity)
+	pool := NewPool(config.EmptyPoolCapacity)
 	defer pool.Clear()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
@@ -17,7 +18,7 @@ func TestNewPool(t *testing.T) {
 
 // TestPool_Put tests the Put function.
 func TestPool_Put(t *testing.T) {
-	pool := NewPool(EmptyPoolCapacity)
+	pool := NewPool(config.EmptyPoolCapacity)
 	defer pool.Clear()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
@@ -34,7 +35,7 @@ func TestPool_Put(t *testing.T) {
 //
 //nolint:dupl
 func TestPool_Pop(t *testing.T) {
-	pool := NewPool(EmptyPoolCapacity)
+	pool := NewPool(config.EmptyPoolCapacity)
 	defer pool.Clear()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
@@ -61,7 +62,7 @@ func TestPool_Pop(t *testing.T) {
 
 // TestPool_Clear tests the Clear function.
 func TestPool_Clear(t *testing.T) {
-	pool := NewPool(EmptyPoolCapacity)
+	pool := NewPool(config.EmptyPoolCapacity)
 	defer pool.Clear()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
@@ -78,7 +79,7 @@ func TestPool_Clear(t *testing.T) {
 
 // TestPool_ForEach tests the ForEach function.
 func TestPool_ForEach(t *testing.T) {
-	pool := NewPool(EmptyPoolCapacity)
+	pool := NewPool(config.EmptyPoolCapacity)
 	defer pool.Clear()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
@@ -101,7 +102,7 @@ func TestPool_ForEach(t *testing.T) {
 //
 //nolint:dupl
 func TestPool_Get(t *testing.T) {
-	pool := NewPool(EmptyPoolCapacity)
+	pool := NewPool(config.EmptyPoolCapacity)
 	defer pool.Clear()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
@@ -128,7 +129,7 @@ func TestPool_Get(t *testing.T) {
 
 // TestPool_GetOrPut tests the GetOrPut function.
 func TestPool_GetOrPut(t *testing.T) {
-	pool := NewPool(EmptyPoolCapacity)
+	pool := NewPool(config.EmptyPoolCapacity)
 	defer pool.Clear()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
@@ -161,7 +162,7 @@ func TestPool_GetOrPut(t *testing.T) {
 
 // TestPool_Remove tests the Remove function.
 func TestPool_Remove(t *testing.T) {
-	pool := NewPool(EmptyPoolCapacity)
+	pool := NewPool(config.EmptyPoolCapacity)
 	defer pool.Clear()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
@@ -180,7 +181,7 @@ func TestPool_Remove(t *testing.T) {
 
 // TestPool_GetClientIDs tests the GetClientIDs function.
 func TestPool_GetClientIDs(t *testing.T) {
-	pool := NewPool(EmptyPoolCapacity)
+	pool := NewPool(config.EmptyPoolCapacity)
 	defer pool.Clear()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
