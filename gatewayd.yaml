@@ -22,7 +22,7 @@ pool:
   # Use the logger config passed here
   # i.e. don't assume it's the same as the logger config above
   logger: loggers.logger
-  size: 2
+  size: 10
   # Database configs for the connection pool
   client: clients.client1
 
