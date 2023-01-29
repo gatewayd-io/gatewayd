@@ -77,7 +77,6 @@ var runCmd = &cobra.Command{
 				// gnet.WithLogLevel(zapcore.DebugLevel),
 
 				// Buffer options
-				// TODO: This should be configurable and optimized.
 				gnet.WithReadBufferCap(serverConfig.ReadBufferCap),
 				gnet.WithWriteBufferCap(serverConfig.WriteBufferCap),
 				gnet.WithSocketRecvBuffer(serverConfig.SocketRecvBuffer),

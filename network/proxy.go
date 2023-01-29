@@ -144,7 +144,6 @@ func (pr *ProxyImpl) PassThrough(
 		}
 	}
 
-	// TODO: parse the buffer and send the response or error
 	// TODO: This is a very basic implementation of the gateway
 	// and it is synchronous. I should make it asynchronous.
 	pr.logger.Debug().Msgf("Received %d bytes from %s", len(buf), gconn.RemoteAddr().String())
