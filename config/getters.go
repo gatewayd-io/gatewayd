@@ -1,6 +1,7 @@
 package config
 
 import (
+	"log/syslog"
 	"time"
 
 	"github.com/panjf2000/gnet/v2"
@@ -93,6 +94,10 @@ func (l Logger) GetOutput() []LogOutput {
 			outputs = append(outputs, Stdout)
 		case "stderr":
 			outputs = append(outputs, Stderr)
+		case "syslog":
+			outputs = append(outputs, Syslog)
+		case "rsyslog":
+			outputs = append(outputs, RSyslog)
 		default:
 			outputs = append(outputs, Console)
 		}
@@ -177,5 +182,31 @@ func (l Logger) GetLevel() zerolog.Level {
 		return zerolog.TraceLevel
 	default:
 		return zerolog.InfoLevel
+	}
+}
+
+// GetRSyslogPriority returns the rsyslog facility from config file.
+//
+//nolint:nosnakecase
+func (l Logger) GetRSyslogPriority() syslog.Priority {
+	switch l.RSyslogPriority {
+	case "emerg":
+		return syslog.LOG_EMERG | syslog.LOG_DAEMON
+	case "alert":
+		return syslog.LOG_ALERT | syslog.LOG_DAEMON
+	case "crit":
+		return syslog.LOG_CRIT | syslog.LOG_DAEMON
+	case "err":
+		return syslog.LOG_ERR | syslog.LOG_DAEMON
+	case "warning":
+		return syslog.LOG_WARNING | syslog.LOG_DAEMON
+	case "notice":
+		return syslog.LOG_NOTICE | syslog.LOG_DAEMON
+	case "info":
+		return syslog.LOG_INFO | syslog.LOG_DAEMON
+	case "debug":
+		return syslog.LOG_DEBUG | syslog.LOG_DAEMON
+	default:
+		return DefaultRSyslogPriority
 	}
 }
