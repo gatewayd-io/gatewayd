@@ -7,15 +7,18 @@ import (
 	"github.com/rs/zerolog"
 )
 
+type Callback func(key, value interface{}) bool
+
 type Pool interface {
-	ForEach(callback func(client *Client) error)
+	ForEach(Callback)
 	Pool() *sync.Map
-	ClientIDs() []string
-	Put(client *Client) error
-	Pop(ID string) *Client
+	// ClientIDs() []string
+	Put(key, value interface{})
+	Pop(key interface{}) interface{}
 	Size() int
-	Close() error
-	Shutdown()
+	Clear()
+	// Close() error
+	// Shutdown()
 }
 
 type PoolImpl struct {
@@ -25,50 +28,23 @@ type PoolImpl struct {
 
 var _ Pool = &PoolImpl{}
 
-func (p *PoolImpl) ForEach(callback func(client *Client) error) {
-	p.pool.Range(func(key, value interface{}) bool {
-		if c, ok := value.(*Client); ok {
-			err := callback(c)
-			if err != nil {
-				p.logger.Debug().Err(err).Msg("an error occurred running the callback")
-			}
-			return true
-		}
-
-		return false
-	})
+func (p *PoolImpl) ForEach(cb Callback) {
+	p.pool.Range(cb)
 }
 
 func (p *PoolImpl) Pool() *sync.Map {
 	return &p.pool
 }
 
-func (p *PoolImpl) ClientIDs() []string {
-	var ids []string
-	p.pool.Range(func(key, _ interface{}) bool {
-		if id, ok := key.(string); ok {
-			ids = append(ids, id)
-			return true
-		}
-		return false
-	})
-	return ids
+func (p *PoolImpl) Put(key, value interface{}) {
+	p.pool.Store(key, value)
+	p.logger.Debug().Msg("Item has been put on the pool")
 }
 
-func (p *PoolImpl) Put(client *Client) error {
-	p.pool.Store(client.ID, client)
-	p.logger.Debug().Msgf("Client %s has been put on the pool", client.ID)
-
-	return nil
-}
-
-func (p *PoolImpl) Pop(id string) *Client {
-	if client, ok := p.pool.LoadAndDelete(id); ok {
-		p.logger.Debug().Msgf("Client %s has been popped from the pool", id)
-		if c, ok := client.(*Client); ok {
-			return c
-		}
-		return nil
+func (p *PoolImpl) Pop(key interface{}) interface{} {
+	if value, ok := p.pool.LoadAndDelete(key); ok {
+		p.logger.Debug().Msg("Item has been popped from the pool")
+		return value
 	}
 
 	return nil
@@ -84,25 +60,14 @@ func (p *PoolImpl) Size() int {
 	return size
 }
 
-func (p *PoolImpl) Close() error {
-	p.ForEach(func(client *Client) error {
-		client.Close()
-		return nil
-	})
-
-	return nil
+func (p *PoolImpl) Clear() {
+	p.pool = sync.Map{}
 }
 
-func (p *PoolImpl) Shutdown() {
-	p.pool.Range(func(key, value interface{}) bool {
-		if cl, ok := value.(*Client); ok {
-			cl.Close()
-		}
-		p.pool.Delete(key)
-		return true
-	})
-
-	p.pool = sync.Map{}
+func NewEmptyPool(logger zerolog.Logger) Pool {
+	return &PoolImpl{
+		logger: logger,
+	}
 }
 
 func NewPool(
@@ -130,15 +95,13 @@ func NewPool(
 		}
 
 		if client != nil {
-			if err := pool.Put(client); err != nil {
-				logger.Panic().Err(err).Msg("Failed to add client to pool")
-			}
+			pool.Put(client.ID, client)
 		}
 	}
 
 	// Verify that the pool is properly populated
-	logger.Info().Msgf("There are %d clients in the pool", len(pool.ClientIDs()))
-	if len(pool.ClientIDs()) != poolSize {
+	logger.Info().Msgf("There are %d clients in the pool", pool.Size())
+	if pool.Size() != poolSize {
 		logger.Error().Msg(
 			"The pool size is incorrect, either because " +
 				"the clients are cannot connect (no network connectivity) " +
