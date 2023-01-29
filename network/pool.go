@@ -7,92 +7,90 @@ import (
 )
 
 type Pool interface {
-	ForEach(callback func(client Client) error) error
-
-	GetPool() map[string]Client
-	GetClientIDs() []string
-	Put(client Client) error
-	Pop(ID string) Client
+	ForEach(callback func(client *Client) error)
+	Pool() sync.Map
+	ClientIDs() []string
+	Put(client *Client) error
+	Pop(ID string) *Client
 	Size() int
 	Close() error
+	Shutdown()
 }
 
 type PoolImpl struct {
-	mutex sync.Mutex
-	pool  map[string]Client
+	pool sync.Map
 }
 
 var _ Pool = &PoolImpl{}
 
-func (p *PoolImpl) ForEach(callback func(client Client) error) error {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
-
-	for _, client := range p.pool {
-		if err := callback(client); err != nil {
-			return err
+func (p *PoolImpl) ForEach(callback func(client *Client) error) {
+	p.pool.Range(func(key, value interface{}) bool {
+		err := callback(value.(*Client))
+		if err != nil {
+			logrus.Errorf("an error occurred running the callback: %v", err)
 		}
-	}
-
-	return nil
+		return true
+	})
 }
 
-func (p *PoolImpl) GetPool() map[string]Client {
+func (p *PoolImpl) Pool() sync.Map {
 	return p.pool
 }
 
-func (p *PoolImpl) GetClientIDs() []string {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
-
-	ids := make([]string, 0, len(p.pool))
-	for id := range p.pool {
-		ids = append(ids, id)
-	}
+func (p *PoolImpl) ClientIDs() []string {
+	var ids []string
+	p.pool.Range(func(key, _ interface{}) bool {
+		ids = append(ids, key.(string))
+		return true
+	})
 	return ids
 }
 
-func (p *PoolImpl) Put(client Client) error {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
-
-	p.pool[client.ID] = client
+func (p *PoolImpl) Put(client *Client) error {
+	p.pool.Store(client.ID, client)
 	logrus.Infof("Client %s has been put on the pool", client.ID)
 
 	return nil
 }
 
-func (p *PoolImpl) Pop(ID string) Client {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
-
-	c := p.pool[ID]
-	delete(p.pool, ID)
-	logrus.Infof("Client %s has been popped from the pool", ID)
-
-	return c
-}
-
-func (p *PoolImpl) Close() error {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
-
-	for _, client := range p.pool {
-		go func(client Client) {
-			client.Close()
-		}(client)
+func (p *PoolImpl) Pop(ID string) *Client {
+	if client, ok := p.pool.Load(ID); ok {
+		p.pool.Delete(ID)
+		logrus.Infof("Client %s has been popped from the pool", ID)
+		return client.(*Client)
 	}
 
 	return nil
 }
 
 func (p *PoolImpl) Size() int {
-	return len(p.pool)
+	var size int
+	p.pool.Range(func(_, _ interface{}) bool {
+		size++
+		return true
+	})
+
+	return size
+}
+
+func (p *PoolImpl) Close() error {
+	p.ForEach(func(client *Client) error {
+		client.Close()
+		return nil
+	})
+
+	return nil
+}
+
+func (p *PoolImpl) Shutdown() {
+	p.pool.Range(func(key, value interface{}) bool {
+		client := value.(*Client)
+		client.Close()
+		p.pool.Delete(key)
+		return true
+	})
 }
 
 func NewPool() *PoolImpl {
-	return &PoolImpl{
-		pool:  make(map[string]Client),
-		mutex: sync.Mutex{},
-	}
+	return &PoolImpl{pool: sync.Map{}}
 }

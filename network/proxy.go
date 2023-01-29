@@ -2,6 +2,7 @@ package network
 
 import (
 	"errors"
+	"sync"
 
 	"github.com/panjf2000/gnet/v2"
 	"github.com/sirupsen/logrus"
@@ -12,11 +13,13 @@ type Proxy interface {
 	Disconnect(c gnet.Conn) error
 	PassThrough(c gnet.Conn) error
 	Shutdown()
+	Size() int
 }
 
 type ProxyImpl struct {
-	pool                Pool
-	connectedClients    map[gnet.Conn]Client
+	pool        Pool
+	connClients sync.Map
+
 	PoolSize            int
 	Elastic             bool
 	ReuseElasticClients bool
@@ -26,8 +29,9 @@ var _ Proxy = &ProxyImpl{}
 
 func NewProxy(size int, elastic, reuseElasticClients bool) *ProxyImpl {
 	proxy := ProxyImpl{
-		pool:                NewPool(),
-		connectedClients:    make(map[gnet.Conn]Client),
+		pool:        NewPool(),
+		connClients: sync.Map{},
+
 		PoolSize:            size,
 		Elastic:             elastic,
 		ReuseElasticClients: reuseElasticClients,
@@ -46,44 +50,74 @@ func NewProxy(size int, elastic, reuseElasticClients bool) *ProxyImpl {
 }
 
 func (pr *ProxyImpl) Connect(c gnet.Conn) error {
-	clientIDs := pr.pool.GetClientIDs()
+	clientIDs := pr.pool.ClientIDs()
+
+	var client *Client
 	if len(clientIDs) == 0 {
-		logrus.Error("No clients available")
-	}
-
-	var client Client
-	if len(clientIDs) == 0 && pr.Elastic {
-		client = NewClient("tcp", "localhost:5432", 4096)
-		logrus.Infof("Elastic client connection %s has been created", client.ID)
-	} else if len(clientIDs) > 0 {
-		client = pr.pool.Pop(clientIDs[0])
+		// Pool is exhausted
+		if pr.Elastic {
+			// Create a new client
+			client = NewClient("tcp", "localhost:5432", 4096)
+			logrus.Infof("Reused the client %s by putting it back in the pool", client.ID)
+		} else {
+			return errors.New("pool is exhausted")
+		}
 	} else {
-		return errors.New("no clients available")
+		// Get a client from the pool
+		logrus.Infof("Available clients: %v", len(clientIDs))
+		client = pr.pool.Pop(clientIDs[0])
 	}
 
-	logrus.Infof("Client %s has been assigned to %s", client.ID, c.RemoteAddr().String())
-	pr.connectedClients[c] = client
+	if client.ID != "" {
+		pr.connClients.Store(c, client)
+		logrus.Infof("Client %s has been assigned to %s", client.ID, c.RemoteAddr().String())
+	} else {
+		return errors.New("client is not connected (connect)")
+	}
+
+	logrus.Infof("[C] There are %d clients in the pool", len(pr.pool.ClientIDs()))
+	logrus.Infof("[C] There are %d clients in use", pr.Size())
 
 	return nil
 }
 
 func (pr *ProxyImpl) Disconnect(c gnet.Conn) error {
-	client := pr.connectedClients[c]
-	if pr.Elastic && pr.ReuseElasticClients {
-		pr.pool.Put(client)
-		logrus.Infof("Elastic client connection %s has been put on the pool for reuse", client.ID)
-	} else if !pr.Elastic {
-		pr.pool.Put(client)
-	} else {
-		client.Close()
-		logrus.Infof("Elastic client connection %s has been closed", client.ID)
+	var client *Client
+	if c, ok := pr.connClients.Load(c); ok {
+		client = c.(*Client)
 	}
-	delete(pr.connectedClients, c)
+	pr.connClients.Delete(c)
+
+	// TODO: The connection is unstable when I put the client back in the pool
+	// If the client is not in the pool, put it back
+	if client.ID != "" {
+		if pr.Elastic && pr.ReuseElasticClients {
+			if err := pr.pool.Put(client); err != nil {
+				return err
+			}
+		} else {
+			// FIXME: Close the client connection, as it is not reusable???
+			pr.pool.Put(client)
+			// pr.pool.Put(NewClient("tcp", "localhost:5432", 4096))
+		}
+	} else {
+		return errors.New("client is not connected (disconnect)")
+	}
+
+	logrus.Infof("[D] There are %d clients in the pool", len(pr.pool.ClientIDs()))
+	logrus.Infof("[D] There are %d clients in use", pr.Size())
 
 	return nil
 }
 
 func (pr *ProxyImpl) PassThrough(c gnet.Conn) error {
+	var client *Client
+	if c, ok := pr.connClients.Load(c); !ok {
+		return errors.New("client is not connected (passthrough)")
+	} else {
+		client = c.(*Client)
+	}
+
 	// buf contains the data from the client (query)
 	buf, _ := c.Next(-1)
 
@@ -93,9 +127,21 @@ func (pr *ProxyImpl) PassThrough(c gnet.Conn) error {
 	logrus.Infof("Received %d bytes from %s", len(buf), c.RemoteAddr().String())
 
 	// Send the query to the server
-	pr.connectedClients[c].Send(buf)
+	err := client.Send(buf)
+	if err != nil {
+		return err
+	}
+
 	// Receive the response from the server
-	size, response := pr.connectedClients[c].Receive()
+	size, response, err := client.Receive()
+	if err != nil {
+		return err
+	}
+
+	if size == 0 {
+		return errors.New("no response from the server")
+	}
+
 	// Write the response to the incoming connection
 	c.Write(response[:size])
 
@@ -103,15 +149,23 @@ func (pr *ProxyImpl) PassThrough(c gnet.Conn) error {
 }
 
 func (pr *ProxyImpl) Shutdown() {
-	for _, client := range pr.connectedClients {
-		client.Close()
-	}
+	pr.pool.Shutdown()
 	logrus.Info("All busy client connections have been closed")
 
-	availableClients := pr.pool.GetClientIDs()
+	availableClients := pr.pool.ClientIDs()
 	for _, clientID := range availableClients {
 		client := pr.pool.Pop(clientID)
 		client.Close()
 	}
 	logrus.Info("All available client connections have been closed")
+}
+
+func (pr *ProxyImpl) Size() int {
+	var size int
+	pr.connClients.Range(func(_, _ interface{}) bool {
+		size++
+		return true
+	})
+
+	return size
 }
