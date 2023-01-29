@@ -92,10 +92,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends postgresql-client
-          psql ${PGURL1} -c "CREATE DATABASE gatewayd_test;"
-          psql ${PGURL2} -c "CREATE TABLE test_table (id serial PRIMARY KEY, name varchar(255));"
-          psql ${PGURL2} -c "INSERT INTO test_table (name) VALUES ('test');"
-          psql ${PGURL2} -c "SELECT * FROM test_table;" | grep test || exit 1
+          psql ${PGURL} -c  "CREATE TABLE test_table (id serial PRIMARY KEY, name varchar(255));" | grep CREATE || exit 1
+          psql ${PGURL} -c "INSERT INTO test_table (name) VALUES ('test');" | grep INSERT || exit 1
+          psql ${PGURL} -c "SELECT * FROM test_table;" | grep test || exit 1
         env:
-          PGURL1: postgresql://postgres:postgres@localhost:15432/postgres
-          PGURL2: postgresql://postgres:postgres@localhost:15432/gatewayd_test
+          PGURL: postgres://postgres:postgres@localhost:5432/postgres
