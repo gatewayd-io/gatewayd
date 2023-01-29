@@ -65,6 +65,7 @@ const (
 	DefaultMaxPort             = 60000
 	PluginPriorityStart        = 1000
 	LoggerName                 = "plugin"
+	DefaultPluginAddress       = "http://plugins/metrics"
 	DefaultMetricsMergerPeriod = 5 * time.Second
 
 	// Client constants.

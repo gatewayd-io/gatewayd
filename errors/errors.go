@@ -15,6 +15,7 @@ const (
 	ErrCodeStartPluginFailed
 	ErrCodeGetRPCClientFailed
 	ErrCodeDispensePluginFailed
+	ErrCodePluginMetricsMergeFailed
 	ErrCodeClientReceiveFailed
 	ErrCodeClientSendFailed
 	ErrCodeServerReceiveFailed
@@ -59,6 +60,8 @@ var (
 		ErrCodeGetRPCClientFailed, "failed to get RPC client", nil)
 	ErrFailedToDispensePlugin = NewGatewayDError(
 		ErrCodeDispensePluginFailed, "failed to dispense plugin", nil)
+	ErrFailedToMergePluginMetrics = NewGatewayDError(
+		ErrCodePluginMetricsMergeFailed, "failed to merge plugin metrics", nil)
 
 	ErrClientReceiveFailed = NewGatewayDError(
 		ErrCodeClientReceiveFailed, "couldn't receive data from the server", nil)

@@ -25,8 +25,16 @@ func TestMerger(t *testing.T) {
 
 	merger := NewMerger(1, logger)
 	merger.Add("test", "/tmp/test.sock")
-	go merger.Start()
-	time.Sleep(1 * time.Second)
+
+	// We need to give the merger some time to read the metrics.
+	// TODO: Find a better way to do this.
+	// Note: httptest.NewServer only creates a TCP server.
+	time.Sleep(100 * time.Millisecond)
+
+	metrics, err := merger.ReadMetrics()
+	assert.Nil(t, err)
+	err = merger.MergeMetrics(metrics)
+	assert.Nil(t, err)
 
 	// We expect the metrics to be merged into a single output.
 	// Also, we don't need to test the actual metrics from GatewayD,
@@ -38,5 +46,4 @@ func TestMerger(t *testing.T) {
 gatewayd_test_total{plugin="test"} 1`
 
 	assert.Contains(t, string(merger.OutputMetrics), want)
-	defer merger.Stop()
 }

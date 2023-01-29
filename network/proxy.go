@@ -574,5 +574,6 @@ func (pr *Proxy) Shutdown() {
 		return true
 	})
 	pr.busyConnections.Clear()
+	pr.scheduler.Clear()
 	pr.logger.Debug().Msg("All busy connections have been closed")
 }
