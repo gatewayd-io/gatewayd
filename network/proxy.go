@@ -314,7 +314,16 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	// Run the OnTrafficFromClient hooks.
 	result, err := pr.hookConfig.Run(
 		context.Background(),
-		trafficData(gconn, client, "request", request, origErr),
+		trafficData(
+			gconn,
+			client,
+			[]Field{
+				{
+					Name:  "request",
+					Value: request,
+				},
+			},
+			origErr),
 		hook.OnTrafficFromClient,
 		pr.hookConfig.Verification)
 	if err != nil {
@@ -338,7 +347,16 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	// Run the OnTrafficToServer hooks.
 	_, err = pr.hookConfig.Run(
 		context.Background(),
-		trafficData(gconn, client, "request", request, err),
+		trafficData(
+			gconn,
+			client,
+			[]Field{
+				{
+					Name:  "request",
+					Value: request,
+				},
+			},
+			err),
 		hook.OnTrafficToServer,
 		pr.hookConfig.Verification)
 	if err != nil {
@@ -381,7 +399,20 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	// Run the OnTrafficFromServer hooks.
 	result, err = pr.hookConfig.Run(
 		context.Background(),
-		trafficData(gconn, client, "response", response[:received], err),
+		trafficData(
+			gconn,
+			client,
+			[]Field{
+				{
+					Name:  "request",
+					Value: request,
+				},
+				{
+					Name:  "response",
+					Value: response[:received],
+				},
+			},
+			err),
 		hook.OnTrafficFromServer,
 		pr.hookConfig.Verification)
 	if err != nil {
@@ -392,6 +423,8 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 		response = modResponse
 		received = modReceived
 	}
+
+	// TODO: Implement OnTrafficToClient hooks.
 
 	// Send the response to the client.
 	return sendTrafficToClient(response, received)
