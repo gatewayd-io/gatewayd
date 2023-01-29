@@ -149,6 +149,11 @@ func (reg *RegistryImpl) LoadPlugins(pluginConfig *koanf.Koanf) {
 
 	// Add each plugin to the registry.
 	for priority, name := range plugins {
+		// Skip the top-level "plugins" key.
+		if name == "plugins" {
+			continue
+		}
+
 		reg.hooksConfig.Logger.Debug().Str("name", name).Msg("Loading plugin")
 		plugin := &Impl{
 			ID: Identifier{
