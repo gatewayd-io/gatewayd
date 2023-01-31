@@ -9,24 +9,6 @@ acceptancePolicy: "accept"
 metricsMergerPeriod: 5s
 
 plugins:
-  # Plugin name
-  - name: gatewayd-plugin-test
-    # whether to enable or disable the plugin on the next run
-    enabled: False
-    # path to the plugin's binary file
-    localPath: ../gatewayd-plugin-test/gatewayd-plugin-test
-    # Pass cmdline args to the plugin
-    args: ["--log-level", "info"]
-    # Pass environment variables to the plugin
-    # System-wide environment variables are passed to the plugin normally
-    # and they can be accessed via os.Environ().
-    # Defining any environment variables below will override system-wide environment variables.
-    env:
-      # The below environment variables are used by the plugin loader to verify the plugin's identity.
-      - MAGIC_COOKIE_KEY=GATEWAYD_PLUGIN
-      - MAGIC_COOKIE_VALUE=5712b87aa5d7e9f9e9ab643e6603181c5b796015cb1c09d6f5ada882bf2a1872
-    # Checksum hash to verify the binary before loading
-    checksum: 4098de0e6058fd3805d3729d0940f7f15a78aedcdfa249fd074a5021aae7e8cb
   - name: gatewayd-plugin-cache
     enabled: True
     localPath: ../gatewayd-plugin-cache/gatewayd-plugin-cache
