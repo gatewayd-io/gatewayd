@@ -12,7 +12,7 @@ tidy:
 	@go mod tidy
 
 build-dev:
-	@go mod tidy && go build -trimpath -ldflags "-s -w -X ${PACKAGE_NAME}.Version=${VERSION}"
+	@go mod tidy && CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X ${PACKAGE_NAME}.Version=${VERSION}"
 
 build-release: tidy
 	@mkdir -p dist
