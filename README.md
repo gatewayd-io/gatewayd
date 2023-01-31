@@ -11,7 +11,7 @@ GatewayD is a cloud-native database gateway and framework for building data-driv
 
 ## Architecture
 
-The GatewayD architecture consists of a core and plugins. The core enables basic functionality for:
+The GatewayD architecture consists of a core, SDK and plugins. The core enables basic functionality for:
 
 - **Proxying connections** between clients and server(s)
 - **Connection pooling**, health check and management
@@ -20,6 +20,8 @@ The GatewayD architecture consists of a core and plugins. The core enables basic
 - **Plugin system and hooks**
 - **Metric aggregation and emission**
 
+![GatewayD Core Architecture v1](https://github.com/gatewayd-io/gatewayd/blob/main/assets/architecture-core-v1.png)
+
 Then, plugins are loaded on startup to add tons of functionality, for example:
 
 - **Query parsing and processing**
@@ -27,7 +29,13 @@ Then, plugins are loaded on startup to add tons of functionality, for example:
 - **Schema and data** management and transformation
 - Many other possibilities
 
+![GatewayD Core Architecture v1](https://github.com/gatewayd-io/gatewayd/blob/main/assets/architecture-plugins-v1.png)
+
 Plugins talk over **gRPC** using **protocol buffers** with the core. The core exposes a long list of hooks. Upon loading a plugin, the plugin can register to those hooks. When specific events happen in the core, like `onTrafficFromClient`, the plugins registered to that hook will be called with the parameters available in that hook, like the client request, that is, the query. Plugins can terminate client connections and return a response immediately without consulting the database server. Plugins can also emit Prometheus metrics via HTTP over UDS to the core. Then, the core aggregates, relabels and emits those metrics over an HTTP endpoint to be scraped by Prometheus.
+
+The last piece of the puzzle is the SDK, which helps developers create their extensions with ease.
+
+![GatewayD Core Architecture v1](https://github.com/gatewayd-io/gatewayd/blob/main/assets/architecture-sdk-v1.png)
 
 ## Run
 
