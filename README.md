@@ -29,14 +29,6 @@ Then, plugins are loaded on startup to add tons of functionality, for example:
 
 Plugins talk over **gRPC** using **protocol buffers** with the core. The core exposes a long list of hooks. Upon loading a plugin, the plugin can register to those hooks. When specific events happen in the core, like `onTrafficFromClient`, the plugins registered to that hook will be called with the parameters available in that hook, like the client request, that is, the query. Plugins can terminate client connections and return a response immediately without consulting the database server. Plugins can also emit Prometheus metrics via HTTP over UDS to the core. Then, the core aggregates, relabels and emits those metrics over an HTTP endpoint to be scraped by Prometheus.
 
-<!--
-ADD A DIAGRAM HERE.
-
-The high-level component architecture diagram is depicted below:
-
-![Architecture diagrams](https://github.com/gatewayd-io/gatewayd/blob/main/assets/architecture-diagram-v0.0.1.png)
--->
-
 ## Run
 
 To run GatewayD, you need to download the latest version from the [releases](https://github.com/gatewayd-io/gatewayd/releases) page. Then extract it somewhere in your `PATH` and run it like below:
