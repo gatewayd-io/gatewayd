@@ -113,12 +113,13 @@ jobs:
           compatibilityPolicy: "strict"
           acceptancePolicy: "accept"
           metricsMergerPeriod: 1s
+          healthCheckPeriod: 1s
 
           plugins:
             - name: gatewayd-plugin-test
               enabled: True
               localPath: ./gdp-test
-              args: ["--log-level", "info"]
+              args: ["--log-level", "debug"]
               env:
                 - MAGIC_COOKIE_KEY=GATEWAYD_PLUGIN
                 - MAGIC_COOKIE_VALUE=5712b87aa5d7e9f9e9ab643e6603181c5b796015cb1c09d6f5ada882bf2a1872
