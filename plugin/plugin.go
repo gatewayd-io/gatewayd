@@ -14,6 +14,7 @@ type IPlugin interface {
 	Start() (net.Addr, error)
 	Stop()
 	Dispense() (v1.GatewayDPluginServiceClient, *gerr.GatewayDError)
+	Ping() *gerr.GatewayDError
 }
 
 var _ IPlugin = &Plugin{}
@@ -50,4 +51,18 @@ func (p *Plugin) Dispense() (v1.GatewayDPluginServiceClient, *gerr.GatewayDError
 	}
 
 	return nil, gerr.ErrPluginNotReady
+}
+
+// Ping pings the plugin.
+func (p *Plugin) Ping() *gerr.GatewayDError {
+	rpcClient, err := p.Client.Client()
+	if err != nil {
+		return gerr.ErrFailedToGetRPCClient.Wrap(err)
+	}
+
+	if err := rpcClient.Ping(); err != nil {
+		return gerr.ErrFailedToPingPlugin.Wrap(err)
+	}
+
+	return nil
 }
