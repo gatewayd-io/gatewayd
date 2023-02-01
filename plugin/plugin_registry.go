@@ -153,8 +153,17 @@ func (reg *Registry) ForEach(f func(sdkPlugin.Identifier, *Plugin)) {
 	})
 }
 
-// Remove removes a plugin from the registry.
+// Remove removes plugin hooks, stops the plugin and
+// eventually removes the plugin from the registry.
 func (reg *Registry) Remove(id sdkPlugin.Identifier) {
+	plugin := reg.Get(id)
+	for _, hooks := range reg.hooks {
+		delete(hooks, plugin.Priority)
+	}
+	if plugin != nil {
+		plugin.Stop()
+	}
+
 	reg.plugins.Remove(id)
 }
 
