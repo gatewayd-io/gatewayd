@@ -128,6 +128,7 @@ func (c *Config) LoadDefaults() {
 			"compatibilityPolicy": "strict",
 			"acceptancePolicy":    "accept",
 			"metricsMergerPeriod": DefaultMetricsMergerPeriod.String(),
+			"healthCheckPeriod":   DefaultPluginHealthCheckPeriod.String(),
 		},
 	}
 
