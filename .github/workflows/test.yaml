@@ -127,6 +127,7 @@ jobs:
 
       - name: Run GatewayD with test plugin 🚀
         run: |
+          sed -i 's/level: "info"/level: "debug"/g' gatewayd.yaml # Enable debug logs
           ./gatewayd run &
 
       - name: Run a test with PSQL 🧪
