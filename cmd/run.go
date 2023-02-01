@@ -112,7 +112,7 @@ var runCmd = &cobra.Command{
 		).Msg("Starting plugin health check scheduler")
 		// Ping the plugins to check if they are alive, and remove them if they are not.
 		startDelay := time.Now().Add(conf.Plugin.HealthCheckPeriod)
-		healthCheckScheduler.Every(
+		if _, err := healthCheckScheduler.Every(
 			conf.Plugin.HealthCheckPeriod).SingletonMode().StartAt(startDelay).Do(func() {
 			pluginRegistry.ForEach(func(pluginId sdkPlugin.Identifier, plugin *plugin.Plugin) {
 				if err := plugin.Ping(); err != nil {
@@ -123,7 +123,9 @@ var runCmd = &cobra.Command{
 					logger.Trace().Str("name", pluginId.Name).Msg("Successfully pinged plugin")
 				}
 			})
-		})
+		}); err != nil {
+			logger.Error().Err(err).Msg("Failed to start plugin health check scheduler")
+		}
 		healthCheckScheduler.StartAsync()
 
 		// The config will be passed to the plugins that register to the "OnConfigLoaded" plugin.
