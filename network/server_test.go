@@ -26,7 +26,7 @@ func TestRunServer(t *testing.T) {
 		Output:            []config.LogOutput{config.Console},
 		TimeFormat:        zerolog.TimeFormatUnix,
 		ConsoleTimeFormat: config.DefaultConsoleTimeFormat,
-		Level:             zerolog.DebugLevel,
+		Level:             zerolog.ErrorLevel,
 		NoColor:           true,
 	})
 
@@ -152,12 +152,15 @@ func TestRunServer(t *testing.T) {
 	}
 
 	// Create a connection pool.
-	pool := pool.NewPool(2)
+	pool := pool.NewPool(3)
 	client1 := NewClient(&clientConfig, logger)
 	err := pool.Put(client1.ID, client1)
 	assert.Nil(t, err)
 	client2 := NewClient(&clientConfig, logger)
 	err = pool.Put(client2.ID, client2)
+	assert.Nil(t, err)
+	client3 := NewClient(&clientConfig, logger)
+	err = pool.Put(client3.ID, client3)
 	assert.Nil(t, err)
 
 	// Create a proxy with a fixed buffer pool.
@@ -228,7 +231,7 @@ func TestRunServer(t *testing.T) {
 				// AuthenticationOk.
 				assert.Equal(t, uint8(0x52), data[0])
 
-				assert.Equal(t, 1, proxy.availableConnections.Size())
+				assert.Equal(t, 2, proxy.availableConnections.Size())
 				assert.Equal(t, 1, proxy.busyConnections.Size())
 
 				// Test Prometheus metrics.

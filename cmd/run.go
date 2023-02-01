@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/NYTimes/gziphandler"
 	sdkPlugin "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin"
@@ -22,6 +23,7 @@ import (
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
 	"github.com/getsentry/sentry-go"
+	"github.com/go-co-op/gocron"
 	"github.com/panjf2000/gnet/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -30,11 +32,12 @@ import (
 )
 
 var (
-	enableSentry     bool
-	pluginConfigFile string
-	globalConfigFile string
-	conf             *config.Config
-	pluginRegistry   *plugin.Registry
+	enableSentry         bool
+	pluginConfigFile     string
+	globalConfigFile     string
+	conf                 *config.Config
+	pluginRegistry       *plugin.Registry
+	healthCheckScheduler = gocron.NewScheduler(time.UTC)
 )
 
 // runCmd represents the run command.
@@ -103,6 +106,27 @@ var runCmd = &cobra.Command{
 			}
 		})
 		metricsMerger.Start()
+
+		logger.Info().Str(
+			"healthCheckPeriod", conf.Plugin.HealthCheckPeriod.String(),
+		).Msg("Starting plugin health check scheduler")
+		// Ping the plugins to check if they are alive, and remove them if they are not.
+		startDelay := time.Now().Add(conf.Plugin.HealthCheckPeriod)
+		if _, err := healthCheckScheduler.Every(
+			conf.Plugin.HealthCheckPeriod).SingletonMode().StartAt(startDelay).Do(func() {
+			pluginRegistry.ForEach(func(pluginId sdkPlugin.Identifier, plugin *plugin.Plugin) {
+				if err := plugin.Ping(); err != nil {
+					logger.Error().Err(err).Msg("Failed to ping plugin")
+					metricsMerger.Remove(pluginId.Name)
+					pluginRegistry.Remove(pluginId)
+				} else {
+					logger.Trace().Str("name", pluginId.Name).Msg("Successfully pinged plugin")
+				}
+			})
+		}); err != nil {
+			logger.Error().Err(err).Msg("Failed to start plugin health check scheduler")
+		}
+		healthCheckScheduler.StartAsync()
 
 		// The config will be passed to the plugins that register to the "OnConfigLoaded" plugin.
 		// The plugins can modify the config and return it.
@@ -371,7 +395,7 @@ var runCmd = &cobra.Command{
 			for sig := range signalsCh {
 				for _, s := range signals {
 					if sig != s {
-						// Notify the hooks that the server is shutting down.
+						logger.Info().Msg("Notifying the plugins that the server is shutting down")
 						_, err := pluginRegistry.Run(
 							context.Background(),
 							map[string]interface{}{"signal": sig.String()},
@@ -381,9 +405,15 @@ var runCmd = &cobra.Command{
 							logger.Error().Err(err).Msg("Failed to run OnSignal hooks")
 						}
 
+						logger.Info().Msg("Stopping GatewayD")
+						healthCheckScheduler.Clear()
+						logger.Info().Msg("Stopped health check scheduler")
 						metricsMerger.Stop()
+						logger.Info().Msg("Stopped metrics merger")
 						server.Shutdown()
+						logger.Info().Msg("Stopped server")
 						pluginRegistry.Shutdown()
+						logger.Info().Msg("Stopped plugin registry")
 						os.Exit(0)
 					}
 				}

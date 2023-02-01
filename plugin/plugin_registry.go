@@ -33,14 +33,14 @@ type IHook interface {
 type IRegistry interface {
 	// Plugin management
 	Add(plugin *Plugin) bool
-	Get(id sdkPlugin.Identifier) *Plugin
+	Get(pluginID sdkPlugin.Identifier) *Plugin
 	List() []sdkPlugin.Identifier
 	Exists(name, version, remoteURL string) bool
 	ForEach(f func(sdkPlugin.Identifier, *Plugin))
-	Remove(id sdkPlugin.Identifier)
+	Remove(pluginID sdkPlugin.Identifier)
 	Shutdown()
 	LoadPlugins(plugins []config.Plugin)
-	RegisterHooks(id sdkPlugin.Identifier)
+	RegisterHooks(pluginID sdkPlugin.Identifier)
 
 	// Hook management
 	IHook
@@ -86,8 +86,8 @@ func (reg *Registry) Add(plugin *Plugin) bool {
 }
 
 // Get returns a plugin from the registry.
-func (reg *Registry) Get(id sdkPlugin.Identifier) *Plugin {
-	if plugin, ok := reg.plugins.Get(id).(*Plugin); ok {
+func (reg *Registry) Get(pluginID sdkPlugin.Identifier) *Plugin {
+	if plugin, ok := reg.plugins.Get(pluginID).(*Plugin); ok {
 		return plugin
 	}
 
@@ -153,9 +153,13 @@ func (reg *Registry) ForEach(f func(sdkPlugin.Identifier, *Plugin)) {
 	})
 }
 
-// Remove removes a plugin from the registry.
-func (reg *Registry) Remove(id sdkPlugin.Identifier) {
-	reg.plugins.Remove(id)
+// Remove removes plugin hooks and then removes the plugin from the registry.
+func (reg *Registry) Remove(pluginID sdkPlugin.Identifier) {
+	plugin := reg.Get(pluginID)
+	for _, hooks := range reg.hooks {
+		delete(hooks, plugin.Priority)
+	}
+	reg.plugins.Remove(pluginID)
 }
 
 // Shutdown shuts down all plugins in the registry.
@@ -509,8 +513,8 @@ func (reg *Registry) LoadPlugins(plugins []config.Plugin) {
 }
 
 // RegisterHooks registers the hooks for the given plugin.
-func (reg *Registry) RegisterHooks(id sdkPlugin.Identifier) {
-	pluginImpl := reg.Get(id)
+func (reg *Registry) RegisterHooks(pluginID sdkPlugin.Identifier) {
+	pluginImpl := reg.Get(pluginID)
 	reg.Logger.Debug().Str("name", pluginImpl.ID.Name).Msg(
 		"Registering hooks for plugin")
 	var pluginV1 v1.GatewayDPluginServiceClient

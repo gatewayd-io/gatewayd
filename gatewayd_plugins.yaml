@@ -7,6 +7,7 @@ compatibilityPolicy: "strict"
 # Possible values: "accept" (default) and "reject" 
 acceptancePolicy: "accept"
 metricsMergerPeriod: 5s
+healthCheckPeriod: 5s
 
 plugins:
   - name: gatewayd-plugin-cache
@@ -17,4 +18,4 @@ plugins:
       - MAGIC_COOKIE_KEY=GATEWAYD_PLUGIN
       - MAGIC_COOKIE_VALUE=5712b87aa5d7e9f9e9ab643e6603181c5b796015cb1c09d6f5ada882bf2a1872
       - REDIS_ADDR=localhost:6379
-    checksum: 4c37fe93e874c8cefebb4c89d6daa915605299de0d5236ed66ef8db5b9a0d6b8
+    checksum: 2b126c2e305c0d6608c32629bb23ad475f4c7fa0adb5944e8fa5796726938e4c

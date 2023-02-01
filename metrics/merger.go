@@ -24,6 +24,7 @@ import (
 
 type IMerger interface {
 	Add(pluginName string, unixDomainSocket string)
+	Remove(pluginName string)
 	ReadMetrics() (map[string][]byte, *gerr.GatewayDError)
 	MergeMetrics(pluginMetrics map[string][]byte) *gerr.GatewayDError
 	Start()
@@ -63,6 +64,19 @@ func (m *Merger) Add(pluginName string, unixDomainSocket string) {
 		return
 	}
 	m.Addresses[pluginName] = unixDomainSocket
+}
+
+// Remove removes a plugin and its unix domain socket from the map of plugins,
+// so that merging metrics don't pick it up on the next scheduled run.
+func (m *Merger) Remove(pluginName string) {
+	if _, ok := m.Addresses[pluginName]; !ok {
+		m.Logger.Warn().Fields(
+			map[string]interface{}{
+				"plugin": pluginName,
+			}).Msg("Plugin not registered, skipping")
+		return
+	}
+	delete(m.Addresses, pluginName)
 }
 
 // ReadMetrics reads metrics from plugins by reading from their unix domain sockets.

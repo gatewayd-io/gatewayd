@@ -119,7 +119,7 @@ func CollectAndComparePrometheusMetrics(t *testing.T) {
 			gatewayd_proxy_health_checks_total 0
 			gatewayd_proxy_passthrough_terminations_total 0
 			gatewayd_proxy_passthroughs_total 1
-			gatewayd_server_connections 4
+			gatewayd_server_connections 5
 			gatewayd_traffic_bytes_sum 182
 			gatewayd_traffic_bytes_count 4
 		`
