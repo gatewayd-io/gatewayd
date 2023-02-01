@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/Masterminds/semver/v3 v3.2.0
 	github.com/NYTimes/gziphandler v1.1.1
-	github.com/gatewayd-io/gatewayd-plugin-sdk v0.0.4
+	github.com/gatewayd-io/gatewayd-plugin-sdk v0.0.5
 	github.com/getsentry/sentry-go v0.17.0
 	github.com/go-co-op/gocron v1.18.0
 	github.com/google/go-cmp v0.5.9
