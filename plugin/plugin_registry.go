@@ -387,7 +387,7 @@ func (reg *Registry) LoadPlugins(plugins []config.Plugin) {
 		// have a priority of 1000 or greater.
 		plugin.Priority = sdkPlugin.Priority(config.PluginPriorityStart + uint(priority))
 
-		logAdapter := logging.NewHcLogAdapter(&reg.Logger, config.LoggerName)
+		logAdapter := logging.NewHcLogAdapter(&reg.Logger, pCfg.Name)
 
 		plugin.Client = goplugin.NewClient(
 			&goplugin.ClientConfig{
