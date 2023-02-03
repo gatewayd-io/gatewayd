@@ -20,7 +20,9 @@ The GatewayD architecture consists of a core, SDK and plugins. The core enables 
 - **Plugin system and hooks**
 - **Metric aggregation and emission**
 
-![GatewayD Core Architecture v1](https://github.com/gatewayd-io/gatewayd/blob/main/assets/architecture-core-v1.png)
+<p align="center">
+    <img alt="GatewayD Core Architecture v1" src="https://github.com/gatewayd-io/gatewayd/blob/main/assets/architecture-core-v1.png" style="width: 512px; object-fit: cover; object-position: 100% -2px;">
+</p>
 
 Then, plugins are loaded on startup to add tons of functionality, for example:
 
@@ -29,13 +31,17 @@ Then, plugins are loaded on startup to add tons of functionality, for example:
 - **Schema and data** management and transformation
 - Many other possibilities
 
-![GatewayD Core Architecture v1](https://github.com/gatewayd-io/gatewayd/blob/main/assets/architecture-plugins-v1.png)
+<p align="center">
+    <img alt="GatewayD Plugins Architecture v1" src="https://github.com/gatewayd-io/gatewayd/blob/main/assets/architecture-plugins-v1.png" style="width: 512px; object-fit: cover; object-position: 100% -2px;">
+</p>
 
 Plugins talk over **gRPC** using **protocol buffers** with the core. The core exposes a long list of hooks. Upon loading a plugin, the plugin can register to those hooks. When specific events happen in the core, like `onTrafficFromClient`, the plugins registered to that hook will be called with the parameters available in that hook, like the client request, that is, the query. Plugins can terminate client connections and return a response immediately without consulting the database server. Plugins can also emit Prometheus metrics via HTTP over UDS to the core. Then, the core aggregates, relabels and emits those metrics over an HTTP endpoint to be scraped by Prometheus.
 
 The last piece of the puzzle is the SDK, which helps developers create their extensions with ease.
 
-![GatewayD Core Architecture v1](https://github.com/gatewayd-io/gatewayd/blob/main/assets/architecture-sdk-v1.png)
+<p align="center">
+    <img alt="GatewayD SDK Architecture v1" src="https://github.com/gatewayd-io/gatewayd/blob/main/assets/architecture-sdk-v1.png" style="width: 512px; object-fit: cover; object-position: 100% -2px;">
+</p>
 
 ## Run
 
