@@ -318,62 +318,63 @@ var runCmd = &cobra.Command{
 		}
 
 		// Create a server
+		serverCfg := conf.Global.Server[config.Default]
 		server := network.NewServer(
-			conf.Global.Server.Network,
-			conf.Global.Server.Address,
-			conf.Global.Server.SoftLimit,
-			conf.Global.Server.HardLimit,
-			conf.Global.Server.TickInterval,
+			serverCfg.Network,
+			serverCfg.Address,
+			serverCfg.SoftLimit,
+			serverCfg.HardLimit,
+			serverCfg.TickInterval,
 			[]gnet.Option{
 				// Scheduling options
-				gnet.WithMulticore(conf.Global.Server.MultiCore),
-				gnet.WithLockOSThread(conf.Global.Server.LockOSThread),
+				gnet.WithMulticore(serverCfg.MultiCore),
+				gnet.WithLockOSThread(serverCfg.LockOSThread),
 				// NumEventLoop overrides Multicore option.
 				// gnet.WithNumEventLoop(1),
 
 				// Can be used to send keepalive messages to the client.
-				gnet.WithTicker(conf.Global.Server.EnableTicker),
+				gnet.WithTicker(serverCfg.EnableTicker),
 
 				// Internal event-loop load balancing options
-				gnet.WithLoadBalancing(conf.Global.Server.GetLoadBalancer()),
+				gnet.WithLoadBalancing(serverCfg.GetLoadBalancer()),
 
 				// Buffer options
-				gnet.WithReadBufferCap(conf.Global.Server.ReadBufferCap),
-				gnet.WithWriteBufferCap(conf.Global.Server.WriteBufferCap),
-				gnet.WithSocketRecvBuffer(conf.Global.Server.SocketRecvBuffer),
-				gnet.WithSocketSendBuffer(conf.Global.Server.SocketSendBuffer),
+				gnet.WithReadBufferCap(serverCfg.ReadBufferCap),
+				gnet.WithWriteBufferCap(serverCfg.WriteBufferCap),
+				gnet.WithSocketRecvBuffer(serverCfg.SocketRecvBuffer),
+				gnet.WithSocketSendBuffer(serverCfg.SocketSendBuffer),
 
 				// TCP options
-				gnet.WithReuseAddr(conf.Global.Server.ReuseAddress),
-				gnet.WithReusePort(conf.Global.Server.ReusePort),
-				gnet.WithTCPKeepAlive(conf.Global.Server.TCPKeepAlive),
-				gnet.WithTCPNoDelay(conf.Global.Server.GetTCPNoDelay()),
+				gnet.WithReuseAddr(serverCfg.ReuseAddress),
+				gnet.WithReusePort(serverCfg.ReusePort),
+				gnet.WithTCPKeepAlive(serverCfg.TCPKeepAlive),
+				gnet.WithTCPNoDelay(serverCfg.GetTCPNoDelay()),
 			},
 			proxy,
 			logger,
 			pluginRegistry,
 		)
 
-		serverCfg := map[string]interface{}{
-			"network":          conf.Global.Server.Network,
-			"address":          conf.Global.Server.Address,
-			"softLimit":        conf.Global.Server.SoftLimit,
-			"hardLimit":        conf.Global.Server.HardLimit,
-			"tickInterval":     conf.Global.Server.TickInterval.String(),
-			"multiCore":        conf.Global.Server.MultiCore,
-			"lockOSThread":     conf.Global.Server.LockOSThread,
-			"enableTicker":     conf.Global.Server.EnableTicker,
-			"loadBalancer":     conf.Global.Server.LoadBalancer,
-			"readBufferCap":    conf.Global.Server.ReadBufferCap,
-			"writeBufferCap":   conf.Global.Server.WriteBufferCap,
-			"socketRecvBuffer": conf.Global.Server.SocketRecvBuffer,
-			"socketSendBuffer": conf.Global.Server.SocketSendBuffer,
-			"reuseAddress":     conf.Global.Server.ReuseAddress,
-			"reusePort":        conf.Global.Server.ReusePort,
-			"tcpKeepAlive":     conf.Global.Server.TCPKeepAlive.String(),
-			"tcpNoDelay":       conf.Global.Server.TCPNoDelay,
+		data = map[string]interface{}{
+			"network":          serverCfg.Network,
+			"address":          serverCfg.Address,
+			"softLimit":        serverCfg.SoftLimit,
+			"hardLimit":        serverCfg.HardLimit,
+			"tickInterval":     serverCfg.TickInterval.String(),
+			"multiCore":        serverCfg.MultiCore,
+			"lockOSThread":     serverCfg.LockOSThread,
+			"enableTicker":     serverCfg.EnableTicker,
+			"loadBalancer":     serverCfg.LoadBalancer,
+			"readBufferCap":    serverCfg.ReadBufferCap,
+			"writeBufferCap":   serverCfg.WriteBufferCap,
+			"socketRecvBuffer": serverCfg.SocketRecvBuffer,
+			"socketSendBuffer": serverCfg.SocketSendBuffer,
+			"reuseAddress":     serverCfg.ReuseAddress,
+			"reusePort":        serverCfg.ReusePort,
+			"tcpKeepAlive":     serverCfg.TCPKeepAlive.String(),
+			"tcpNoDelay":       serverCfg.TCPNoDelay,
 		}
-		_, err = pluginRegistry.Run(context.Background(), serverCfg, sdkPlugin.OnNewServer)
+		_, err = pluginRegistry.Run(context.Background(), data, sdkPlugin.OnNewServer)
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to run OnNewServer hooks")
 		}

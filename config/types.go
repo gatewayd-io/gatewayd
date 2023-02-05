@@ -103,6 +103,6 @@ type GlobalConfig struct {
 	Clients map[string]Client  `koanf:"clients"`
 	Pools   map[string]Pool    `koanf:"pools"`
 	Proxy   map[string]Proxy   `koanf:"proxy"`
-	Server  Server             `koanf:"server"`
+	Server  map[string]Server  `koanf:"server"`
 	Metrics map[string]Metrics `koanf:"metrics"`
 }
