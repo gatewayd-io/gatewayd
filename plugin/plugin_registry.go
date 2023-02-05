@@ -252,12 +252,20 @@ func (reg *Registry) Run(
 	// The signature of parameters and args MUST be the same for this to work.
 	for idx, priority := range priorities {
 		var result *structpb.Struct
-		// TODO: Handle errors properly.
 		var err error
 		if idx == 0 {
 			result, err = reg.hooks[hookName][priority](inheritedCtx, params, opts...)
 		} else {
 			result, err = reg.hooks[hookName][priority](inheritedCtx, returnVal, opts...)
+		}
+
+		if err != nil {
+			reg.Logger.Error().Err(err).Fields(
+				map[string]interface{}{
+					"hookName": hookName,
+					"priority": priority,
+				},
+			).Msg("Hook returned an error")
 		}
 
 		// This is done to ensure that the return value of the hook is always valid,
@@ -275,35 +283,17 @@ func (reg *Registry) Run(
 		switch reg.Verification {
 		// Ignore the result of this plugin, log an error and execute the next
 		case config.Ignore:
-			reg.Logger.Error().Err(err).Fields(
-				map[string]interface{}{
-					"hookName": hookName,
-					"priority": priority,
-				},
-			).Msg("Hook returned invalid value, ignoring")
 			if idx == 0 {
 				returnVal = params
 			}
 		// Abort execution of the plugins, log the error and return the result of the last
 		case config.Abort:
-			reg.Logger.Error().Err(err).Fields(
-				map[string]interface{}{
-					"hookName": hookName,
-					"priority": priority,
-				},
-			).Msg("Hook returned invalid value, aborting")
 			if idx == 0 {
 				return args, nil
 			}
 			return returnVal.AsMap(), nil
 		// Remove the hook from the registry, log the error and execute the next
 		case config.Remove:
-			reg.Logger.Error().Err(err).Fields(
-				map[string]interface{}{
-					"hookName": hookName,
-					"priority": priority,
-				},
-			).Msg("Hook returned invalid value, removing")
 			removeList = append(removeList, priority)
 			if idx == 0 {
 				returnVal = params
