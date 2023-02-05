@@ -248,31 +248,6 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 		return gerr.ErrCastFailed
 	}
 
-	// sendTrafficToClient is a function that sends data to the client.
-	sendTrafficToClient := func(response []byte, received int) *gerr.GatewayDError {
-		// Send the response to the client async.
-		origErr := gconn.AsyncWrite(response[:received], func(gconn gnet.Conn, err error) error {
-			pr.logger.Debug().Fields(
-				map[string]interface{}{
-					"function": "proxy.passthrough",
-					"length":   received,
-					"local":    gconn.LocalAddr().String(),
-					"remote":   gconn.RemoteAddr().String(),
-				},
-			).Msg("Sent data to client")
-			return err
-		})
-		if origErr != nil {
-			pr.logger.Error().Err(origErr).Msg("Error writing to client")
-			return gerr.ErrServerSendFailed.Wrap(origErr)
-		}
-
-		metrics.BytesSentToClient.Observe(float64(received))
-		metrics.TotalTrafficBytes.Observe(float64(received))
-
-		return nil
-	}
-
 	// shouldTerminate is a function that retrieves the terminate field from the hook result.
 	// Only the OnTrafficFromClient hook will terminate the connection.
 	shouldTerminate := func(result map[string]interface{}) bool {
@@ -347,7 +322,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 			metrics.BytesSentToClient.Observe(float64(modReceived))
 			metrics.TotalTrafficBytes.Observe(float64(modReceived))
 
-			return sendTrafficToClient(modResponse, modReceived)
+			return pr.sendTrafficToClient(gconn, modResponse, modReceived)
 		}
 		return gerr.ErrHookTerminatedConnection
 	}
@@ -438,7 +413,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	}
 
 	// Send the response to the client.
-	errVerdict := sendTrafficToClient(response, received)
+	errVerdict := pr.sendTrafficToClient(gconn, response, received)
 
 	// Run the OnTrafficToClient hooks.
 	_, err = pr.pluginRegistry.Run(
@@ -577,4 +552,31 @@ func (pr *Proxy) receiveTrafficFromServer(client *Client) (int, []byte, *gerr.Ga
 	metrics.TotalTrafficBytes.Observe(float64(received))
 
 	return received, response, err
+}
+
+// sendTrafficToClient is a function that sends data to the client.
+func (pr *Proxy) sendTrafficToClient(
+	gconn gnet.Conn, response []byte, received int,
+) *gerr.GatewayDError {
+	// Send the response to the client async.
+	origErr := gconn.AsyncWrite(response[:received], func(gconn gnet.Conn, err error) error {
+		pr.logger.Debug().Fields(
+			map[string]interface{}{
+				"function": "proxy.passthrough",
+				"length":   received,
+				"local":    gconn.LocalAddr().String(),
+				"remote":   gconn.RemoteAddr().String(),
+			},
+		).Msg("Sent data to client")
+		return err
+	})
+	if origErr != nil {
+		pr.logger.Error().Err(origErr).Msg("Error writing to client")
+		return gerr.ErrServerSendFailed.Wrap(origErr)
+	}
+
+	metrics.BytesSentToClient.Observe(float64(received))
+	metrics.TotalTrafficBytes.Observe(float64(received))
+
+	return nil
 }
