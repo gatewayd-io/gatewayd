@@ -269,7 +269,10 @@ var runCmd = &cobra.Command{
 			}
 
 			// Verify that the pool is properly populated.
-			logger.Info().Str("count", fmt.Sprint(pools[name].Size())).Msg(
+			logger.Info().Fields(map[string]interface{}{
+				"name":  name,
+				"count": fmt.Sprint(pools[name].Size()),
+			}).Msg(
 				"There are clients available in the pool")
 			if pools[name].Size() != cfg.GetSize() {
 				logger.Error().Msg(
