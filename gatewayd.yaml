@@ -34,30 +34,31 @@ pools:
   default:
     size: 10
 
-proxy:
+proxies:
   default:
     elastic: False
     reuseElasticClients: False
     healthCheckPeriod: 60s # duration
 
-server:
-  network: tcp
-  address: 0.0.0.0:15432
-  softLimit: 0
-  hardLimit: 0
-  enableTicker: False
-  tickInterval: 5s # duration
-  multiCore: True
-  lockOSThread: False
-  loadBalancer: roundrobin
-  readBufferCap: 16777216
-  writeBufferCap: 16777216
-  socketRecvBuffer: 16777216
-  socketSendBuffer: 16777216
-  reuseAddress: True
-  reusePort: True
-  tcpKeepAlive: 3s # duration
-  tcpNoDelay: True
+servers:
+  default:
+    network: tcp
+    address: 0.0.0.0:15432
+    softLimit: 0
+    hardLimit: 0
+    enableTicker: False
+    tickInterval: 5s # duration
+    multiCore: True
+    lockOSThread: False
+    loadBalancer: roundrobin
+    readBufferCap: 16777216
+    writeBufferCap: 16777216
+    socketRecvBuffer: 16777216
+    socketSendBuffer: 16777216
+    reuseAddress: True
+    reusePort: True
+    tcpKeepAlive: 3s # duration
+    tcpNoDelay: True
 
 metrics:
   default:
