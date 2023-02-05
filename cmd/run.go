@@ -229,6 +229,7 @@ var runCmd = &cobra.Command{
 
 		// Create and initialize pools of connections.
 		for name, cfg := range conf.Global.Pools {
+			logger := loggers[name]
 			pools[name] = pool.NewPool(cfg.GetSize())
 
 			// Get client config from the config file.
@@ -244,7 +245,6 @@ var runCmd = &cobra.Command{
 			// Add clients to the pool.
 			for i := 0; i < cfg.GetSize(); i++ {
 				clientConfig := clients[name]
-				logger := loggers[name]
 				client := network.NewClient(&clientConfig, logger)
 
 				if client != nil {
