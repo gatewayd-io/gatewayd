@@ -32,11 +32,13 @@ import (
 )
 
 var (
-	enableSentry         bool
-	pluginConfigFile     string
-	globalConfigFile     string
-	conf                 *config.Config
-	pluginRegistry       *plugin.Registry
+	enableSentry     bool
+	pluginConfigFile string
+	globalConfigFile string
+	conf             *config.Config
+	pluginRegistry   *plugin.Registry
+
+	loggers              = make(map[string]zerolog.Logger)
 	healthCheckScheduler = gocron.NewScheduler(time.UTC)
 )
 
@@ -66,24 +68,28 @@ var runCmd = &cobra.Command{
 		// Load global and plugin configuration.
 		conf = config.NewConfig(globalConfigFile, pluginConfigFile)
 
-		// Create a new logger from the config.
-		loggerCfg := conf.Global.Loggers[config.Default]
-		logger := logging.NewLogger(logging.LoggerConfig{
-			Output:            loggerCfg.GetOutput(),
-			Level:             loggerCfg.GetLevel(),
-			TimeFormat:        loggerCfg.GetTimeFormat(),
-			ConsoleTimeFormat: loggerCfg.GetConsoleTimeFormat(),
-			NoColor:           loggerCfg.NoColor,
-			FileName:          loggerCfg.FileName,
-			MaxSize:           loggerCfg.MaxSize,
-			MaxBackups:        loggerCfg.MaxBackups,
-			MaxAge:            loggerCfg.MaxAge,
-			Compress:          loggerCfg.Compress,
-			LocalTime:         loggerCfg.LocalTime,
-			SyslogPriority:    loggerCfg.GetSyslogPriority(),
-			RSyslogNetwork:    loggerCfg.RSyslogNetwork,
-			RSyslogAddress:    loggerCfg.RSyslogAddress,
-		})
+		// Create and initialize loggers from the config.
+		for name, cfg := range conf.Global.Loggers {
+			loggers[name] = logging.NewLogger(logging.LoggerConfig{
+				Output:            cfg.GetOutput(),
+				Level:             cfg.GetLevel(),
+				TimeFormat:        cfg.GetTimeFormat(),
+				ConsoleTimeFormat: cfg.GetConsoleTimeFormat(),
+				NoColor:           cfg.NoColor,
+				FileName:          cfg.FileName,
+				MaxSize:           cfg.MaxSize,
+				MaxBackups:        cfg.MaxBackups,
+				MaxAge:            cfg.MaxAge,
+				Compress:          cfg.Compress,
+				LocalTime:         cfg.LocalTime,
+				SyslogPriority:    cfg.GetSyslogPriority(),
+				RSyslogNetwork:    cfg.RSyslogNetwork,
+				RSyslogAddress:    cfg.RSyslogAddress,
+			})
+		}
+
+		// Set the default logger.
+		logger := loggers[config.Default]
 
 		// Create a new plugin registry.
 		// The plugins are loaded and hooks registered before the configuration is loaded.
