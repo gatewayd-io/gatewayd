@@ -248,22 +248,6 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 		return gerr.ErrCastFailed
 	}
 
-	// getPluginModifiedResponse is a function that retrieves the modified response
-	// from the hook result.
-	getPluginModifiedResponse := func(result map[string]interface{}) ([]byte, int) {
-		// If the hook returns a response, use it instead of the original response.
-		//nolint:gocritic
-		if modResponse, errMsg, convErr := extractFieldValue(result, "response"); errMsg != "" {
-			pr.logger.Error().Str("error", errMsg).Msg("Error in hook")
-		} else if convErr != nil {
-			pr.logger.Error().Err(convErr).Msg("Error in data conversion")
-		} else if modResponse != nil {
-			return modResponse, len(modResponse)
-		}
-
-		return nil, 0
-	}
-
 	// Receive the request from the client.
 	request, origErr := pr.receiveTrafficFromClient(gconn)
 
@@ -286,7 +270,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	}
 	// If the hook wants to terminate the connection, do it.
 	if pr.shouldTerminate(result) {
-		if modResponse, modReceived := getPluginModifiedResponse(result); modResponse != nil {
+		if modResponse, modReceived := pr.getPluginModifiedResponse(result); modResponse != nil {
 			metrics.ProxyPassThroughs.Inc()
 			metrics.ProxyPassThroughTerminations.Inc()
 			metrics.BytesSentToClient.Observe(float64(modReceived))
@@ -377,7 +361,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 		pr.logger.Error().Err(err).Msg("Error running hook")
 	}
 	// If the hook modified the response, use the modified response.
-	if modResponse, modReceived := getPluginModifiedResponse(result); modResponse != nil {
+	if modResponse, modReceived := pr.getPluginModifiedResponse(result); modResponse != nil {
 		response = modResponse
 		received = modReceived
 	}
@@ -579,4 +563,20 @@ func (pr *Proxy) getPluginModifiedRequest(result map[string]interface{}) []byte 
 	}
 
 	return nil
+}
+
+// getPluginModifiedResponse is a function that retrieves the modified response
+// from the hook result.
+func (pr *Proxy) getPluginModifiedResponse(result map[string]interface{}) ([]byte, int) {
+	// If the hook returns a response, use it instead of the original response.
+	//nolint:gocritic
+	if modResponse, errMsg, convErr := extractFieldValue(result, "response"); errMsg != "" {
+		pr.logger.Error().Str("error", errMsg).Msg("Error in hook")
+	} else if convErr != nil {
+		pr.logger.Error().Err(convErr).Msg("Error in data conversion")
+	} else if modResponse != nil {
+		return modResponse, len(modResponse)
+	}
+
+	return nil, 0
 }
