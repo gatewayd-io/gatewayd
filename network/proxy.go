@@ -227,8 +227,6 @@ func (pr *Proxy) Disconnect(gconn gnet.Conn) *gerr.GatewayDError {
 }
 
 // PassThrough sends the data from the client to the server and vice versa.
-//
-// TODO: refactor this mess! My eye burns even looking at it.
 func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	// TODO: Handle bi-directional traffic
 	// Currently the passthrough is a one-way street from the client to the server, that is,
@@ -248,142 +246,8 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 		return gerr.ErrCastFailed
 	}
 
-	// receiveTrafficFromClient is a function that receives data from the client.
-	receiveTrafficFromClient := func() ([]byte, error) {
-		// request contains the data from the client.
-		request, err := gconn.Next(-1)
-		if err != nil {
-			pr.logger.Error().Err(err).Msg("Error reading from client")
-		}
-		pr.logger.Debug().Fields(
-			map[string]interface{}{
-				"length": len(request),
-				"local":  gconn.LocalAddr().String(),
-				"remote": gconn.RemoteAddr().String(),
-			},
-		).Msg("Received data from client")
-
-		metrics.BytesReceivedFromClient.Observe(float64(len(request)))
-		metrics.TotalTrafficBytes.Observe(float64(len(request)))
-
-		//nolint:wrapcheck
-		return request, err
-	}
-
-	// sendTrafficToServer is a function that sends data to the server.
-	sendTrafficToServer := func(request []byte) (int, *gerr.GatewayDError) {
-		// Send the request to the server.
-		sent, err := client.Send(request)
-		if err != nil {
-			pr.logger.Error().Err(err).Msg("Error sending request to database")
-		}
-		pr.logger.Debug().Fields(
-			map[string]interface{}{
-				"function": "proxy.passthrough",
-				"length":   sent,
-				"local":    client.Conn.LocalAddr().String(),
-				"remote":   client.Conn.RemoteAddr().String(),
-			},
-		).Msg("Sent data to database")
-
-		metrics.BytesSentToServer.Observe(float64(sent))
-		metrics.TotalTrafficBytes.Observe(float64(sent))
-
-		return sent, err
-	}
-
-	// receiveTrafficFromServer is a function that receives data from the server.
-	receiveTrafficFromServer := func() (int, []byte, *gerr.GatewayDError) {
-		// Receive the response from the server.
-		received, response, err := client.Receive()
-		pr.logger.Debug().Fields(
-			map[string]interface{}{
-				"function": "proxy.passthrough",
-				"length":   received,
-				"local":    client.Conn.LocalAddr().String(),
-				"remote":   client.Conn.RemoteAddr().String(),
-			},
-		).Msg("Received data from database")
-
-		metrics.BytesReceivedFromServer.Observe(float64(received))
-		metrics.TotalTrafficBytes.Observe(float64(received))
-
-		return received, response, err
-	}
-
-	// sendTrafficToClient is a function that sends data to the client.
-	sendTrafficToClient := func(response []byte, received int) *gerr.GatewayDError {
-		// Send the response to the client async.
-		origErr := gconn.AsyncWrite(response[:received], func(gconn gnet.Conn, err error) error {
-			pr.logger.Debug().Fields(
-				map[string]interface{}{
-					"function": "proxy.passthrough",
-					"length":   received,
-					"local":    gconn.LocalAddr().String(),
-					"remote":   gconn.RemoteAddr().String(),
-				},
-			).Msg("Sent data to client")
-			return err
-		})
-		if origErr != nil {
-			pr.logger.Error().Err(origErr).Msg("Error writing to client")
-			return gerr.ErrServerSendFailed.Wrap(origErr)
-		}
-
-		metrics.BytesSentToClient.Observe(float64(received))
-		metrics.TotalTrafficBytes.Observe(float64(received))
-
-		return nil
-	}
-
-	// shouldTerminate is a function that retrieves the terminate field from the hook result.
-	// Only the OnTrafficFromClient hook will terminate the connection.
-	shouldTerminate := func(result map[string]interface{}) bool {
-		// If the hook wants to terminate the connection, do it.
-		if result != nil {
-			if terminate, ok := result["terminate"].(bool); ok && terminate {
-				pr.logger.Debug().Str("function", "proxy.passthrough").Msg("Terminating connection")
-				return true
-			}
-		}
-
-		return false
-	}
-
-	// getPluginModifiedRequest is a function that retrieves the modified request
-	// from the hook result.
-	getPluginModifiedRequest := func(result map[string]interface{}) []byte {
-		// If the hook modified the request, use the modified request.
-		//nolint:gocritic
-		if modRequest, errMsg, convErr := extractFieldValue(result, "request"); errMsg != "" {
-			pr.logger.Error().Str("error", errMsg).Msg("Error in hook")
-		} else if convErr != nil {
-			pr.logger.Error().Err(convErr).Msg("Error in data conversion")
-		} else if modRequest != nil {
-			return modRequest
-		}
-
-		return nil
-	}
-
-	// getPluginModifiedResponse is a function that retrieves the modified response
-	// from the hook result.
-	getPluginModifiedResponse := func(result map[string]interface{}) ([]byte, int) {
-		// If the hook returns a response, use it instead of the original response.
-		//nolint:gocritic
-		if modResponse, errMsg, convErr := extractFieldValue(result, "response"); errMsg != "" {
-			pr.logger.Error().Str("error", errMsg).Msg("Error in hook")
-		} else if convErr != nil {
-			pr.logger.Error().Err(convErr).Msg("Error in data conversion")
-		} else if modResponse != nil {
-			return modResponse, len(modResponse)
-		}
-
-		return nil, 0
-	}
-
 	// Receive the request from the client.
-	request, origErr := receiveTrafficFromClient()
+	request, origErr := pr.receiveTrafficFromClient(gconn)
 
 	// Run the OnTrafficFromClient hooks.
 	result, err := pr.pluginRegistry.Run(
@@ -403,24 +267,24 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 		pr.logger.Error().Err(err).Msg("Error running hook")
 	}
 	// If the hook wants to terminate the connection, do it.
-	if shouldTerminate(result) {
-		if modResponse, modReceived := getPluginModifiedResponse(result); modResponse != nil {
+	if pr.shouldTerminate(result) {
+		if modResponse, modReceived := pr.getPluginModifiedResponse(result); modResponse != nil {
 			metrics.ProxyPassThroughs.Inc()
 			metrics.ProxyPassThroughTerminations.Inc()
 			metrics.BytesSentToClient.Observe(float64(modReceived))
 			metrics.TotalTrafficBytes.Observe(float64(modReceived))
 
-			return sendTrafficToClient(modResponse, modReceived)
+			return pr.sendTrafficToClient(gconn, modResponse, modReceived)
 		}
 		return gerr.ErrHookTerminatedConnection
 	}
 	// If the hook modified the request, use the modified request.
-	if modRequest := getPluginModifiedRequest(result); modRequest != nil {
+	if modRequest := pr.getPluginModifiedRequest(result); modRequest != nil {
 		request = modRequest
 	}
 
 	// Send the request to the server.
-	_, err = sendTrafficToServer(request)
+	_, err = pr.sendTrafficToServer(client, request)
 
 	// Run the OnTrafficToServer hooks.
 	_, err = pr.pluginRegistry.Run(
@@ -441,7 +305,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	}
 
 	// Receive the response from the server.
-	received, response, err := receiveTrafficFromServer()
+	received, response, err := pr.receiveTrafficFromServer(client)
 
 	// The connection to the server is closed, so we MUST reconnect,
 	// otherwise the client will be stuck.
@@ -495,13 +359,13 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 		pr.logger.Error().Err(err).Msg("Error running hook")
 	}
 	// If the hook modified the response, use the modified response.
-	if modResponse, modReceived := getPluginModifiedResponse(result); modResponse != nil {
+	if modResponse, modReceived := pr.getPluginModifiedResponse(result); modResponse != nil {
 		response = modResponse
 		received = modReceived
 	}
 
 	// Send the response to the client.
-	errVerdict := sendTrafficToClient(response, received)
+	errVerdict := pr.sendTrafficToClient(gconn, response, received)
 
 	// Run the OnTrafficToClient hooks.
 	_, err = pr.pluginRegistry.Run(
@@ -577,4 +441,140 @@ func (pr *Proxy) Shutdown() {
 	pr.busyConnections.Clear()
 	pr.scheduler.Clear()
 	pr.logger.Debug().Msg("All busy connections have been closed")
+}
+
+// receiveTrafficFromClient is a function that receives data from the client.
+func (pr *Proxy) receiveTrafficFromClient(gconn gnet.Conn) ([]byte, error) {
+	// request contains the data from the client.
+	request, err := gconn.Next(-1)
+	if err != nil {
+		pr.logger.Error().Err(err).Msg("Error reading from client")
+	}
+	pr.logger.Debug().Fields(
+		map[string]interface{}{
+			"length": len(request),
+			"local":  gconn.LocalAddr().String(),
+			"remote": gconn.RemoteAddr().String(),
+		},
+	).Msg("Received data from client")
+
+	metrics.BytesReceivedFromClient.Observe(float64(len(request)))
+	metrics.TotalTrafficBytes.Observe(float64(len(request)))
+
+	//nolint:wrapcheck
+	return request, err
+}
+
+// sendTrafficToServer is a function that sends data to the server.
+func (pr *Proxy) sendTrafficToServer(client *Client, request []byte) (int, *gerr.GatewayDError) {
+	// Send the request to the server.
+	sent, err := client.Send(request)
+	if err != nil {
+		pr.logger.Error().Err(err).Msg("Error sending request to database")
+	}
+	pr.logger.Debug().Fields(
+		map[string]interface{}{
+			"function": "proxy.passthrough",
+			"length":   sent,
+			"local":    client.Conn.LocalAddr().String(),
+			"remote":   client.Conn.RemoteAddr().String(),
+		},
+	).Msg("Sent data to database")
+
+	metrics.BytesSentToServer.Observe(float64(sent))
+	metrics.TotalTrafficBytes.Observe(float64(sent))
+
+	return sent, err
+}
+
+// receiveTrafficFromServer is a function that receives data from the server.
+func (pr *Proxy) receiveTrafficFromServer(client *Client) (int, []byte, *gerr.GatewayDError) {
+	// Receive the response from the server.
+	received, response, err := client.Receive()
+	pr.logger.Debug().Fields(
+		map[string]interface{}{
+			"function": "proxy.passthrough",
+			"length":   received,
+			"local":    client.Conn.LocalAddr().String(),
+			"remote":   client.Conn.RemoteAddr().String(),
+		},
+	).Msg("Received data from database")
+
+	metrics.BytesReceivedFromServer.Observe(float64(received))
+	metrics.TotalTrafficBytes.Observe(float64(received))
+
+	return received, response, err
+}
+
+// sendTrafficToClient is a function that sends data to the client.
+func (pr *Proxy) sendTrafficToClient(
+	gconn gnet.Conn, response []byte, received int,
+) *gerr.GatewayDError {
+	// Send the response to the client async.
+	origErr := gconn.AsyncWrite(response[:received], func(gconn gnet.Conn, err error) error {
+		pr.logger.Debug().Fields(
+			map[string]interface{}{
+				"function": "proxy.passthrough",
+				"length":   received,
+				"local":    gconn.LocalAddr().String(),
+				"remote":   gconn.RemoteAddr().String(),
+			},
+		).Msg("Sent data to client")
+		return err
+	})
+	if origErr != nil {
+		pr.logger.Error().Err(origErr).Msg("Error writing to client")
+		return gerr.ErrServerSendFailed.Wrap(origErr)
+	}
+
+	metrics.BytesSentToClient.Observe(float64(received))
+	metrics.TotalTrafficBytes.Observe(float64(received))
+
+	return nil
+}
+
+// shouldTerminate is a function that retrieves the terminate field from the hook result.
+// Only the OnTrafficFromClient hook will terminate the connection.
+func (pr *Proxy) shouldTerminate(result map[string]interface{}) bool {
+	// If the hook wants to terminate the connection, do it.
+	if result != nil {
+		if terminate, ok := result["terminate"].(bool); ok && terminate {
+			pr.logger.Debug().Str("function", "proxy.passthrough").Msg("Terminating connection")
+			return true
+		}
+	}
+
+	return false
+}
+
+// getPluginModifiedRequest is a function that retrieves the modified request
+// from the hook result.
+func (pr *Proxy) getPluginModifiedRequest(result map[string]interface{}) []byte {
+	// If the hook modified the request, use the modified request.
+	//nolint:gocritic
+	if modRequest, errMsg, convErr := extractFieldValue(result, "request"); errMsg != "" {
+		pr.logger.Error().Str("error", errMsg).Msg("Error in hook")
+	} else if convErr != nil {
+		pr.logger.Error().Err(convErr).Msg("Error in data conversion")
+	} else if modRequest != nil {
+		return modRequest
+	}
+
+	return nil
+}
+
+// getPluginModifiedResponse is a function that retrieves the modified response
+// from the hook result.
+func (pr *Proxy) getPluginModifiedResponse(result map[string]interface{}) ([]byte, int) {
+	// If the hook returns a response, use it instead of the original response.
+	//nolint:gocritic
+	if modResponse, errMsg, convErr := extractFieldValue(result, "response"); errMsg != "" {
+		pr.logger.Error().Str("error", errMsg).Msg("Error in hook")
+	} else if convErr != nil {
+		pr.logger.Error().Err(convErr).Msg("Error in data conversion")
+	} else if modResponse != nil {
+		return modResponse, len(modResponse)
+	}
+
+	return nil, 0
 }
