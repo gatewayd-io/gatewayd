@@ -38,6 +38,10 @@ var (
 	pluginRegistry   *plugin.Registry
 
 	loggers              = make(map[string]zerolog.Logger)
+	pools                = make(map[string]*pool.Pool)
+	clients              = make(map[string]config.Client)
+	proxies              = make(map[string]*network.Proxy)
+	servers              = make(map[string]*network.Server)
 	healthCheckScheduler = gocron.NewScheduler(time.UTC)
 )
 
@@ -221,129 +225,139 @@ var runCmd = &cobra.Command{
 			logger.Error().Msg("Failed to get loggers from config")
 		}
 
-		// Create and initialize a pool of connections.
-		poolSize := conf.Global.Pools[config.Default].GetSize()
-		pool := pool.NewPool(poolSize)
+		// Create and initialize pools of connections.
+		for name, cfg := range conf.Global.Pools {
+			pools[name] = pool.NewPool(cfg.GetSize())
 
-		// Get client config from the config file.
-		clientConfig := conf.Global.Clients[config.Default]
+			// Get client config from the config file.
+			if clientConfig, ok := conf.Global.Clients[name]; !ok {
+				// This ensures that the default client config is used if the pool name is not
+				// found in the clients section.
+				clients[name] = conf.Global.Clients[config.Default]
+			} else {
+				// Merge the default client config with the one from the pool.
+				clients[name] = clientConfig
+			}
 
-		// Add clients to the pool.
-		for i := 0; i < poolSize; i++ {
-			client := network.NewClient(&clientConfig, logger)
+			// Add clients to the pool.
+			for i := 0; i < cfg.GetSize(); i++ {
+				clientConfig := clients[name]
+				client := network.NewClient(&clientConfig, logger)
 
-			if client != nil {
-				clientCfg := map[string]interface{}{
-					"id":                 client.ID,
-					"network":            client.Network,
-					"address":            client.Address,
-					"receiveBufferSize":  client.ReceiveBufferSize,
-					"receiveChunkSize":   client.ReceiveChunkSize,
-					"receiveDeadline":    client.ReceiveDeadline.String(),
-					"sendDeadline":       client.SendDeadline.String(),
-					"tcpKeepAlive":       client.TCPKeepAlive,
-					"tcpKeepAlivePeriod": client.TCPKeepAlivePeriod.String(),
-				}
-				_, err := pluginRegistry.Run(context.Background(), clientCfg, sdkPlugin.OnNewClient)
-				if err != nil {
-					logger.Error().Err(err).Msg("Failed to run OnNewClient hooks")
-				}
+				if client != nil {
+					clientCfg := map[string]interface{}{
+						"id":                 client.ID,
+						"network":            client.Network,
+						"address":            client.Address,
+						"receiveBufferSize":  client.ReceiveBufferSize,
+						"receiveChunkSize":   client.ReceiveChunkSize,
+						"receiveDeadline":    client.ReceiveDeadline.String(),
+						"sendDeadline":       client.SendDeadline.String(),
+						"tcpKeepAlive":       client.TCPKeepAlive,
+						"tcpKeepAlivePeriod": client.TCPKeepAlivePeriod.String(),
+					}
+					_, err := pluginRegistry.Run(context.Background(), clientCfg, sdkPlugin.OnNewClient)
+					if err != nil {
+						logger.Error().Err(err).Msg("Failed to run OnNewClient hooks")
+					}
 
-				err = pool.Put(client.ID, client)
-				if err != nil {
-					logger.Error().Err(err).Msg("Failed to add client to the pool")
+					err = pools[name].Put(client.ID, client)
+					if err != nil {
+						logger.Error().Err(err).Msg("Failed to add client to the pool")
+					}
 				}
 			}
-		}
 
-		// Verify that the pool is properly populated.
-		logger.Info().Str("count", fmt.Sprint(pool.Size())).Msg(
-			"There are clients available in the pool")
-		if pool.Size() != poolSize {
-			logger.Error().Msg(
-				"The pool size is incorrect, either because " +
-					"the clients cannot connect due to no network connectivity " +
-					"or the server is not running. exiting...")
-			pluginRegistry.Shutdown()
-			os.Exit(gerr.FailedToInitializePool)
-		}
+			// Verify that the pool is properly populated.
+			logger.Info().Str("count", fmt.Sprint(pools[name].Size())).Msg(
+				"There are clients available in the pool")
+			if pools[name].Size() != cfg.GetSize() {
+				logger.Error().Msg(
+					"The pool size is incorrect, either because " +
+						"the clients cannot connect due to no network connectivity " +
+						"or the server is not running. exiting...")
+				pluginRegistry.Shutdown()
+				os.Exit(gerr.FailedToInitializePool)
+			}
 
-		_, err = pluginRegistry.Run(
-			context.Background(),
-			map[string]interface{}{"size": poolSize},
-			sdkPlugin.OnNewPool)
-		if err != nil {
-			logger.Error().Err(err).Msg("Failed to run OnNewPool hooks")
-		}
-
-		// Create a prefork proxy with the pool of clients.
-		elastic := conf.Global.Proxy[config.Default].Elastic
-		reuseElasticClients := conf.Global.Proxy[config.Default].ReuseElasticClients
-		healthCheckPeriod := conf.Global.Proxy[config.Default].HealthCheckPeriod
-		proxy := network.NewProxy(
-			pool,
-			pluginRegistry,
-			elastic,
-			reuseElasticClients,
-			healthCheckPeriod,
-			&clientConfig,
-			logger,
-		)
-
-		if data, ok := conf.GlobalKoanf.Get("proxy").(map[string]interface{}); ok {
-			_, err = pluginRegistry.Run(context.Background(), data, sdkPlugin.OnNewProxy)
+			_, err = pluginRegistry.Run(
+				context.Background(),
+				map[string]interface{}{"name": name, "size": cfg.GetSize()},
+				sdkPlugin.OnNewPool)
 			if err != nil {
-				logger.Error().Err(err).Msg("Failed to run OnNewProxy hooks")
+				logger.Error().Err(err).Msg("Failed to run OnNewPool hooks")
 			}
-		} else {
-			logger.Error().Msg("Failed to get proxy from config")
 		}
 
-		// Create a server
-		serverCfg := conf.Global.Servers[config.Default]
-		server := network.NewServer(
-			serverCfg.Network,
-			serverCfg.Address,
-			serverCfg.SoftLimit,
-			serverCfg.HardLimit,
-			serverCfg.TickInterval,
-			[]gnet.Option{
-				// Scheduling options
-				gnet.WithMulticore(serverCfg.MultiCore),
-				gnet.WithLockOSThread(serverCfg.LockOSThread),
-				// NumEventLoop overrides Multicore option.
-				// gnet.WithNumEventLoop(1),
+		// Create and initialize prefork proxies with each pool of clients.
+		for name, cfg := range conf.Global.Proxy {
+			clientConfig := clients[name]
+			proxies[name] = network.NewProxy(
+				pools[name],
+				pluginRegistry,
+				cfg.Elastic,
+				cfg.ReuseElasticClients,
+				cfg.HealthCheckPeriod,
+				&clientConfig,
+				logger,
+			)
 
-				// Can be used to send keepalive messages to the client.
-				gnet.WithTicker(serverCfg.EnableTicker),
-
-				// Internal event-loop load balancing options
-				gnet.WithLoadBalancing(serverCfg.GetLoadBalancer()),
-
-				// Buffer options
-				gnet.WithReadBufferCap(serverCfg.ReadBufferCap),
-				gnet.WithWriteBufferCap(serverCfg.WriteBufferCap),
-				gnet.WithSocketRecvBuffer(serverCfg.SocketRecvBuffer),
-				gnet.WithSocketSendBuffer(serverCfg.SocketSendBuffer),
-
-				// TCP options
-				gnet.WithReuseAddr(serverCfg.ReuseAddress),
-				gnet.WithReusePort(serverCfg.ReusePort),
-				gnet.WithTCPKeepAlive(serverCfg.TCPKeepAlive),
-				gnet.WithTCPNoDelay(serverCfg.GetTCPNoDelay()),
-			},
-			proxy,
-			logger,
-			pluginRegistry,
-		)
-
-		if data, ok := conf.GlobalKoanf.Get("servers").(map[string]interface{}); ok {
-			_, err = pluginRegistry.Run(context.Background(), data, sdkPlugin.OnNewServer)
-			if err != nil {
-				logger.Error().Err(err).Msg("Failed to run OnNewServer hooks")
+			if data, ok := conf.GlobalKoanf.Get("proxy").(map[string]interface{}); ok {
+				_, err = pluginRegistry.Run(context.Background(), data, sdkPlugin.OnNewProxy)
+				if err != nil {
+					logger.Error().Err(err).Msg("Failed to run OnNewProxy hooks")
+				}
+			} else {
+				logger.Error().Msg("Failed to get proxy from config")
 			}
-		} else {
-			logger.Error().Msg("Failed to get the servers configuration")
+		}
+
+		// Create and initialize servers.
+		for name, cfg := range conf.Global.Servers {
+			servers[name] = network.NewServer(
+				cfg.Network,
+				cfg.Address,
+				cfg.SoftLimit,
+				cfg.HardLimit,
+				cfg.TickInterval,
+				[]gnet.Option{
+					// Scheduling options
+					gnet.WithMulticore(cfg.MultiCore),
+					gnet.WithLockOSThread(cfg.LockOSThread),
+					// NumEventLoop overrides Multicore option.
+					// gnet.WithNumEventLoop(1),
+
+					// Can be used to send keepalive messages to the client.
+					gnet.WithTicker(cfg.EnableTicker),
+
+					// Internal event-loop load balancing options
+					gnet.WithLoadBalancing(cfg.GetLoadBalancer()),
+
+					// Buffer options
+					gnet.WithReadBufferCap(cfg.ReadBufferCap),
+					gnet.WithWriteBufferCap(cfg.WriteBufferCap),
+					gnet.WithSocketRecvBuffer(cfg.SocketRecvBuffer),
+					gnet.WithSocketSendBuffer(cfg.SocketSendBuffer),
+
+					// TCP options
+					gnet.WithReuseAddr(cfg.ReuseAddress),
+					gnet.WithReusePort(cfg.ReusePort),
+					gnet.WithTCPKeepAlive(cfg.TCPKeepAlive),
+					gnet.WithTCPNoDelay(cfg.GetTCPNoDelay()),
+				},
+				proxies[name],
+				logger,
+				pluginRegistry,
+			)
+
+			if data, ok := conf.GlobalKoanf.Get("servers").(map[string]interface{}); ok {
+				_, err = pluginRegistry.Run(context.Background(), data, sdkPlugin.OnNewServer)
+				if err != nil {
+					logger.Error().Err(err).Msg("Failed to run OnNewServer hooks")
+				}
+			} else {
+				logger.Error().Msg("Failed to get the servers configuration")
+			}
 		}
 
 		// Shutdown the server gracefully.
@@ -359,7 +373,10 @@ var runCmd = &cobra.Command{
 		)
 		signalsCh := make(chan os.Signal, 1)
 		signal.Notify(signalsCh, signals...)
-		go func(pluginRegistry *plugin.Registry, logger zerolog.Logger, server *network.Server) {
+		go func(pluginRegistry *plugin.Registry,
+			logger zerolog.Logger,
+			servers map[string]*network.Server,
+		) {
 			for sig := range signalsCh {
 				for _, s := range signals {
 					if sig != s {
@@ -378,21 +395,25 @@ var runCmd = &cobra.Command{
 						logger.Info().Msg("Stopped health check scheduler")
 						metricsMerger.Stop()
 						logger.Info().Msg("Stopped metrics merger")
-						server.Shutdown()
-						logger.Info().Msg("Stopped server")
+						for name, server := range servers {
+							logger.Info().Str("name", name).Msg("Stopping server")
+							server.Shutdown()
+						}
+						logger.Info().Msg("Stopped servers")
 						pluginRegistry.Shutdown()
 						logger.Info().Msg("Stopped plugin registry")
 						os.Exit(0)
 					}
 				}
 			}
-		}(pluginRegistry, logger, server)
+		}(pluginRegistry, logger, servers)
 
-		// Run the server.
-		if err := server.Run(); err != nil {
+		// Start the server.
+		if err := servers[config.Default].Run(); err != nil {
 			logger.Error().Err(err).Msg("Failed to start server")
+			healthCheckScheduler.Clear()
 			metricsMerger.Stop()
-			server.Shutdown()
+			servers[config.Default].Shutdown()
 			pluginRegistry.Shutdown()
 			os.Exit(gerr.FailedToStartServer)
 		}
