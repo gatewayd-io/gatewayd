@@ -248,28 +248,6 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 		return gerr.ErrCastFailed
 	}
 
-	// sendTrafficToServer is a function that sends data to the server.
-	sendTrafficToServer := func(request []byte) (int, *gerr.GatewayDError) {
-		// Send the request to the server.
-		sent, err := client.Send(request)
-		if err != nil {
-			pr.logger.Error().Err(err).Msg("Error sending request to database")
-		}
-		pr.logger.Debug().Fields(
-			map[string]interface{}{
-				"function": "proxy.passthrough",
-				"length":   sent,
-				"local":    client.Conn.LocalAddr().String(),
-				"remote":   client.Conn.RemoteAddr().String(),
-			},
-		).Msg("Sent data to database")
-
-		metrics.BytesSentToServer.Observe(float64(sent))
-		metrics.TotalTrafficBytes.Observe(float64(sent))
-
-		return sent, err
-	}
-
 	// receiveTrafficFromServer is a function that receives data from the server.
 	receiveTrafficFromServer := func() (int, []byte, *gerr.GatewayDError) {
 		// Receive the response from the server.
@@ -398,7 +376,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	}
 
 	// Send the request to the server.
-	_, err = sendTrafficToServer(request)
+	_, err = pr.sendTrafficToServer(client, request)
 
 	// Run the OnTrafficToServer hooks.
 	_, err = pr.pluginRegistry.Run(
@@ -577,4 +555,26 @@ func (pr *Proxy) receiveTrafficFromClient(gconn gnet.Conn) ([]byte, error) {
 
 	//nolint:wrapcheck
 	return request, err
+}
+
+// sendTrafficToServer is a function that sends data to the server.
+func (pr *Proxy) sendTrafficToServer(client *Client, request []byte) (int, *gerr.GatewayDError) {
+	// Send the request to the server.
+	sent, err := client.Send(request)
+	if err != nil {
+		pr.logger.Error().Err(err).Msg("Error sending request to database")
+	}
+	pr.logger.Debug().Fields(
+		map[string]interface{}{
+			"function": "proxy.passthrough",
+			"length":   sent,
+			"local":    client.Conn.LocalAddr().String(),
+			"remote":   client.Conn.RemoteAddr().String(),
+		},
+	).Msg("Sent data to database")
+
+	metrics.BytesSentToServer.Observe(float64(sent))
+	metrics.TotalTrafficBytes.Observe(float64(sent))
+
+	return sent, err
 }
