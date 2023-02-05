@@ -248,20 +248,6 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 		return gerr.ErrCastFailed
 	}
 
-	// shouldTerminate is a function that retrieves the terminate field from the hook result.
-	// Only the OnTrafficFromClient hook will terminate the connection.
-	shouldTerminate := func(result map[string]interface{}) bool {
-		// If the hook wants to terminate the connection, do it.
-		if result != nil {
-			if terminate, ok := result["terminate"].(bool); ok && terminate {
-				pr.logger.Debug().Str("function", "proxy.passthrough").Msg("Terminating connection")
-				return true
-			}
-		}
-
-		return false
-	}
-
 	// getPluginModifiedRequest is a function that retrieves the modified request
 	// from the hook result.
 	getPluginModifiedRequest := func(result map[string]interface{}) []byte {
@@ -315,7 +301,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 		pr.logger.Error().Err(err).Msg("Error running hook")
 	}
 	// If the hook wants to terminate the connection, do it.
-	if shouldTerminate(result) {
+	if pr.shouldTerminate(result) {
 		if modResponse, modReceived := getPluginModifiedResponse(result); modResponse != nil {
 			metrics.ProxyPassThroughs.Inc()
 			metrics.ProxyPassThroughTerminations.Inc()
@@ -579,4 +565,18 @@ func (pr *Proxy) sendTrafficToClient(
 	metrics.TotalTrafficBytes.Observe(float64(received))
 
 	return nil
+}
+
+// shouldTerminate is a function that retrieves the terminate field from the hook result.
+// Only the OnTrafficFromClient hook will terminate the connection.
+func (pr *Proxy) shouldTerminate(result map[string]interface{}) bool {
+	// If the hook wants to terminate the connection, do it.
+	if result != nil {
+		if terminate, ok := result["terminate"].(bool); ok && terminate {
+			pr.logger.Debug().Str("function", "proxy.passthrough").Msg("Terminating connection")
+			return true
+		}
+	}
+
+	return false
 }
