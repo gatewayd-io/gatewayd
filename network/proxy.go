@@ -500,8 +500,6 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 		received = modReceived
 	}
 
-	// TODO: Implement OnTrafficToClient hooks.
-
 	// Send the response to the client.
 	errVerdict := sendTrafficToClient(response, received)
 
