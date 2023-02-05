@@ -248,25 +248,6 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 		return gerr.ErrCastFailed
 	}
 
-	// receiveTrafficFromServer is a function that receives data from the server.
-	receiveTrafficFromServer := func() (int, []byte, *gerr.GatewayDError) {
-		// Receive the response from the server.
-		received, response, err := client.Receive()
-		pr.logger.Debug().Fields(
-			map[string]interface{}{
-				"function": "proxy.passthrough",
-				"length":   received,
-				"local":    client.Conn.LocalAddr().String(),
-				"remote":   client.Conn.RemoteAddr().String(),
-			},
-		).Msg("Received data from database")
-
-		metrics.BytesReceivedFromServer.Observe(float64(received))
-		metrics.TotalTrafficBytes.Observe(float64(received))
-
-		return received, response, err
-	}
-
 	// sendTrafficToClient is a function that sends data to the client.
 	sendTrafficToClient := func(response []byte, received int) *gerr.GatewayDError {
 		// Send the response to the client async.
@@ -397,7 +378,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	}
 
 	// Receive the response from the server.
-	received, response, err := receiveTrafficFromServer()
+	received, response, err := pr.receiveTrafficFromServer(client)
 
 	// The connection to the server is closed, so we MUST reconnect,
 	// otherwise the client will be stuck.
@@ -577,4 +558,23 @@ func (pr *Proxy) sendTrafficToServer(client *Client, request []byte) (int, *gerr
 	metrics.TotalTrafficBytes.Observe(float64(sent))
 
 	return sent, err
+}
+
+// receiveTrafficFromServer is a function that receives data from the server.
+func (pr *Proxy) receiveTrafficFromServer(client *Client) (int, []byte, *gerr.GatewayDError) {
+	// Receive the response from the server.
+	received, response, err := client.Receive()
+	pr.logger.Debug().Fields(
+		map[string]interface{}{
+			"function": "proxy.passthrough",
+			"length":   received,
+			"local":    client.Conn.LocalAddr().String(),
+			"remote":   client.Conn.RemoteAddr().String(),
+		},
+	).Msg("Received data from database")
+
+	metrics.BytesReceivedFromServer.Observe(float64(received))
+	metrics.TotalTrafficBytes.Observe(float64(received))
+
+	return received, response, err
 }
