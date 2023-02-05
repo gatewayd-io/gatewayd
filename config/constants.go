@@ -1,7 +1,6 @@
 package config
 
 import (
-	"log/syslog"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -53,17 +52,13 @@ const (
 	RSyslog
 )
 
-var (
-	DefaultLogOutput      = [...]string{"console"}
-	DefaultSyslogPriority = syslog.LOG_LOCAL0 | syslog.LOG_DEBUG //nolint:nosnakecase
-)
-
 const (
 	// Config constants.
 	Default   = "default"
 	EnvPrefix = "GATEWAYD_"
 
 	// Logger constants.
+	DefaultLogOutput         = "console"
 	DefaultLogFileName       = "gatewayd.log"
 	DefaultLogLevel          = "info"
 	DefaultTimeFormat        = zerolog.TimeFormatUnix
@@ -76,6 +71,7 @@ const (
 	DefaultSyslogTag         = "gatewayd"
 	DefaultRSyslogNetwork    = "tcp"
 	DefaultRSyslogAddress    = "localhost:514"
+	DefaultSyslogPriority    = "info"
 
 	// Plugin constants.
 	DefaultMinPort                 = 50000

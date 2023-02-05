@@ -182,5 +182,5 @@ func (l Logger) GetSyslogPriority() syslog.Priority {
 	if priority, ok := rSyslogPriorities[l.SyslogPriority]; ok {
 		return priority | syslog.LOG_DAEMON
 	}
-	return DefaultSyslogPriority
+	return syslog.LOG_DAEMON | syslog.LOG_INFO
 }
