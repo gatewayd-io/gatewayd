@@ -248,22 +248,6 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 		return gerr.ErrCastFailed
 	}
 
-	// getPluginModifiedRequest is a function that retrieves the modified request
-	// from the hook result.
-	getPluginModifiedRequest := func(result map[string]interface{}) []byte {
-		// If the hook modified the request, use the modified request.
-		//nolint:gocritic
-		if modRequest, errMsg, convErr := extractFieldValue(result, "request"); errMsg != "" {
-			pr.logger.Error().Str("error", errMsg).Msg("Error in hook")
-		} else if convErr != nil {
-			pr.logger.Error().Err(convErr).Msg("Error in data conversion")
-		} else if modRequest != nil {
-			return modRequest
-		}
-
-		return nil
-	}
-
 	// getPluginModifiedResponse is a function that retrieves the modified response
 	// from the hook result.
 	getPluginModifiedResponse := func(result map[string]interface{}) ([]byte, int) {
@@ -313,7 +297,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 		return gerr.ErrHookTerminatedConnection
 	}
 	// If the hook modified the request, use the modified request.
-	if modRequest := getPluginModifiedRequest(result); modRequest != nil {
+	if modRequest := pr.getPluginModifiedRequest(result); modRequest != nil {
 		request = modRequest
 	}
 
@@ -579,4 +563,20 @@ func (pr *Proxy) shouldTerminate(result map[string]interface{}) bool {
 	}
 
 	return false
+}
+
+// getPluginModifiedRequest is a function that retrieves the modified request
+// from the hook result.
+func (pr *Proxy) getPluginModifiedRequest(result map[string]interface{}) []byte {
+	// If the hook modified the request, use the modified request.
+	//nolint:gocritic
+	if modRequest, errMsg, convErr := extractFieldValue(result, "request"); errMsg != "" {
+		pr.logger.Error().Str("error", errMsg).Msg("Error in hook")
+	} else if convErr != nil {
+		pr.logger.Error().Err(convErr).Msg("Error in data conversion")
+	} else if modRequest != nil {
+		return modRequest
+	}
+
+	return nil
 }
