@@ -302,7 +302,7 @@ var runCmd = &cobra.Command{
 				cfg.ReuseElasticClients,
 				cfg.HealthCheckPeriod,
 				&clientConfig,
-				logger,
+				loggers[name],
 			)
 
 			if data, ok := conf.GlobalKoanf.Get("proxy").(map[string]interface{}); ok {
@@ -412,14 +412,21 @@ var runCmd = &cobra.Command{
 		}(pluginRegistry, logger, servers)
 
 		// Start the server.
-		if err := servers[config.Default].Run(); err != nil {
-			logger.Error().Err(err).Msg("Failed to start server")
-			healthCheckScheduler.Clear()
-			metricsMerger.Stop()
-			servers[config.Default].Shutdown()
-			pluginRegistry.Shutdown()
-			os.Exit(gerr.FailedToStartServer)
+		for _, server := range servers {
+			go func(server *network.Server) {
+				if err := server.Run(); err != nil {
+					logger.Error().Err(err).Msg("Failed to start server")
+					healthCheckScheduler.Clear()
+					metricsMerger.Stop()
+					server.Shutdown()
+					pluginRegistry.Shutdown()
+					os.Exit(gerr.FailedToStartServer)
+				}
+			}(server)
 		}
+
+		// Wait for the server to shutdown.
+		<-make(chan struct{})
 	},
 }
 
