@@ -157,6 +157,8 @@ var runCmd = &cobra.Command{
 		}
 
 		// Start the metrics server if enabled.
+		// TODO: Start multiple metrics servers. For now, only one default is supported.
+		// I should first find a use case for those multiple metrics servers.
 		go func(metricsConfig config.Metrics, logger zerolog.Logger) {
 			// TODO: refactor this to a separate function.
 			if !metricsConfig.Enabled {
