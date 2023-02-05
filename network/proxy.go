@@ -248,28 +248,6 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 		return gerr.ErrCastFailed
 	}
 
-	// receiveTrafficFromClient is a function that receives data from the client.
-	receiveTrafficFromClient := func() ([]byte, error) {
-		// request contains the data from the client.
-		request, err := gconn.Next(-1)
-		if err != nil {
-			pr.logger.Error().Err(err).Msg("Error reading from client")
-		}
-		pr.logger.Debug().Fields(
-			map[string]interface{}{
-				"length": len(request),
-				"local":  gconn.LocalAddr().String(),
-				"remote": gconn.RemoteAddr().String(),
-			},
-		).Msg("Received data from client")
-
-		metrics.BytesReceivedFromClient.Observe(float64(len(request)))
-		metrics.TotalTrafficBytes.Observe(float64(len(request)))
-
-		//nolint:wrapcheck
-		return request, err
-	}
-
 	// sendTrafficToServer is a function that sends data to the server.
 	sendTrafficToServer := func(request []byte) (int, *gerr.GatewayDError) {
 		// Send the request to the server.
@@ -383,7 +361,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	}
 
 	// Receive the request from the client.
-	request, origErr := receiveTrafficFromClient()
+	request, origErr := pr.receiveTrafficFromClient(gconn)
 
 	// Run the OnTrafficFromClient hooks.
 	result, err := pr.pluginRegistry.Run(
@@ -577,4 +555,26 @@ func (pr *Proxy) Shutdown() {
 	pr.busyConnections.Clear()
 	pr.scheduler.Clear()
 	pr.logger.Debug().Msg("All busy connections have been closed")
+}
+
+// receiveTrafficFromClient is a function that receives data from the client.
+func (pr *Proxy) receiveTrafficFromClient(gconn gnet.Conn) ([]byte, error) {
+	// request contains the data from the client.
+	request, err := gconn.Next(-1)
+	if err != nil {
+		pr.logger.Error().Err(err).Msg("Error reading from client")
+	}
+	pr.logger.Debug().Fields(
+		map[string]interface{}{
+			"length": len(request),
+			"local":  gconn.LocalAddr().String(),
+			"remote": gconn.RemoteAddr().String(),
+		},
+	).Msg("Received data from client")
+
+	metrics.BytesReceivedFromClient.Observe(float64(len(request)))
+	metrics.TotalTrafficBytes.Observe(float64(len(request)))
+
+	//nolint:wrapcheck
+	return request, err
 }
