@@ -293,7 +293,7 @@ var runCmd = &cobra.Command{
 		}
 
 		// Create and initialize prefork proxies with each pool of clients.
-		for name, cfg := range conf.Global.Proxy {
+		for name, cfg := range conf.Global.Proxies {
 			clientConfig := clients[name]
 			proxies[name] = network.NewProxy(
 				pools[name],

@@ -34,7 +34,7 @@ pools:
   default:
     size: 10
 
-proxy:
+proxies:
   default:
     elastic: False
     reuseElasticClients: False
