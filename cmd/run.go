@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
-	"strings"
 	"syscall"
 	"time"
 
@@ -212,26 +211,14 @@ var runCmd = &cobra.Command{
 		}(conf.Global.Metrics[config.Default], logger)
 
 		// This is a notification hook, so we don't care about the result.
-		data := map[string]interface{}{
-			"output":            strings.Join(loggerCfg.Output, ","),
-			"level":             loggerCfg.Level,
-			"timeFormat":        loggerCfg.TimeFormat,
-			"consoleTimeFormat": loggerCfg.ConsoleTimeFormat,
-			"noColor":           loggerCfg.NoColor,
-			"fileName":          loggerCfg.FileName,
-			"maxSize":           loggerCfg.MaxSize,
-			"maxBackups":        loggerCfg.MaxBackups,
-			"maxAge":            loggerCfg.MaxAge,
-			"compress":          loggerCfg.Compress,
-			"localTime":         loggerCfg.LocalTime,
-			"rsyslogNetwork":    loggerCfg.RSyslogNetwork,
-			"rsyslogAddress":    loggerCfg.RSyslogAddress,
-			"syslogPriority":    loggerCfg.SyslogPriority,
-		}
 		// TODO: Use a context with a timeout
-		_, err = pluginRegistry.Run(context.Background(), data, sdkPlugin.OnNewLogger)
-		if err != nil {
-			logger.Error().Err(err).Msg("Failed to run OnNewLogger hooks")
+		if data, ok := conf.GlobalKoanf.Get("loggers").(map[string]interface{}); ok {
+			_, err = pluginRegistry.Run(context.Background(), data, sdkPlugin.OnNewLogger)
+			if err != nil {
+				logger.Error().Err(err).Msg("Failed to run OnNewLogger hooks")
+			}
+		} else {
+			logger.Error().Msg("Failed to get loggers from config")
 		}
 
 		// Create and initialize a pool of connections.
@@ -303,24 +290,13 @@ var runCmd = &cobra.Command{
 			logger,
 		)
 
-		proxyCfg := map[string]interface{}{
-			"elastic":             elastic,
-			"reuseElasticClients": reuseElasticClients,
-			"healthCheckPeriod":   healthCheckPeriod.String(),
-			"clientConfig": map[string]interface{}{
-				"network":            clientConfig.Network,
-				"address":            clientConfig.Address,
-				"receiveBufferSize":  clientConfig.ReceiveBufferSize,
-				"receiveChunkSize":   clientConfig.ReceiveChunkSize,
-				"receiveDeadline":    clientConfig.ReceiveDeadline.String(),
-				"sendDeadline":       clientConfig.SendDeadline.String(),
-				"tcpKeepAlive":       clientConfig.TCPKeepAlive,
-				"tcpKeepAlivePeriod": clientConfig.TCPKeepAlivePeriod.String(),
-			},
-		}
-		_, err = pluginRegistry.Run(context.Background(), proxyCfg, sdkPlugin.OnNewProxy)
-		if err != nil {
-			logger.Error().Err(err).Msg("Failed to run OnNewProxy hooks")
+		if data, ok := conf.GlobalKoanf.Get("proxy").(map[string]interface{}); ok {
+			_, err = pluginRegistry.Run(context.Background(), data, sdkPlugin.OnNewProxy)
+			if err != nil {
+				logger.Error().Err(err).Msg("Failed to run OnNewProxy hooks")
+			}
+		} else {
+			logger.Error().Msg("Failed to get proxy from config")
 		}
 
 		// Create a server
@@ -361,28 +337,13 @@ var runCmd = &cobra.Command{
 			pluginRegistry,
 		)
 
-		data = map[string]interface{}{
-			"network":          serverCfg.Network,
-			"address":          serverCfg.Address,
-			"softLimit":        serverCfg.SoftLimit,
-			"hardLimit":        serverCfg.HardLimit,
-			"tickInterval":     serverCfg.TickInterval.String(),
-			"multiCore":        serverCfg.MultiCore,
-			"lockOSThread":     serverCfg.LockOSThread,
-			"enableTicker":     serverCfg.EnableTicker,
-			"loadBalancer":     serverCfg.LoadBalancer,
-			"readBufferCap":    serverCfg.ReadBufferCap,
-			"writeBufferCap":   serverCfg.WriteBufferCap,
-			"socketRecvBuffer": serverCfg.SocketRecvBuffer,
-			"socketSendBuffer": serverCfg.SocketSendBuffer,
-			"reuseAddress":     serverCfg.ReuseAddress,
-			"reusePort":        serverCfg.ReusePort,
-			"tcpKeepAlive":     serverCfg.TCPKeepAlive.String(),
-			"tcpNoDelay":       serverCfg.TCPNoDelay,
-		}
-		_, err = pluginRegistry.Run(context.Background(), data, sdkPlugin.OnNewServer)
-		if err != nil {
-			logger.Error().Err(err).Msg("Failed to run OnNewServer hooks")
+		if data, ok := conf.GlobalKoanf.Get("servers").(map[string]interface{}); ok {
+			_, err = pluginRegistry.Run(context.Background(), data, sdkPlugin.OnNewServer)
+			if err != nil {
+				logger.Error().Err(err).Msg("Failed to run OnNewServer hooks")
+			}
+		} else {
+			logger.Error().Msg("Failed to get the servers configuration")
 		}
 
 		// Shutdown the server gracefully.
