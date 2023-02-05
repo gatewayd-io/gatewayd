@@ -244,6 +244,7 @@ var runCmd = &cobra.Command{
 			// Add clients to the pool.
 			for i := 0; i < cfg.GetSize(); i++ {
 				clientConfig := clients[name]
+				logger := loggers[name]
 				client := network.NewClient(&clientConfig, logger)
 
 				if client != nil {
@@ -296,6 +297,7 @@ var runCmd = &cobra.Command{
 
 		// Create and initialize prefork proxies with each pool of clients.
 		for name, cfg := range conf.Global.Proxies {
+			logger := loggers[name]
 			clientConfig := clients[name]
 			proxies[name] = network.NewProxy(
 				pools[name],
@@ -304,7 +306,7 @@ var runCmd = &cobra.Command{
 				cfg.ReuseElasticClients,
 				cfg.HealthCheckPeriod,
 				&clientConfig,
-				loggers[name],
+				logger,
 			)
 
 			if data, ok := conf.GlobalKoanf.Get("proxy").(map[string]interface{}); ok {
@@ -319,6 +321,7 @@ var runCmd = &cobra.Command{
 
 		// Create and initialize servers.
 		for name, cfg := range conf.Global.Servers {
+			logger := loggers[name]
 			servers[name] = network.NewServer(
 				cfg.Network,
 				cfg.Address,
@@ -414,8 +417,9 @@ var runCmd = &cobra.Command{
 		}(pluginRegistry, logger, servers)
 
 		// Start the server.
-		for _, server := range servers {
-			go func(server *network.Server) {
+		for name, server := range servers {
+			logger := loggers[name]
+			go func(server *network.Server, logger zerolog.Logger) {
 				if err := server.Run(); err != nil {
 					logger.Error().Err(err).Msg("Failed to start server")
 					healthCheckScheduler.Clear()
@@ -424,7 +428,7 @@ var runCmd = &cobra.Command{
 					pluginRegistry.Shutdown()
 					os.Exit(gerr.FailedToStartServer)
 				}
-			}(server)
+			}(server, logger)
 		}
 
 		// Wait for the server to shutdown.
