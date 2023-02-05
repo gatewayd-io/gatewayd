@@ -227,8 +227,6 @@ func (pr *Proxy) Disconnect(gconn gnet.Conn) *gerr.GatewayDError {
 }
 
 // PassThrough sends the data from the client to the server and vice versa.
-//
-// TODO: refactor this mess! My eye burns even looking at it.
 func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	// TODO: Handle bi-directional traffic
 	// Currently the passthrough is a one-way street from the client to the server, that is,
