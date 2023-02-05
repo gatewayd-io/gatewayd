@@ -54,17 +54,18 @@ $ docker run --rm --name postgres-test -e POSTGRES_PASSWORD=postgres -p 5432:543
 $ ./redis-server &
 # Run GatewayD
 $ ./gatewayd run
-2023-01-24T22:57:27+01:00 WRN plugin configured with a nil SecureConfig
-2023-01-24T22:57:27+01:00 INF configuring client automatic mTLS
-2023-01-24T22:57:27+01:00 INF Starting metrics server via HTTP over Unix domain socket endpoint=/metrics timestamp=2023-01-24T22:57:27.848+0100 unixDomainSocket=/tmp/gatewayd-plugin-cache.sock
-2023-01-24T22:57:27+01:00 INF configuring server automatic mTLS  timestamp=2023-01-24T22:57:27.849+0100
-2023-01-24T22:57:27+01:00 INF Plugin is ready name=gatewayd-plugin-cache
-2023-01-24T22:57:27+01:00 INF Started the metrics merger scheduler metricsMergerPeriod=5s startDelay=1674597452
-2023-01-24T22:57:27+01:00 INF Metrics are exposed address=http://localhost:2112/metrics
-2023-01-24T22:57:27+01:00 INF There are clients available in the pool count=10
-2023-01-24T22:57:27+01:00 INF Started the client health check scheduler healthCheckPeriod=1m0s startDelay=1674597507
-2023-01-24T22:57:27+01:00 INF GatewayD is listening address=0.0.0.0:15432
-2023-01-24T22:57:27+01:00 INF GatewayD is running pid=4823
+2023-02-06T 20:20:32+01:00 WRN plugin configured with a nil SecureConfig plugin=gatewayd-plugin-cache
+2023-02-06T 20:20:32+01:00 INF configuring client automatic mTLS plugin=gatewayd-plugin-cache
+2023-02-06T 20:20:32+01:00 INF Starting metrics server via HTTP over Unix domain socket endpoint=/metrics plugin=gatewayd-plugin-cache timestamp=2023-02-06T 20:20:32.170+0100 unixDomainSocket=/tmp/gatewayd-plugin-cache.sock
+2023-02-06T 20:20:32+01:00 INF configuring server automatic mTLS plugin=gatewayd-plugin-cache timestamp=2023-02-06T 20:20:32.170+0100
+2023-02-06T 20:20:32+01:00 INF Plugin is ready name=gatewayd-plugin-cache
+2023-02-06T 20:20:32+01:00 INF Started the metrics merger scheduler metricsMergerPeriod=5s startDelay=1675639237
+2023-02-06T 20:20:32+01:00 INF Starting plugin health check scheduler healthCheckPeriod=5s
+2023-02-06T 20:20:32+01:00 INF Metrics are exposed address=http://localhost:2112/metrics
+2023-02-06T 20:20:32+01:00 INF There are clients available in the pool count=10 name=default
+2023-02-06T 20:20:32+01:00 INF Started the client health check scheduler healthCheckPeriod=1m0s startDelay=1675639292
+2023-02-06T 20:20:32+01:00 INF GatewayD is listening address=0.0.0.0:15432
+2023-02-06T 20:20:32+01:00 INF GatewayD is running pid=9566
 ```
 
 As shown above in the console logs, the `gatewayd-plugin-cache` loads and exposes metrics over HTTP via `/tmp/gatewayd-plugin-cache.sock`. The metrics merger is started and collects, aggregates and relabels metrics from plugins, and merges them with metrics emitted from the core. It'll then expose those metrics over HTTP via `http://localhost:2112/metrics`. Ten connections are connected to the PostgreSQL on port 5432 and are put in the pool, ready to serve incoming connections from clients. Next, a connection health check is run to recycle connections when no authenticated client exists - This is to deal with timeout on the database server. When all the above is set up, GatewayD starts listening on port 15432. The clients can point to GatewayD's address and start working as before while GatewayD is proxying calls. If you run Redis, `SELECT` queries sent through GatewayD will end up being cached along with their response from PostgreSQL. The next time another client runs the same query, the response will be read from the cache and returned to the client, without touching server. When done testing, you should be able to gracefully stop GatewayD using `CTRL+C`. In the above example, only one plugin, `gatewayd-plugin-cache`, is loaded, but GatewayD is perfectly capable of handling multiple plugins.
