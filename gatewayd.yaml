@@ -40,7 +40,7 @@ proxy:
     reuseElasticClients: False
     healthCheckPeriod: 60s # duration
 
-server:
+servers:
   default:
     network: tcp
     address: 0.0.0.0:15432

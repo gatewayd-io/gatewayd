@@ -97,7 +97,7 @@ func (c *Config) LoadDefaults() {
 				"healthCheckPeriod":   DefaultHealthCheckPeriod.String(),
 			},
 		},
-		"server": map[string]interface{}{
+		"servers": map[string]interface{}{
 			"default": map[string]interface{}{
 				"network":          DefaultListenNetwork,
 				"address":          DefaultListenAddress,

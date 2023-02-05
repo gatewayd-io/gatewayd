@@ -324,7 +324,7 @@ var runCmd = &cobra.Command{
 		}
 
 		// Create a server
-		serverCfg := conf.Global.Server[config.Default]
+		serverCfg := conf.Global.Servers[config.Default]
 		server := network.NewServer(
 			serverCfg.Network,
 			serverCfg.Address,
