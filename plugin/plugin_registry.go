@@ -30,6 +30,7 @@ type IHook interface {
 	) (map[string]interface{}, *gerr.GatewayDError)
 }
 
+//nolint:interfacebloat
 type IRegistry interface {
 	// Plugin management
 	Add(plugin *Plugin) bool
