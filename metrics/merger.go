@@ -210,13 +210,15 @@ func (m *Merger) Start() {
 		sentry.CaptureException(err)
 	}
 
-	m.scheduler.StartAsync()
-	m.Logger.Info().Fields(
-		map[string]interface{}{
-			"startDelay":          startDelay,
-			"metricsMergerPeriod": m.MetricsMergerPeriod.String(),
-		},
-	).Msg("Started the metrics merger scheduler")
+	if len(m.Addresses) > 0 {
+		m.scheduler.StartAsync()
+		m.Logger.Info().Fields(
+			map[string]interface{}{
+				"startDelay":          startDelay,
+				"metricsMergerPeriod": m.MetricsMergerPeriod.String(),
+			},
+		).Msg("Started the metrics merger scheduler")
+	}
 }
 
 // Stop stops the metrics merger.
