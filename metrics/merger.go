@@ -194,7 +194,7 @@ func (m *Merger) Start() {
 		StartAt(startDelay).
 		Do(func() {
 			m.Logger.Trace().Msg(
-				"Running the scheduler for merging metrics from plugins with GatewayD.")
+				"Running the scheduler for merging metrics from plugins with GatewayD")
 			pluginMetrics, err := m.ReadMetrics()
 			if err != nil {
 				m.Logger.Error().Err(err.Unwrap()).Msg("Failed to read plugin metrics")

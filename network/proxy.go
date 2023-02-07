@@ -104,7 +104,7 @@ func NewProxy(
 	proxy.scheduler.StartAsync()
 	logger.Info().Fields(
 		map[string]interface{}{
-			"startDelay":        startDelay,
+			"startDelay":        startDelay.Format(time.RFC3339),
 			"healthCheckPeriod": proxy.HealthCheckPeriod.String(),
 		},
 	).Msg("Started the client health check scheduler")

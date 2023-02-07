@@ -107,14 +107,17 @@ var runCmd = &cobra.Command{
 		// Load plugins and register their hooks.
 		pluginRegistry.LoadPlugins(conf.Plugin.Plugins)
 
-		// Start the metrics merger.
-		metricsMerger := metrics.NewMerger(conf.Plugin.MetricsMergerPeriod, logger)
-		pluginRegistry.ForEach(func(_ sdkPlugin.Identifier, plugin *plugin.Plugin) {
-			if metricsEnabled, err := strconv.ParseBool(plugin.Config["metricsEnabled"]); err == nil && metricsEnabled {
-				metricsMerger.Add(plugin.ID.Name, plugin.Config["metricsUnixDomainSocket"])
-			}
-		})
-		metricsMerger.Start()
+		// Start the metrics merger if enabled.
+		var metricsMerger *metrics.Merger
+		if conf.Plugin.EnableMetricsMerger {
+			metricsMerger = metrics.NewMerger(conf.Plugin.MetricsMergerPeriod, logger)
+			pluginRegistry.ForEach(func(_ sdkPlugin.Identifier, plugin *plugin.Plugin) {
+				if metricsEnabled, err := strconv.ParseBool(plugin.Config["metricsEnabled"]); err == nil && metricsEnabled {
+					metricsMerger.Add(plugin.ID.Name, plugin.Config["metricsUnixDomainSocket"])
+				}
+			})
+			metricsMerger.Start()
+		}
 
 		logger.Info().Str(
 			"healthCheckPeriod", conf.Plugin.HealthCheckPeriod.String(),
@@ -126,7 +129,9 @@ var runCmd = &cobra.Command{
 			pluginRegistry.ForEach(func(pluginId sdkPlugin.Identifier, plugin *plugin.Plugin) {
 				if err := plugin.Ping(); err != nil {
 					logger.Error().Err(err).Msg("Failed to ping plugin")
-					metricsMerger.Remove(pluginId.Name)
+					if conf.Plugin.EnableMetricsMerger && metricsMerger != nil {
+						metricsMerger.Remove(pluginId.Name)
+					}
 					pluginRegistry.Remove(pluginId)
 				} else {
 					logger.Trace().Str("name", pluginId.Name).Msg("Successfully pinged plugin")
@@ -190,24 +195,21 @@ var runCmd = &cobra.Command{
 				return http.HandlerFunc(handler)
 			}
 
-			decompressedGatewayDMetricsHandler := func() http.Handler {
+			handler := func() http.Handler {
 				return promhttp.InstrumentMetricHandler(
 					prometheus.DefaultRegisterer,
 					promhttp.HandlerFor(prometheus.DefaultGatherer, promhttp.HandlerOpts{
 						DisableCompression: true,
 					}),
 				)
-			}
+			}()
 
 			logger.Info().Str("address", address).Msg("Metrics are exposed")
-			http.Handle(
-				metricsConfig.Path,
-				gziphandler.GzipHandler(
-					mergedMetricsHandler(
-						decompressedGatewayDMetricsHandler(),
-					),
-				),
-			)
+
+			if conf.Plugin.EnableMetricsMerger && metricsMerger != nil {
+				handler = mergedMetricsHandler(handler)
+			}
+			http.Handle(metricsConfig.Path, gziphandler.GzipHandler(handler))
 
 			//nolint:gosec
 			if err = http.ListenAndServe(
@@ -401,8 +403,10 @@ var runCmd = &cobra.Command{
 						logger.Info().Msg("Stopping GatewayD")
 						healthCheckScheduler.Clear()
 						logger.Info().Msg("Stopped health check scheduler")
-						metricsMerger.Stop()
-						logger.Info().Msg("Stopped metrics merger")
+						if metricsMerger != nil {
+							metricsMerger.Stop()
+							logger.Info().Msg("Stopped metrics merger")
+						}
 						for name, server := range servers {
 							logger.Info().Str("name", name).Msg("Stopping server")
 							server.Shutdown()
@@ -423,7 +427,9 @@ var runCmd = &cobra.Command{
 				if err := server.Run(); err != nil {
 					logger.Error().Err(err).Msg("Failed to start server")
 					healthCheckScheduler.Clear()
-					metricsMerger.Stop()
+					if metricsMerger != nil {
+						metricsMerger.Stop()
+					}
 					server.Shutdown()
 					pluginRegistry.Shutdown()
 					os.Exit(gerr.FailedToStartServer)
