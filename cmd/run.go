@@ -140,7 +140,9 @@ var runCmd = &cobra.Command{
 		}); err != nil {
 			logger.Error().Err(err).Msg("Failed to start plugin health check scheduler")
 		}
-		healthCheckScheduler.StartAsync()
+		if pluginRegistry.Size() > 0 {
+			healthCheckScheduler.StartAsync()
+		}
 
 		// The config will be passed to the plugins that register to the "OnConfigLoaded" plugin.
 		// The plugins can modify the config and return it.
