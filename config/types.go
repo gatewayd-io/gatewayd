@@ -27,6 +27,7 @@ type PluginConfig struct {
 	VerificationPolicy  string        `koanf:"verificationPolicy"`
 	CompatibilityPolicy string        `koanf:"compatibilityPolicy"`
 	AcceptancePolicy    string        `koanf:"acceptancePolicy"`
+	EnableMetricsMerger bool          `koanf:"enableMetricsMerger"`
 	MetricsMergerPeriod time.Duration `koanf:"metricsMergerPeriod"`
 	HealthCheckPeriod   time.Duration `koanf:"healthCheckPeriod"`
 	Plugins             []Plugin      `koanf:"plugins"`

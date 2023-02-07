@@ -6,6 +6,7 @@ verificationPolicy: "passdown"
 compatibilityPolicy: "strict"
 # Possible values: "accept" (default) and "reject" 
 acceptancePolicy: "accept"
+enableMetricsMerger: True
 metricsMergerPeriod: 5s
 healthCheckPeriod: 5s
 

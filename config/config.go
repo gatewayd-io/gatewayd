@@ -125,13 +125,12 @@ func (c *Config) LoadDefaults() {
 	}
 
 	c.pluginDefaults = map[string]interface{}{
-		"plugins": map[string]interface{}{
-			"verificationPolicy":  "passdown",
-			"compatibilityPolicy": "strict",
-			"acceptancePolicy":    "accept",
-			"metricsMergerPeriod": DefaultMetricsMergerPeriod.String(),
-			"healthCheckPeriod":   DefaultPluginHealthCheckPeriod.String(),
-		},
+		"verificationPolicy":  "passdown",
+		"compatibilityPolicy": "strict",
+		"acceptancePolicy":    "accept",
+		"enableMetricsMerger": true,
+		"metricsMergerPeriod": DefaultMetricsMergerPeriod.String(),
+		"healthCheckPeriod":   DefaultPluginHealthCheckPeriod.String(),
 	}
 
 	if err := c.GlobalKoanf.Load(confmap.Provider(c.globalDefaults, ""), nil); err != nil {
