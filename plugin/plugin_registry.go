@@ -35,6 +35,7 @@ type IRegistry interface {
 	Add(plugin *Plugin) bool
 	Get(pluginID sdkPlugin.Identifier) *Plugin
 	List() []sdkPlugin.Identifier
+	Size() int
 	Exists(name, version, remoteURL string) bool
 	ForEach(f func(sdkPlugin.Identifier, *Plugin))
 	Remove(pluginID sdkPlugin.Identifier)
@@ -104,6 +105,11 @@ func (reg *Registry) List() []sdkPlugin.Identifier {
 		return true
 	})
 	return plugins
+}
+
+// Size returns the number of plugins in the registry.
+func (reg *Registry) Size() int {
+	return reg.plugins.Size()
 }
 
 // Exists checks if a plugin exists in the registry.
