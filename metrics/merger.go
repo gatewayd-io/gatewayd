@@ -18,6 +18,8 @@ import (
 	promClient "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
 	"github.com/rs/zerolog"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"golang.org/x/exp/maps"
 	"google.golang.org/protobuf/proto"
 )
@@ -27,7 +29,7 @@ type IMerger interface {
 	Remove(pluginName string)
 	ReadMetrics() (map[string][]byte, *gerr.GatewayDError)
 	MergeMetrics(pluginMetrics map[string][]byte) *gerr.GatewayDError
-	Start()
+	Start(ctx context.Context)
 	Stop()
 }
 
@@ -185,7 +187,10 @@ func (m *Merger) MergeMetrics(pluginMetrics map[string][]byte) *gerr.GatewayDErr
 }
 
 // Start starts the metrics merger.
-func (m *Merger) Start() {
+func (m *Merger) Start(ctx context.Context) {
+	ctx, span := otel.Tracer(config.TracerName).Start(ctx, "Metrics merger")
+	defer span.End()
+
 	startDelay := time.Now().Add(m.MetricsMergerPeriod)
 	// Merge metrics from plugins by reading from their unix domain sockets periodically.
 	if _, err := m.scheduler.
@@ -193,6 +198,10 @@ func (m *Merger) Start() {
 		SingletonMode().
 		StartAt(startDelay).
 		Do(func() {
+			_, span := otel.Tracer(config.TracerName).Start(ctx, "Merge metrics")
+			span.SetAttributes(attribute.StringSlice("plugins", maps.Keys(m.Addresses)))
+			defer span.End()
+
 			m.Logger.Trace().Msg(
 				"Running the scheduler for merging metrics from plugins with GatewayD")
 			pluginMetrics, err := m.ReadMetrics()
@@ -207,6 +216,7 @@ func (m *Merger) Start() {
 			}
 		}); err != nil {
 		m.Logger.Error().Err(err).Msg("Failed to start metrics merger scheduler")
+		span.RecordError(err)
 		sentry.CaptureException(err)
 	}
 
