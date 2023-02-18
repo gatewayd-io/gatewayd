@@ -1,6 +1,7 @@
 package logging
 
 import (
+	"context"
 	"testing"
 
 	"github.com/gatewayd-io/gatewayd/config"
@@ -14,6 +15,7 @@ import (
 func TestNewHcLogAdapter(t *testing.T) {
 	consoleOutput := capturer.CaptureStdout(func() {
 		logger := NewLogger(
+			context.Background(),
 			LoggerConfig{
 				Output:            []config.LogOutput{config.Console},
 				Level:             zerolog.TraceLevel,
@@ -52,6 +54,7 @@ func TestNewHcLogAdapter(t *testing.T) {
 func TestNewHcLogAdapter_LogLevel_Difference(t *testing.T) {
 	consoleOutput := capturer.CaptureStdout(func() {
 		logger := NewLogger(
+			context.Background(),
 			LoggerConfig{
 				Output:     []config.LogOutput{config.Console},
 				Level:      zerolog.WarnLevel,

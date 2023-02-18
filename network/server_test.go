@@ -22,7 +22,7 @@ import (
 func TestRunServer(t *testing.T) {
 	errs := make(chan error)
 
-	logger := logging.NewLogger(logging.LoggerConfig{
+	logger := logging.NewLogger(context.Background(), logging.LoggerConfig{
 		Output:            []config.LogOutput{config.Console},
 		TimeFormat:        zerolog.TimeFormatUnix,
 		ConsoleTimeFormat: config.DefaultConsoleTimeFormat,
@@ -30,7 +30,8 @@ func TestRunServer(t *testing.T) {
 		NoColor:           true,
 	})
 
-	pluginRegistry := plugin.NewRegistry(config.Loose, config.PassDown, config.Accept, logger)
+	pluginRegistry := plugin.NewRegistry(
+		context.Background(), config.Loose, config.PassDown, config.Accept, logger)
 
 	onTrafficFromClient := func(
 		ctx context.Context,

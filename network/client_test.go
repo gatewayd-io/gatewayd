@@ -1,6 +1,7 @@
 package network
 
 import (
+	"context"
 	"testing"
 
 	"github.com/gatewayd-io/gatewayd/config"
@@ -13,7 +14,7 @@ import (
 func CreateNewClient(t *testing.T) *Client {
 	t.Helper()
 
-	logger := logging.NewLogger(logging.LoggerConfig{
+	logger := logging.NewLogger(context.Background(), logging.LoggerConfig{
 		Output:            []config.LogOutput{config.Console},
 		TimeFormat:        zerolog.TimeFormatUnix,
 		ConsoleTimeFormat: config.DefaultConsoleTimeFormat,
