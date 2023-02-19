@@ -2,6 +2,7 @@ package network
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	sdkPlugin "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin"
@@ -32,6 +33,7 @@ type Proxy struct {
 	logger               zerolog.Logger
 	pluginRegistry       *plugin.Registry
 	scheduler            *gocron.Scheduler
+	ctx                  context.Context
 
 	Elastic             bool
 	ReuseElasticClients bool
@@ -63,6 +65,7 @@ func NewProxy(
 		Elastic:              elastic,
 		ReuseElasticClients:  reuseElasticClients,
 		ClientConfig:         clientConfig,
+		ctx:                  proxyCtx,
 	}
 
 	if healthCheckPeriod == 0 {
@@ -103,6 +106,7 @@ func NewProxy(
 	); err != nil {
 		proxy.logger.Error().Err(err).Msg("Failed to schedule the client health check")
 		sentry.CaptureException(err)
+		span.RecordError(err)
 	}
 
 	// Start the scheduler.
@@ -121,6 +125,9 @@ func NewProxy(
 // It returns an error if the pool is exhausted. If the pool is elastic, it creates a new client
 // and maps it to the incoming connection.
 func (pr *Proxy) Connect(gconn gnet.Conn) *gerr.GatewayDError {
+	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "Connect")
+	defer span.End()
+
 	var clientID string
 	// Get the first available client from the pool.
 	pr.availableConnections.ForEach(func(key, _ interface{}) bool {
@@ -137,8 +144,10 @@ func (pr *Proxy) Connect(gconn gnet.Conn) *gerr.GatewayDError {
 		if pr.Elastic {
 			// Create a new client.
 			client = NewClient(pr.ClientConfig, pr.logger)
+			span.AddEvent("Created a new client connection")
 			pr.logger.Debug().Str("id", client.ID[:7]).Msg("Reused the client connection")
 		} else {
+			span.AddEvent(gerr.ErrPoolExhausted.Error())
 			return gerr.ErrPoolExhausted
 		}
 	} else {
@@ -151,10 +160,12 @@ func (pr *Proxy) Connect(gconn gnet.Conn) *gerr.GatewayDError {
 	client, err := pr.IsHealty(client)
 	if err != nil {
 		pr.logger.Error().Err(err).Msg("Failed to connect to the client")
+		span.RecordError(err)
 	}
 
 	if err := pr.busyConnections.Put(gconn, client); err != nil {
 		// This should never happen.
+		span.RecordError(err)
 		return err
 	}
 
@@ -187,6 +198,9 @@ func (pr *Proxy) Connect(gconn gnet.Conn) *gerr.GatewayDError {
 // Disconnect removes the client from the busy connection pool and tries to recycle
 // the server connection.
 func (pr *Proxy) Disconnect(gconn gnet.Conn) *gerr.GatewayDError {
+	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "Disconnect")
+	defer span.End()
+
 	client := pr.busyConnections.Pop(gconn)
 	//nolint:nestif
 	if client != nil {
@@ -195,21 +209,26 @@ func (pr *Proxy) Disconnect(gconn gnet.Conn) *gerr.GatewayDError {
 				_, err := pr.IsHealty(client)
 				if err != nil {
 					pr.logger.Error().Err(err).Msg("Failed to reconnect to the client")
+					span.RecordError(err)
 				}
 				// If the client is not in the pool, put it back.
 				err = pr.availableConnections.Put(client.ID, client)
 				if err != nil {
 					pr.logger.Error().Err(err).Msg("Failed to put the client back in the pool")
+					span.RecordError(err)
 				}
 			} else {
+				span.RecordError(gerr.ErrClientNotConnected)
 				return gerr.ErrClientNotConnected
 			}
 		} else {
 			// This should never happen, but if it does,
 			// then there are some serious issues with the pool.
+			span.RecordError(gerr.ErrCastFailed)
 			return gerr.ErrCastFailed
 		}
 	} else {
+		span.RecordError(gerr.ErrClientNotFound)
 		return gerr.ErrClientNotFound
 	}
 
@@ -233,6 +252,8 @@ func (pr *Proxy) Disconnect(gconn gnet.Conn) *gerr.GatewayDError {
 
 // PassThrough sends the data from the client to the server and vice versa.
 func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
+	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "PassThrough")
+	defer span.End()
 	// TODO: Handle bi-directional traffic
 	// Currently the passthrough is a one-way street from the client to the server, that is,
 	// the client can send data to the server and receive the response back, but the server
@@ -241,6 +262,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 
 	var client *Client
 	if pr.busyConnections.Get(gconn) == nil {
+		span.RecordError(gerr.ErrClientNotFound)
 		return gerr.ErrClientNotFound
 	}
 
@@ -248,11 +270,14 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	if cl, ok := pr.busyConnections.Get(gconn).(*Client); ok {
 		client = cl
 	} else {
+		span.RecordError(gerr.ErrCastFailed)
 		return gerr.ErrCastFailed
 	}
+	span.AddEvent("Got the client from the busy connection pool")
 
 	// Receive the request from the client.
 	request, origErr := pr.receiveTrafficFromClient(gconn)
+	span.AddEvent("Received traffic from client")
 
 	// Run the OnTrafficFromClient hooks.
 	result, err := pr.pluginRegistry.Run(
@@ -270,7 +295,10 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 		sdkPlugin.OnTrafficFromClient)
 	if err != nil {
 		pr.logger.Error().Err(err).Msg("Error running hook")
+		span.RecordError(err)
 	}
+	span.AddEvent("Ran the OnTrafficFromClient hooks")
+
 	// If the hook wants to terminate the connection, do it.
 	if pr.shouldTerminate(result) {
 		if modResponse, modReceived := pr.getPluginModifiedResponse(result); modResponse != nil {
@@ -279,17 +307,21 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 			metrics.BytesSentToClient.Observe(float64(modReceived))
 			metrics.TotalTrafficBytes.Observe(float64(modReceived))
 
+			span.AddEvent("Terminating connection")
 			return pr.sendTrafficToClient(gconn, modResponse, modReceived)
 		}
+		span.RecordError(gerr.ErrHookTerminatedConnection)
 		return gerr.ErrHookTerminatedConnection
 	}
 	// If the hook modified the request, use the modified request.
 	if modRequest := pr.getPluginModifiedRequest(result); modRequest != nil {
 		request = modRequest
+		span.AddEvent("Plugin(s) modified the request")
 	}
 
 	// Send the request to the server.
 	_, err = pr.sendTrafficToServer(client, request)
+	span.AddEvent("Sent traffic to server")
 
 	// Run the OnTrafficToServer hooks.
 	_, err = pr.pluginRegistry.Run(
@@ -307,10 +339,13 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 		sdkPlugin.OnTrafficToServer)
 	if err != nil {
 		pr.logger.Error().Err(err).Msg("Error running hook")
+		span.RecordError(err)
 	}
+	span.AddEvent("Ran the OnTrafficToServer hooks")
 
 	// Receive the response from the server.
 	received, response, err := pr.receiveTrafficFromServer(client)
+	span.AddEvent("Received traffic from server")
 
 	// The connection to the server is closed, so we MUST reconnect,
 	// otherwise the client will be stuck.
@@ -326,6 +361,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 		client = NewClient(pr.ClientConfig, pr.logger)
 		pr.busyConnections.Remove(gconn)
 		if err := pr.busyConnections.Put(gconn, client); err != nil {
+			span.RecordError(err)
 			// This should never happen
 			return err
 		}
@@ -339,6 +375,8 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 				"local":    client.Conn.LocalAddr().String(),
 				"remote":   client.Conn.RemoteAddr().String(),
 			}).Msg("No data to send to client")
+		span.AddEvent("No data to send to client")
+		span.RecordError(err)
 		return err
 	}
 
@@ -362,15 +400,20 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 		sdkPlugin.OnTrafficFromServer)
 	if err != nil {
 		pr.logger.Error().Err(err).Msg("Error running hook")
+		span.RecordError(err)
 	}
+	span.AddEvent("Ran the OnTrafficFromServer hooks")
+
 	// If the hook modified the response, use the modified response.
 	if modResponse, modReceived := pr.getPluginModifiedResponse(result); modResponse != nil {
 		response = modResponse
 		received = modReceived
+		span.AddEvent("Plugin(s) modified the response")
 	}
 
 	// Send the response to the client.
 	errVerdict := pr.sendTrafficToClient(gconn, response, received)
+	span.AddEvent("Sent traffic to client")
 
 	// Run the OnTrafficToClient hooks.
 	_, err = pr.pluginRegistry.Run(
@@ -393,6 +436,11 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 		sdkPlugin.OnTrafficToClient)
 	if err != nil {
 		pr.logger.Error().Err(err).Msg("Error running hook")
+		span.RecordError(err)
+	}
+
+	if errVerdict != nil {
+		span.RecordError(errVerdict)
 	}
 
 	metrics.ProxyPassThroughs.Inc()
@@ -402,13 +450,18 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 
 // IsHealty checks if the pool is exhausted or the client is disconnected.
 func (pr *Proxy) IsHealty(client *Client) (*Client, *gerr.GatewayDError) {
+	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "IsHealty")
+	defer span.End()
+
 	if pr.IsExhausted() {
 		pr.logger.Error().Msg("No more available connections")
+		span.RecordError(gerr.ErrPoolExhausted)
 		return client, gerr.ErrPoolExhausted
 	}
 
 	if !client.IsConnected() {
 		pr.logger.Error().Msg("Client is disconnected")
+		span.RecordError(gerr.ErrClientNotConnected)
 	}
 
 	return client, nil
@@ -416,6 +469,9 @@ func (pr *Proxy) IsHealty(client *Client) (*Client, *gerr.GatewayDError) {
 
 // IsExhausted checks if the available connection pool is exhausted.
 func (pr *Proxy) IsExhausted() bool {
+	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "IsExhausted")
+	defer span.End()
+
 	if pr.Elastic {
 		return false
 	}
@@ -425,6 +481,9 @@ func (pr *Proxy) IsExhausted() bool {
 
 // Shutdown closes all connections and clears the connection pools.
 func (pr *Proxy) Shutdown() {
+	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "Shutdown")
+	defer span.End()
+
 	pr.availableConnections.ForEach(func(key, value interface{}) bool {
 		if cl, ok := value.(*Client); ok {
 			cl.Close()
@@ -450,10 +509,14 @@ func (pr *Proxy) Shutdown() {
 
 // receiveTrafficFromClient is a function that receives data from the client.
 func (pr *Proxy) receiveTrafficFromClient(gconn gnet.Conn) ([]byte, error) {
+	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "receiveTrafficFromClient")
+	defer span.End()
+
 	// request contains the data from the client.
 	request, err := gconn.Next(-1)
 	if err != nil {
 		pr.logger.Error().Err(err).Msg("Error reading from client")
+		span.RecordError(err)
 	}
 	pr.logger.Debug().Fields(
 		map[string]interface{}{
@@ -472,10 +535,14 @@ func (pr *Proxy) receiveTrafficFromClient(gconn gnet.Conn) ([]byte, error) {
 
 // sendTrafficToServer is a function that sends data to the server.
 func (pr *Proxy) sendTrafficToServer(client *Client, request []byte) (int, *gerr.GatewayDError) {
+	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "sendTrafficToServer")
+	defer span.End()
+
 	// Send the request to the server.
 	sent, err := client.Send(request)
 	if err != nil {
 		pr.logger.Error().Err(err).Msg("Error sending request to database")
+		span.RecordError(err)
 	}
 	pr.logger.Debug().Fields(
 		map[string]interface{}{
@@ -494,6 +561,9 @@ func (pr *Proxy) sendTrafficToServer(client *Client, request []byte) (int, *gerr
 
 // receiveTrafficFromServer is a function that receives data from the server.
 func (pr *Proxy) receiveTrafficFromServer(client *Client) (int, []byte, *gerr.GatewayDError) {
+	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "receiveTrafficFromServer")
+	defer span.End()
+
 	// Receive the response from the server.
 	received, response, err := client.Receive()
 	pr.logger.Debug().Fields(
@@ -515,6 +585,9 @@ func (pr *Proxy) receiveTrafficFromServer(client *Client) (int, []byte, *gerr.Ga
 func (pr *Proxy) sendTrafficToClient(
 	gconn gnet.Conn, response []byte, received int,
 ) *gerr.GatewayDError {
+	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "sendTrafficToClient")
+	defer span.End()
+
 	// Send the response to the client async.
 	origErr := gconn.AsyncWrite(response[:received], func(gconn gnet.Conn, err error) error {
 		pr.logger.Debug().Fields(
@@ -525,10 +598,12 @@ func (pr *Proxy) sendTrafficToClient(
 				"remote":   gconn.RemoteAddr().String(),
 			},
 		).Msg("Sent data to client")
+		span.RecordError(err)
 		return err
 	})
 	if origErr != nil {
 		pr.logger.Error().Err(origErr).Msg("Error writing to client")
+		span.RecordError(origErr)
 		return gerr.ErrServerSendFailed.Wrap(origErr)
 	}
 
@@ -541,6 +616,9 @@ func (pr *Proxy) sendTrafficToClient(
 // shouldTerminate is a function that retrieves the terminate field from the hook result.
 // Only the OnTrafficFromClient hook will terminate the connection.
 func (pr *Proxy) shouldTerminate(result map[string]interface{}) bool {
+	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "shouldTerminate")
+	defer span.End()
+
 	// If the hook wants to terminate the connection, do it.
 	if result != nil {
 		if terminate, ok := result["terminate"].(bool); ok && terminate {
@@ -555,12 +633,17 @@ func (pr *Proxy) shouldTerminate(result map[string]interface{}) bool {
 // getPluginModifiedRequest is a function that retrieves the modified request
 // from the hook result.
 func (pr *Proxy) getPluginModifiedRequest(result map[string]interface{}) []byte {
+	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "getPluginModifiedRequest")
+	defer span.End()
+
 	// If the hook modified the request, use the modified request.
 	//nolint:gocritic
 	if modRequest, errMsg, convErr := extractFieldValue(result, "request"); errMsg != "" {
 		pr.logger.Error().Str("error", errMsg).Msg("Error in hook")
+		span.RecordError(errors.New(errMsg))
 	} else if convErr != nil {
 		pr.logger.Error().Err(convErr).Msg("Error in data conversion")
+		span.RecordError(convErr)
 	} else if modRequest != nil {
 		return modRequest
 	}
@@ -571,12 +654,17 @@ func (pr *Proxy) getPluginModifiedRequest(result map[string]interface{}) []byte 
 // getPluginModifiedResponse is a function that retrieves the modified response
 // from the hook result.
 func (pr *Proxy) getPluginModifiedResponse(result map[string]interface{}) ([]byte, int) {
+	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "getPluginModifiedResponse")
+	defer span.End()
+
 	// If the hook returns a response, use it instead of the original response.
 	//nolint:gocritic
 	if modResponse, errMsg, convErr := extractFieldValue(result, "response"); errMsg != "" {
 		pr.logger.Error().Str("error", errMsg).Msg("Error in hook")
+		span.RecordError(errors.New(errMsg))
 	} else if convErr != nil {
 		pr.logger.Error().Err(convErr).Msg("Error in data conversion")
+		span.RecordError(convErr)
 	} else if modResponse != nil {
 		return modResponse, len(modResponse)
 	}
