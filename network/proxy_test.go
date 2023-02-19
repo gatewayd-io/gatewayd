@@ -26,6 +26,7 @@ func TestNewProxy(t *testing.T) {
 	pool := pool.NewPool(context.Background(), config.EmptyPoolCapacity)
 
 	client := NewClient(
+		context.Background(),
 		&config.Client{
 			Network:            "tcp",
 			Address:            "localhost:5432",

@@ -23,6 +23,7 @@ func CreateNewClient(t *testing.T) *Client {
 	})
 
 	client := NewClient(
+		context.Background(),
 		&config.Client{
 			Network:            "tcp",
 			Address:            "localhost:5432",
