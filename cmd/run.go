@@ -302,7 +302,7 @@ var runCmd = &cobra.Command{
 			// Add clients to the pool.
 			for i := 0; i < cfg.GetSize(); i++ {
 				clientConfig := clients[name]
-				client := network.NewClient(&clientConfig, logger)
+				client := network.NewClient(runCtx, &clientConfig, logger)
 
 				span.AddEvent("Create client", trace.WithAttributes(
 					attribute.String("name", name),

@@ -1,6 +1,7 @@
 package network
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"time"
@@ -9,6 +10,7 @@ import (
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/metrics"
 	"github.com/rs/zerolog"
+	"go.opentelemetry.io/otel"
 )
 
 type IClient interface {
@@ -22,6 +24,7 @@ type Client struct {
 	net.Conn
 
 	logger zerolog.Logger
+	ctx    context.Context //nolint:containedctx
 
 	TCPKeepAlive       bool
 	TCPKeepAlivePeriod time.Duration
@@ -37,7 +40,10 @@ type Client struct {
 var _ IClient = &Client{}
 
 // NewClient creates a new client.
-func NewClient(clientConfig *config.Client, logger zerolog.Logger) *Client {
+func NewClient(ctx context.Context, clientConfig *config.Client, logger zerolog.Logger) *Client {
+	clientCtx, span := otel.Tracer(config.TracerName).Start(ctx, "NewClient")
+	defer span.End()
+
 	var client Client
 
 	if clientConfig == nil {
@@ -50,10 +56,12 @@ func NewClient(clientConfig *config.Client, logger zerolog.Logger) *Client {
 	addr, err := Resolve(clientConfig.Network, clientConfig.Address, logger)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to resolve address")
+		span.RecordError(err)
 	}
 
 	// Create a resolved client.
 	client = Client{
+		ctx:     clientCtx,
 		Network: clientConfig.Network,
 		Address: addr,
 	}
@@ -71,6 +79,7 @@ func NewClient(clientConfig *config.Client, logger zerolog.Logger) *Client {
 	if origErr != nil {
 		err := gerr.ErrClientConnectionFailed.Wrap(origErr)
 		logger.Error().Err(err).Msg("Failed to create a new connection")
+		span.RecordError(err)
 		return nil
 	}
 
@@ -87,9 +96,11 @@ func NewClient(clientConfig *config.Client, logger zerolog.Logger) *Client {
 	if c, ok := client.Conn.(*net.TCPConn); ok {
 		if err := c.SetKeepAlive(client.TCPKeepAlive); err != nil {
 			logger.Error().Err(err).Msg("Failed to set keep alive")
+			span.RecordError(err)
 		} else {
 			if err := c.SetKeepAlivePeriod(client.TCPKeepAlivePeriod); err != nil {
 				logger.Error().Err(err).Msg("Failed to set keep alive period")
+				span.RecordError(err)
 			}
 		}
 	}
@@ -101,6 +112,7 @@ func NewClient(clientConfig *config.Client, logger zerolog.Logger) *Client {
 		client.ReceiveDeadline = clientConfig.ReceiveDeadline
 		if err := client.Conn.SetReadDeadline(time.Now().Add(client.ReceiveDeadline)); err != nil {
 			logger.Error().Err(err).Msg("Failed to set receive deadline")
+			span.RecordError(err)
 		} else {
 			logger.Debug().Str("duration", fmt.Sprint(client.ReceiveDeadline.String())).Msg(
 				"Set receive deadline")
@@ -114,6 +126,7 @@ func NewClient(clientConfig *config.Client, logger zerolog.Logger) *Client {
 		client.SendDeadline = clientConfig.SendDeadline
 		if err := client.Conn.SetWriteDeadline(time.Now().Add(client.SendDeadline)); err != nil {
 			logger.Error().Err(err).Msg("Failed to set send deadline")
+			span.RecordError(err)
 		} else {
 			logger.Debug().Str("duration", fmt.Sprint(client.SendDeadline)).Msg(
 				"Set send deadline")
@@ -146,9 +159,13 @@ func NewClient(clientConfig *config.Client, logger zerolog.Logger) *Client {
 
 // Send sends data to the server.
 func (c *Client) Send(data []byte) (int, *gerr.GatewayDError) {
+	_, span := otel.Tracer(config.TracerName).Start(c.ctx, "Send")
+	defer span.End()
+
 	sent, err := c.Conn.Write(data)
 	if err != nil {
 		c.logger.Error().Err(err).Msg("Couldn't send data to the server")
+		span.RecordError(err)
 		return 0, gerr.ErrClientSendFailed.Wrap(err)
 	}
 	c.logger.Debug().Fields(
@@ -165,6 +182,9 @@ func (c *Client) Send(data []byte) (int, *gerr.GatewayDError) {
 
 // Receive receives data from the server.
 func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
+	_, span := otel.Tracer(config.TracerName).Start(c.ctx, "Receive")
+	defer span.End()
+
 	var received int
 	buffer := make([]byte, 0, c.ReceiveBufferSize)
 	// Read the data in chunks.
@@ -177,10 +197,12 @@ func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 			buffer = append(buffer, chunk[:read]...)
 			c.logger.Error().Err(err).Msg("Couldn't receive data from the server")
 			metrics.BytesReceivedFromServer.Observe(float64(received))
+			span.RecordError(err)
 			return received, buffer, gerr.ErrClientReceiveFailed.Wrap(err)
 		case err != nil:
 			c.logger.Error().Err(err).Msg("Couldn't receive data from the server")
 			metrics.BytesReceivedFromServer.Observe(float64(received))
+			span.RecordError(err)
 			return received, buffer, gerr.ErrClientReceiveFailed.Wrap(err)
 		default:
 			received += read
@@ -197,6 +219,9 @@ func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 
 // Close closes the connection to the server.
 func (c *Client) Close() {
+	_, span := otel.Tracer(config.TracerName).Start(c.ctx, "Close")
+	defer span.End()
+
 	c.logger.Debug().Str("address", c.Address).Msg("Closing connection to server")
 	if c.Conn != nil {
 		c.Conn.Close()
@@ -211,6 +236,9 @@ func (c *Client) Close() {
 
 // IsConnected checks if the client is still connected to the server.
 func (c *Client) IsConnected() bool {
+	_, span := otel.Tracer(config.TracerName).Start(c.ctx, "IsConnected")
+	defer span.End()
+
 	if c == nil {
 		c.logger.Debug().Fields(
 			map[string]interface{}{
