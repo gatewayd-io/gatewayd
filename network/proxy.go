@@ -14,6 +14,7 @@ import (
 	"github.com/go-co-op/gocron"
 	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
+	"go.opentelemetry.io/otel"
 )
 
 type IProxy interface {
@@ -44,14 +45,18 @@ var _ IProxy = &Proxy{}
 
 // NewProxy creates a new proxy.
 func NewProxy(
+	ctx context.Context,
 	connPool pool.IPool, pluginRegistry *plugin.Registry,
 	elastic, reuseElasticClients bool,
 	healthCheckPeriod time.Duration,
 	clientConfig *config.Client, logger zerolog.Logger,
 ) *Proxy {
+	proxyCtx, span := otel.Tracer(config.TracerName).Start(ctx, "NewProxy")
+	defer span.End()
+
 	proxy := Proxy{
 		availableConnections: connPool,
-		busyConnections:      pool.NewPool(config.EmptyPoolCapacity),
+		busyConnections:      pool.NewPool(proxyCtx, config.EmptyPoolCapacity),
 		logger:               logger,
 		pluginRegistry:       pluginRegistry,
 		scheduler:            gocron.NewScheduler(time.UTC),

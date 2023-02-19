@@ -70,11 +70,11 @@ func NewRegistry(
 	acceptance config.AcceptancePolicy,
 	logger zerolog.Logger,
 ) *Registry {
-	_, span := otel.Tracer(config.TracerName).Start(ctx, "Create new registry")
+	regCtx, span := otel.Tracer(config.TracerName).Start(ctx, "Create new registry")
 	defer span.End()
 
 	return &Registry{
-		plugins:       pool.NewPool(config.EmptyPoolCapacity),
+		plugins:       pool.NewPool(regCtx, config.EmptyPoolCapacity),
 		hooks:         map[string]map[sdkPlugin.Priority]sdkPlugin.Method{},
 		Logger:        logger,
 		Compatibility: compatibility,

@@ -282,7 +282,7 @@ var runCmd = &cobra.Command{
 		// Create and initialize pools of connections.
 		for name, cfg := range conf.Global.Pools {
 			logger := loggers[name]
-			pools[name] = pool.NewPool(cfg.GetSize())
+			pools[name] = pool.NewPool(runCtx, cfg.GetSize())
 
 			span.AddEvent("Create pool", trace.WithAttributes(
 				attribute.String("name", name),
@@ -378,6 +378,7 @@ var runCmd = &cobra.Command{
 			logger := loggers[name]
 			clientConfig := clients[name]
 			proxies[name] = network.NewProxy(
+				runCtx,
 				pools[name],
 				pluginRegistry,
 				cfg.Elastic,
