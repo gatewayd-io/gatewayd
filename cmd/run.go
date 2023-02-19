@@ -231,13 +231,13 @@ var runCmd = &cobra.Command{
 
 			// Merge the metrics from the plugins with the ones from GatewayD.
 			mergedMetricsHandler := func(next http.Handler) http.Handler {
-				handler := func(w http.ResponseWriter, r *http.Request) {
-					if _, err := w.Write(metricsMerger.OutputMetrics); err != nil {
+				handler := func(responseWriter http.ResponseWriter, request *http.Request) {
+					if _, err := responseWriter.Write(metricsMerger.OutputMetrics); err != nil {
 						logger.Error().Err(err).Msg("Failed to write metrics")
 						span.RecordError(err)
 						sentry.CaptureException(err)
 					}
-					next.ServeHTTP(w, r)
+					next.ServeHTTP(responseWriter, request)
 				}
 				return http.HandlerFunc(handler)
 			}
@@ -304,9 +304,8 @@ var runCmd = &cobra.Command{
 				clientConfig := clients[name]
 				client := network.NewClient(runCtx, &clientConfig, logger)
 
-				span.AddEvent("Create client", trace.WithAttributes(
+				eventOptions := trace.WithAttributes(
 					attribute.String("name", name),
-					attribute.String("id", client.ID),
 					attribute.String("network", client.Network),
 					attribute.String("address", client.Address),
 					attribute.Int("receiveBufferSize", client.ReceiveBufferSize),
@@ -317,7 +316,14 @@ var runCmd = &cobra.Command{
 					attribute.String("tcpKeepAlivePeriod", client.TCPKeepAlivePeriod.String()),
 					attribute.String("localAddress", client.Conn.LocalAddr().String()),
 					attribute.String("remoteAddress", client.Conn.RemoteAddr().String()),
-				))
+				)
+				if client.ID != "" {
+					eventOptions = trace.WithAttributes(
+						attribute.String("id", client.ID),
+					)
+				}
+
+				span.AddEvent("Create client", eventOptions)
 
 				if client != nil {
 					clientCfg := map[string]interface{}{

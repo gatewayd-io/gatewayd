@@ -344,7 +344,6 @@ func (s *Server) Run() error {
 	if result != nil {
 		if errMsg, ok := result["error"].(string); ok && errMsg != "" {
 			s.logger.Error().Str("error", errMsg).Msg("Error in hook")
-			span.RecordError(errors.New(errMsg))
 		}
 
 		if address, ok := result["address"].(string); ok {

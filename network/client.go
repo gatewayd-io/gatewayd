@@ -236,8 +236,10 @@ func (c *Client) Close() {
 
 // IsConnected checks if the client is still connected to the server.
 func (c *Client) IsConnected() bool {
-	_, span := otel.Tracer(config.TracerName).Start(c.ctx, "IsConnected")
-	defer span.End()
+	if c != nil && c.ctx.Err() != nil {
+		_, span := otel.Tracer(config.TracerName).Start(c.ctx, "IsConnected")
+		defer span.End()
+	}
 
 	if c == nil {
 		c.logger.Debug().Fields(

@@ -37,7 +37,6 @@ type LoggerConfig struct {
 // NewLogger creates a new logger with the given configuration.
 func NewLogger(ctx context.Context, cfg LoggerConfig) zerolog.Logger {
 	_, span := otel.Tracer(config.TracerName).Start(ctx, "Create new logger")
-	defer span.End()
 
 	// Create a new logger.
 	consoleWriter := zerolog.ConsoleWriter{
@@ -70,6 +69,8 @@ func NewLogger(ctx context.Context, cfg LoggerConfig) zerolog.Logger {
 		case config.Syslog:
 			syslogWriter, err := syslog.New(cfg.SyslogPriority, config.DefaultSyslogTag)
 			if err != nil {
+				span.RecordError(err)
+				span.End()
 				log.Fatal(err)
 			}
 			output = append(output, syslogWriter)
@@ -93,6 +94,8 @@ func NewLogger(ctx context.Context, cfg LoggerConfig) zerolog.Logger {
 	multiWriter := zerolog.MultiLevelWriter(output...)
 	logger := zerolog.New(multiWriter)
 	logger = logger.With().Timestamp().Logger()
+
+	span.End()
 
 	return logger
 }

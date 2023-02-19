@@ -53,7 +53,7 @@ type IRegistry interface {
 type Registry struct {
 	plugins pool.IPool
 	hooks   map[string]map[sdkPlugin.Priority]sdkPlugin.Method
-	ctx     context.Context
+	ctx     context.Context //nolint:containedctx
 
 	Logger        zerolog.Logger
 	Compatibility config.CompatibilityPolicy
@@ -172,14 +172,14 @@ func (reg *Registry) Exists(name, version, remoteURL string) bool {
 }
 
 // ForEach iterates over all plugins in the registry.
-func (reg *Registry) ForEach(f func(sdkPlugin.Identifier, *Plugin)) {
+func (reg *Registry) ForEach(function func(sdkPlugin.Identifier, *Plugin)) {
 	_, span := otel.Tracer(config.TracerName).Start(reg.ctx, "ForEach")
 	defer span.End()
 
 	reg.plugins.ForEach(func(key, value interface{}) bool {
 		if id, ok := key.(sdkPlugin.Identifier); ok {
 			if plugin, ok := value.(*Plugin); ok {
-				f(id, plugin)
+				function(id, plugin)
 			}
 		}
 		return true
@@ -483,7 +483,7 @@ func (reg *Registry) LoadPlugins(ctx context.Context, plugins []config.Plugin) {
 				"Failed to dispense plugin")
 			continue
 		} else {
-			if meta, origErr := pluginV1.GetPluginConfig(
+			if meta, origErr := pluginV1.GetPluginConfig( //nolint:contextcheck
 				context.Background(), &structpb.Struct{}); err != nil {
 				reg.Logger.Debug().Str("name", plugin.ID.Name).Err(origErr).Msg(
 					"Failed to get plugin metadata")

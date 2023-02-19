@@ -2,7 +2,6 @@ package network
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	sdkPlugin "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin"
@@ -33,7 +32,7 @@ type Proxy struct {
 	logger               zerolog.Logger
 	pluginRegistry       *plugin.Registry
 	scheduler            *gocron.Scheduler
-	ctx                  context.Context
+	ctx                  context.Context //nolint:containedctx
 
 	Elastic             bool
 	ReuseElasticClients bool
@@ -640,7 +639,6 @@ func (pr *Proxy) getPluginModifiedRequest(result map[string]interface{}) []byte 
 	//nolint:gocritic
 	if modRequest, errMsg, convErr := extractFieldValue(result, "request"); errMsg != "" {
 		pr.logger.Error().Str("error", errMsg).Msg("Error in hook")
-		span.RecordError(errors.New(errMsg))
 	} else if convErr != nil {
 		pr.logger.Error().Err(convErr).Msg("Error in data conversion")
 		span.RecordError(convErr)
@@ -661,7 +659,6 @@ func (pr *Proxy) getPluginModifiedResponse(result map[string]interface{}) ([]byt
 	//nolint:gocritic
 	if modResponse, errMsg, convErr := extractFieldValue(result, "response"); errMsg != "" {
 		pr.logger.Error().Str("error", errMsg).Msg("Error in hook")
-		span.RecordError(errors.New(errMsg))
 	} else if convErr != nil {
 		pr.logger.Error().Err(convErr).Msg("Error in data conversion")
 		span.RecordError(convErr)
