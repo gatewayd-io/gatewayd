@@ -413,6 +413,7 @@ var runCmd = &cobra.Command{
 		for name, cfg := range conf.Global.Servers {
 			logger := loggers[name]
 			servers[name] = network.NewServer(
+				runCtx,
 				cfg.Network,
 				cfg.Address,
 				cfg.SoftLimit,
