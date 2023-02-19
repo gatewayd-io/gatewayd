@@ -54,8 +54,9 @@ const (
 
 const (
 	// Config constants.
-	Default   = "default"
-	EnvPrefix = "GATEWAYD_"
+	Default    = "default"
+	EnvPrefix  = "GATEWAYD_"
+	TracerName = "gatewayd"
 
 	// Logger constants.
 	DefaultLogOutput         = "console"

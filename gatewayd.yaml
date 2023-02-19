@@ -19,6 +19,12 @@ loggers:
     rsyslogAddress: "localhost:514"
     syslogPriority: "info" # emerg, alert, crit, err, warning, notice, debug
 
+metrics:
+  default:
+    enabled: True
+    address: localhost:2112
+    path: /metrics
+
 clients:
   default:
     network: tcp
@@ -59,9 +65,3 @@ servers:
     reusePort: True
     tcpKeepAlive: 3s # duration
     tcpNoDelay: True
-
-metrics:
-  default:
-    enabled: True
-    address: localhost:2112
-    path: /metrics

@@ -21,6 +21,7 @@ import (
 	"github.com/gatewayd-io/gatewayd/network"
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
+	"github.com/gatewayd-io/gatewayd/tracing"
 	"github.com/getsentry/sentry-go"
 	"github.com/go-co-op/gocron"
 	"github.com/panjf2000/gnet/v2"
@@ -28,9 +29,13 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var (
+	enableTracing    bool
 	enableSentry     bool
 	pluginConfigFile string
 	globalConfigFile string
@@ -50,8 +55,25 @@ var runCmd = &cobra.Command{
 	Use:   "run",
 	Short: "Run a gatewayd instance",
 	Run: func(cmd *cobra.Command, args []string) {
+		// Enable tracing with OpenTelemetry.
+		if enableTracing {
+			// TODO: Make this configurable.
+			shutdown := tracing.OTLPTracer(true, "localhost:4317", config.TracerName)
+			defer func() {
+				if err := shutdown(context.Background()); err != nil {
+					log.Fatal(err)
+				}
+			}()
+		}
+
+		runCtx, span := otel.Tracer(config.TracerName).Start(context.Background(), "GatewayD")
+		span.End()
+
 		// Enable Sentry.
 		if enableSentry {
+			_, span := otel.Tracer(config.TracerName).Start(runCtx, "Sentry")
+			defer span.End()
+
 			// Initialize Sentry.
 			err := sentry.Init(sentry.ClientOptions{
 				Dsn:              "https://e22f42dbb3e0433fbd9ea32453faa598@o4504550475038720.ingest.sentry.io/4504550481723392",
@@ -60,6 +82,7 @@ var runCmd = &cobra.Command{
 			})
 			if err != nil {
 				log.Fatalf("sentry.Init: %s", err)
+				span.RecordError(err)
 			}
 
 			// Flush buffered events before the program terminates.
@@ -69,11 +92,12 @@ var runCmd = &cobra.Command{
 		}
 
 		// Load global and plugin configuration.
-		conf = config.NewConfig(globalConfigFile, pluginConfigFile)
+		conf = config.NewConfig(runCtx, globalConfigFile, pluginConfigFile)
+		conf.InitConfig(runCtx)
 
 		// Create and initialize loggers from the config.
 		for name, cfg := range conf.Global.Loggers {
-			loggers[name] = logging.NewLogger(logging.LoggerConfig{
+			loggers[name] = logging.NewLogger(runCtx, logging.LoggerConfig{
 				Output:            cfg.GetOutput(),
 				Level:             cfg.GetLevel(),
 				TimeFormat:        cfg.GetTimeFormat(),
@@ -96,7 +120,8 @@ var runCmd = &cobra.Command{
 
 		// Create a new plugin registry.
 		// The plugins are loaded and hooks registered before the configuration is loaded.
-		pluginRegistry = plugin.NewRegistry(config.Loose, config.PassDown, config.Accept, logger)
+		pluginRegistry = plugin.NewRegistry(
+			runCtx, config.Loose, config.PassDown, config.Accept, logger)
 		// Set the plugin requirement's compatibility policy.
 		pluginRegistry.Compatibility = conf.Plugin.GetPluginCompatibilityPolicy()
 		// Set hooks' signature verification policy.
@@ -105,12 +130,12 @@ var runCmd = &cobra.Command{
 		pluginRegistry.Acceptance = conf.Plugin.GetAcceptancePolicy()
 
 		// Load plugins and register their hooks.
-		pluginRegistry.LoadPlugins(conf.Plugin.Plugins)
+		pluginRegistry.LoadPlugins(runCtx, conf.Plugin.Plugins)
 
 		// Start the metrics merger if enabled.
 		var metricsMerger *metrics.Merger
 		if conf.Plugin.EnableMetricsMerger {
-			metricsMerger = metrics.NewMerger(conf.Plugin.MetricsMergerPeriod, logger)
+			metricsMerger = metrics.NewMerger(runCtx, conf.Plugin.MetricsMergerPeriod, logger)
 			pluginRegistry.ForEach(func(_ sdkPlugin.Identifier, plugin *plugin.Plugin) {
 				if metricsEnabled, err := strconv.ParseBool(plugin.Config["metricsEnabled"]); err == nil && metricsEnabled {
 					metricsMerger.Add(plugin.ID.Name, plugin.Config["metricsUnixDomainSocket"])
@@ -119,6 +144,9 @@ var runCmd = &cobra.Command{
 			metricsMerger.Start()
 		}
 
+		// TODO: Move this to the plugin registry.
+		ctx, span := otel.Tracer(config.TracerName).Start(runCtx, "Plugin health check")
+
 		logger.Info().Str(
 			"healthCheckPeriod", conf.Plugin.HealthCheckPeriod.String(),
 		).Msg("Starting plugin health check scheduler")
@@ -126,8 +154,13 @@ var runCmd = &cobra.Command{
 		startDelay := time.Now().Add(conf.Plugin.HealthCheckPeriod)
 		if _, err := healthCheckScheduler.Every(
 			conf.Plugin.HealthCheckPeriod).SingletonMode().StartAt(startDelay).Do(func() {
+			_, span = otel.Tracer(config.TracerName).Start(ctx, "Run plugin health check")
+			defer span.End()
+
+			var plugins []string
 			pluginRegistry.ForEach(func(pluginId sdkPlugin.Identifier, plugin *plugin.Plugin) {
 				if err := plugin.Ping(); err != nil {
+					span.RecordError(err)
 					logger.Error().Err(err).Msg("Failed to ping plugin")
 					if conf.Plugin.EnableMetricsMerger && metricsMerger != nil {
 						metricsMerger.Remove(pluginId.Name)
@@ -135,14 +168,19 @@ var runCmd = &cobra.Command{
 					pluginRegistry.Remove(pluginId)
 				} else {
 					logger.Trace().Str("name", pluginId.Name).Msg("Successfully pinged plugin")
+					plugins = append(plugins, pluginId.Name)
 				}
 			})
+			span.SetAttributes(attribute.StringSlice("plugins", plugins))
 		}); err != nil {
 			logger.Error().Err(err).Msg("Failed to start plugin health check scheduler")
+			span.RecordError(err)
 		}
 		if pluginRegistry.Size() > 0 {
 			healthCheckScheduler.StartAsync()
 		}
+
+		span.End()
 
 		// The config will be passed to the plugins that register to the "OnConfigLoaded" plugin.
 		// The plugins can modify the config and return it.
@@ -152,6 +190,7 @@ var runCmd = &cobra.Command{
 			sdkPlugin.OnConfigLoaded)
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to run OnConfigLoaded hooks")
+			span.RecordError(err)
 		}
 
 		// If the config was modified by the plugins, merge it with the one loaded from the file.
@@ -160,13 +199,16 @@ var runCmd = &cobra.Command{
 		if updatedGlobalConfig != nil {
 			// Merge the config with the one loaded from the file (in memory).
 			// The changes won't be persisted to disk.
-			conf.MergeGlobalConfig(updatedGlobalConfig)
+			conf.MergeGlobalConfig(runCtx, updatedGlobalConfig)
 		}
 
 		// Start the metrics server if enabled.
 		// TODO: Start multiple metrics servers. For now, only one default is supported.
 		// I should first find a use case for those multiple metrics servers.
 		go func(metricsConfig config.Metrics, logger zerolog.Logger) {
+			_, span := otel.Tracer(config.TracerName).Start(runCtx, "Start metrics server")
+			defer span.End()
+
 			// TODO: refactor this to a separate function.
 			if !metricsConfig.Enabled {
 				logger.Info().Msg("Metrics server is disabled")
@@ -176,23 +218,26 @@ var runCmd = &cobra.Command{
 			fqdn, err := url.Parse("http://" + metricsConfig.Address)
 			if err != nil {
 				logger.Error().Err(err).Msg("Failed to parse metrics address")
+				span.RecordError(err)
 				return
 			}
 
 			address, err := url.JoinPath(fqdn.String(), metricsConfig.Path)
 			if err != nil {
 				logger.Error().Err(err).Msg("Failed to parse metrics path")
+				span.RecordError(err)
 				return
 			}
 
 			// Merge the metrics from the plugins with the ones from GatewayD.
 			mergedMetricsHandler := func(next http.Handler) http.Handler {
-				handler := func(w http.ResponseWriter, r *http.Request) {
-					if _, err := w.Write(metricsMerger.OutputMetrics); err != nil {
+				handler := func(responseWriter http.ResponseWriter, request *http.Request) {
+					if _, err := responseWriter.Write(metricsMerger.OutputMetrics); err != nil {
 						logger.Error().Err(err).Msg("Failed to write metrics")
+						span.RecordError(err)
 						sentry.CaptureException(err)
 					}
-					next.ServeHTTP(w, r)
+					next.ServeHTTP(responseWriter, request)
 				}
 				return http.HandlerFunc(handler)
 			}
@@ -217,6 +262,7 @@ var runCmd = &cobra.Command{
 			if err = http.ListenAndServe(
 				metricsConfig.Address, nil); err != nil {
 				logger.Error().Err(err).Msg("Failed to start metrics server")
+				span.RecordError(err)
 			}
 		}(conf.Global.Metrics[config.Default], logger)
 
@@ -226,15 +272,22 @@ var runCmd = &cobra.Command{
 			_, err = pluginRegistry.Run(context.Background(), data, sdkPlugin.OnNewLogger)
 			if err != nil {
 				logger.Error().Err(err).Msg("Failed to run OnNewLogger hooks")
+				span.RecordError(err)
 			}
 		} else {
 			logger.Error().Msg("Failed to get loggers from config")
 		}
 
+		_, span = otel.Tracer(config.TracerName).Start(runCtx, "Create pools and clients")
 		// Create and initialize pools of connections.
 		for name, cfg := range conf.Global.Pools {
 			logger := loggers[name]
-			pools[name] = pool.NewPool(cfg.GetSize())
+			pools[name] = pool.NewPool(runCtx, cfg.GetSize())
+
+			span.AddEvent("Create pool", trace.WithAttributes(
+				attribute.String("name", name),
+				attribute.Int("size", cfg.GetSize()),
+			))
 
 			// Get client config from the config file.
 			if clientConfig, ok := conf.Global.Clients[name]; !ok {
@@ -249,7 +302,28 @@ var runCmd = &cobra.Command{
 			// Add clients to the pool.
 			for i := 0; i < cfg.GetSize(); i++ {
 				clientConfig := clients[name]
-				client := network.NewClient(&clientConfig, logger)
+				client := network.NewClient(runCtx, &clientConfig, logger)
+
+				eventOptions := trace.WithAttributes(
+					attribute.String("name", name),
+					attribute.String("network", client.Network),
+					attribute.String("address", client.Address),
+					attribute.Int("receiveBufferSize", client.ReceiveBufferSize),
+					attribute.Int("receiveChunkSize", client.ReceiveChunkSize),
+					attribute.String("receiveDeadline", client.ReceiveDeadline.String()),
+					attribute.String("sendDeadline", client.SendDeadline.String()),
+					attribute.Bool("tcpKeepAlive", client.TCPKeepAlive),
+					attribute.String("tcpKeepAlivePeriod", client.TCPKeepAlivePeriod.String()),
+					attribute.String("localAddress", client.Conn.LocalAddr().String()),
+					attribute.String("remoteAddress", client.Conn.RemoteAddr().String()),
+				)
+				if client.ID != "" {
+					eventOptions = trace.WithAttributes(
+						attribute.String("id", client.ID),
+					)
+				}
+
+				span.AddEvent("Create client", eventOptions)
 
 				if client != nil {
 					clientCfg := map[string]interface{}{
@@ -266,11 +340,13 @@ var runCmd = &cobra.Command{
 					_, err := pluginRegistry.Run(context.Background(), clientCfg, sdkPlugin.OnNewClient)
 					if err != nil {
 						logger.Error().Err(err).Msg("Failed to run OnNewClient hooks")
+						span.RecordError(err)
 					}
 
 					err = pools[name].Put(client.ID, client)
 					if err != nil {
 						logger.Error().Err(err).Msg("Failed to add client to the pool")
+						span.RecordError(err)
 					}
 				}
 			}
@@ -279,8 +355,8 @@ var runCmd = &cobra.Command{
 			logger.Info().Fields(map[string]interface{}{
 				"name":  name,
 				"count": fmt.Sprint(pools[name].Size()),
-			}).Msg(
-				"There are clients available in the pool")
+			}).Msg("There are clients available in the pool")
+
 			if pools[name].Size() != cfg.GetSize() {
 				logger.Error().Msg(
 					"The pool size is incorrect, either because " +
@@ -296,14 +372,19 @@ var runCmd = &cobra.Command{
 				sdkPlugin.OnNewPool)
 			if err != nil {
 				logger.Error().Err(err).Msg("Failed to run OnNewPool hooks")
+				span.RecordError(err)
 			}
 		}
 
+		span.End()
+
+		_, span = otel.Tracer(config.TracerName).Start(runCtx, "Create proxies")
 		// Create and initialize prefork proxies with each pool of clients.
 		for name, cfg := range conf.Global.Proxies {
 			logger := loggers[name]
 			clientConfig := clients[name]
 			proxies[name] = network.NewProxy(
+				runCtx,
 				pools[name],
 				pluginRegistry,
 				cfg.Elastic,
@@ -313,20 +394,32 @@ var runCmd = &cobra.Command{
 				logger,
 			)
 
+			span.AddEvent("Create proxy", trace.WithAttributes(
+				attribute.String("name", name),
+				attribute.Bool("elastic", cfg.Elastic),
+				attribute.Bool("reuseElasticClients", cfg.ReuseElasticClients),
+				attribute.String("healthCheckPeriod", cfg.HealthCheckPeriod.String()),
+			))
+
 			if data, ok := conf.GlobalKoanf.Get("proxy").(map[string]interface{}); ok {
 				_, err = pluginRegistry.Run(context.Background(), data, sdkPlugin.OnNewProxy)
 				if err != nil {
 					logger.Error().Err(err).Msg("Failed to run OnNewProxy hooks")
+					span.RecordError(err)
 				}
 			} else {
 				logger.Error().Msg("Failed to get proxy from config")
 			}
 		}
 
+		span.End()
+
+		_, span = otel.Tracer(config.TracerName).Start(runCtx, "Create servers")
 		// Create and initialize servers.
 		for name, cfg := range conf.Global.Servers {
 			logger := loggers[name]
 			servers[name] = network.NewServer(
+				runCtx,
 				cfg.Network,
 				cfg.Address,
 				cfg.SoftLimit,
@@ -362,15 +455,39 @@ var runCmd = &cobra.Command{
 				pluginRegistry,
 			)
 
+			span.AddEvent("Create server", trace.WithAttributes(
+				attribute.String("name", name),
+				attribute.String("network", cfg.Network),
+				attribute.String("address", cfg.Address),
+				attribute.Int64("softLimit", int64(cfg.SoftLimit)),
+				attribute.Int64("hardLimit", int64(cfg.HardLimit)),
+				attribute.String("tickInterval", cfg.TickInterval.String()),
+				attribute.Bool("multiCore", cfg.MultiCore),
+				attribute.Bool("lockOSThread", cfg.LockOSThread),
+				attribute.Bool("enableTicker", cfg.EnableTicker),
+				attribute.String("loadBalancer", cfg.LoadBalancer),
+				attribute.Int("readBufferCap", cfg.ReadBufferCap),
+				attribute.Int("writeBufferCap", cfg.WriteBufferCap),
+				attribute.Int("socketRecvBuffer", cfg.SocketRecvBuffer),
+				attribute.Int("socketSendBuffer", cfg.SocketSendBuffer),
+				attribute.Bool("reuseAddress", cfg.ReuseAddress),
+				attribute.Bool("reusePort", cfg.ReusePort),
+				attribute.String("tcpKeepAlive", cfg.TCPKeepAlive.String()),
+				attribute.Bool("tcpNoDelay", cfg.TCPNoDelay),
+			))
+
 			if data, ok := conf.GlobalKoanf.Get("servers").(map[string]interface{}); ok {
 				_, err = pluginRegistry.Run(context.Background(), data, sdkPlugin.OnNewServer)
 				if err != nil {
 					logger.Error().Err(err).Msg("Failed to run OnNewServer hooks")
+					span.RecordError(err)
 				}
 			} else {
 				logger.Error().Msg("Failed to get the servers configuration")
 			}
 		}
+
+		span.End()
 
 		// Shutdown the server gracefully.
 		var signals []os.Signal
@@ -392,6 +509,8 @@ var runCmd = &cobra.Command{
 			for sig := range signalsCh {
 				for _, s := range signals {
 					if sig != s {
+						_, span := otel.Tracer(config.TracerName).Start(runCtx, "Shutdown server")
+
 						logger.Info().Msg("Notifying the plugins that the server is shutting down")
 						_, err := pluginRegistry.Run(
 							context.Background(),
@@ -400,34 +519,48 @@ var runCmd = &cobra.Command{
 						)
 						if err != nil {
 							logger.Error().Err(err).Msg("Failed to run OnSignal hooks")
+							span.RecordError(err)
 						}
 
 						logger.Info().Msg("Stopping GatewayD")
+						span.AddEvent("Stopping GatewayD", trace.WithAttributes(
+							attribute.String("signal", sig.String()),
+						))
 						healthCheckScheduler.Clear()
 						logger.Info().Msg("Stopped health check scheduler")
+						span.AddEvent("Stopped health check scheduler")
 						if metricsMerger != nil {
 							metricsMerger.Stop()
 							logger.Info().Msg("Stopped metrics merger")
+							span.AddEvent("Stopped metrics merger")
 						}
 						for name, server := range servers {
 							logger.Info().Str("name", name).Msg("Stopping server")
 							server.Shutdown()
+							span.AddEvent("Stopped server")
 						}
 						logger.Info().Msg("Stopped servers")
 						pluginRegistry.Shutdown()
 						logger.Info().Msg("Stopped plugin registry")
+						span.AddEvent("Stopped plugin registry")
+
+						span.End()
 						os.Exit(0)
 					}
 				}
 			}
 		}(pluginRegistry, logger, servers)
 
+		_, span = otel.Tracer(config.TracerName).Start(runCtx, "Start servers")
 		// Start the server.
 		for name, server := range servers {
 			logger := loggers[name]
 			go func(server *network.Server, logger zerolog.Logger) {
+				span.AddEvent("Start server")
 				if err := server.Run(); err != nil {
 					logger.Error().Err(err).Msg("Failed to start server")
+					span.RecordError(err)
+					// TODO: Shutdown the server gracefully, like in the signal handler.
 					healthCheckScheduler.Clear()
 					if metricsMerger != nil {
 						metricsMerger.Stop()
@@ -438,6 +571,7 @@ var runCmd = &cobra.Command{
 				}
 			}(server, logger)
 		}
+		span.End()
 
 		// Wait for the server to shutdown.
 		<-make(chan struct{})
@@ -455,6 +589,8 @@ func init() {
 		&pluginConfigFile,
 		"plugin-config", "p", "./gatewayd_plugins.yaml",
 		"Plugin config file")
+	rootCmd.PersistentFlags().BoolVar(
+		&enableTracing, "tracing", false, "Enable tracing")
 	rootCmd.PersistentFlags().BoolVar(
 		&enableSentry, "sentry", true, "Enable Sentry")
 }

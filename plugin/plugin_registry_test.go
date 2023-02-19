@@ -23,8 +23,9 @@ func NewPluginRegistry(t *testing.T) *Registry {
 		Level:             zerolog.DebugLevel,
 		NoColor:           true,
 	}
-	logger := logging.NewLogger(cfg)
-	reg := NewRegistry(config.Loose, config.PassDown, config.Accept, logger)
+	logger := logging.NewLogger(context.Background(), cfg)
+	reg := NewRegistry(
+		context.Background(), config.Loose, config.PassDown, config.Accept, logger)
 	return reg
 }
 

@@ -22,7 +22,7 @@ import (
 func TestRunServer(t *testing.T) {
 	errs := make(chan error)
 
-	logger := logging.NewLogger(logging.LoggerConfig{
+	logger := logging.NewLogger(context.Background(), logging.LoggerConfig{
 		Output:            []config.LogOutput{config.Console},
 		TimeFormat:        zerolog.TimeFormatUnix,
 		ConsoleTimeFormat: config.DefaultConsoleTimeFormat,
@@ -30,7 +30,8 @@ func TestRunServer(t *testing.T) {
 		NoColor:           true,
 	})
 
-	pluginRegistry := plugin.NewRegistry(config.Loose, config.PassDown, config.Accept, logger)
+	pluginRegistry := plugin.NewRegistry(
+		context.Background(), config.Loose, config.PassDown, config.Accept, logger)
 
 	onTrafficFromClient := func(
 		ctx context.Context,
@@ -152,23 +153,31 @@ func TestRunServer(t *testing.T) {
 	}
 
 	// Create a connection pool.
-	pool := pool.NewPool(3)
-	client1 := NewClient(&clientConfig, logger)
+	pool := pool.NewPool(context.Background(), 3)
+	client1 := NewClient(context.Background(), &clientConfig, logger)
 	err := pool.Put(client1.ID, client1)
 	assert.Nil(t, err)
-	client2 := NewClient(&clientConfig, logger)
+	client2 := NewClient(context.Background(), &clientConfig, logger)
 	err = pool.Put(client2.ID, client2)
 	assert.Nil(t, err)
-	client3 := NewClient(&clientConfig, logger)
+	client3 := NewClient(context.Background(), &clientConfig, logger)
 	err = pool.Put(client3.ID, client3)
 	assert.Nil(t, err)
 
 	// Create a proxy with a fixed buffer pool.
 	proxy := NewProxy(
-		pool, pluginRegistry, false, false, config.DefaultHealthCheckPeriod, &clientConfig, logger)
+		context.Background(),
+		pool,
+		pluginRegistry,
+		false,
+		false,
+		config.DefaultHealthCheckPeriod,
+		&clientConfig,
+		logger)
 
 	// Create a server.
 	server := NewServer(
+		context.Background(),
 		"tcp",
 		"127.0.0.1:15432",
 		0,
@@ -197,6 +206,7 @@ func TestRunServer(t *testing.T) {
 		for {
 			if server.IsRunning() {
 				client := NewClient(
+					context.Background(),
 					&config.Client{
 						Network:            "tcp",
 						Address:            "127.0.0.1:15432",

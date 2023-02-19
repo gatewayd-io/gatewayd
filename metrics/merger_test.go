@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -16,15 +17,18 @@ func TestMerger(t *testing.T) {
 	// so we just expose the metrics via the same mechanism to the merger.
 	go exposeMetrics(t)
 
-	logger := logging.NewLogger(logging.LoggerConfig{
-		Output:            []config.LogOutput{config.Console},
-		TimeFormat:        zerolog.TimeFormatUnix,
-		ConsoleTimeFormat: config.DefaultConsoleTimeFormat,
-		Level:             zerolog.InfoLevel,
-		NoColor:           true,
-	})
+	logger := logging.NewLogger(
+		context.Background(),
+		logging.LoggerConfig{
+			Output:            []config.LogOutput{config.Console},
+			TimeFormat:        zerolog.TimeFormatUnix,
+			ConsoleTimeFormat: config.DefaultConsoleTimeFormat,
+			Level:             zerolog.InfoLevel,
+			NoColor:           true,
+		},
+	)
 
-	merger := NewMerger(1, logger)
+	merger := NewMerger(context.Background(), 1, logger)
 	merger.Add("test", "/tmp/test.sock")
 
 	// We need to give the merger some time to read the metrics.

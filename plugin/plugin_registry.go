@@ -15,6 +15,8 @@ import (
 	goplugin "github.com/hashicorp/go-plugin"
 	"github.com/mitchellh/mapstructure"
 	"github.com/rs/zerolog"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -41,8 +43,8 @@ type IRegistry interface {
 	ForEach(f func(sdkPlugin.Identifier, *Plugin))
 	Remove(pluginID sdkPlugin.Identifier)
 	Shutdown()
-	LoadPlugins(plugins []config.Plugin)
-	RegisterHooks(pluginID sdkPlugin.Identifier)
+	LoadPlugins(ctx context.Context, plugins []config.Plugin)
+	RegisterHooks(ctx context.Context, pluginID sdkPlugin.Identifier)
 
 	// Hook management
 	IHook
@@ -51,6 +53,7 @@ type IRegistry interface {
 type Registry struct {
 	plugins pool.IPool
 	hooks   map[string]map[sdkPlugin.Priority]sdkPlugin.Method
+	ctx     context.Context //nolint:containedctx
 
 	Logger        zerolog.Logger
 	Compatibility config.CompatibilityPolicy
@@ -62,14 +65,19 @@ var _ IRegistry = &Registry{}
 
 // NewRegistry creates a new plugin registry.
 func NewRegistry(
+	ctx context.Context,
 	compatibility config.CompatibilityPolicy,
 	verification config.VerificationPolicy,
 	acceptance config.AcceptancePolicy,
 	logger zerolog.Logger,
 ) *Registry {
+	regCtx, span := otel.Tracer(config.TracerName).Start(ctx, "Create new registry")
+	defer span.End()
+
 	return &Registry{
-		plugins:       pool.NewPool(config.EmptyPoolCapacity),
+		plugins:       pool.NewPool(regCtx, config.EmptyPoolCapacity),
 		hooks:         map[string]map[sdkPlugin.Priority]sdkPlugin.Method{},
+		ctx:           regCtx,
 		Logger:        logger,
 		Compatibility: compatibility,
 		Verification:  verification,
@@ -79,9 +87,13 @@ func NewRegistry(
 
 // Add adds a plugin to the registry.
 func (reg *Registry) Add(plugin *Plugin) bool {
+	_, span := otel.Tracer(config.TracerName).Start(reg.ctx, "Add")
+	defer span.End()
+
 	_, loaded, err := reg.plugins.GetOrPut(plugin.ID, plugin)
 	if err != nil {
 		reg.Logger.Error().Err(err).Msg("Failed to add plugin to registry")
+		span.RecordError(err)
 		return false
 	}
 	return loaded
@@ -89,6 +101,9 @@ func (reg *Registry) Add(plugin *Plugin) bool {
 
 // Get returns a plugin from the registry.
 func (reg *Registry) Get(pluginID sdkPlugin.Identifier) *Plugin {
+	_, span := otel.Tracer(config.TracerName).Start(reg.ctx, "Get")
+	defer span.End()
+
 	if plugin, ok := reg.plugins.Get(pluginID).(*Plugin); ok {
 		return plugin
 	}
@@ -98,6 +113,9 @@ func (reg *Registry) Get(pluginID sdkPlugin.Identifier) *Plugin {
 
 // List returns a list of all plugins in the registry.
 func (reg *Registry) List() []sdkPlugin.Identifier {
+	_, span := otel.Tracer(config.TracerName).Start(reg.ctx, "List")
+	defer span.End()
+
 	var plugins []sdkPlugin.Identifier
 	reg.plugins.ForEach(func(key, _ interface{}) bool {
 		if id, ok := key.(sdkPlugin.Identifier); ok {
@@ -110,11 +128,16 @@ func (reg *Registry) List() []sdkPlugin.Identifier {
 
 // Size returns the number of plugins in the registry.
 func (reg *Registry) Size() int {
+	_, span := otel.Tracer(config.TracerName).Start(reg.ctx, "Size")
+	defer span.End()
 	return reg.plugins.Size()
 }
 
 // Exists checks if a plugin exists in the registry.
 func (reg *Registry) Exists(name, version, remoteURL string) bool {
+	_, span := otel.Tracer(config.TracerName).Start(reg.ctx, "Exists")
+	defer span.End()
+
 	for _, plugin := range reg.List() {
 		if plugin.Name == name && plugin.RemoteURL == remoteURL {
 			// Parse the supplied version and the version in the registry.
@@ -149,11 +172,14 @@ func (reg *Registry) Exists(name, version, remoteURL string) bool {
 }
 
 // ForEach iterates over all plugins in the registry.
-func (reg *Registry) ForEach(f func(sdkPlugin.Identifier, *Plugin)) {
+func (reg *Registry) ForEach(function func(sdkPlugin.Identifier, *Plugin)) {
+	_, span := otel.Tracer(config.TracerName).Start(reg.ctx, "ForEach")
+	defer span.End()
+
 	reg.plugins.ForEach(func(key, value interface{}) bool {
 		if id, ok := key.(sdkPlugin.Identifier); ok {
 			if plugin, ok := value.(*Plugin); ok {
-				f(id, plugin)
+				function(id, plugin)
 			}
 		}
 		return true
@@ -162,6 +188,9 @@ func (reg *Registry) ForEach(f func(sdkPlugin.Identifier, *Plugin)) {
 
 // Remove removes plugin hooks and then removes the plugin from the registry.
 func (reg *Registry) Remove(pluginID sdkPlugin.Identifier) {
+	_, span := otel.Tracer(config.TracerName).Start(reg.ctx, "Remove")
+	defer span.End()
+
 	plugin := reg.Get(pluginID)
 	for _, hooks := range reg.hooks {
 		delete(hooks, plugin.Priority)
@@ -171,6 +200,9 @@ func (reg *Registry) Remove(pluginID sdkPlugin.Identifier) {
 
 // Shutdown shuts down all plugins in the registry.
 func (reg *Registry) Shutdown() {
+	_, span := otel.Tracer(config.TracerName).Start(reg.ctx, "Shutdown")
+	defer span.End()
+
 	reg.plugins.ForEach(func(key, value interface{}) bool {
 		if id, ok := key.(sdkPlugin.Identifier); ok {
 			if plugin, ok := value.(*Plugin); ok {
@@ -185,11 +217,17 @@ func (reg *Registry) Shutdown() {
 
 // Hooks returns the hooks map.
 func (reg *Registry) Hooks() map[string]map[sdkPlugin.Priority]sdkPlugin.Method {
+	_, span := otel.Tracer(config.TracerName).Start(reg.ctx, "Hooks")
+	defer span.End()
+
 	return reg.hooks
 }
 
 // Add adds a hook with a priority to the hooks map.
 func (reg *Registry) AddHook(hookName string, priority sdkPlugin.Priority, hookMethod sdkPlugin.Method) {
+	_, span := otel.Tracer(config.TracerName).Start(reg.ctx, "AddHook")
+	defer span.End()
+
 	if len(reg.hooks[hookName]) == 0 {
 		reg.hooks[hookName] = map[sdkPlugin.Priority]sdkPlugin.Method{priority: hookMethod}
 	} else {
@@ -223,6 +261,9 @@ func (reg *Registry) Run(
 	hookName string,
 	opts ...grpc.CallOption,
 ) (map[string]interface{}, *gerr.GatewayDError) {
+	_, span := otel.Tracer(config.TracerName).Start(reg.ctx, "Run")
+	defer span.End()
+
 	if ctx == nil {
 		return nil, gerr.ErrNilContext
 	}
@@ -241,6 +282,7 @@ func (reg *Registry) Run(
 	} else if casted, err := structpb.NewStruct(args); err == nil {
 		params = casted
 	} else {
+		span.RecordError(err)
 		return nil, gerr.ErrCastFailed.Wrap(err)
 	}
 
@@ -273,6 +315,7 @@ func (reg *Registry) Run(
 					"priority": priority,
 				},
 			).Msg("Hook returned an error")
+			span.RecordError(err)
 		}
 
 		// This is done to ensure that the return value of the hook is always valid,
@@ -322,12 +365,24 @@ func (reg *Registry) Run(
 }
 
 // LoadPlugins loads plugins from the config file.
-func (reg *Registry) LoadPlugins(plugins []config.Plugin) {
+func (reg *Registry) LoadPlugins(ctx context.Context, plugins []config.Plugin) {
 	// TODO: Append built-in plugins to the list of plugins
 	// Built-in plugins are plugins that are compiled and shipped with the gatewayd binary.
+	ctx, span := otel.Tracer("").Start(ctx, "Load plugins")
+	defer span.End()
 
 	// Add each plugin to the registry.
 	for priority, pCfg := range plugins {
+		pluginCtx, span := otel.Tracer("").Start(ctx, "Load plugin")
+		span.SetAttributes(attribute.Int("priority", priority))
+		span.SetAttributes(attribute.String("name", pCfg.Name))
+		span.SetAttributes(attribute.Bool("enabled", pCfg.Enabled))
+		span.SetAttributes(attribute.String("checksum", pCfg.Checksum))
+		span.SetAttributes(attribute.String("local_path", pCfg.LocalPath))
+		span.SetAttributes(attribute.StringSlice("args", pCfg.Args))
+		span.SetAttributes(attribute.StringSlice("env", pCfg.Env))
+		defer span.End()
+
 		reg.Logger.Debug().Str("name", pCfg.Name).Msg("Loading plugin")
 		plugin := &Plugin{
 			ID: sdkPlugin.Identifier{
@@ -339,6 +394,8 @@ func (reg *Registry) LoadPlugins(plugins []config.Plugin) {
 			Args:      pCfg.Args,
 			Env:       pCfg.Env,
 		}
+
+		span.AddEvent("Created plugin object")
 
 		// Is the plugin enabled?
 		plugin.Enabled = pCfg.Enabled
@@ -378,6 +435,8 @@ func (reg *Registry) LoadPlugins(plugins []config.Plugin) {
 			continue
 		}
 
+		span.AddEvent("Verified plugin checksum")
+
 		// Plugin priority is determined by the order in which the plugin is listed
 		// in the config file. Built-in plugins are loaded first, followed by user-defined
 		// plugins. Built-in plugins have a priority of 0 to 999, and user-defined plugins
@@ -407,11 +466,15 @@ func (reg *Registry) LoadPlugins(plugins []config.Plugin) {
 			},
 		)
 
+		span.AddEvent("Created plugin client")
+
 		reg.Logger.Debug().Str("name", plugin.ID.Name).Msg("Plugin loaded")
 		if _, err := plugin.Start(); err != nil {
 			reg.Logger.Debug().Str("name", plugin.ID.Name).Err(err).Msg(
 				"Failed to start plugin")
 		}
+
+		span.AddEvent("Started plugin")
 
 		// Load metadata from the plugin.
 		var metadata *structpb.Struct
@@ -420,7 +483,7 @@ func (reg *Registry) LoadPlugins(plugins []config.Plugin) {
 				"Failed to dispense plugin")
 			continue
 		} else {
-			if meta, origErr := pluginV1.GetPluginConfig(
+			if meta, origErr := pluginV1.GetPluginConfig( //nolint:contextcheck
 				context.Background(), &structpb.Struct{}); err != nil {
 				reg.Logger.Debug().Str("name", plugin.ID.Name).Err(origErr).Msg(
 					"Failed to get plugin metadata")
@@ -429,6 +492,8 @@ func (reg *Registry) LoadPlugins(plugins []config.Plugin) {
 				metadata = meta
 			}
 		}
+
+		span.AddEvent("Fetched plugin metadata")
 
 		// Retrieve plugin requirements.
 		if err := mapstructure.Decode(metadata.Fields["requires"].GetListValue().AsSlice(),
@@ -469,6 +534,8 @@ func (reg *Registry) LoadPlugins(plugins []config.Plugin) {
 			}
 		}
 
+		span.AddEvent("Verified plugin requirements")
+
 		plugin.ID.RemoteURL = metadata.Fields["id"].GetStructValue().Fields["remoteUrl"].GetStringValue()
 		plugin.ID.Version = metadata.Fields["id"].GetStructValue().Fields["version"].GetStringValue()
 		plugin.Description = metadata.Fields["description"].GetStringValue()
@@ -496,13 +563,19 @@ func (reg *Registry) LoadPlugins(plugins []config.Plugin) {
 			}
 		}
 
+		span.AddEvent("Decoded plugin metadata")
+
 		reg.Logger.Trace().Msgf("Plugin metadata: %+v", plugin)
 
 		reg.Add(plugin)
 		reg.Logger.Debug().Str("name", plugin.ID.Name).Msg("Plugin metadata loaded")
 
-		reg.RegisterHooks(plugin.ID)
+		span.AddEvent("Plugin metadata loaded")
+
+		reg.RegisterHooks(pluginCtx, plugin.ID)
 		reg.Logger.Debug().Str("name", plugin.ID.Name).Msg("Plugin hooks registered")
+
+		span.AddEvent("Registered plugin hooks")
 
 		metrics.PluginsLoaded.Inc()
 		reg.Logger.Info().Str("name", plugin.ID.Name).Msg("Plugin is ready")
@@ -510,7 +583,10 @@ func (reg *Registry) LoadPlugins(plugins []config.Plugin) {
 }
 
 // RegisterHooks registers the hooks for the given plugin.
-func (reg *Registry) RegisterHooks(pluginID sdkPlugin.Identifier) {
+func (reg *Registry) RegisterHooks(ctx context.Context, pluginID sdkPlugin.Identifier) {
+	_, span := otel.Tracer("gatewayd").Start(ctx, "Register plugin hooks")
+	defer span.End()
+
 	pluginImpl := reg.Get(pluginID)
 	reg.Logger.Debug().Str("name", pluginImpl.ID.Name).Msg(
 		"Registering hooks for plugin")
@@ -519,8 +595,11 @@ func (reg *Registry) RegisterHooks(pluginID sdkPlugin.Identifier) {
 	if pluginV1, err = pluginImpl.Dispense(); err != nil {
 		reg.Logger.Debug().Str("name", pluginImpl.ID.Name).Err(err).Msg(
 			"Failed to dispense plugin")
+		span.RecordError(err)
 		return
 	}
+
+	span.SetAttributes(attribute.StringSlice("hooks", pluginImpl.Hooks))
 
 	for _, hookName := range pluginImpl.Hooks {
 		var hookMethod sdkPlugin.Method

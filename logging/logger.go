@@ -1,7 +1,7 @@
 package logging
 
 import (
-	"bytes"
+	"context"
 	"io"
 	"log"
 	"log/syslog"
@@ -9,6 +9,7 @@ import (
 
 	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/rs/zerolog"
+	"go.opentelemetry.io/otel"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
@@ -34,12 +35,9 @@ type LoggerConfig struct {
 }
 
 // NewLogger creates a new logger with the given configuration.
-func NewLogger(cfg LoggerConfig) zerolog.Logger {
-	return NewLoggerWithBuffer(cfg, nil)
-}
+func NewLogger(ctx context.Context, cfg LoggerConfig) zerolog.Logger {
+	_, span := otel.Tracer(config.TracerName).Start(ctx, "Create new logger")
 
-// NewLoggerWithBuffer creates a new logger with the given configuration.
-func NewLoggerWithBuffer(cfg LoggerConfig, buffer *bytes.Buffer) zerolog.Logger {
 	// Create a new logger.
 	consoleWriter := zerolog.ConsoleWriter{
 		Out:        os.Stdout,
@@ -71,6 +69,8 @@ func NewLoggerWithBuffer(cfg LoggerConfig, buffer *bytes.Buffer) zerolog.Logger 
 		case config.Syslog:
 			syslogWriter, err := syslog.New(cfg.SyslogPriority, config.DefaultSyslogTag)
 			if err != nil {
+				span.RecordError(err)
+				span.End()
 				log.Fatal(err)
 			}
 			output = append(output, syslogWriter)
@@ -94,6 +94,8 @@ func NewLoggerWithBuffer(cfg LoggerConfig, buffer *bytes.Buffer) zerolog.Logger 
 	multiWriter := zerolog.MultiLevelWriter(output...)
 	logger := zerolog.New(multiWriter)
 	logger = logger.With().Timestamp().Logger()
+
+	span.End()
 
 	return logger
 }
