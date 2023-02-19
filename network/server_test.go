@@ -177,6 +177,7 @@ func TestRunServer(t *testing.T) {
 
 	// Create a server.
 	server := NewServer(
+		context.Background(),
 		"tcp",
 		"127.0.0.1:15432",
 		0,
