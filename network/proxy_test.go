@@ -23,7 +23,7 @@ func TestNewProxy(t *testing.T) {
 	})
 
 	// Create a connection pool
-	pool := pool.NewPool(config.EmptyPoolCapacity)
+	pool := pool.NewPool(context.Background(), config.EmptyPoolCapacity)
 
 	client := NewClient(
 		&config.Client{
@@ -41,7 +41,9 @@ func TestNewProxy(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Create a proxy with a fixed buffer pool
-	proxy := NewProxy(pool,
+	proxy := NewProxy(
+		context.Background(),
+		pool,
 		plugin.NewRegistry(
 			context.Background(), config.Loose, config.PassDown, config.Accept, logger),
 		false,
@@ -76,10 +78,12 @@ func TestNewProxyElastic(t *testing.T) {
 	})
 
 	// Create a connection pool
-	pool := pool.NewPool(config.EmptyPoolCapacity)
+	pool := pool.NewPool(context.Background(), config.EmptyPoolCapacity)
 
 	// Create a proxy with an elastic buffer pool
-	proxy := NewProxy(pool,
+	proxy := NewProxy(
+		context.Background(),
+		pool,
 		plugin.NewRegistry(
 			context.Background(), config.Loose, config.PassDown, config.Accept, logger),
 		true,

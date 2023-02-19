@@ -153,7 +153,7 @@ func TestRunServer(t *testing.T) {
 	}
 
 	// Create a connection pool.
-	pool := pool.NewPool(3)
+	pool := pool.NewPool(context.Background(), 3)
 	client1 := NewClient(&clientConfig, logger)
 	err := pool.Put(client1.ID, client1)
 	assert.Nil(t, err)
@@ -166,7 +166,14 @@ func TestRunServer(t *testing.T) {
 
 	// Create a proxy with a fixed buffer pool.
 	proxy := NewProxy(
-		pool, pluginRegistry, false, false, config.DefaultHealthCheckPeriod, &clientConfig, logger)
+		context.Background(),
+		pool,
+		pluginRegistry,
+		false,
+		false,
+		config.DefaultHealthCheckPeriod,
+		&clientConfig,
+		logger)
 
 	// Create a server.
 	server := NewServer(
