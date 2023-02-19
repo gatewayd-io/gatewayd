@@ -28,7 +28,7 @@ func TestMerger(t *testing.T) {
 		},
 	)
 
-	merger := NewMerger(1, logger)
+	merger := NewMerger(context.Background(), 1, logger)
 	merger.Add("test", "/tmp/test.sock")
 
 	// We need to give the merger some time to read the metrics.
