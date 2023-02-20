@@ -636,7 +636,6 @@ func (pr *Proxy) getPluginModifiedRequest(result map[string]interface{}) []byte 
 	defer span.End()
 
 	// If the hook modified the request, use the modified request.
-	//nolint:gocritic
 	if modRequest, errMsg, convErr := extractFieldValue(result, "request"); errMsg != "" {
 		pr.logger.Error().Str("error", errMsg).Msg("Error in hook")
 	} else if convErr != nil {
@@ -656,7 +655,6 @@ func (pr *Proxy) getPluginModifiedResponse(result map[string]interface{}) ([]byt
 	defer span.End()
 
 	// If the hook returns a response, use it instead of the original response.
-	//nolint:gocritic
 	if modResponse, errMsg, convErr := extractFieldValue(result, "response"); errMsg != "" {
 		pr.logger.Error().Str("error", errMsg).Msg("Error in hook")
 	} else if convErr != nil {
