@@ -97,17 +97,17 @@ jobs:
       - name: Checkout test plugin 🛎️
         uses: actions/checkout@v3
         with:
-          repository: gatewayd-io/gatewayd-plugin-test
-          path: gatewayd-plugin-test
+          repository: gatewayd-io/gatewayd-plugin-template
+          path: gatewayd-plugin-template
           token: ${{ secrets.GH_PLUGIN_TOKEN }}
 
-      - name: Build test plugin 🏗️
+      - name: Build template plugin 🏗️
         run: |
           # Build GatewayD
           make build-dev
-          # Build test plugin
-          cd gatewayd-plugin-test && make build && cp gatewayd-plugin-test ../gdp-test && cd ..
-          export SHA256SUM=$(sha256sum gdp-test | awk '{print $1}')
+          # Build template plugin
+          cd gatewayd-plugin-template && make build && cp gatewayd-plugin-template ../gdp-template && cd ..
+          export SHA256SUM=$(sha256sum gdp-template | awk '{print $1}')
           cat <<EOF > gatewayd_plugins.yaml
           verificationPolicy: "passdown"
           compatibilityPolicy: "strict"
@@ -116,9 +116,9 @@ jobs:
           healthCheckPeriod: 1s
 
           plugins:
-            - name: gatewayd-plugin-test
+            - name: gatewayd-plugin-template
               enabled: True
-              localPath: ./gdp-test
+              localPath: ./gdp-template
               args: ["--log-level", "debug"]
               env:
                 - MAGIC_COOKIE_KEY=GATEWAYD_PLUGIN
@@ -126,7 +126,7 @@ jobs:
               checksum: ${SHA256SUM}
           EOF
 
-      - name: Run GatewayD with test plugin 🚀
+      - name: Run GatewayD with template plugin 🚀
         run: |
           sed -i 's/level: "info"/level: "debug"/g' gatewayd.yaml # Enable debug logs
           ./gatewayd run &
