@@ -1,15 +1,58 @@
 # Plugin configuration file for GatewayD
 
-# Possible values: "passdown" (default), "ignore", "abort" and "remove"
+# The verification policy controls how the output of the plugin's hook, that is, its result,
+# should be handled and whether to verify the output or not.
+# - "passdown" (default): the output of the plugin is passed down to the next plugin,
+#   regardless of the result. The result is not verified.
+# - "ignore": the output of the current plugin is ignored if the verification fails, and
+#   the next plugin is called with the same input.
+# - "abort": the output of the current plugin is ignored if the verification fails, and
+#   the next plugin is not called.
+# - "remove": the output of the current plugin is ignored if the verification fails, and
+#   the next plugin is called with the same input. The current registered hook from the
+#   current plugin is removed from the list of registered hooks and it will not be called
+#   again.
 verificationPolicy: "passdown"
-# Possible values: "strict" (default) and "loose"
+
+# The compatibility policy controls how GatewayD treats plugins' requirements. If a plugin
+# requires a specific version of another plugin, the compatibility policy controls whether to
+# allow or reject the plugin.
+# - "strict" (default): the plugin is rejected if it requires a specific version of another
+#   plugin and that version is not the one currently loaded.
+# - "loose": the plugin is allowed to run even if it requires a specific version of another
+#   plugin and that version is not the one currently loaded.
 compatibilityPolicy: "strict"
-# Possible values: "accept" (default) and "reject" 
+
+# The acceptance policy controls how new dynamic hooks are handled. If a plugin registers a
+# new hook, the acceptance policy controls whether to accept or reject the new hook.
+# - "accept" (default): the new hook is accepted and registered.
+# - "reject": the new hook is rejected and not registered.
 acceptancePolicy: "accept"
+
+# The metrics policy controls whether to collect and merge metrics from plugins or not.
+# The Prometheus metrics are collected from the plugins via a Unix domain socket. The metrics
+# are merged and exposed via the GatewayD metrics endpoint via HTTP.
 enableMetricsMerger: True
+
+# The metrics merger period controls how often the metrics merger should collect and merge
+# metrics from plugins.
 metricsMergerPeriod: 5s
+
+# The health check period controls how often the health check should be performed. The health
+# check is performed by pinging each plugin. Unhealthy plugins are removed.
 healthCheckPeriod: 5s
 
+# The plugin configuration is a list of plugins to load. Each plugin is defined by a name,
+# a path to the plugin's executable, and a list of arguments to pass to the plugin. The
+# plugin's executable is expected to be a Go plugin that implements the GatewayD plugin
+# interface via the GatewayD plugin SDK using gRPC. The args field is optional and is passed
+# as command line arguments to the plugin's executable. The env field is used to pass extra
+# environment variables to the running instance of the plugin. The MAGIC_COOKIE_KEY and
+# MAGIC_COOKIE_VALUE environment variables are used to verify the identity of the plugin and
+# are required. The env field is optional if the MAGIC_COOKIE_KEY and MAGIC_COOKIE_VALUE are
+# hardcoded in the plugin's executable. The checksum field is mandatoryy and is used to verify
+# the integrity of the plugin's executable. The checksum is a SHA256 hash of the plugin's
+# executable. Checksum verification will change in the future for better security and automation.
 plugins:
   - name: gatewayd-plugin-cache
     enabled: True
