@@ -48,6 +48,9 @@ build-release: tidy
 	@sha256sum dist/gatewayd-darwin-arm64-${VERSION}.tar.gz | sed 's/dist\///g' >> dist/checksums.txt
 
 run: tidy
+	@go run main.go run
+
+run-tracing: tidy
 	@go run main.go run --tracing
 
 clean:
