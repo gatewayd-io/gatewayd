@@ -36,6 +36,7 @@ import (
 
 var (
 	enableTracing    bool
+	collectorURL     string
 	enableSentry     bool
 	pluginConfigFile string
 	globalConfigFile string
@@ -58,7 +59,7 @@ var runCmd = &cobra.Command{
 		// Enable tracing with OpenTelemetry.
 		if enableTracing {
 			// TODO: Make this configurable.
-			shutdown := tracing.OTLPTracer(true, "localhost:4317", config.TracerName)
+			shutdown := tracing.OTLPTracer(true, collectorURL, config.TracerName)
 			defer func() {
 				if err := shutdown(context.Background()); err != nil {
 					log.Fatal(err)
@@ -591,6 +592,9 @@ func init() {
 		"Plugin config file")
 	rootCmd.PersistentFlags().BoolVar(
 		&enableTracing, "tracing", false, "Enable tracing")
+	rootCmd.PersistentFlags().StringVar(
+		&collectorURL, "collector-url", "localhost:4317",
+		"Collector URL of OpenTelemetry gRPC endpoint")
 	rootCmd.PersistentFlags().BoolVar(
 		&enableSentry, "sentry", true, "Enable Sentry")
 }
