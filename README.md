@@ -7,7 +7,7 @@
     </a>
 </p>
 
-GatewayD is a cloud-native database gateway and framework for building data-driven applications. It sits between your database servers and clients and proxies all the communication happening in between.
+GatewayD is a cloud-native database gateway and framework for building data-driven applications. It sits between your database servers and clients and proxies all their communication.
 
 ## Architecture
 
@@ -15,23 +15,23 @@ The GatewayD architecture consists of a core, SDK and plugins. The core enables 
 
 - **Event-based I/O** for handling connections:
 
-    There are many events happening upon boot, running servers and proxying connections. Each event registers one or more hooks, so that plugins can connect to and receive the event and its data. Plugins can alter and return what they receive. For example, there is a hook called `onTrafficFromClient`. Plugins registered to this hook can see what the client sends and manipulate it before sending it to the server. For example, the result of an SQL query can be cached in Redis (or any other caching server) using the query as the key and the database's response as the value. Any other client that send the same query will receive the cached results without reaching the database server, until one updates the record or the cache key expires. Of course, the result of the query is actually cached in the `onTrafficFromServer` hook.
+    Many events happen upon boot, running servers and proxying connections. Each event registers one or more hooks, so plugins can connect to and receive the event and its data. Plugins can alter and return what they receive. For example, there is a hook called `onTrafficFromClient`. Plugins registered to this hook can see what the client sends and manipulate it before sending it to the server. For example, the result of an SQL query can be cached in Redis (or any other caching server) using the query as the key and the database's response as the value. Any other client that sends the same query will receive the cached results without reaching the database server, until one updates the record or the cache key expires. Of course, the query's result is cached in the `onTrafficFromServer` hook.
 
 - **Connection pooling**, health check and management:
 
-    There are two pools for handling incoming client connections. Upon startup, the server initiates a fixed number of connections to the database servers and puts them in the available connections pool. Whenever a new client wants to connect, it'll grab an available connection and puts it into the busy connection pool, thus effectively mapping these two connections together for proxying. Unused, stale and closed connections will be recycled.
+    There are two pools for handling incoming client connections. Upon startup, the server initiates a fixed number of connections to the database servers and puts them in the available connections pool. Whenever a new client wants to connect, it'll grab an available connection and puts it into the busy connection pool, thus effectively mapping these two connections together for proxying. Stale and closed connections will be recycled.
 
 - **Connection proxy** between clients and server(s):
 
-    Client connections in the busy connections pool listen to specific events, which are `onConnect`, `onClose`, `onTraffic` and so on. When traffic is seen on a client connection, the proxy starts relaying information between the client and the server. While proxying, four important hooks are called: `onTrafficFromClient`, `onTrafficToServer`, `onTrafficFromServer` and `onTrafficToClient`. These hooks pass any data they receive to plugins and plugins get to decide what to do with the data based on their priority. Multiple plugins can register to a single hook.
+    Client connections in the busy connections pool listen to specific events: `onConnect`, `onClose`, `onTraffic`, and so on. When traffic is seen on a client connection, the proxy relays information between the client and the server. While proxying, four important hooks are called: `onTrafficFromClient`, `onTrafficToServer`, `onTrafficFromServer` and `onTrafficToClient`. These hooks pass any data they receive to plugins and plugins get to decide what to do with the data based on their priority. Multiple plugins can register to a single hook.
 
 - **Configuration management** for the core and plugins (file-based, env-vars and runtime):
 
-    There are two major configurations: 1) global configuration, which is manged by the `gatewayd.yaml` file. 2) plugins configuration, which is managed by the `gatewayd_plugins.yaml` file. The global configuration includes directives for configuring loggers, metrics, clients, pools, proxies and servers. The plugins configuration includes directives for managing plugin registry and its subsystems plus the actual plugins configuration. Both of these can be overriden using environment variables. Plugins can also override the global configuration.
+    There are two primary configurations: 1) global configuration, which is managed by the `gatewayd.yaml` file. 2) plugins configuration is managed by the `gatewayd_plugins.yaml` file. The global configuration includes directives for configuring loggers, metrics, clients, pools, proxies and servers. The plugins configuration includes directives for managing the plugin registry and its subsystems plus the actual plugins configuration. Both of these can be overridden using environment variables. Plugins can also override the global configuration.
 
 - **Multi-tenancy** for supporting multiple databases and clients:
 
-    Multiple databases can be connected to the core and clients can choose which database to connect to. The work is still in progress for aggregation between databases.
+    Multiple databases can be connected to the core and clients can choose which database to connect. The work is still in progress for aggregation between databases.
 
 - **Full observability** including logging, metrics and tracing:
 
@@ -39,27 +39,27 @@ The GatewayD architecture consists of a core, SDK and plugins. The core enables 
 
 - **Logging** to console, stdout/stderr, file and (r)syslog:
 
-    The core can write logs to multiple log outputs. The log level controls how much information is written to the logs. Detailed information are written as traces and the rest have higher log levels. Log rotation and compression are also supported if logs are written to files.
+    The core can write logs to multiple log outputs. The log level controls how much information is written to the logs. Detailed information is written as traces and the rest have higher log levels. Log rotation and compression are also supported if logs are written to files.
 
 - **Metric merger and emission**:
 
-    The core exposes Prometheus metrics over HTTP. In turn, plugins can either expose their own metrics, or they can use the SDK to expose metrics over HTTP via a Unix Domain Socket. The UDS addresses geets registered in metrics merger. The metrics merger is an in-process scheduler that runs every few seconds and collects metrics from plugins. Collected metrics are relabeled and merged with the core metrics and are exposed together over HTTP via TCP.
+    The core exposes Prometheus metrics over HTTP. In turn, plugins can either expose their metrics or use the SDK to expose metrics over HTTP via a Unix Domain Socket. The UDS addresses get registered in the metrics merger. The metrics merger is an in-process scheduler that runs every few seconds and collects metrics from plugins. Collected metrics are relabeled and merged with the core metrics and are exposed over HTTP via TCP.
 
 - **Tracing** to observe deep into the core:
 
-    The core produces traces in the OpenTelemetry gRPC format. This can be connected with any tracing framework that support OpenTelemetry over gRPC, like Jaeger. A lot of information is recorded in traces and they can be correlated with logs and metrics for a great observability experience.
+    The core produces traces in the OpenTelemetry gRPC format. The trace exporter can connect with any tracing framework supporting OpenTelemetry over gRPC, such as Jaeger. Many pieces of information are recorded in traces and can be correlated with logs and metrics for an excellent observability experience.
 
 - **Plugin registry** for plugin loading and management:
 
-    The plugin registry controls the entire lifecycle of plugins, including loading them and registering their hooks in the hooks registry. It also controls running of gRPC endpoints exposed by plugins that are registered with each hook. Plugins are always loaded by the core and communicate with the core over gRPC.
+    The plugin registry controls the entire lifecycle of plugins, including loading them and registering their hooks in the hooks registry. It also controls the running of gRPC endpoints exposed by plugins registered with each hook. Plugins are always loaded by the core and communicate with the core over gRPC.
 
 - **Plugin hooks** for tapping into the event-based I/O:
 
-    The core executes many events in the entire lifetime of a pair of connections and other parts of the system. Plugins expose gRPC endpoints. Each endpoint can register to a hook. Since multiple plugins can be loaded, each of them can register to one or many hooks. The order of appearance in the plugins configurations dictates which priority each plugin has. Each hooks is a binding between an event in the core and a corresponding gRPC endpoint in one or more plugin(s).
+    The core executes many events in the entire lifetime of a pair of connections and other parts of the system. Plugins expose gRPC endpoints. Each endpoint can register to a hook. Since multiple plugins can be loaded, each can register to one or many hooks. The order of appearance in the plugins configurations dictates which priority each plugin has. Each hook is a binding between an event in the core and a corresponding gRPC endpoint in one or more plugin(s).
 
 - **Plugin health check**:
 
-    The metrics merger and the plugin registry rely on plugins being healthy at all times. If a plugin crashes or no metrics are exposed by any plugin, either of the functions might malfunction. To avoid any malfunctioning, the health check process pings plugins every few seconds and removes the faulty ones from the register and the metrics merger scheduler.
+    The metrics merger and the plugin registry rely on plugins always being healthy. Plugin crashes can cause malfunctions in the core and the metrics merger. The health check process pings plugins every few seconds and removes the faulty ones from the register and the metrics merger scheduler.
 
 <p align="center">
     <img alt="GatewayD Core Architecture v1" src="https://github.com/gatewayd-io/gatewayd/blob/main/assets/architecture-core-v1.png" style="width: 512px;">
@@ -76,9 +76,9 @@ Then, the plugins are loaded on startup to add tons of functionality, for exampl
     <img alt="GatewayD Plugins Architecture v1" src="https://github.com/gatewayd-io/gatewayd/blob/main/assets/architecture-plugins-v1.png" style="width: 512px;">
 </p>
 
-Plugins talk over **gRPC** using **protocol buffers** with the core. The core exposes a long list of hooks. Upon loading a plugin, the plugin can register to those hooks. When specific events happen in the core, like `onTrafficFromClient`, the plugins registered to that hook will be called with the parameters available in that hook, like the client request, that is, the query. Plugins can terminate client connections and return a response immediately without consulting the database server. Plugins can also emit Prometheus metrics via HTTP over UDS to the core. Then, the core aggregates, relabels and emits those metrics over an HTTP endpoint to be scraped by Prometheus.
+Plugins talk over **gRPC** using **protocol buffers** with the core. The core exposes a long list of hooks. Upon loading a plugin, the plugin can register to those hooks. When specific events happen in the core, like `onTrafficFromClient`, the plugins registered to that hook will be called with the parameters available: the client request containing the query. Plugins can terminate client connections and return a response immediately without consulting the database server. Plugins can also emit Prometheus metrics via HTTP over UDS to the core. Then, the core aggregates, relabels and emits those metrics over an HTTP endpoint to be scraped by Prometheus.
 
-The last piece of the puzzle is the SDK, which helps developers create their extensions with ease.
+The last piece of the puzzle is the SDK, which helps developers create extensions with ease.
 
 <p align="center">
     <img alt="GatewayD SDK Architecture v1" src="https://github.com/gatewayd-io/gatewayd/blob/main/assets/architecture-sdk-v1.png" style="width: 512px;">
@@ -109,4 +109,4 @@ $ ./gatewayd run
 2023-02-06T 20:20:32+01:00 INF GatewayD is running pid=9566
 ```
 
-As shown above in the console logs, the `gatewayd-plugin-cache` loads and exposes metrics over HTTP via `/tmp/gatewayd-plugin-cache.sock`. The metrics merger is started and collects, aggregates and relabels metrics from plugins, and merges them with metrics emitted from the core. It'll then expose those metrics over HTTP via `http://localhost:2112/metrics`. Ten connections are connected to the PostgreSQL on port 5432 and are put in the pool, ready to serve incoming connections from clients. Next, a connection health check is run to recycle connections when no authenticated client exists - This is to deal with timeout on the database server. When all the above is set up, GatewayD starts listening on port 15432. The clients can point to GatewayD's address and start working as before while GatewayD is proxying calls. If you run Redis, `SELECT` queries sent through GatewayD will end up being cached along with their response from PostgreSQL. The next time another client runs the same query, the response will be read from the cache and returned to the client, without touching server. When done testing, you should be able to gracefully stop GatewayD using `CTRL+C`. In the above example, only one plugin, `gatewayd-plugin-cache`, is loaded, but GatewayD is perfectly capable of handling multiple plugins.
+As shown above in the console logs, the `gatewayd-plugin-cache` loads and exposes metrics over HTTP via `/tmp/gatewayd-plugin-cache.sock`. The metrics merger is started and collects, aggregates and relabels metrics from plugins, and merges them with metrics emitted from the core. It'll then expose those metrics over HTTP via `http://localhost:2112/metrics`. Ten connections are connected to the PostgreSQL on port 5432 and are put in the pool, ready to serve incoming connections from clients. Next, a connection health check is run to recycle connections when no authenticated client exists - This is to deal with timeout on the database server. When all the above is set up, GatewayD starts listening on port 15432. The clients can point to GatewayD's address and start working as before while GatewayD is proxying calls. If you run Redis, `SELECT` queries sent through GatewayD and their response from PostgreSQL are cached. The next time another client runs the same query, the response will be read from the cache and returned to the client, without touching the server. When done testing, you should be able to gracefully stop GatewayD using `CTRL+C`. In the above example, only one plugin, `gatewayd-plugin-cache`, is loaded, but GatewayD is perfectly capable of handling multiple plugins.
