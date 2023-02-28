@@ -9,9 +9,7 @@ import (
 var rootCmd = &cobra.Command{
 	Use:   "gatewayd",
 	Short: "A cloud-native database gateway and framework for building data-driven applications",
-	Long: "GatewayD is a cloud-native database gateway and framework for building data-driven " +
-		"applications. It sits in between your database(s) and your database client(s) and " +
-		"proxies all queries to and their responses from the database.",
+	Long:  `GatewayD is a cloud-native database gateway and framework for building data-driven applications. It sits between your database servers and clients and proxies all their communication.`, //nolint:lll
 }
 
 func Execute() {
