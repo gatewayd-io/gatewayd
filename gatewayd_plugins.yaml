@@ -64,10 +64,10 @@ plugins:
     env:
       - MAGIC_COOKIE_KEY=GATEWAYD_PLUGIN
       - MAGIC_COOKIE_VALUE=5712b87aa5d7e9f9e9ab643e6603181c5b796015cb1c09d6f5ada882bf2a1872
-      - REDIS_ADDRESS=localhost:6379
+      - REDIS_URL=redis://localhost:6379/0
       - EXPIRY=1h
       # - DEFAULT_DB_NAME=postgres
       - METRICS_ENABLED=True
       - METRICS_UNIX_DOMAIN_SOCKET=/tmp/gatewayd-plugin-cache.sock
       - METRICS_PATH=/metrics
-    checksum: 59d669f90f34c331d499974688111d5244d8dea3a49f3309b64a5b9c9d30de2a
+    checksum: 31bd927bb05fdb9e32b9e5776c61c2530a8c432b5484bfcb27e44925e06f579a
