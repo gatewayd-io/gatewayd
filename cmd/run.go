@@ -591,7 +591,7 @@ func init() {
 		"plugin-config", "p", "./gatewayd_plugins.yaml",
 		"Plugin config file")
 	rootCmd.PersistentFlags().BoolVar(
-		&enableTracing, "tracing", false, "Enable tracing")
+		&enableTracing, "tracing", false, "Enable tracing with OpenTelemetry via gRPC")
 	rootCmd.PersistentFlags().StringVar(
 		&collectorURL, "collector-url", "localhost:4317",
 		"Collector URL of OpenTelemetry gRPC endpoint")
