@@ -62,3 +62,4 @@ test:
 
 update-all:
 	@go get -u ./...
+	@go mod tidy
