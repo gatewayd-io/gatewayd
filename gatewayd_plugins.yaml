@@ -53,6 +53,9 @@ healthCheckPeriod: 5s
 # hardcoded in the plugin's executable. The checksum field is mandatoryy and is used to verify
 # the integrity of the plugin's executable. The checksum is a SHA256 hash of the plugin's
 # executable. Checksum verification will change in the future for better security and automation.
+# The DEFAULT_DB_NAME environment variable is used to specify the default database name to
+# use when connecting to the database. The DEFAULT_DB_NAME environment variable is optional
+# and should only be used if one only has a single database in their PostgreSQL instance.
 plugins:
   - name: gatewayd-plugin-cache
     enabled: True
@@ -63,7 +66,8 @@ plugins:
       - MAGIC_COOKIE_VALUE=5712b87aa5d7e9f9e9ab643e6603181c5b796015cb1c09d6f5ada882bf2a1872
       - REDIS_ADDRESS=localhost:6379
       - EXPIRY=1h
+      # - DEFAULT_DB_NAME=postgres
       - METRICS_ENABLED=True
       - METRICS_UNIX_DOMAIN_SOCKET=/tmp/gatewayd-plugin-cache.sock
       - METRICS_PATH=/metrics
-    checksum: fd00cc8a3336b3294e4d6377e874a10953bd6a1ecd233b1463851e11af5d8487
+    checksum: 59d669f90f34c331d499974688111d5244d8dea3a49f3309b64a5b9c9d30de2a
