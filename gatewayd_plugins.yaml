@@ -70,4 +70,4 @@ plugins:
       - METRICS_ENABLED=True
       - METRICS_UNIX_DOMAIN_SOCKET=/tmp/gatewayd-plugin-cache.sock
       - METRICS_PATH=/metrics
-    checksum: 0dba7b28ccd9ee693d79c376f7e319c3ff15a131f7e0fad4423fb6f0e3814324
+    checksum: 1a23fc871cbb16c9c13bf32d162aaa43ff94d55a9b3d5b17d7268394afa3289a
