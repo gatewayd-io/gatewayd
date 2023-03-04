@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package api.v1;
+
+// import "google/protobuf/struct.proto";
+import "google/protobuf/empty.proto";
+import "google/api/annotations.proto";
+
+option go_package = "github.com/gatewayd-io/gatewayd/api/v1";
+
+message VersionResponse {
+    string version = 1;
+}
+
+service GatewayDAPIService {
+    // Version returns the version of the GatewayD.
+    rpc Version (google.protobuf.Empty) returns (VersionResponse) {
+        option (google.api.http) = {
+            post: "/v1/GatewayDPluginService/Version"
+            body: "*"
+        };
+    }
+}
