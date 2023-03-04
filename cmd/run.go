@@ -491,10 +491,23 @@ var runCmd = &cobra.Command{
 
 		span.End()
 
-		go api.StartGRPCAPI()
+		apiOptions := api.Options{
+			GRPCNetwork: "tcp",
+			GRPCAddress: ":9090",
+			HTTPAddress: ":8080",
+		}
+
+		go api.StartGRPCAPI(&api.API{
+			Options:        &apiOptions,
+			Config:         conf,
+			PluginRegistry: pluginRegistry,
+			Pools:          pools,
+			Proxies:        proxies,
+			Servers:        servers,
+		})
 		logger.Info().Msg("Started the HTTP API")
 
-		go api.StartHTTPAPI()
+		go api.StartHTTPAPI(&apiOptions)
 		logger.Info().Msg("Started the gRPC API")
 
 		// Shutdown the server gracefully.
