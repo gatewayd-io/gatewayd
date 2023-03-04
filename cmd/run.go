@@ -491,8 +491,11 @@ var runCmd = &cobra.Command{
 
 		span.End()
 
-		go api.RungRPCAPI()
-		go api.RunHTTPAPI()
+		go api.StartGRPCAPI()
+		logger.Info().Msg("Started the HTTP API")
+
+		go api.StartHTTPAPI()
+		logger.Info().Msg("Started the gRPC API")
 
 		// Shutdown the server gracefully.
 		var signals []os.Signal

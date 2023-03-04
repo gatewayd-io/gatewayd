@@ -30,7 +30,7 @@ func (a *API) Version(ctx context.Context, _ *emptypb.Empty) (*v1.VersionRespons
 	}, nil
 }
 
-func RungRPCAPI() error {
+func StartGRPCAPI() error {
 	listener, err := net.Listen("tcp", ":9090")
 	if err != nil {
 		return err
@@ -42,7 +42,7 @@ func RungRPCAPI() error {
 	return grpcServer.Serve(listener)
 }
 
-func RunHTTPAPI() error {
+func StartHTTPAPI() error {
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
