@@ -21,7 +21,7 @@ import (
 var swaggerUI embed.FS
 
 type API struct {
-	v1.UnimplementedGatewayDAPIServiceServer
+	v1.UnimplementedGatewayDAdminAPIServiceServer
 }
 
 func (a *API) Version(ctx context.Context, _ *emptypb.Empty) (*v1.VersionResponse, error) {
@@ -38,7 +38,7 @@ func RungRPCAPI() error {
 
 	grpcServer := grpc.NewServer()
 	reflection.Register(grpcServer)
-	v1.RegisterGatewayDAPIServiceServer(grpcServer, &API{})
+	v1.RegisterGatewayDAdminAPIServiceServer(grpcServer, &API{})
 	return grpcServer.Serve(listener)
 }
 
@@ -51,7 +51,7 @@ func RunHTTPAPI() error {
 	// Note: Make sure the gRPC server is running properly and accessible
 	rmux := runtime.NewServeMux()
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
-	err := v1.RegisterGatewayDAPIServiceHandlerFromEndpoint(ctx, rmux, "localhost:9090", opts)
+	err := v1.RegisterGatewayDAdminAPIServiceHandlerFromEndpoint(ctx, rmux, "localhost:9090", opts)
 	if err != nil {
 		return err
 	}
