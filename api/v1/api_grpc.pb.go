@@ -12,6 +12,7 @@ import (
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
+	structpb "google.golang.org/protobuf/types/known/structpb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -25,6 +26,18 @@ const _ = grpc.SupportPackageIsVersion7
 type GatewayDAdminAPIServiceClient interface {
 	// Version returns the version of the GatewayD.
 	Version(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*VersionResponse, error)
+	// GetGlobalConfig returns the global configuration of the GatewayD.
+	GetGlobalConfig(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*structpb.Struct, error)
+	// GetPluginConfig returns the configuration of the specified plugin.
+	GetPluginConfig(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*structpb.Struct, error)
+	// GetPlugins returns the list of plugins installed on the GatewayD.
+	GetPlugins(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*PluginConfigs, error)
+	// GetPools returns the list of pools configured on the GatewayD.
+	GetPools(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*structpb.Struct, error)
+	// GetProxies returns the list of proxies configured on the GatewayD.
+	GetProxies(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*structpb.Struct, error)
+	// GetServers returns the list of servers configured on the GatewayD.
+	GetServers(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*structpb.Struct, error)
 }
 
 type gatewayDAdminAPIServiceClient struct {
@@ -44,12 +57,78 @@ func (c *gatewayDAdminAPIServiceClient) Version(ctx context.Context, in *emptypb
 	return out, nil
 }
 
+func (c *gatewayDAdminAPIServiceClient) GetGlobalConfig(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*structpb.Struct, error) {
+	out := new(structpb.Struct)
+	err := c.cc.Invoke(ctx, "/api.v1.GatewayDAdminAPIService/GetGlobalConfig", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *gatewayDAdminAPIServiceClient) GetPluginConfig(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*structpb.Struct, error) {
+	out := new(structpb.Struct)
+	err := c.cc.Invoke(ctx, "/api.v1.GatewayDAdminAPIService/GetPluginConfig", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *gatewayDAdminAPIServiceClient) GetPlugins(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*PluginConfigs, error) {
+	out := new(PluginConfigs)
+	err := c.cc.Invoke(ctx, "/api.v1.GatewayDAdminAPIService/GetPlugins", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *gatewayDAdminAPIServiceClient) GetPools(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*structpb.Struct, error) {
+	out := new(structpb.Struct)
+	err := c.cc.Invoke(ctx, "/api.v1.GatewayDAdminAPIService/GetPools", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *gatewayDAdminAPIServiceClient) GetProxies(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*structpb.Struct, error) {
+	out := new(structpb.Struct)
+	err := c.cc.Invoke(ctx, "/api.v1.GatewayDAdminAPIService/GetProxies", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *gatewayDAdminAPIServiceClient) GetServers(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*structpb.Struct, error) {
+	out := new(structpb.Struct)
+	err := c.cc.Invoke(ctx, "/api.v1.GatewayDAdminAPIService/GetServers", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GatewayDAdminAPIServiceServer is the server API for GatewayDAdminAPIService service.
 // All implementations must embed UnimplementedGatewayDAdminAPIServiceServer
 // for forward compatibility
 type GatewayDAdminAPIServiceServer interface {
 	// Version returns the version of the GatewayD.
 	Version(context.Context, *emptypb.Empty) (*VersionResponse, error)
+	// GetGlobalConfig returns the global configuration of the GatewayD.
+	GetGlobalConfig(context.Context, *emptypb.Empty) (*structpb.Struct, error)
+	// GetPluginConfig returns the configuration of the specified plugin.
+	GetPluginConfig(context.Context, *emptypb.Empty) (*structpb.Struct, error)
+	// GetPlugins returns the list of plugins installed on the GatewayD.
+	GetPlugins(context.Context, *emptypb.Empty) (*PluginConfigs, error)
+	// GetPools returns the list of pools configured on the GatewayD.
+	GetPools(context.Context, *emptypb.Empty) (*structpb.Struct, error)
+	// GetProxies returns the list of proxies configured on the GatewayD.
+	GetProxies(context.Context, *emptypb.Empty) (*structpb.Struct, error)
+	// GetServers returns the list of servers configured on the GatewayD.
+	GetServers(context.Context, *emptypb.Empty) (*structpb.Struct, error)
 	mustEmbedUnimplementedGatewayDAdminAPIServiceServer()
 }
 
@@ -59,6 +138,24 @@ type UnimplementedGatewayDAdminAPIServiceServer struct {
 
 func (UnimplementedGatewayDAdminAPIServiceServer) Version(context.Context, *emptypb.Empty) (*VersionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Version not implemented")
+}
+func (UnimplementedGatewayDAdminAPIServiceServer) GetGlobalConfig(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetGlobalConfig not implemented")
+}
+func (UnimplementedGatewayDAdminAPIServiceServer) GetPluginConfig(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPluginConfig not implemented")
+}
+func (UnimplementedGatewayDAdminAPIServiceServer) GetPlugins(context.Context, *emptypb.Empty) (*PluginConfigs, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPlugins not implemented")
+}
+func (UnimplementedGatewayDAdminAPIServiceServer) GetPools(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPools not implemented")
+}
+func (UnimplementedGatewayDAdminAPIServiceServer) GetProxies(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetProxies not implemented")
+}
+func (UnimplementedGatewayDAdminAPIServiceServer) GetServers(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetServers not implemented")
 }
 func (UnimplementedGatewayDAdminAPIServiceServer) mustEmbedUnimplementedGatewayDAdminAPIServiceServer() {
 }
@@ -92,6 +189,114 @@ func _GatewayDAdminAPIService_Version_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _GatewayDAdminAPIService_GetGlobalConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GatewayDAdminAPIServiceServer).GetGlobalConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.v1.GatewayDAdminAPIService/GetGlobalConfig",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GatewayDAdminAPIServiceServer).GetGlobalConfig(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GatewayDAdminAPIService_GetPluginConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GatewayDAdminAPIServiceServer).GetPluginConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.v1.GatewayDAdminAPIService/GetPluginConfig",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GatewayDAdminAPIServiceServer).GetPluginConfig(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GatewayDAdminAPIService_GetPlugins_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GatewayDAdminAPIServiceServer).GetPlugins(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.v1.GatewayDAdminAPIService/GetPlugins",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GatewayDAdminAPIServiceServer).GetPlugins(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GatewayDAdminAPIService_GetPools_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GatewayDAdminAPIServiceServer).GetPools(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.v1.GatewayDAdminAPIService/GetPools",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GatewayDAdminAPIServiceServer).GetPools(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GatewayDAdminAPIService_GetProxies_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GatewayDAdminAPIServiceServer).GetProxies(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.v1.GatewayDAdminAPIService/GetProxies",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GatewayDAdminAPIServiceServer).GetProxies(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GatewayDAdminAPIService_GetServers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GatewayDAdminAPIServiceServer).GetServers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.v1.GatewayDAdminAPIService/GetServers",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GatewayDAdminAPIServiceServer).GetServers(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // GatewayDAdminAPIService_ServiceDesc is the grpc.ServiceDesc for GatewayDAdminAPIService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -102,6 +307,30 @@ var GatewayDAdminAPIService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Version",
 			Handler:    _GatewayDAdminAPIService_Version_Handler,
+		},
+		{
+			MethodName: "GetGlobalConfig",
+			Handler:    _GatewayDAdminAPIService_GetGlobalConfig_Handler,
+		},
+		{
+			MethodName: "GetPluginConfig",
+			Handler:    _GatewayDAdminAPIService_GetPluginConfig_Handler,
+		},
+		{
+			MethodName: "GetPlugins",
+			Handler:    _GatewayDAdminAPIService_GetPlugins_Handler,
+		},
+		{
+			MethodName: "GetPools",
+			Handler:    _GatewayDAdminAPIService_GetPools_Handler,
+		},
+		{
+			MethodName: "GetProxies",
+			Handler:    _GatewayDAdminAPIService_GetProxies_Handler,
+		},
+		{
+			MethodName: "GetServers",
+			Handler:    _GatewayDAdminAPIService_GetServers_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
