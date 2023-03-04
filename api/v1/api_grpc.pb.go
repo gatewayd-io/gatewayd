@@ -19,86 +19,89 @@ import (
 // Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
-// GatewayDAPIServiceClient is the client API for GatewayDAPIService service.
+// GatewayDAdminAPIServiceClient is the client API for GatewayDAdminAPIService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type GatewayDAPIServiceClient interface {
+type GatewayDAdminAPIServiceClient interface {
+	// Version returns the version of the GatewayD.
 	Version(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*VersionResponse, error)
 }
 
-type gatewayDAPIServiceClient struct {
+type gatewayDAdminAPIServiceClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewGatewayDAPIServiceClient(cc grpc.ClientConnInterface) GatewayDAPIServiceClient {
-	return &gatewayDAPIServiceClient{cc}
+func NewGatewayDAdminAPIServiceClient(cc grpc.ClientConnInterface) GatewayDAdminAPIServiceClient {
+	return &gatewayDAdminAPIServiceClient{cc}
 }
 
-func (c *gatewayDAPIServiceClient) Version(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*VersionResponse, error) {
+func (c *gatewayDAdminAPIServiceClient) Version(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*VersionResponse, error) {
 	out := new(VersionResponse)
-	err := c.cc.Invoke(ctx, "/api.v1.GatewayDAPIService/Version", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/api.v1.GatewayDAdminAPIService/Version", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// GatewayDAPIServiceServer is the server API for GatewayDAPIService service.
-// All implementations must embed UnimplementedGatewayDAPIServiceServer
+// GatewayDAdminAPIServiceServer is the server API for GatewayDAdminAPIService service.
+// All implementations must embed UnimplementedGatewayDAdminAPIServiceServer
 // for forward compatibility
-type GatewayDAPIServiceServer interface {
+type GatewayDAdminAPIServiceServer interface {
+	// Version returns the version of the GatewayD.
 	Version(context.Context, *emptypb.Empty) (*VersionResponse, error)
-	mustEmbedUnimplementedGatewayDAPIServiceServer()
+	mustEmbedUnimplementedGatewayDAdminAPIServiceServer()
 }
 
-// UnimplementedGatewayDAPIServiceServer must be embedded to have forward compatible implementations.
-type UnimplementedGatewayDAPIServiceServer struct {
+// UnimplementedGatewayDAdminAPIServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedGatewayDAdminAPIServiceServer struct {
 }
 
-func (UnimplementedGatewayDAPIServiceServer) Version(context.Context, *emptypb.Empty) (*VersionResponse, error) {
+func (UnimplementedGatewayDAdminAPIServiceServer) Version(context.Context, *emptypb.Empty) (*VersionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Version not implemented")
 }
-func (UnimplementedGatewayDAPIServiceServer) mustEmbedUnimplementedGatewayDAPIServiceServer() {}
+func (UnimplementedGatewayDAdminAPIServiceServer) mustEmbedUnimplementedGatewayDAdminAPIServiceServer() {
+}
 
-// UnsafeGatewayDAPIServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to GatewayDAPIServiceServer will
+// UnsafeGatewayDAdminAPIServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to GatewayDAdminAPIServiceServer will
 // result in compilation errors.
-type UnsafeGatewayDAPIServiceServer interface {
-	mustEmbedUnimplementedGatewayDAPIServiceServer()
+type UnsafeGatewayDAdminAPIServiceServer interface {
+	mustEmbedUnimplementedGatewayDAdminAPIServiceServer()
 }
 
-func RegisterGatewayDAPIServiceServer(s grpc.ServiceRegistrar, srv GatewayDAPIServiceServer) {
-	s.RegisterService(&GatewayDAPIService_ServiceDesc, srv)
+func RegisterGatewayDAdminAPIServiceServer(s grpc.ServiceRegistrar, srv GatewayDAdminAPIServiceServer) {
+	s.RegisterService(&GatewayDAdminAPIService_ServiceDesc, srv)
 }
 
-func _GatewayDAPIService_Version_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _GatewayDAdminAPIService_Version_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(GatewayDAPIServiceServer).Version(ctx, in)
+		return srv.(GatewayDAdminAPIServiceServer).Version(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/api.v1.GatewayDAPIService/Version",
+		FullMethod: "/api.v1.GatewayDAdminAPIService/Version",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GatewayDAPIServiceServer).Version(ctx, req.(*emptypb.Empty))
+		return srv.(GatewayDAdminAPIServiceServer).Version(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-// GatewayDAPIService_ServiceDesc is the grpc.ServiceDesc for GatewayDAPIService service.
+// GatewayDAdminAPIService_ServiceDesc is the grpc.ServiceDesc for GatewayDAdminAPIService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var GatewayDAPIService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "api.v1.GatewayDAPIService",
-	HandlerType: (*GatewayDAPIServiceServer)(nil),
+var GatewayDAdminAPIService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "api.v1.GatewayDAdminAPIService",
+	HandlerType: (*GatewayDAdminAPIServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
 			MethodName: "Version",
-			Handler:    _GatewayDAPIService_Version_Handler,
+			Handler:    _GatewayDAdminAPIService_Version_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

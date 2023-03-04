@@ -32,7 +32,7 @@ var _ = runtime.String
 var _ = utilities.NewDoubleArray
 var _ = metadata.Join
 
-func request_GatewayDAPIService_Version_0(ctx context.Context, marshaler runtime.Marshaler, client GatewayDAPIServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_GatewayDAdminAPIService_Version_0(ctx context.Context, marshaler runtime.Marshaler, client GatewayDAdminAPIServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
@@ -49,7 +49,7 @@ func request_GatewayDAPIService_Version_0(ctx context.Context, marshaler runtime
 
 }
 
-func local_request_GatewayDAPIService_Version_0(ctx context.Context, marshaler runtime.Marshaler, server GatewayDAPIServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_GatewayDAdminAPIService_Version_0(ctx context.Context, marshaler runtime.Marshaler, server GatewayDAdminAPIServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq emptypb.Empty
 	var metadata runtime.ServerMetadata
 
@@ -66,13 +66,13 @@ func local_request_GatewayDAPIService_Version_0(ctx context.Context, marshaler r
 
 }
 
-// RegisterGatewayDAPIServiceHandlerServer registers the http handlers for service GatewayDAPIService to "mux".
-// UnaryRPC     :call GatewayDAPIServiceServer directly.
+// RegisterGatewayDAdminAPIServiceHandlerServer registers the http handlers for service GatewayDAdminAPIService to "mux".
+// UnaryRPC     :call GatewayDAdminAPIServiceServer directly.
 // StreamingRPC :currently unsupported pending https://github.com/grpc/grpc-go/issues/906.
-// Note that using this registration option will cause many gRPC library features to stop working. Consider using RegisterGatewayDAPIServiceHandlerFromEndpoint instead.
-func RegisterGatewayDAPIServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux, server GatewayDAPIServiceServer) error {
+// Note that using this registration option will cause many gRPC library features to stop working. Consider using RegisterGatewayDAdminAPIServiceHandlerFromEndpoint instead.
+func RegisterGatewayDAdminAPIServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux, server GatewayDAdminAPIServiceServer) error {
 
-	mux.Handle("POST", pattern_GatewayDAPIService_Version_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("POST", pattern_GatewayDAdminAPIService_Version_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
@@ -80,12 +80,12 @@ func RegisterGatewayDAPIServiceHandlerServer(ctx context.Context, mux *runtime.S
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/api.v1.GatewayDAPIService/Version", runtime.WithHTTPPathPattern("/v1/GatewayDPluginService/Version"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/api.v1.GatewayDAdminAPIService/Version", runtime.WithHTTPPathPattern("/v1/GatewayDPluginService/Version"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_GatewayDAPIService_Version_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_GatewayDAdminAPIService_Version_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
@@ -93,16 +93,16 @@ func RegisterGatewayDAPIServiceHandlerServer(ctx context.Context, mux *runtime.S
 			return
 		}
 
-		forward_GatewayDAPIService_Version_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_GatewayDAdminAPIService_Version_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
 	return nil
 }
 
-// RegisterGatewayDAPIServiceHandlerFromEndpoint is same as RegisterGatewayDAPIServiceHandler but
+// RegisterGatewayDAdminAPIServiceHandlerFromEndpoint is same as RegisterGatewayDAdminAPIServiceHandler but
 // automatically dials to "endpoint" and closes the connection when "ctx" gets done.
-func RegisterGatewayDAPIServiceHandlerFromEndpoint(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) (err error) {
+func RegisterGatewayDAdminAPIServiceHandlerFromEndpoint(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) (err error) {
 	conn, err := grpc.DialContext(ctx, endpoint, opts...)
 	if err != nil {
 		return err
@@ -122,41 +122,41 @@ func RegisterGatewayDAPIServiceHandlerFromEndpoint(ctx context.Context, mux *run
 		}()
 	}()
 
-	return RegisterGatewayDAPIServiceHandler(ctx, mux, conn)
+	return RegisterGatewayDAdminAPIServiceHandler(ctx, mux, conn)
 }
 
-// RegisterGatewayDAPIServiceHandler registers the http handlers for service GatewayDAPIService to "mux".
+// RegisterGatewayDAdminAPIServiceHandler registers the http handlers for service GatewayDAdminAPIService to "mux".
 // The handlers forward requests to the grpc endpoint over "conn".
-func RegisterGatewayDAPIServiceHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
-	return RegisterGatewayDAPIServiceHandlerClient(ctx, mux, NewGatewayDAPIServiceClient(conn))
+func RegisterGatewayDAdminAPIServiceHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
+	return RegisterGatewayDAdminAPIServiceHandlerClient(ctx, mux, NewGatewayDAdminAPIServiceClient(conn))
 }
 
-// RegisterGatewayDAPIServiceHandlerClient registers the http handlers for service GatewayDAPIService
-// to "mux". The handlers forward requests to the grpc endpoint over the given implementation of "GatewayDAPIServiceClient".
-// Note: the gRPC framework executes interceptors within the gRPC handler. If the passed in "GatewayDAPIServiceClient"
+// RegisterGatewayDAdminAPIServiceHandlerClient registers the http handlers for service GatewayDAdminAPIService
+// to "mux". The handlers forward requests to the grpc endpoint over the given implementation of "GatewayDAdminAPIServiceClient".
+// Note: the gRPC framework executes interceptors within the gRPC handler. If the passed in "GatewayDAdminAPIServiceClient"
 // doesn't go through the normal gRPC flow (creating a gRPC client etc.) then it will be up to the passed in
-// "GatewayDAPIServiceClient" to call the correct interceptors.
-func RegisterGatewayDAPIServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux, client GatewayDAPIServiceClient) error {
+// "GatewayDAdminAPIServiceClient" to call the correct interceptors.
+func RegisterGatewayDAdminAPIServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux, client GatewayDAdminAPIServiceClient) error {
 
-	mux.Handle("POST", pattern_GatewayDAPIService_Version_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("POST", pattern_GatewayDAdminAPIService_Version_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/api.v1.GatewayDAPIService/Version", runtime.WithHTTPPathPattern("/v1/GatewayDPluginService/Version"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/api.v1.GatewayDAdminAPIService/Version", runtime.WithHTTPPathPattern("/v1/GatewayDPluginService/Version"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_GatewayDAPIService_Version_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_GatewayDAdminAPIService_Version_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_GatewayDAPIService_Version_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_GatewayDAdminAPIService_Version_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -164,9 +164,9 @@ func RegisterGatewayDAPIServiceHandlerClient(ctx context.Context, mux *runtime.S
 }
 
 var (
-	pattern_GatewayDAPIService_Version_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "GatewayDPluginService", "Version"}, ""))
+	pattern_GatewayDAdminAPIService_Version_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "GatewayDPluginService", "Version"}, ""))
 )
 
 var (
-	forward_GatewayDAPIService_Version_0 = runtime.ForwardResponseMessage
+	forward_GatewayDAdminAPIService_Version_0 = runtime.ForwardResponseMessage
 )

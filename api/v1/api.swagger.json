@@ -6,7 +6,7 @@
   },
   "tags": [
     {
-      "name": "GatewayDAPIService"
+      "name": "GatewayDAdminAPIService"
     }
   ],
   "consumes": [
@@ -18,7 +18,8 @@
   "paths": {
     "/v1/GatewayDPluginService/Version": {
       "post": {
-        "operationId": "GatewayDAPIService_Version",
+        "summary": "Version returns the version of the GatewayD.",
+        "operationId": "GatewayDAdminAPIService_Version",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -45,7 +46,7 @@
           }
         ],
         "tags": [
-          "GatewayDAPIService"
+          "GatewayDAdminAPIService"
         ]
       }
     }
