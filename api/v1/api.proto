@@ -12,7 +12,7 @@ message VersionResponse {
     string version = 1;
 }
 
-service GatewayDAPIService {
+service GatewayDAdminAPIService {
     // Version returns the version of the GatewayD.
     rpc Version (google.protobuf.Empty) returns (VersionResponse) {
         option (google.api.http) = {
