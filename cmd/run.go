@@ -14,6 +14,7 @@ import (
 
 	"github.com/NYTimes/gziphandler"
 	sdkPlugin "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin"
+	"github.com/gatewayd-io/gatewayd/api"
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/logging"
@@ -489,6 +490,9 @@ var runCmd = &cobra.Command{
 		}
 
 		span.End()
+
+		go api.RungRPCAPI()
+		go api.RunHTTPAPI()
 
 		// Shutdown the server gracefully.
 		var signals []os.Signal
