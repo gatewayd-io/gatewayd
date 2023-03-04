@@ -63,3 +63,9 @@ test:
 update-all:
 	@go get -u ./...
 	@go mod tidy
+
+lint:
+	@buf lint
+
+gen:
+	@buf generate
