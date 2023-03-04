@@ -69,3 +69,6 @@ lint:
 
 gen:
 	@buf generate
+
+update:
+	@buf mod update
