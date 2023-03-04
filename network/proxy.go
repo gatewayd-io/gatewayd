@@ -24,6 +24,8 @@ type IProxy interface {
 	IsHealty(cl *Client) (*Client, *gerr.GatewayDError)
 	IsExhausted() bool
 	Shutdown()
+	AvailableConnections() []string
+	BusyConnections() []string
 }
 
 type Proxy struct {
@@ -504,6 +506,36 @@ func (pr *Proxy) Shutdown() {
 	pr.busyConnections.Clear()
 	pr.scheduler.Clear()
 	pr.logger.Debug().Msg("All busy connections have been closed")
+}
+
+// AvailableConnections returns a list of available connections.
+func (pr *Proxy) AvailableConnections() []string {
+	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "AvailableConnections")
+	defer span.End()
+
+	connections := make([]string, 0)
+	pr.availableConnections.ForEach(func(_, value interface{}) bool {
+		if cl, ok := value.(*Client); ok {
+			connections = append(connections, cl.Conn.LocalAddr().String())
+		}
+		return true
+	})
+	return connections
+}
+
+// BusyConnections returns a list of busy connections.
+func (pr *Proxy) BusyConnections() []string {
+	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "BusyConnections")
+	defer span.End()
+
+	connections := make([]string, 0)
+	pr.busyConnections.ForEach(func(_, value interface{}) bool {
+		if cl, ok := value.(*Client); ok {
+			connections = append(connections, cl.Conn.LocalAddr().String())
+		}
+		return true
+	})
+	return connections
 }
 
 // receiveTrafficFromClient is a function that receives data from the client.
