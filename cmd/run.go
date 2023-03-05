@@ -505,10 +505,15 @@ var runCmd = &cobra.Command{
 			Proxies:        proxies,
 			Servers:        servers,
 		})
-		logger.Info().Msg("Started the HTTP API")
+		logger.Info().Str("address", apiOptions.HTTPAddress).Msg("Started the HTTP API")
 
 		go api.StartHTTPAPI(&apiOptions)
-		logger.Info().Msg("Started the gRPC API")
+		logger.Info().Fields(
+			map[string]interface{}{
+				"grpcNetwork": apiOptions.GRPCNetwork,
+				"grpcAddress": apiOptions.GRPCAddress,
+			},
+		).Msg("Started the gRPC API")
 
 		// Shutdown the server gracefully.
 		var signals []os.Signal
