@@ -36,14 +36,18 @@ func StartHTTPAPI(options *Options) error {
 
 	mux.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(config.Version))
+		if _, err := w.Write([]byte(config.Version)); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
 	})
 
 	if IsSwaggerEmbedded() {
 		mux.HandleFunc("/swagger.json", func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			data, _ := swaggerUI.ReadFile("v1/api.swagger.json")
-			w.Write(data)
+			if _, err := w.Write(data); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+			}
 		})
 
 		fsys, err := fs.Sub(swaggerUI, "v1/swagger-ui")
