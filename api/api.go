@@ -12,6 +12,7 @@ import (
 	"github.com/gatewayd-io/gatewayd/network"
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
+	"github.com/rs/zerolog"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -19,6 +20,7 @@ import (
 )
 
 type Options struct {
+	Logger      zerolog.Logger
 	GRPCNetwork string
 	GRPCAddress string
 	HTTPAddress string

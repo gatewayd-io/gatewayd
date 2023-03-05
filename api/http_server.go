@@ -13,7 +13,7 @@ import (
 )
 
 // StartHTTPAPI starts the HTTP API.
-func StartHTTPAPI(options *Options) error {
+func StartHTTPAPI(options *Options) {
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -25,7 +25,7 @@ func StartHTTPAPI(options *Options) error {
 	err := v1.RegisterGatewayDAdminAPIServiceHandlerFromEndpoint(
 		ctx, rmux, options.GRPCAddress, opts)
 	if err != nil {
-		return err
+		options.Logger.Err(err).Msg("failed to start HTTP API")
 	}
 
 	mux := http.NewServeMux()
@@ -37,6 +37,7 @@ func StartHTTPAPI(options *Options) error {
 	mux.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		if _, err := w.Write([]byte(config.Version)); err != nil {
+			options.Logger.Err(err).Msg("failed to serve version")
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 	})
@@ -46,17 +47,21 @@ func StartHTTPAPI(options *Options) error {
 			w.WriteHeader(http.StatusOK)
 			data, _ := swaggerUI.ReadFile("v1/api.swagger.json")
 			if _, err := w.Write(data); err != nil {
+				options.Logger.Err(err).Msg("failed to serve swagger.json")
 				w.WriteHeader(http.StatusInternalServerError)
 			}
 		})
 
 		fsys, err := fs.Sub(swaggerUI, "v1/swagger-ui")
 		if err != nil {
-			return err
+			options.Logger.Err(err).Msg("failed to serve swagger-ui")
+			return
 		}
 		mux.Handle("/swagger-ui/", http.StripPrefix("/swagger-ui/", http.FileServer(http.FS(fsys))))
 	}
 
 	// Start HTTP server (and proxy calls to gRPC server endpoint)
-	return http.ListenAndServe(options.HTTPAddress, mux)
+	if err := http.ListenAndServe(options.HTTPAddress, mux); err != nil {
+		options.Logger.Err(err).Msg("failed to start HTTP API")
+	}
 }

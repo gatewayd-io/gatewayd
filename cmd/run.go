@@ -494,6 +494,7 @@ var runCmd = &cobra.Command{
 		// Start the HTTP and gRPC APIs.
 		if conf.Global.API.Enabled {
 			apiOptions := api.Options{
+				Logger:      logger,
 				GRPCNetwork: conf.Global.API.GRPCNetwork,
 				GRPCAddress: conf.Global.API.GRPCAddress,
 				HTTPAddress: conf.Global.API.HTTPAddress,

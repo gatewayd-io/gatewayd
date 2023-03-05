@@ -9,14 +9,16 @@ import (
 )
 
 // StartGRPCAPI starts the gRPC API.
-func StartGRPCAPI(api *API) error {
+func StartGRPCAPI(api *API) {
 	listener, err := net.Listen(api.Options.GRPCNetwork, api.Options.GRPCAddress)
 	if err != nil {
-		return err
+		api.Options.Logger.Err(err).Msg("failed to start gRPC API")
 	}
 
 	grpcServer := grpc.NewServer()
 	reflection.Register(grpcServer)
 	v1.RegisterGatewayDAdminAPIServiceServer(grpcServer, api)
-	return grpcServer.Serve(listener)
+	if err := grpcServer.Serve(listener); err != nil {
+		api.Options.Logger.Err(err).Msg("failed to start gRPC API")
+	}
 }
