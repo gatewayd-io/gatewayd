@@ -63,6 +63,12 @@ type Logger struct {
 	SyslogPriority string `koanf:"syslogPriority"`
 }
 
+type Metrics struct {
+	Enabled bool   `koanf:"enabled"`
+	Address string `koanf:"address"`
+	Path    string `koanf:"path"`
+}
+
 type Pool struct {
 	Size int `koanf:"size"`
 }
@@ -93,13 +99,15 @@ type Server struct {
 	LoadBalancer     string        `koanf:"loadBalancer"`
 }
 
-type Metrics struct {
-	Enabled bool   `koanf:"enabled"`
-	Address string `koanf:"address"`
-	Path    string `koanf:"path"`
+type API struct {
+	Enabled     bool   `koanf:"enabled"`
+	HTTPAddress string `koanf:"httpAddress"`
+	GRPCAddress string `koanf:"grpcAddress"`
+	GRPCNetwork string `koanf:"grpcNetwork"`
 }
 
 type GlobalConfig struct {
+	API     API                `koanf:"api"`
 	Loggers map[string]Logger  `koanf:"loggers"`
 	Clients map[string]Client  `koanf:"clients"`
 	Pools   map[string]Pool    `koanf:"pools"`

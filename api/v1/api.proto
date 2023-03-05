@@ -1,0 +1,107 @@
+syntax = "proto3";
+
+package api.v1;
+
+// import "google/protobuf/struct.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/struct.proto";
+import "google/api/annotations.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option go_package = "github.com/gatewayd-io/gatewayd/api/v1";
+option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
+  info: {
+    title: "GatewayD Admin API";
+    version: "1.0.0";
+    contact: {
+      name: "GatewayD";
+      url: "https://github.com/gatewayd-io/gatewayd";
+      email: "info@gatewayd.io";
+    };
+    license: {
+      name: "GNU Affero General Public License v3.0";
+      url: "https://github.com/gatewayd-io/gatewayd/blob/main/LICENSE";
+    };
+  };
+};
+
+service GatewayDAdminAPIService {
+    // Version returns the version of the GatewayD.
+    rpc Version (google.protobuf.Empty) returns (VersionResponse) {
+        option (google.api.http) = {
+            get: "/v1/GatewayDPluginService/Version"
+        };
+    }
+    // GetGlobalConfig returns the global configuration of the GatewayD.
+    rpc GetGlobalConfig (google.protobuf.Empty) returns (google.protobuf.Struct) {
+        option (google.api.http) = {
+            get: "/v1/GatewayDPluginService/GetGlobalConfig"
+        };
+    }
+    // GetPluginConfig returns the configuration of the specified plugin.
+    rpc GetPluginConfig (google.protobuf.Empty) returns (google.protobuf.Struct) {
+        option (google.api.http) = {
+            get: "/v1/GatewayDPluginService/GetPluginConfig"
+        };
+    }
+    // GetPlugins returns the list of plugins installed on the GatewayD.
+    rpc GetPlugins (google.protobuf.Empty) returns (PluginConfigs) {
+        option (google.api.http) = {
+            get: "/v1/GatewayDPluginService/GetPlugins"
+        };
+    }
+    // GetPools returns the list of pools configured on the GatewayD.
+    rpc GetPools (google.protobuf.Empty) returns (google.protobuf.Struct) {
+        option (google.api.http) = {
+            get: "/v1/GatewayDPluginService/GetPools"
+        };
+    }
+    // GetProxies returns the list of proxies configured on the GatewayD.
+    rpc GetProxies (google.protobuf.Empty) returns (google.protobuf.Struct) {
+        option (google.api.http) = {
+            get: "/v1/GatewayDPluginService/GetProxies"
+        };
+    }
+    // GetServers returns the list of servers configured on the GatewayD.
+    rpc GetServers (google.protobuf.Empty) returns (google.protobuf.Struct) {
+        option (google.api.http) = {
+            get: "/v1/GatewayDPluginService/GetServers"
+        };
+    }
+}
+
+message VersionResponse {
+    string version = 1;
+    string version_info = 2;
+}
+
+message PluginName {
+    string name = 1;
+}
+
+message PluginID {
+    string name = 1;
+    string version = 2;
+    string remote_url = 3;
+    string checksum = 4;
+}
+
+message PluginConfig {
+    PluginID id = 1;
+    string description = 2;
+    repeated string authors = 3;
+    string license = 4;
+    string project_url = 5;
+    // internal and external config options
+    map<string, string> config = 6;
+    // hooks it attaches to
+    repeated string hooks = 7;
+    // required plugins
+    map<string, string> requires = 8;
+    repeated string tags = 9;
+    repeated string categories = 10;
+}
+
+message PluginConfigs {
+    repeated PluginConfig configs = 1;
+}

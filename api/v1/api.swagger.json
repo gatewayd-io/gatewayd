@@ -1,0 +1,324 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "GatewayD Admin API",
+    "version": "1.0.0",
+    "contact": {
+      "name": "GatewayD",
+      "url": "https://github.com/gatewayd-io/gatewayd",
+      "email": "info@gatewayd.io"
+    },
+    "license": {
+      "name": "GNU Affero General Public License v3.0",
+      "url": "https://github.com/gatewayd-io/gatewayd/blob/main/LICENSE"
+    }
+  },
+  "tags": [
+    {
+      "name": "GatewayDAdminAPIService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/GatewayDPluginService/GetGlobalConfig": {
+      "get": {
+        "summary": "GetGlobalConfig returns the global configuration of the GatewayD.",
+        "operationId": "GatewayDAdminAPIService_GetGlobalConfig",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "GatewayDAdminAPIService"
+        ]
+      }
+    },
+    "/v1/GatewayDPluginService/GetPluginConfig": {
+      "get": {
+        "summary": "GetPluginConfig returns the configuration of the specified plugin.",
+        "operationId": "GatewayDAdminAPIService_GetPluginConfig",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "GatewayDAdminAPIService"
+        ]
+      }
+    },
+    "/v1/GatewayDPluginService/GetPlugins": {
+      "get": {
+        "summary": "GetPlugins returns the list of plugins installed on the GatewayD.",
+        "operationId": "GatewayDAdminAPIService_GetPlugins",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1PluginConfigs"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "GatewayDAdminAPIService"
+        ]
+      }
+    },
+    "/v1/GatewayDPluginService/GetPools": {
+      "get": {
+        "summary": "GetPools returns the list of pools configured on the GatewayD.",
+        "operationId": "GatewayDAdminAPIService_GetPools",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "GatewayDAdminAPIService"
+        ]
+      }
+    },
+    "/v1/GatewayDPluginService/GetProxies": {
+      "get": {
+        "summary": "GetProxies returns the list of proxies configured on the GatewayD.",
+        "operationId": "GatewayDAdminAPIService_GetProxies",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "GatewayDAdminAPIService"
+        ]
+      }
+    },
+    "/v1/GatewayDPluginService/GetServers": {
+      "get": {
+        "summary": "GetServers returns the list of servers configured on the GatewayD.",
+        "operationId": "GatewayDAdminAPIService_GetServers",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "GatewayDAdminAPIService"
+        ]
+      }
+    },
+    "/v1/GatewayDPluginService/Version": {
+      "get": {
+        "summary": "Version returns the version of the GatewayD.",
+        "operationId": "GatewayDAdminAPIService_Version",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1VersionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "GatewayDAdminAPIService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "protobufNullValue": {
+      "type": "string",
+      "enum": [
+        "NULL_VALUE"
+      ],
+      "default": "NULL_VALUE",
+      "description": "`NullValue` is a singleton enumeration to represent the null value for the\n`Value` type union.\n\n The JSON representation for `NullValue` is JSON `null`.\n\n - NULL_VALUE: Null value."
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1PluginConfig": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/v1PluginID"
+        },
+        "description": {
+          "type": "string"
+        },
+        "authors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "license": {
+          "type": "string"
+        },
+        "projectUrl": {
+          "type": "string"
+        },
+        "config": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "internal and external config options"
+        },
+        "hooks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "title": "hooks it attaches to"
+        },
+        "requires": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "required plugins"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "v1PluginConfigs": {
+      "type": "object",
+      "properties": {
+        "configs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PluginConfig"
+          }
+        }
+      }
+    },
+    "v1PluginID": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "remoteUrl": {
+          "type": "string"
+        },
+        "checksum": {
+          "type": "string"
+        }
+      }
+    },
+    "v1VersionResponse": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "versionInfo": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

@@ -14,6 +14,7 @@ import (
 
 	"github.com/NYTimes/gziphandler"
 	sdkPlugin "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin"
+	"github.com/gatewayd-io/gatewayd/api"
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/logging"
@@ -489,6 +490,34 @@ var runCmd = &cobra.Command{
 		}
 
 		span.End()
+
+		// Start the HTTP and gRPC APIs.
+		if conf.Global.API.Enabled {
+			apiOptions := api.Options{
+				Logger:      logger,
+				GRPCNetwork: conf.Global.API.GRPCNetwork,
+				GRPCAddress: conf.Global.API.GRPCAddress,
+				HTTPAddress: conf.Global.API.HTTPAddress,
+			}
+
+			go api.StartGRPCAPI(&api.API{
+				Options:        &apiOptions,
+				Config:         conf,
+				PluginRegistry: pluginRegistry,
+				Pools:          pools,
+				Proxies:        proxies,
+				Servers:        servers,
+			})
+			logger.Info().Str("address", apiOptions.HTTPAddress).Msg("Started the HTTP API")
+
+			go api.StartHTTPAPI(&apiOptions)
+			logger.Info().Fields(
+				map[string]interface{}{
+					"grpcNetwork": apiOptions.GRPCNetwork,
+					"grpcAddress": apiOptions.GRPCAddress,
+				},
+			).Msg("Started the gRPC API")
+		}
 
 		// Shutdown the server gracefully.
 		var signals []os.Signal
