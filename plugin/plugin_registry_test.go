@@ -25,7 +25,7 @@ func NewPluginRegistry(t *testing.T) *Registry {
 	}
 	logger := logging.NewLogger(context.Background(), cfg)
 	reg := NewRegistry(
-		context.Background(), config.Loose, config.PassDown, config.Accept, logger)
+		context.Background(), config.Loose, config.PassDown, config.Accept, logger, false)
 	return reg
 }
 
