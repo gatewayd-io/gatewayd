@@ -46,7 +46,7 @@ func TestNewProxy(t *testing.T) {
 		context.Background(),
 		pool,
 		plugin.NewRegistry(
-			context.Background(), config.Loose, config.PassDown, config.Accept, logger),
+			context.Background(), config.Loose, config.PassDown, config.Accept, logger, false),
 		false,
 		false,
 		config.DefaultHealthCheckPeriod,
@@ -86,7 +86,7 @@ func TestNewProxyElastic(t *testing.T) {
 		context.Background(),
 		pool,
 		plugin.NewRegistry(
-			context.Background(), config.Loose, config.PassDown, config.Accept, logger),
+			context.Background(), config.Loose, config.PassDown, config.Accept, logger, false),
 		true,
 		false,
 		config.DefaultHealthCheckPeriod,

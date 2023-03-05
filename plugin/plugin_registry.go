@@ -54,6 +54,7 @@ type Registry struct {
 	plugins pool.IPool
 	hooks   map[string]map[sdkPlugin.Priority]sdkPlugin.Method
 	ctx     context.Context //nolint:containedctx
+	devMode bool
 
 	Logger        zerolog.Logger
 	Compatibility config.CompatibilityPolicy
@@ -70,6 +71,7 @@ func NewRegistry(
 	verification config.VerificationPolicy,
 	acceptance config.AcceptancePolicy,
 	logger zerolog.Logger,
+	devMode bool,
 ) *Registry {
 	regCtx, span := otel.Tracer(config.TracerName).Start(ctx, "Create new registry")
 	defer span.End()
@@ -78,6 +80,7 @@ func NewRegistry(
 		plugins:       pool.NewPool(regCtx, config.EmptyPoolCapacity),
 		hooks:         map[string]map[sdkPlugin.Priority]sdkPlugin.Method{},
 		ctx:           regCtx,
+		devMode:       devMode,
 		Logger:        logger,
 		Compatibility: compatibility,
 		Verification:  verification,
@@ -411,31 +414,35 @@ func (reg *Registry) LoadPlugins(ctx context.Context, plugins []config.Plugin) {
 			continue
 		}
 
-		// Checksum of the plugin.
-		if plugin.ID.Checksum == "" {
-			reg.Logger.Debug().Str("name", plugin.ID.Name).Msg(
-				"Checksum of plugin doesn't exist or is not set")
-			continue
-		}
+		if !reg.devMode {
+			// Checksum of the plugin.
+			if plugin.ID.Checksum == "" {
+				reg.Logger.Debug().Str("name", plugin.ID.Name).Msg(
+					"Checksum of plugin doesn't exist or is not set")
+				continue
+			}
 
-		// Verify the checksum.
-		// TODO: Load the plugin from a remote location if the checksum didn't match?
-		if sum, err := SHA256SUM(plugin.LocalPath); err != nil {
-			reg.Logger.Debug().Str("name", plugin.ID.Name).Err(err).Msg(
-				"Failed to calculate checksum")
-			continue
-		} else if sum != plugin.ID.Checksum {
-			reg.Logger.Debug().Fields(
-				map[string]interface{}{
-					"calculated": sum,
-					"expected":   plugin.ID.Checksum,
-					"name":       plugin.ID.Name,
-				},
-			).Msg("Checksum mismatch")
-			continue
-		}
+			// Verify the checksum.
+			// TODO: Load the plugin from a remote location if the checksum didn't match?
+			if sum, err := SHA256SUM(plugin.LocalPath); err != nil {
+				reg.Logger.Debug().Str("name", plugin.ID.Name).Err(err).Msg(
+					"Failed to calculate checksum")
+				continue
+			} else if sum != plugin.ID.Checksum {
+				reg.Logger.Debug().Fields(
+					map[string]interface{}{
+						"calculated": sum,
+						"expected":   plugin.ID.Checksum,
+						"name":       plugin.ID.Name,
+					},
+				).Msg("Checksum mismatch")
+				continue
+			}
 
-		span.AddEvent("Verified plugin checksum")
+			span.AddEvent("Verified plugin checksum")
+		} else {
+			span.AddEvent("Skipping plugin checksum verification (dev mode)")
+		}
 
 		// Plugin priority is determined by the order in which the plugin is listed
 		// in the config file. Built-in plugins are loaded first, followed by user-defined
