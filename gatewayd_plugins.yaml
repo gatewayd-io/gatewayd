@@ -42,6 +42,9 @@ metricsMergerPeriod: 5s
 # check is performed by pinging each plugin. Unhealthy plugins are removed.
 healthCheckPeriod: 5s
 
+# If the plugin crashes, should GatewayD restart it? The crash is detected by the health check.
+reloadOnCrash: True
+
 # The plugin configuration is a list of plugins to load. Each plugin is defined by a name,
 # a path to the plugin's executable, and a list of arguments to pass to the plugin. The
 # plugin's executable is expected to be a Go plugin that implements the GatewayD plugin

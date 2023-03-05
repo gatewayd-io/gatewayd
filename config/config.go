@@ -151,6 +151,7 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 		"enableMetricsMerger": true,
 		"metricsMergerPeriod": DefaultMetricsMergerPeriod.String(),
 		"healthCheckPeriod":   DefaultPluginHealthCheckPeriod.String(),
+		"reloadOnCrash":       true,
 	}
 
 	if err := c.GlobalKoanf.Load(confmap.Provider(c.globalDefaults, ""), nil); err != nil {
