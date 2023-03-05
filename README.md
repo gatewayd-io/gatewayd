@@ -59,7 +59,11 @@ The GatewayD architecture consists of a core, SDK and plugins. The core enables 
 
 - **Plugin health check**:
 
-    The metrics merger and the plugin registry rely on plugins always being healthy. Plugin crashes can cause malfunctions in the core and the metrics merger. The health check process pings plugins every few seconds and removes the faulty ones from the register and the metrics merger scheduler.
+    The metrics merger and the plugin registry rely on plugins always being healthy. Plugin crashes can cause malfunctions in the core and the metrics merger. The health check process pings plugins every few seconds and removes the faulty ones from the register and the metrics merger scheduler. The crashed plugins will be automatically reloaded.
+
+- **Admin API**
+
+    The current API exposes a few endpoints to retrieve information about various parts of the system over gRPC and HTTP. The HTTP API server also serves a `swagger.json` that contains all the endpoints and their examples. The Swagger UI is also accessible that provides a UI on top of the `swagger.json` specification document.
 
 <p align="center">
     <img alt="GatewayD Core Architecture v1" src="https://github.com/gatewayd-io/gatewayd/blob/main/assets/architecture-core-v1.png" style="width: 512px;">
