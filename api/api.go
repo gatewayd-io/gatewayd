@@ -77,29 +77,29 @@ func (a *API) GetPluginConfig(ctx context.Context, _ *emptypb.Empty) (*structpb.
 func (a *API) GetPlugins(context.Context, *emptypb.Empty) (*v1.PluginConfigs, error) {
 	plugins := make([]*v1.PluginConfig, 0)
 	a.PluginRegistry.ForEach(
-		func(id sdkPlugin.Identifier, p *plugin.Plugin) {
+		func(pluginID sdkPlugin.Identifier, plugIn *plugin.Plugin) {
 			requires := make(map[string]string, 0)
-			if p.Requires != nil {
-				for _, r := range p.Requires {
+			if plugIn.Requires != nil {
+				for _, r := range plugIn.Requires {
 					requires[r.Name] = r.Version
 				}
 			}
 			plugins = append(plugins, &v1.PluginConfig{
 				Id: &v1.PluginID{
-					Name:      id.Name,
-					Version:   id.Version,
-					RemoteUrl: id.RemoteURL,
-					Checksum:  id.Checksum,
+					Name:      pluginID.Name,
+					Version:   pluginID.Version,
+					RemoteUrl: pluginID.RemoteURL,
+					Checksum:  pluginID.Checksum,
 				},
-				Description: p.Description,
-				Authors:     p.Authors,
-				License:     p.License,
-				ProjectUrl:  p.ProjectURL,
-				Config:      p.Config,
-				Hooks:       p.Hooks,
+				Description: plugIn.Description,
+				Authors:     plugIn.Authors,
+				License:     plugIn.License,
+				ProjectUrl:  plugIn.ProjectURL,
+				Config:      plugIn.Config,
+				Hooks:       plugIn.Hooks,
 				Requires:    requires,
-				Tags:        p.Tags,
-				Categories:  p.Categories,
+				Tags:        plugIn.Tags,
+				Categories:  plugIn.Categories,
 			})
 		},
 	)
@@ -127,15 +127,15 @@ func (a *API) GetPools(ctx context.Context, _ *emptypb.Empty) (*structpb.Struct,
 // GetProxies returns the proxy configuration of the GatewayD.
 func (a *API) GetProxies(ctx context.Context, _ *emptypb.Empty) (*structpb.Struct, error) {
 	proxies := make(map[string]interface{}, 0)
-	for name, p := range a.Proxies {
+	for name, proxy := range a.Proxies {
 		available := make([]interface{}, 0)
-		for _, c := range p.AvailableConnections() {
+		for _, c := range proxy.AvailableConnections() {
 			available = append(available, c)
 		}
 
 		busy := make([]interface{}, 0)
-		for _, c := range p.BusyConnections() {
-			busy = append(busy, c)
+		for _, conn := range proxy.BusyConnections() {
+			busy = append(busy, conn)
 		}
 
 		proxies[name] = map[string]interface{}{
@@ -154,14 +154,14 @@ func (a *API) GetProxies(ctx context.Context, _ *emptypb.Empty) (*structpb.Struc
 // GetServers returns the server configuration of the GatewayD.
 func (a *API) GetServers(ctx context.Context, _ *emptypb.Empty) (*structpb.Struct, error) {
 	servers := make(map[string]interface{}, 0)
-	for name, s := range a.Servers {
+	for name, server := range a.Servers {
 		servers[name] = map[string]interface{}{
-			"network":      s.Network,
-			"address":      s.Address,
-			"status":       uint(s.Status),
-			"softLimit":    s.SoftLimit,
-			"hardLimit":    s.HardLimit,
-			"tickInterval": s.TickInterval.Nanoseconds(),
+			"network":      server.Network,
+			"address":      server.Address,
+			"status":       uint(server.Status),
+			"softLimit":    server.SoftLimit,
+			"hardLimit":    server.HardLimit,
+			"tickInterval": server.TickInterval.Nanoseconds(),
 		}
 	}
 	serversConfig, err := structpb.NewStruct(servers)

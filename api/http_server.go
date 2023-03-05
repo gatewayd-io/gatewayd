@@ -61,7 +61,7 @@ func StartHTTPAPI(options *Options) {
 	}
 
 	// Start HTTP server (and proxy calls to gRPC server endpoint)
-	if err := http.ListenAndServe(options.HTTPAddress, mux); err != nil {
+	if err := http.ListenAndServe(options.HTTPAddress, mux); err != nil { //nolint:gosec
 		options.Logger.Err(err).Msg("failed to start HTTP API")
 	}
 }
