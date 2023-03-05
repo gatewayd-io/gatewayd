@@ -92,6 +92,13 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 				"syslogPriority":    DefaultSyslogPriority,
 			},
 		},
+		"metrics": map[string]interface{}{
+			"default": map[string]interface{}{
+				"enabled": true,
+				"address": DefaultMetricsAddress,
+				"path":    DefaultMetricsPath,
+			},
+		},
 		"clients": map[string]interface{}{
 			"default": map[string]interface{}{
 				"receiveBufferSize":  DefaultBufferSize,
@@ -127,13 +134,6 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 				"writeBufferCap":   DefaultBufferSize,
 				"socketRecvBuffer": DefaultBufferSize,
 				"socketSendBuffer": DefaultBufferSize,
-			},
-		},
-		"metrics": map[string]interface{}{
-			"default": map[string]interface{}{
-				"enabled": true,
-				"address": DefaultMetricsAddress,
-				"path":    DefaultMetricsPath,
 			},
 		},
 	}

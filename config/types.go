@@ -63,6 +63,12 @@ type Logger struct {
 	SyslogPriority string `koanf:"syslogPriority"`
 }
 
+type Metrics struct {
+	Enabled bool   `koanf:"enabled"`
+	Address string `koanf:"address"`
+	Path    string `koanf:"path"`
+}
+
 type Pool struct {
 	Size int `koanf:"size"`
 }
@@ -91,12 +97,6 @@ type Server struct {
 	Network          string        `koanf:"network"`
 	Address          string        `koanf:"address"`
 	LoadBalancer     string        `koanf:"loadBalancer"`
-}
-
-type Metrics struct {
-	Enabled bool   `koanf:"enabled"`
-	Address string `koanf:"address"`
-	Path    string `koanf:"path"`
 }
 
 type GlobalConfig struct {
