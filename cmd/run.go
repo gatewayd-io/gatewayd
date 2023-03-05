@@ -169,6 +169,17 @@ var runCmd = &cobra.Command{
 						metricsMerger.Remove(pluginId.Name)
 					}
 					pluginRegistry.Remove(pluginId)
+
+					if !conf.Plugin.ReloadOnCrash {
+						return // Do not reload the plugins.
+					}
+
+					// Reload the plugins and register their hooks upon crash.
+					logger.Info().Str("name", pluginId.Name).Msg("Reloading crashed plugin")
+					pluginConfig := conf.Plugin.GetPlugins(pluginId.Name)
+					if pluginConfig != nil {
+						pluginRegistry.LoadPlugins(runCtx, pluginConfig)
+					}
 				} else {
 					logger.Trace().Str("name", pluginId.Name).Msg("Successfully pinged plugin")
 					plugins = append(plugins, pluginId.Name)

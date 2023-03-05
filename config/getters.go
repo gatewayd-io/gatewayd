@@ -184,3 +184,15 @@ func (l Logger) GetSyslogPriority() syslog.Priority {
 	}
 	return syslog.LOG_DAEMON | syslog.LOG_INFO
 }
+
+func (p PluginConfig) GetPlugins(name ...string) []Plugin {
+	var plugins []Plugin
+	for _, plugin := range p.Plugins {
+		for _, n := range name {
+			if plugin.Name == n {
+				plugins = append(plugins, plugin)
+			}
+		}
+	}
+	return plugins
+}
