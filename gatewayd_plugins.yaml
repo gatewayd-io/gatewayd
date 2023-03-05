@@ -70,4 +70,8 @@ plugins:
       - METRICS_ENABLED=True
       - METRICS_UNIX_DOMAIN_SOCKET=/tmp/gatewayd-plugin-cache.sock
       - METRICS_PATH=/metrics
-    checksum: 1a23fc871cbb16c9c13bf32d162aaa43ff94d55a9b3d5b17d7268394afa3289a
+      - PERIODIC_INVALIDATOR_ENABLED=True
+      - PERIODIC_INVALIDATOR_INTERVAL=1m
+      - PERIODIC_INVALIDATOR_START_DELAY=1m
+      - API_ADDRESS=localhost:8080
+    checksum: 3988e10aefce2cd9b30888eddd2ec93a431c9018a695aea1cea0dac46ba91cae
