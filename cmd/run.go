@@ -39,6 +39,7 @@ var (
 	enableTracing    bool
 	collectorURL     string
 	enableSentry     bool
+	devMode          bool
 	pluginConfigFile string
 	globalConfigFile string
 	conf             *config.Config
@@ -123,7 +124,7 @@ var runCmd = &cobra.Command{
 		// Create a new plugin registry.
 		// The plugins are loaded and hooks registered before the configuration is loaded.
 		pluginRegistry = plugin.NewRegistry(
-			runCtx, config.Loose, config.PassDown, config.Accept, logger)
+			runCtx, config.Loose, config.PassDown, config.Accept, logger, devMode)
 		// Set the plugin requirement's compatibility policy.
 		pluginRegistry.Compatibility = conf.Plugin.GetPluginCompatibilityPolicy()
 		// Set hooks' signature verification policy.
@@ -626,4 +627,6 @@ func init() {
 		"Collector URL of OpenTelemetry gRPC endpoint")
 	rootCmd.PersistentFlags().BoolVar(
 		&enableSentry, "sentry", true, "Enable Sentry")
+	rootCmd.PersistentFlags().BoolVar(
+		&devMode, "dev", false, "Enable development mode for plugin development")
 }
