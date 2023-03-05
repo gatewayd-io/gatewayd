@@ -74,4 +74,4 @@ plugins:
       - PERIODIC_INVALIDATOR_INTERVAL=1m
       - PERIODIC_INVALIDATOR_START_DELAY=1m
       - API_ADDRESS=localhost:8080
-    checksum: 3988e10aefce2cd9b30888eddd2ec93a431c9018a695aea1cea0dac46ba91cae
+    checksum: 28456728dd3427b91d2e22f38b909526355d1b2becc9379581e1b70bb9495aa9
