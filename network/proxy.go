@@ -529,9 +529,9 @@ func (pr *Proxy) BusyConnections() []string {
 	defer span.End()
 
 	connections := make([]string, 0)
-	pr.busyConnections.ForEach(func(_, value interface{}) bool {
-		if cl, ok := value.(*Client); ok {
-			connections = append(connections, cl.Conn.LocalAddr().String())
+	pr.busyConnections.ForEach(func(key, _ interface{}) bool {
+		if gconn, ok := key.(gnet.Conn); ok {
+			connections = append(connections, gconn.RemoteAddr().String())
 		}
 		return true
 	})
