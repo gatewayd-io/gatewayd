@@ -99,7 +99,15 @@ type Server struct {
 	LoadBalancer     string        `koanf:"loadBalancer"`
 }
 
+type API struct {
+	Enabled     bool   `koanf:"enabled"`
+	HTTPAddress string `koanf:"httpAddress"`
+	GRPCAddress string `koanf:"grpcAddress"`
+	GRPCNetwork string `koanf:"grpcNetwork"`
+}
+
 type GlobalConfig struct {
+	API     API                `koanf:"api"`
 	Loggers map[string]Logger  `koanf:"loggers"`
 	Clients map[string]Client  `koanf:"clients"`
 	Pools   map[string]Pool    `koanf:"pools"`

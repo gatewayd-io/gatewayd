@@ -65,3 +65,9 @@ servers:
     reusePort: True
     tcpKeepAlive: 3s # duration
     tcpNoDelay: True
+
+api:
+  enabled: True
+  httpAddress: localhost:8080
+  grpcNetwork: tcp
+  grpcAddress: localhost:9090

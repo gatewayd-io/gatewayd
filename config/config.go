@@ -136,6 +136,12 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 				"socketSendBuffer": DefaultBufferSize,
 			},
 		},
+		"api": map[string]interface{}{
+			"enabled":     true,
+			"httpAddress": DefaultHTTPAPIAddress,
+			"grpcNetwork": DefaultGRPCAPINetwork,
+			"grpcAddress": DefaultGRPCAPIAddress,
+		},
 	}
 
 	c.pluginDefaults = map[string]interface{}{

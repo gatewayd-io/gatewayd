@@ -115,4 +115,9 @@ const (
 	DefaultTraceSampleRate  = 0.2
 	DefaultAttachStacktrace = true
 	DefaultFlushTimeout     = 2 * time.Second
+
+	// API constants.
+	DefaultHTTPAPIAddress = "localhost:8080"
+	DefaultGRPCAPINetwork = "tcp"
+	DefaultGRPCAPIAddress = "localhost:9090"
 )
