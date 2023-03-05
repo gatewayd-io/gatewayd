@@ -121,6 +121,11 @@ var runCmd = &cobra.Command{
 		// Set the default logger.
 		logger := loggers[config.Default]
 
+		if devMode {
+			logger.Warn().Msg(
+				"Running GatewayD in development mode (not recommended for production)")
+		}
+
 		// Create a new plugin registry.
 		// The plugins are loaded and hooks registered before the configuration is loaded.
 		pluginRegistry = plugin.NewRegistry(
