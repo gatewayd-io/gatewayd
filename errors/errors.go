@@ -105,6 +105,7 @@ var (
 const (
 	FailedToLoadPluginConfig = 1
 	FailedToLoadGlobalConfig = 2
-	FailedToInitializePool   = 3
-	FailedToStartServer      = 4
+	FailedToCreateClient     = 3
+	FailedToInitializePool   = 4
+	FailedToStartServer      = 5
 )
