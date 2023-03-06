@@ -323,28 +323,28 @@ var runCmd = &cobra.Command{
 				clientConfig := clients[name]
 				client := network.NewClient(runCtx, &clientConfig, logger)
 
-				eventOptions := trace.WithAttributes(
-					attribute.String("name", name),
-					attribute.String("network", client.Network),
-					attribute.String("address", client.Address),
-					attribute.Int("receiveBufferSize", client.ReceiveBufferSize),
-					attribute.Int("receiveChunkSize", client.ReceiveChunkSize),
-					attribute.String("receiveDeadline", client.ReceiveDeadline.String()),
-					attribute.String("sendDeadline", client.SendDeadline.String()),
-					attribute.Bool("tcpKeepAlive", client.TCPKeepAlive),
-					attribute.String("tcpKeepAlivePeriod", client.TCPKeepAlivePeriod.String()),
-					attribute.String("localAddress", client.Conn.LocalAddr().String()),
-					attribute.String("remoteAddress", client.Conn.RemoteAddr().String()),
-				)
-				if client.ID != "" {
-					eventOptions = trace.WithAttributes(
-						attribute.String("id", client.ID),
-					)
-				}
-
-				span.AddEvent("Create client", eventOptions)
-
 				if client != nil {
+					eventOptions := trace.WithAttributes(
+						attribute.String("name", name),
+						attribute.String("network", client.Network),
+						attribute.String("address", client.Address),
+						attribute.Int("receiveBufferSize", client.ReceiveBufferSize),
+						attribute.Int("receiveChunkSize", client.ReceiveChunkSize),
+						attribute.String("receiveDeadline", client.ReceiveDeadline.String()),
+						attribute.String("sendDeadline", client.SendDeadline.String()),
+						attribute.Bool("tcpKeepAlive", client.TCPKeepAlive),
+						attribute.String("tcpKeepAlivePeriod", client.TCPKeepAlivePeriod.String()),
+						attribute.String("localAddress", client.Conn.LocalAddr().String()),
+						attribute.String("remoteAddress", client.Conn.RemoteAddr().String()),
+					)
+					if client.ID != "" {
+						eventOptions = trace.WithAttributes(
+							attribute.String("id", client.ID),
+						)
+					}
+
+					span.AddEvent("Create client", eventOptions)
+
 					clientCfg := map[string]interface{}{
 						"id":                 client.ID,
 						"network":            client.Network,
@@ -367,6 +367,9 @@ var runCmd = &cobra.Command{
 						logger.Error().Err(err).Msg("Failed to add client to the pool")
 						span.RecordError(err)
 					}
+				} else {
+					logger.Error().Msg("Failed to create client, please check the configuration")
+					os.Exit(gerr.FailedToCreateClient)
 				}
 			}
 
