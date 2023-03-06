@@ -46,7 +46,7 @@ func NewClient(ctx context.Context, clientConfig *config.Client, logger zerolog.
 
 	var client Client
 
-	if clientConfig == nil {
+	if clientConfig == nil || clientConfig == (&config.Client{}) {
 		return nil
 	}
 
