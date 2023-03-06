@@ -530,8 +530,8 @@ var runCmd = &cobra.Command{
 			go api.StartHTTPAPI(&apiOptions)
 			logger.Info().Fields(
 				map[string]interface{}{
-					"grpcNetwork": apiOptions.GRPCNetwork,
-					"grpcAddress": apiOptions.GRPCAddress,
+					"network": apiOptions.GRPCNetwork,
+					"address": apiOptions.GRPCAddress,
 				},
 			).Msg("Started the gRPC API")
 		}
