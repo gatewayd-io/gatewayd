@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"log"
 	"net/http"
@@ -36,6 +37,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 var (
@@ -548,10 +550,15 @@ var runCmd = &cobra.Command{
 		// Report usage statistics.
 		if enableUsageReport {
 			go func() {
-				var opts []grpc.DialOption
-				// TODO: Add TLS support.
-				opts = append(opts, grpc.WithInsecure())
-				conn, err := grpc.Dial(UsageReportURL, opts...)
+				conn, err := grpc.Dial(UsageReportURL,
+					grpc.WithTransportCredentials(
+						credentials.NewTLS(
+							&tls.Config{
+								MinVersion: tls.VersionTLS12,
+							},
+						),
+					),
+				)
 				if err != nil {
 					logger.Trace().Err(err).Msg(
 						"Failed to dial to the gRPC server for usage reporting")
