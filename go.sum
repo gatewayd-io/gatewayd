@@ -110,8 +110,8 @@ github.com/fatih/structs v1.1.0/go.mod h1:9NiDSp5zOcgEDl+j00MP/WkGVPOlPRLejGD8Ga
 github.com/fsnotify/fsnotify v1.4.9/go.mod h1:znqG4EE+3YCdAaPaxE2ZRY/06pZUdp0tY4IgpuI1SZQ=
 github.com/fsnotify/fsnotify v1.6.0 h1:n+5WquG0fcWoWp6xPWfHdbskMCQaFnG6PfBrh1Ky4HY=
 github.com/fsnotify/fsnotify v1.6.0/go.mod h1:sl3t1tCWJFWoRz9R8WJCbQihKKwmorjAbSClcnxKAGw=
-github.com/gatewayd-io/gatewayd-plugin-sdk v0.0.9 h1:AHvkO38U6t2GYWFvsU9aL2eymff3rw2UfRjgUlmVVXo=
-github.com/gatewayd-io/gatewayd-plugin-sdk v0.0.9/go.mod h1:8ubBVLIi3KM+Xpq3/PHKtD5ev5wtcEobNTSKbvQaUmE=
+github.com/gatewayd-io/gatewayd-plugin-sdk v0.0.13 h1:XiCVN09Xc/lcVIGcH+wtDU97V2r317Fchiri94HccwY=
+github.com/gatewayd-io/gatewayd-plugin-sdk v0.0.13/go.mod h1:8ubBVLIi3KM+Xpq3/PHKtD5ev5wtcEobNTSKbvQaUmE=
 github.com/getsentry/sentry-go v0.19.0 h1:BcCH3CN5tXt5aML+gwmbFwVptLLQA+eT866fCO9wVOM=
 github.com/getsentry/sentry-go v0.19.0/go.mod h1:y3+lGEFEFexZtpbG1GUE2WD/f9zGyKYwpEqryTOC/nE=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
@@ -463,8 +463,8 @@ golang.org/x/exp v0.0.0-20191227195350-da58074b4299/go.mod h1:2RIsYlXP63K8oxa1u0
 golang.org/x/exp v0.0.0-20200119233911-0405dc783f0a/go.mod h1:2RIsYlXP63K8oxa1u096TMicItID8zy7Y6sNkU49FU4=
 golang.org/x/exp v0.0.0-20200207192155-f17229e696bd/go.mod h1:J/WKrq2StrnmMY6+EHIKF9dgMWnmCNThgcyBT1FY9mM=
 golang.org/x/exp v0.0.0-20200224162631-6cc2880d07d6/go.mod h1:3jZMyOhIsHpP37uCMkUooju7aAi5cS1Q23tOzKc+0MU=
-golang.org/x/exp v0.0.0-20230306221820-f0f767cdffd6 h1:3p+wVC0x0TCIPgd3LCQlpgVlEtjziEC5v42w7+B8t8M=
-golang.org/x/exp v0.0.0-20230306221820-f0f767cdffd6/go.mod h1:CxIveKay+FTh1D0yPZemJVgC/95VzuuOLq5Qi4xnoYc=
+golang.org/x/exp v0.0.0-20230307190834-24139beb5833 h1:SChBja7BCQewoTAU7IgvucQKMIXrEpFxNMs0spT3/5s=
+golang.org/x/exp v0.0.0-20230307190834-24139beb5833/go.mod h1:CxIveKay+FTh1D0yPZemJVgC/95VzuuOLq5Qi4xnoYc=
 golang.org/x/image v0.0.0-20190227222117-0694c2d4d067/go.mod h1:kZ7UVZpmo3dzQBMxlp+ypCbDeSB+sBbTgSJuh5dn5js=
 golang.org/x/image v0.0.0-20190802002840-cff245a6509b/go.mod h1:FeLwcggjj3mMvU+oOTbSwawSJRM1uh48EjtB4UJZlP0=
 golang.org/x/lint v0.0.0-20181026193005-c67002cb31c3/go.mod h1:UVdnD1Gm6xHRNCYTkRU2/jEulfH38KcIWyp/GAMgvoE=

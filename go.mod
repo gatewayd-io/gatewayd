@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.2.0
 	github.com/NYTimes/gziphandler v1.1.1
 	github.com/envoyproxy/protoc-gen-validate v0.9.1
-	github.com/gatewayd-io/gatewayd-plugin-sdk v0.0.9
+	github.com/gatewayd-io/gatewayd-plugin-sdk v0.0.13
 	github.com/getsentry/sentry-go v0.19.0
 	github.com/go-co-op/gocron v1.18.1
 	github.com/google/go-cmp v0.5.9
@@ -28,7 +28,7 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.14.0
 	go.opentelemetry.io/otel/sdk v1.14.0
 	go.opentelemetry.io/otel/trace v1.14.0
-	golang.org/x/exp v0.0.0-20230306221820-f0f767cdffd6
+	golang.org/x/exp v0.0.0-20230307190834-24139beb5833
 	google.golang.org/genproto v0.0.0-20230306155012-7f2fa6fef1f4
 	google.golang.org/grpc v1.53.0
 	google.golang.org/protobuf v1.28.1
