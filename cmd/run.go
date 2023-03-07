@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"runtime"
 	"strconv"
 	"syscall"
 	"time"
@@ -23,6 +24,7 @@ import (
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
 	"github.com/gatewayd-io/gatewayd/tracing"
+	usage "github.com/gatewayd-io/gatewayd/usagereport/v1"
 	"github.com/getsentry/sentry-go"
 	"github.com/go-co-op/gocron"
 	"github.com/panjf2000/gnet/v2"
@@ -33,17 +35,21 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
+	"google.golang.org/grpc"
 )
 
 var (
-	enableTracing    bool
-	collectorURL     string
-	enableSentry     bool
-	devMode          bool
-	pluginConfigFile string
-	globalConfigFile string
-	conf             *config.Config
-	pluginRegistry   *plugin.Registry
+	enableTracing     bool
+	collectorURL      string
+	enableSentry      bool
+	devMode           bool
+	enableUsageReport bool
+	pluginConfigFile  string
+	globalConfigFile  string
+	conf              *config.Config
+	pluginRegistry    *plugin.Registry
+
+	UsageReportURL = "localhost:59091"
 
 	loggers              = make(map[string]zerolog.Logger)
 	pools                = make(map[string]*pool.Pool)
@@ -539,6 +545,45 @@ var runCmd = &cobra.Command{
 			).Msg("Started the gRPC API")
 		}
 
+		// Report usage statistics.
+		if enableUsageReport {
+			go func() {
+				var opts []grpc.DialOption
+				// TODO: Add TLS support.
+				opts = append(opts, grpc.WithInsecure())
+				conn, err := grpc.Dial(UsageReportURL, opts...)
+				if err != nil {
+					logger.Trace().Err(err).Msg(
+						"Failed to dial to the gRPC server for usage reporting")
+				}
+				defer conn.Close()
+
+				client := usage.NewUsageReportServiceClient(conn)
+				report := usage.UsageReportRequest{
+					Version:        config.Version,
+					RuntimeVersion: runtime.Version(),
+					Goos:           runtime.GOOS,
+					Goarch:         runtime.GOARCH,
+					Service:        "gatewayd",
+					DevMode:        devMode,
+					Plugins:        []*usage.Plugin{},
+				}
+				pluginRegistry.ForEach(
+					func(identifier sdkPlugin.Identifier, plugin *plugin.Plugin) {
+						report.Plugins = append(report.Plugins, &usage.Plugin{
+							Name:     identifier.Name,
+							Version:  identifier.Version,
+							Checksum: identifier.Checksum,
+						})
+					},
+				)
+				_, err = client.Report(context.Background(), &report)
+				if err != nil {
+					logger.Trace().Err(err).Msg("Failed to report usage statistics")
+				}
+			}()
+		}
+
 		// Shutdown the server gracefully.
 		var signals []os.Signal
 		signals = append(signals,
@@ -648,4 +693,6 @@ func init() {
 		&enableSentry, "sentry", true, "Enable Sentry")
 	rootCmd.PersistentFlags().BoolVar(
 		&devMode, "dev", false, "Enable development mode for plugin development")
+	rootCmd.PersistentFlags().BoolVar(
+		&enableUsageReport, "usage-report", true, "Enable usage report")
 }
