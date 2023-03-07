@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	sdkPlugin "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin"
+	v1 "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin/v1"
 	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/rs/zerolog"
@@ -68,44 +69,44 @@ func Test_PluginRegistry_AddHook(t *testing.T) {
 	}
 
 	reg := NewPluginRegistry(t)
-	reg.AddHook(sdkPlugin.OnNewLogger, 0, testFunc)
-	assert.NotNil(t, reg.Hooks()[sdkPlugin.OnNewLogger][0])
-	assert.ObjectsAreEqual(testFunc, reg.Hooks()[sdkPlugin.OnNewLogger][0])
+	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 0, testFunc)
+	assert.NotNil(t, reg.Hooks()[v1.HookName_HOOK_NAME_ON_NEW_LOGGER][0])
+	assert.ObjectsAreEqual(testFunc, reg.Hooks()[v1.HookName_HOOK_NAME_ON_NEW_LOGGER][0])
 }
 
 // Test_HookRegistry_Add_Multiple_Hooks tests the Add function with multiple hooks.
 func Test_PluginRegistry_AddHook_Multiple(t *testing.T) {
 	reg := NewPluginRegistry(t)
-	reg.AddHook(sdkPlugin.OnNewLogger, 0, func(
+	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 0, func(
 		ctx context.Context,
 		args *structpb.Struct,
 		opts ...grpc.CallOption,
 	) (*structpb.Struct, error) {
 		return args, nil
 	})
-	reg.AddHook(sdkPlugin.OnNewLogger, 1, func(
+	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 1, func(
 		ctx context.Context,
 		args *structpb.Struct,
 		opts ...grpc.CallOption,
 	) (*structpb.Struct, error) {
 		return args, nil
 	})
-	assert.NotNil(t, reg.Hooks()[sdkPlugin.OnNewLogger][0])
-	assert.NotNil(t, reg.Hooks()[sdkPlugin.OnNewLogger][1])
+	assert.NotNil(t, reg.Hooks()[v1.HookName_HOOK_NAME_ON_NEW_LOGGER][0])
+	assert.NotNil(t, reg.Hooks()[v1.HookName_HOOK_NAME_ON_NEW_LOGGER][1])
 }
 
 // Test_HookRegistry_Run tests the Run function.
 func Test_PluginRegistry_Run(t *testing.T) {
 	reg := NewPluginRegistry(t)
 	reg.Verification = config.Ignore
-	reg.AddHook(sdkPlugin.OnNewLogger, 0, func(
+	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 0, func(
 		ctx context.Context,
 		args *structpb.Struct,
 		opts ...grpc.CallOption,
 	) (*structpb.Struct, error) {
 		return args, nil
 	})
-	result, err := reg.Run(context.Background(), map[string]interface{}{}, sdkPlugin.OnNewLogger)
+	result, err := reg.Run(context.Background(), map[string]interface{}{}, v1.HookName_HOOK_NAME_ON_NEW_LOGGER)
 	assert.NotNil(t, result)
 	assert.Nil(t, err)
 }
@@ -115,7 +116,7 @@ func Test_PluginRegistry_Run_PassDown(t *testing.T) {
 	reg := NewPluginRegistry(t)
 	reg.Verification = config.PassDown
 	// The result of the hook will be nil and will be passed down to the next
-	reg.AddHook(sdkPlugin.OnNewLogger, 0, func(
+	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 0, func(
 		ctx context.Context,
 		args *structpb.Struct,
 		opts ...grpc.CallOption,
@@ -123,7 +124,7 @@ func Test_PluginRegistry_Run_PassDown(t *testing.T) {
 		return nil, nil //nolint:nilnil
 	})
 	// The consolidated result should be {"test": "test"}.
-	reg.AddHook(sdkPlugin.OnNewLogger, 1, func(
+	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 1, func(
 		ctx context.Context,
 		args *structpb.Struct,
 		opts ...grpc.CallOption,
@@ -141,7 +142,7 @@ func Test_PluginRegistry_Run_PassDown(t *testing.T) {
 	result, err := reg.Run(
 		context.Background(),
 		map[string]interface{}{"test": "test"},
-		sdkPlugin.OnNewLogger)
+		v1.HookName_HOOK_NAME_ON_NEW_LOGGER)
 	assert.Nil(t, err)
 	assert.NotNil(t, result)
 }
@@ -151,26 +152,26 @@ func Test_HookRegistry_Run_PassDown_2(t *testing.T) {
 	reg := NewPluginRegistry(t)
 	reg.Verification = config.PassDown
 	// The result of the hook will be nil and will be passed down to the next
-	reg.AddHook(sdkPlugin.OnNewLogger, 0, func(
+	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 0, func(
 		ctx context.Context,
 		args *structpb.Struct,
 		opts ...grpc.CallOption,
 	) (*structpb.Struct, error) {
 		args.Fields["test1"] = &structpb.Value{
-			Kind: &structpb.Value_StringValue{ //nolint:nosnakecase
+			Kind: &structpb.Value_StringValue{
 				StringValue: "test1",
 			},
 		}
 		return args, nil
 	})
 	// The consolidated result should be {"test1": "test1", "test2": "test2"}.
-	reg.AddHook(sdkPlugin.OnNewLogger, 1, func(
+	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 1, func(
 		ctx context.Context,
 		args *structpb.Struct,
 		opts ...grpc.CallOption,
 	) (*structpb.Struct, error) {
 		args.Fields["test2"] = &structpb.Value{
-			Kind: &structpb.Value_StringValue{ //nolint:nosnakecase
+			Kind: &structpb.Value_StringValue{
 				StringValue: "test2",
 			},
 		}
@@ -182,7 +183,7 @@ func Test_HookRegistry_Run_PassDown_2(t *testing.T) {
 	result, err := reg.Run(
 		context.Background(),
 		map[string]interface{}{"test": "test"},
-		sdkPlugin.OnNewLogger)
+		v1.HookName_HOOK_NAME_ON_NEW_LOGGER)
 	assert.Nil(t, err)
 	assert.NotNil(t, result)
 }
@@ -192,7 +193,7 @@ func Test_HookRegistry_Run_Ignore(t *testing.T) {
 	reg := NewPluginRegistry(t)
 	reg.Verification = config.Ignore
 	// This should not run, because the return value is not the same as the params
-	reg.AddHook(sdkPlugin.OnNewLogger, 0, func(
+	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 0, func(
 		ctx context.Context,
 		args *structpb.Struct,
 		opts ...grpc.CallOption,
@@ -200,13 +201,13 @@ func Test_HookRegistry_Run_Ignore(t *testing.T) {
 		return nil, nil //nolint:nilnil
 	})
 	// This should run, because the return value is the same as the params
-	reg.AddHook(sdkPlugin.OnNewLogger, 1, func(
+	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 1, func(
 		ctx context.Context,
 		args *structpb.Struct,
 		opts ...grpc.CallOption,
 	) (*structpb.Struct, error) {
 		args.Fields["test"] = &structpb.Value{
-			Kind: &structpb.Value_StringValue{ //nolint:nosnakecase
+			Kind: &structpb.Value_StringValue{
 				StringValue: "test",
 			},
 		}
@@ -218,7 +219,7 @@ func Test_HookRegistry_Run_Ignore(t *testing.T) {
 	result, err := reg.Run(
 		context.Background(),
 		map[string]interface{}{"test": "test"},
-		sdkPlugin.OnNewLogger)
+		v1.HookName_HOOK_NAME_ON_NEW_LOGGER)
 	assert.Nil(t, err)
 	assert.NotNil(t, result)
 }
@@ -228,7 +229,7 @@ func Test_HookRegistry_Run_Abort(t *testing.T) {
 	reg := NewPluginRegistry(t)
 	reg.Verification = config.Abort
 	// This should not run, because the return value is not the same as the params
-	reg.AddHook(sdkPlugin.OnNewLogger, 0, func(
+	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 0, func(
 		ctx context.Context,
 		args *structpb.Struct,
 		opts ...grpc.CallOption,
@@ -236,7 +237,7 @@ func Test_HookRegistry_Run_Abort(t *testing.T) {
 		return nil, nil //nolint:nilnil
 	})
 	// This should not run, because the first hook returns nil, and its result is ignored.
-	reg.AddHook(sdkPlugin.OnNewLogger, 1, func(
+	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 1, func(
 		ctx context.Context,
 		args *structpb.Struct,
 		opts ...grpc.CallOption,
@@ -248,7 +249,7 @@ func Test_HookRegistry_Run_Abort(t *testing.T) {
 		return output, nil
 	})
 	// The first hook returns nil, and it aborts the execution of the rest of the
-	result, err := reg.Run(context.Background(), map[string]interface{}{}, sdkPlugin.OnNewLogger)
+	result, err := reg.Run(context.Background(), map[string]interface{}{}, v1.HookName_HOOK_NAME_ON_NEW_LOGGER)
 	assert.Nil(t, err)
 	assert.Equal(t, map[string]interface{}{}, result)
 }
@@ -258,7 +259,7 @@ func Test_HookRegistry_Run_Remove(t *testing.T) {
 	reg := NewPluginRegistry(t)
 	reg.Verification = config.Remove
 	// This should not run, because the return value is not the same as the params
-	reg.AddHook(sdkPlugin.OnNewLogger, 0, func(
+	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 0, func(
 		ctx context.Context,
 		args *structpb.Struct,
 		opts ...grpc.CallOption,
@@ -266,7 +267,7 @@ func Test_HookRegistry_Run_Remove(t *testing.T) {
 		return nil, nil //nolint:nilnil
 	})
 	// This should not run, because the first hook returns nil, and its result is ignored.
-	reg.AddHook(sdkPlugin.OnNewLogger, 1, func(
+	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 1, func(
 		ctx context.Context,
 		args *structpb.Struct,
 		opts ...grpc.CallOption,
@@ -280,8 +281,8 @@ func Test_HookRegistry_Run_Remove(t *testing.T) {
 	// The first hook returns nil, and its signature doesn't match the params,
 	// so its result is ignored. The failing hook is removed from the list and
 	// the execution continues with the next hook in the list.
-	result, err := reg.Run(context.Background(), map[string]interface{}{}, sdkPlugin.OnNewLogger)
+	result, err := reg.Run(context.Background(), map[string]interface{}{}, v1.HookName_HOOK_NAME_ON_NEW_LOGGER)
 	assert.Nil(t, err)
 	assert.Equal(t, map[string]interface{}{}, result)
-	assert.Equal(t, 1, len(reg.Hooks()[sdkPlugin.OnNewLogger]))
+	assert.Equal(t, 1, len(reg.Hooks()[v1.HookName_HOOK_NAME_ON_NEW_LOGGER]))
 }
