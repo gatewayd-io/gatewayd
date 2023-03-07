@@ -7,7 +7,7 @@ require (
 	github.com/NYTimes/gziphandler v1.1.1
 	github.com/envoyproxy/protoc-gen-validate v0.9.1
 	github.com/gatewayd-io/gatewayd-plugin-sdk v0.0.9
-	github.com/getsentry/sentry-go v0.18.0
+	github.com/getsentry/sentry-go v0.19.0
 	github.com/go-co-op/gocron v1.18.1
 	github.com/google/go-cmp v0.5.9
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.15.2
@@ -28,8 +28,8 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.14.0
 	go.opentelemetry.io/otel/sdk v1.14.0
 	go.opentelemetry.io/otel/trace v1.14.0
-	golang.org/x/exp v0.0.0-20230304125523-9ff063c70017
-	google.golang.org/genproto v0.0.0-20230303212802-e74f57abe488
+	golang.org/x/exp v0.0.0-20230306221820-f0f767cdffd6
+	google.golang.org/genproto v0.0.0-20230306155012-7f2fa6fef1f4
 	google.golang.org/grpc v1.53.0
 	google.golang.org/protobuf v1.28.1
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
