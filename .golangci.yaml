@@ -18,3 +18,4 @@ linters:
     - funlen
     - maintidx
     - musttag
+    - nosnakecase

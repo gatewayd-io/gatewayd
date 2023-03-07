@@ -18,7 +18,7 @@ import (
 // GetRLimit returns the current system soft and hard limits for the number of open files.
 func GetRLimit(logger zerolog.Logger) syscall.Rlimit {
 	var limits syscall.Rlimit
-	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &limits); err != nil { //nolint:nosnakecase
+	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &limits); err != nil {
 		logger.Error().Err(err).Msg("Failed to get rlimit")
 	}
 	logger.Debug().Str("value", fmt.Sprint(limits.Cur)).Msg("Current system soft limit")
@@ -63,7 +63,7 @@ func Resolve(network, address string, logger zerolog.Logger) (string, *gerr.Gate
 	}
 }
 
-// trafficData creates the ingress/egress map for the OnIngressTraffic/OnEgresTraffic hooks.
+// trafficData creates the ingress/egress map for the traffic hooks.
 func trafficData(
 	gconn gnet.Conn,
 	client *Client,

@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	sdkPlugin "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin"
+	v1 "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin/v1"
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/metrics"
@@ -293,7 +293,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 				},
 			},
 			origErr),
-		sdkPlugin.OnTrafficFromClient)
+		v1.HookName_HOOK_NAME_ON_TRAFFIC_FROM_CLIENT)
 	if err != nil {
 		pr.logger.Error().Err(err).Msg("Error running hook")
 		span.RecordError(err)
@@ -337,7 +337,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 				},
 			},
 			err),
-		sdkPlugin.OnTrafficToServer)
+		v1.HookName_HOOK_NAME_ON_TRAFFIC_TO_SERVER)
 	if err != nil {
 		pr.logger.Error().Err(err).Msg("Error running hook")
 		span.RecordError(err)
@@ -398,7 +398,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 				},
 			},
 			err),
-		sdkPlugin.OnTrafficFromServer)
+		v1.HookName_HOOK_NAME_ON_TRAFFIC_FROM_SERVER)
 	if err != nil {
 		pr.logger.Error().Err(err).Msg("Error running hook")
 		span.RecordError(err)
@@ -434,7 +434,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 			},
 			err,
 		),
-		sdkPlugin.OnTrafficToClient)
+		v1.HookName_HOOK_NAME_ON_TRAFFIC_TO_CLIENT)
 	if err != nil {
 		pr.logger.Error().Err(err).Msg("Error running hook")
 		span.RecordError(err)

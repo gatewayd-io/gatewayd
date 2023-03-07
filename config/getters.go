@@ -70,7 +70,6 @@ var (
 		"panic":    zerolog.PanicLevel,
 		"disabled": zerolog.Disabled,
 	}
-	//nolint:nosnakecase
 	rSyslogPriorities = map[string]syslog.Priority{
 		"emerg":   syslog.LOG_EMERG,
 		"alert":   syslog.LOG_ALERT,
@@ -176,8 +175,6 @@ func (l Logger) GetLevel() zerolog.Level {
 }
 
 // GetSyslogPriority returns the rsyslog facility from config file.
-//
-//nolint:nosnakecase
 func (l Logger) GetSyslogPriority() syslog.Priority {
 	if priority, ok := rSyslogPriorities[l.SyslogPriority]; ok {
 		return priority | syslog.LOG_DAEMON

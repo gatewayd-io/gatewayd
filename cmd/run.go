@@ -16,6 +16,7 @@ import (
 
 	"github.com/NYTimes/gziphandler"
 	sdkPlugin "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin"
+	v1 "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin/v1"
 	"github.com/gatewayd-io/gatewayd/api"
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
@@ -214,7 +215,7 @@ var runCmd = &cobra.Command{
 		updatedGlobalConfig, err := pluginRegistry.Run(
 			context.Background(),
 			conf.GlobalKoanf.All(),
-			sdkPlugin.OnConfigLoaded)
+			v1.HookName_HOOK_NAME_ON_CONFIG_LOADED)
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to run OnConfigLoaded hooks")
 			span.RecordError(err)
@@ -296,7 +297,8 @@ var runCmd = &cobra.Command{
 		// This is a notification hook, so we don't care about the result.
 		// TODO: Use a context with a timeout
 		if data, ok := conf.GlobalKoanf.Get("loggers").(map[string]interface{}); ok {
-			_, err = pluginRegistry.Run(context.Background(), data, sdkPlugin.OnNewLogger)
+			_, err = pluginRegistry.Run(
+				context.Background(), data, v1.HookName_HOOK_NAME_ON_NEW_LOGGER)
 			if err != nil {
 				logger.Error().Err(err).Msg("Failed to run OnNewLogger hooks")
 				span.RecordError(err)
@@ -364,7 +366,8 @@ var runCmd = &cobra.Command{
 						"tcpKeepAlive":       client.TCPKeepAlive,
 						"tcpKeepAlivePeriod": client.TCPKeepAlivePeriod.String(),
 					}
-					_, err := pluginRegistry.Run(context.Background(), clientCfg, sdkPlugin.OnNewClient)
+					_, err := pluginRegistry.Run(
+						context.Background(), clientCfg, v1.HookName_HOOK_NAME_ON_NEW_CLIENT)
 					if err != nil {
 						logger.Error().Err(err).Msg("Failed to run OnNewClient hooks")
 						span.RecordError(err)
@@ -399,7 +402,7 @@ var runCmd = &cobra.Command{
 			_, err = pluginRegistry.Run(
 				context.Background(),
 				map[string]interface{}{"name": name, "size": cfg.GetSize()},
-				sdkPlugin.OnNewPool)
+				v1.HookName_HOOK_NAME_ON_NEW_POOL)
 			if err != nil {
 				logger.Error().Err(err).Msg("Failed to run OnNewPool hooks")
 				span.RecordError(err)
@@ -432,7 +435,8 @@ var runCmd = &cobra.Command{
 			))
 
 			if data, ok := conf.GlobalKoanf.Get("proxy").(map[string]interface{}); ok {
-				_, err = pluginRegistry.Run(context.Background(), data, sdkPlugin.OnNewProxy)
+				_, err = pluginRegistry.Run(
+					context.Background(), data, v1.HookName_HOOK_NAME_ON_NEW_PROXY)
 				if err != nil {
 					logger.Error().Err(err).Msg("Failed to run OnNewProxy hooks")
 					span.RecordError(err)
@@ -507,7 +511,8 @@ var runCmd = &cobra.Command{
 			))
 
 			if data, ok := conf.GlobalKoanf.Get("servers").(map[string]interface{}); ok {
-				_, err = pluginRegistry.Run(context.Background(), data, sdkPlugin.OnNewServer)
+				_, err = pluginRegistry.Run(
+					context.Background(), data, v1.HookName_HOOK_NAME_ON_NEW_SERVER)
 				if err != nil {
 					logger.Error().Err(err).Msg("Failed to run OnNewServer hooks")
 					span.RecordError(err)
@@ -617,7 +622,7 @@ var runCmd = &cobra.Command{
 						_, err := pluginRegistry.Run(
 							context.Background(),
 							map[string]interface{}{"signal": sig.String()},
-							sdkPlugin.OnSignal,
+							v1.HookName_HOOK_NAME_ON_SIGNAL,
 						)
 						if err != nil {
 							logger.Error().Err(err).Msg("Failed to run OnSignal hooks")

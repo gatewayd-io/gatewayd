@@ -22,12 +22,12 @@ import (
 )
 
 type IHook interface {
-	AddHook(hookName string, priority sdkPlugin.Priority, hookMethod sdkPlugin.Method)
-	Hooks() map[string]map[sdkPlugin.Priority]sdkPlugin.Method
+	AddHook(hookName v1.HookName, priority sdkPlugin.Priority, hookMethod sdkPlugin.Method)
+	Hooks() map[v1.HookName]map[sdkPlugin.Priority]sdkPlugin.Method
 	Run(
 		ctx context.Context,
 		args map[string]interface{},
-		hookName string,
+		hookName v1.HookName,
 		opts ...grpc.CallOption,
 	) (map[string]interface{}, *gerr.GatewayDError)
 }
@@ -52,7 +52,7 @@ type IRegistry interface {
 
 type Registry struct {
 	plugins pool.IPool
-	hooks   map[string]map[sdkPlugin.Priority]sdkPlugin.Method
+	hooks   map[v1.HookName]map[sdkPlugin.Priority]sdkPlugin.Method
 	ctx     context.Context //nolint:containedctx
 	devMode bool
 
@@ -78,7 +78,7 @@ func NewRegistry(
 
 	return &Registry{
 		plugins:       pool.NewPool(regCtx, config.EmptyPoolCapacity),
-		hooks:         map[string]map[sdkPlugin.Priority]sdkPlugin.Method{},
+		hooks:         map[v1.HookName]map[sdkPlugin.Priority]sdkPlugin.Method{},
 		ctx:           regCtx,
 		devMode:       devMode,
 		Logger:        logger,
@@ -219,7 +219,7 @@ func (reg *Registry) Shutdown() {
 }
 
 // Hooks returns the hooks map.
-func (reg *Registry) Hooks() map[string]map[sdkPlugin.Priority]sdkPlugin.Method {
+func (reg *Registry) Hooks() map[v1.HookName]map[sdkPlugin.Priority]sdkPlugin.Method {
 	_, span := otel.Tracer(config.TracerName).Start(reg.ctx, "Hooks")
 	defer span.End()
 
@@ -227,7 +227,7 @@ func (reg *Registry) Hooks() map[string]map[sdkPlugin.Priority]sdkPlugin.Method 
 }
 
 // Add adds a hook with a priority to the hooks map.
-func (reg *Registry) AddHook(hookName string, priority sdkPlugin.Priority, hookMethod sdkPlugin.Method) {
+func (reg *Registry) AddHook(hookName v1.HookName, priority sdkPlugin.Priority, hookMethod sdkPlugin.Method) {
 	_, span := otel.Tracer(config.TracerName).Start(reg.ctx, "AddHook")
 	defer span.End()
 
@@ -237,7 +237,7 @@ func (reg *Registry) AddHook(hookName string, priority sdkPlugin.Priority, hookM
 		if _, ok := reg.hooks[hookName][priority]; ok {
 			reg.Logger.Warn().Fields(
 				map[string]interface{}{
-					"hookName": hookName,
+					"hookName": hookName.String(),
 					"priority": priority,
 				},
 			).Msg("Hook is replaced")
@@ -261,7 +261,7 @@ func (reg *Registry) AddHook(hookName string, priority sdkPlugin.Priority, hookM
 func (reg *Registry) Run(
 	ctx context.Context,
 	args map[string]interface{},
-	hookName string,
+	hookName v1.HookName,
 	opts ...grpc.CallOption,
 ) (map[string]interface{}, *gerr.GatewayDError) {
 	_, span := otel.Tracer(config.TracerName).Start(reg.ctx, "Run")
@@ -314,7 +314,7 @@ func (reg *Registry) Run(
 		if err != nil {
 			reg.Logger.Error().Err(err).Fields(
 				map[string]interface{}{
-					"hookName": hookName,
+					"hookName": hookName.String(),
 					"priority": priority,
 				},
 			).Msg("Hook returned an error")
@@ -606,58 +606,71 @@ func (reg *Registry) RegisterHooks(ctx context.Context, pluginID sdkPlugin.Ident
 		return
 	}
 
-	span.SetAttributes(attribute.StringSlice("hooks", pluginImpl.Hooks))
+	reg.Logger.Info().Str("name", pluginImpl.ID.Name).Msg("Registering plugin hooks")
+	hooks := make([]string, 0)
+	for _, hook := range pluginImpl.Hooks {
+		hooks = append(hooks, hook.String())
+	}
+	span.SetAttributes(attribute.StringSlice("hooks", hooks))
+	reg.Logger.Debug().Str("name", pluginImpl.ID.Name).Msgf(
+		"Plugin hooks: %+v", pluginImpl.Hooks)
 
 	for _, hookName := range pluginImpl.Hooks {
 		var hookMethod sdkPlugin.Method
 		switch hookName {
-		case sdkPlugin.OnConfigLoaded:
+		case v1.HookName_HOOK_NAME_UNSPECIFIED:
+			reg.Logger.Debug().Str("name", pluginImpl.ID.Name).Msg(
+				"Plugin hook is unspecified or invalid, so it won't work properly")
+			reg.Logger.Debug().Str("name", pluginImpl.ID.Name).Msg(
+				"Consider casting the enum value to an int32")
+		case v1.HookName_HOOK_NAME_ON_CONFIG_LOADED:
 			hookMethod = pluginV1.OnConfigLoaded
-		case sdkPlugin.OnNewLogger:
+		case v1.HookName_HOOK_NAME_ON_NEW_LOGGER:
 			hookMethod = pluginV1.OnNewLogger
-		case sdkPlugin.OnNewPool:
+		case v1.HookName_HOOK_NAME_ON_NEW_POOL:
 			hookMethod = pluginV1.OnNewPool
-		case sdkPlugin.OnNewProxy:
-			hookMethod = pluginV1.OnNewProxy
-		case sdkPlugin.OnNewServer:
-			hookMethod = pluginV1.OnNewServer
-		case sdkPlugin.OnSignal:
-			hookMethod = pluginV1.OnSignal
-		case sdkPlugin.OnRun:
-			hookMethod = pluginV1.OnRun
-		case sdkPlugin.OnBooting:
-			hookMethod = pluginV1.OnBooting
-		case sdkPlugin.OnBooted:
-			hookMethod = pluginV1.OnBooted
-		case sdkPlugin.OnOpening:
-			hookMethod = pluginV1.OnOpening
-		case sdkPlugin.OnOpened:
-			hookMethod = pluginV1.OnOpened
-		case sdkPlugin.OnClosing:
-			hookMethod = pluginV1.OnClosing
-		case sdkPlugin.OnClosed:
-			hookMethod = pluginV1.OnClosed
-		case sdkPlugin.OnTraffic:
-			hookMethod = pluginV1.OnTraffic
-		case sdkPlugin.OnTrafficFromClient:
-			hookMethod = pluginV1.OnTrafficFromClient
-		case sdkPlugin.OnTrafficToServer:
-			hookMethod = pluginV1.OnTrafficToServer
-		case sdkPlugin.OnTrafficFromServer:
-			hookMethod = pluginV1.OnTrafficFromServer
-		case sdkPlugin.OnTrafficToClient:
-			hookMethod = pluginV1.OnTrafficToClient
-		case sdkPlugin.OnShutdown:
-			hookMethod = pluginV1.OnShutdown
-		case sdkPlugin.OnTick:
-			hookMethod = pluginV1.OnTick
-		case sdkPlugin.OnNewClient:
+		case v1.HookName_HOOK_NAME_ON_NEW_CLIENT:
 			hookMethod = pluginV1.OnNewClient
+		case v1.HookName_HOOK_NAME_ON_NEW_PROXY:
+			hookMethod = pluginV1.OnNewProxy
+		case v1.HookName_HOOK_NAME_ON_NEW_SERVER:
+			hookMethod = pluginV1.OnNewServer
+		case v1.HookName_HOOK_NAME_ON_SIGNAL:
+			hookMethod = pluginV1.OnSignal
+		case v1.HookName_HOOK_NAME_ON_RUN:
+			hookMethod = pluginV1.OnRun
+		case v1.HookName_HOOK_NAME_ON_BOOTING:
+			hookMethod = pluginV1.OnBooting
+		case v1.HookName_HOOK_NAME_ON_BOOTED:
+			hookMethod = pluginV1.OnBooted
+		case v1.HookName_HOOK_NAME_ON_OPENING:
+			hookMethod = pluginV1.OnOpening
+		case v1.HookName_HOOK_NAME_ON_OPENED:
+			hookMethod = pluginV1.OnOpened
+		case v1.HookName_HOOK_NAME_ON_CLOSING:
+			hookMethod = pluginV1.OnClosing
+		case v1.HookName_HOOK_NAME_ON_CLOSED:
+			hookMethod = pluginV1.OnClosed
+		case v1.HookName_HOOK_NAME_ON_TRAFFIC:
+			hookMethod = pluginV1.OnTraffic
+		case v1.HookName_HOOK_NAME_ON_TRAFFIC_FROM_CLIENT:
+			hookMethod = pluginV1.OnTrafficFromClient
+		case v1.HookName_HOOK_NAME_ON_TRAFFIC_TO_SERVER:
+			hookMethod = pluginV1.OnTrafficToServer
+		case v1.HookName_HOOK_NAME_ON_TRAFFIC_FROM_SERVER:
+			hookMethod = pluginV1.OnTrafficFromServer
+		case v1.HookName_HOOK_NAME_ON_TRAFFIC_TO_CLIENT:
+			hookMethod = pluginV1.OnTrafficToClient
+		case v1.HookName_HOOK_NAME_ON_SHUTDOWN:
+			hookMethod = pluginV1.OnShutdown
+		case v1.HookName_HOOK_NAME_ON_TICK:
+			hookMethod = pluginV1.OnTick
+		case v1.HookName_HOOK_NAME_ON_HOOK: // fallthrough
 		default:
 			switch reg.Acceptance {
 			case config.Reject:
 				reg.Logger.Warn().Fields(map[string]interface{}{
-					"hook":     hookName,
+					"hook":     hookName.String(),
 					"priority": pluginImpl.Priority,
 					"name":     pluginImpl.ID.Name,
 				}).Msg("Unknown hook, skipping")
@@ -665,7 +678,7 @@ func (reg *Registry) RegisterHooks(ctx context.Context, pluginID sdkPlugin.Ident
 			default:
 				// Default is to accept custom hooks.
 				reg.Logger.Debug().Fields(map[string]interface{}{
-					"hook":     hookName,
+					"hook":     hookName.String(),
 					"priority": pluginImpl.Priority,
 					"name":     pluginImpl.ID.Name,
 				}).Msg("Registering a custom hook")
@@ -676,7 +689,7 @@ func (reg *Registry) RegisterHooks(ctx context.Context, pluginID sdkPlugin.Ident
 		}
 
 		reg.Logger.Debug().Fields(map[string]interface{}{
-			"hook":     hookName,
+			"hook":     hookName.String(),
 			"priority": pluginImpl.Priority,
 			"name":     pluginImpl.ID.Name,
 		}).Msg("Registering hook")
