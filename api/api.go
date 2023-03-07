@@ -84,6 +84,12 @@ func (a *API) GetPlugins(context.Context, *emptypb.Empty) (*v1.PluginConfigs, er
 					requires[r.Name] = r.Version
 				}
 			}
+
+			hooks := make([]int32, 0)
+			for _, hook := range plugIn.Hooks {
+				hooks = append(hooks, int32(hook.Number()))
+			}
+
 			plugins = append(plugins, &v1.PluginConfig{
 				Id: &v1.PluginID{
 					Name:      pluginID.Name,
@@ -96,7 +102,7 @@ func (a *API) GetPlugins(context.Context, *emptypb.Empty) (*v1.PluginConfigs, er
 				License:     plugIn.License,
 				ProjectUrl:  plugIn.ProjectURL,
 				Config:      plugIn.Config,
-				Hooks:       plugIn.Hooks,
+				Hooks:       hooks,
 				Requires:    requires,
 				Tags:        plugIn.Tags,
 				Categories:  plugIn.Categories,

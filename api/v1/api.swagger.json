@@ -255,7 +255,8 @@
         "hooks": {
           "type": "array",
           "items": {
-            "type": "string"
+            "type": "integer",
+            "format": "int32"
           },
           "title": "hooks it attaches to"
         },
