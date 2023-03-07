@@ -10,7 +10,7 @@ const Name = "GatewayD"
 
 var (
 	// Version is the semantic version of GatewayD.
-	Version = ""
+	Version = "0.0.0"
 	// VersionDetails is the build timestamp and the tagged commit hash.
 	VersionDetails = ""
 )
