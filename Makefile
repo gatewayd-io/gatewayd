@@ -1,18 +1,20 @@
-PACKAGE_NAME=github.com/gatewayd-io/gatewayd/config
+PROJECT_URL=github.com/gatewayd-io/gatewayd
+CONFIG_PACKAGE=${PROJECT_URL}/config
+CMD_PACKAGE=${PROJECT_URL}/cmd
 LAST_TAGGED_COMMIT=$(shell git rev-list --tags --max-count=1)
 LAST_TAGGED_COMMIT_SHORT=$(shell git rev-parse --short ${LAST_TAGGED_COMMIT})
 # LAST_TAGGED_COMMIT_SHORT=$(shell git rev-parse --short HEAD)
 VERSION=$(shell git describe --tags ${LAST_TAGGED_COMMIT})
 TIMESTAMP=$(shell date -u +"%FT%T%z")
 VERSION_DETAILS=${TIMESTAMP}/${LAST_TAGGED_COMMIT_SHORT}
-EXTRA_LDFLAGS=-X ${PACKAGE_NAME}.Version=${VERSION} -X ${PACKAGE_NAME}.VersionDetails=${VERSION_DETAILS}
+EXTRA_LDFLAGS=-X ${CONFIG_PACKAGE}.Version=${VERSION} -X ${CONFIG_PACKAGE}.VersionDetails=${VERSION_DETAILS} -X ${CMD_PACKAGE}.UsageReportURL=usage.gatewayd.io:59091
 FILES=gatewayd README.md LICENSE gatewayd.yaml gatewayd_plugins.yaml
 
 tidy:
 	@go mod tidy
 
 build-dev:
-	@go mod tidy && CGO_ENABLED=0 go build -tags embed_swagger -trimpath -ldflags "-s -w -X ${PACKAGE_NAME}.Version=${VERSION}"
+	@go mod tidy && CGO_ENABLED=0 go build -tags embed_swagger -trimpath -ldflags "-s -w -X ${CONFIG_PACKAGE}.Version=${VERSION} -X ${CMD_PACKAGE}.UsageReportURL=localhost:59091"
 
 build-release: tidy
 	@mkdir -p dist
