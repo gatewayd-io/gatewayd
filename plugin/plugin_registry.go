@@ -618,6 +618,11 @@ func (reg *Registry) RegisterHooks(ctx context.Context, pluginID sdkPlugin.Ident
 	for _, hookName := range pluginImpl.Hooks {
 		var hookMethod sdkPlugin.Method
 		switch hookName {
+		case v1.HookName_HOOK_NAME_UNSPECIFIED:
+			reg.Logger.Debug().Str("name", pluginImpl.ID.Name).Msg(
+				"Plugin hook is unspecified or invalid, so it won't work properly")
+			reg.Logger.Debug().Str("name", pluginImpl.ID.Name).Msg(
+				"Consider casting the enum value to an int32")
 		case v1.HookName_HOOK_NAME_ON_CONFIG_LOADED:
 			hookMethod = pluginV1.OnConfigLoaded
 		case v1.HookName_HOOK_NAME_ON_NEW_LOGGER:
@@ -660,6 +665,7 @@ func (reg *Registry) RegisterHooks(ctx context.Context, pluginID sdkPlugin.Ident
 			hookMethod = pluginV1.OnShutdown
 		case v1.HookName_HOOK_NAME_ON_TICK:
 			hookMethod = pluginV1.OnTick
+		case v1.HookName_HOOK_NAME_ON_HOOK: // fallthrough
 		default:
 			switch reg.Acceptance {
 			case config.Reject:
