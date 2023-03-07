@@ -7,7 +7,7 @@ require (
 	github.com/NYTimes/gziphandler v1.1.1
 	github.com/envoyproxy/protoc-gen-validate v0.9.1
 	github.com/gatewayd-io/gatewayd-plugin-sdk v0.0.9
-	github.com/getsentry/sentry-go v0.18.0
+	github.com/getsentry/sentry-go v0.19.0
 	github.com/go-co-op/gocron v1.18.1
 	github.com/google/go-cmp v0.5.9
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.15.2
