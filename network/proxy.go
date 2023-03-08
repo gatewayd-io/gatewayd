@@ -172,13 +172,15 @@ func (pr *Proxy) Connect(gconn gnet.Conn) *gerr.GatewayDError {
 
 	metrics.ProxiedConnections.Inc()
 
-	pr.logger.Debug().Fields(
-		map[string]interface{}{
-			"function": "proxy.connect",
-			"client":   client.ID[:7],
-			"server":   gconn.RemoteAddr().String(),
-		},
-	).Msg("Client has been assigned")
+	fields := map[string]interface{}{
+		"function": "proxy.connect",
+		"client":   "unknown",
+		"server":   gconn.RemoteAddr().String(),
+	}
+	if client.ID != "" {
+		fields["client"] = client.ID[:7]
+	}
+	pr.logger.Debug().Fields(fields).Msg("Client has been assigned")
 
 	pr.logger.Debug().Fields(
 		map[string]interface{}{
