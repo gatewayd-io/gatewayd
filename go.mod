@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.2.0
 	github.com/NYTimes/gziphandler v1.1.1
 	github.com/envoyproxy/protoc-gen-validate v0.9.1
-	github.com/gatewayd-io/gatewayd-plugin-sdk v0.0.13
+	github.com/gatewayd-io/gatewayd-plugin-sdk v0.0.14
 	github.com/getsentry/sentry-go v0.19.0
 	github.com/go-co-op/gocron v1.18.1
 	github.com/google/go-cmp v0.5.9
@@ -18,7 +18,7 @@ require (
 	github.com/panjf2000/gnet/v2 v2.2.5
 	github.com/prometheus/client_golang v1.14.0
 	github.com/prometheus/client_model v0.3.0
-	github.com/prometheus/common v0.41.0
+	github.com/prometheus/common v0.42.0
 	github.com/rs/zerolog v1.29.0
 	github.com/spf13/cobra v1.6.1
 	github.com/stretchr/testify v1.8.2
@@ -31,7 +31,7 @@ require (
 	golang.org/x/exp v0.0.0-20230307190834-24139beb5833
 	google.golang.org/genproto v0.0.0-20230306155012-7f2fa6fef1f4
 	google.golang.org/grpc v1.53.0
-	google.golang.org/protobuf v1.28.1
+	google.golang.org/protobuf v1.29.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
 
@@ -44,7 +44,7 @@ require (
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/hashicorp/yamux v0.1.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/kr/pretty v0.3.0 // indirect
@@ -63,7 +63,7 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.14.0 // indirect
 	go.opentelemetry.io/proto/otlp v0.19.0 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
-	go.uber.org/multierr v1.9.0 // indirect
+	go.uber.org/multierr v1.10.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect
 	golang.org/x/net v0.8.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
