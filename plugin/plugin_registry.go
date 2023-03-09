@@ -461,14 +461,10 @@ func (reg *Registry) LoadPlugins(ctx context.Context, plugins []config.Plugin) {
 					goplugin.ProtocolGRPC,
 				},
 				// SecureConfig: nil,
-				Logger:  logAdapter,
-				Managed: true,
-				MinPort: config.DefaultMinPort,
-				MaxPort: config.DefaultMaxPort,
-				// TODO: Enable GRPC DialOptions
-				// GRPCDialOptions: []grpc.DialOption{
-				// 	grpc.WithInsecure(),
-				// },
+				Logger:   logAdapter,
+				Managed:  true,
+				MinPort:  config.DefaultMinPort,
+				MaxPort:  config.DefaultMaxPort,
 				AutoMTLS: true,
 			},
 		)
