@@ -662,12 +662,18 @@ var runCmd = &cobra.Command{
 		// Start the server.
 		for name, server := range servers {
 			logger := loggers[name]
-			go func(server *network.Server, logger zerolog.Logger) {
+			go func(
+				server *network.Server,
+				logger zerolog.Logger,
+				healthCheckScheduler *gocron.Scheduler,
+				metricsMerger *metrics.Merger,
+				pluginRegistry *plugin.Registry,
+			) {
 				span.AddEvent("Start server")
 				if err := server.Run(); err != nil {
 					logger.Error().Err(err).Msg("Failed to start server")
 					span.RecordError(err)
-					// TODO: Shutdown the server gracefully, like in the signal handler.
+
 					healthCheckScheduler.Clear()
 					if metricsMerger != nil {
 						metricsMerger.Stop()
@@ -676,7 +682,7 @@ var runCmd = &cobra.Command{
 					pluginRegistry.Shutdown()
 					os.Exit(gerr.FailedToStartServer)
 				}
-			}(server, logger)
+			}(server, logger, healthCheckScheduler, metricsMerger, pluginRegistry)
 		}
 		span.End()
 
