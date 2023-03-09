@@ -31,10 +31,10 @@ clients:
     address: localhost:5432
     tcpKeepAlive: False
     tcpKeepAlivePeriod: 30s # duration
-    receiveBufferSize: 16777216
-    receiveChunkSize: 4096
-    receiveDeadline: 0ms # duration, 0ms/0s means no deadline
-    sendDeadline: 0ms # duration, 0ms/0s means no deadline
+    receiveBufferSize: 134217728
+    receiveChunkSize: 8192
+    receiveDeadline: 0s # duration, 0ms/0s means no deadline
+    sendDeadline: 0s # duration, 0ms/0s means no deadline
 
 pools:
   default:
@@ -57,10 +57,10 @@ servers:
     multiCore: True
     lockOSThread: False
     loadBalancer: roundrobin
-    readBufferCap: 16777216
-    writeBufferCap: 16777216
-    socketRecvBuffer: 16777216
-    socketSendBuffer: 16777216
+    readBufferCap: 134217728
+    writeBufferCap: 134217728
+    socketRecvBuffer: 134217728
+    socketSendBuffer: 134217728
     reuseAddress: True
     reusePort: True
     tcpKeepAlive: 3s # duration
