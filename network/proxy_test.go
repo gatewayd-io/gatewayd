@@ -30,7 +30,6 @@ func TestNewProxy(t *testing.T) {
 		&config.Client{
 			Network:            "tcp",
 			Address:            "localhost:5432",
-			ReceiveBufferSize:  config.DefaultBufferSize,
 			ReceiveChunkSize:   config.DefaultChunkSize,
 			ReceiveDeadline:    config.DefaultReceiveDeadline,
 			SendDeadline:       config.DefaultSendDeadline,
@@ -93,7 +92,6 @@ func TestNewProxyElastic(t *testing.T) {
 		&config.Client{
 			Network:            "tcp",
 			Address:            "localhost:5432",
-			ReceiveBufferSize:  config.DefaultBufferSize,
 			ReceiveChunkSize:   config.DefaultChunkSize,
 			ReceiveDeadline:    config.DefaultReceiveDeadline,
 			SendDeadline:       config.DefaultSendDeadline,
@@ -110,5 +108,4 @@ func TestNewProxyElastic(t *testing.T) {
 	assert.Equal(t, false, proxy.ReuseElasticClients)
 	assert.Equal(t, "tcp", proxy.ClientConfig.Network)
 	assert.Equal(t, "localhost:5432", proxy.ClientConfig.Address)
-	assert.Equal(t, config.DefaultBufferSize, proxy.ClientConfig.ReceiveBufferSize)
 }

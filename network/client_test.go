@@ -27,7 +27,6 @@ func CreateNewClient(t *testing.T) *Client {
 		&config.Client{
 			Network:            "tcp",
 			Address:            "localhost:5432",
-			ReceiveBufferSize:  config.DefaultBufferSize,
 			ReceiveChunkSize:   config.DefaultChunkSize,
 			ReceiveDeadline:    config.DefaultReceiveDeadline,
 			SendDeadline:       config.DefaultSendDeadline,
@@ -46,7 +45,6 @@ func TestNewClient(t *testing.T) {
 
 	assert.Equal(t, "tcp", client.Network)
 	assert.Equal(t, "127.0.0.1:5432", client.Address)
-	assert.Equal(t, config.DefaultBufferSize, client.ReceiveBufferSize)
 	assert.NotEmpty(t, client.ID)
 	assert.NotNil(t, client.Conn)
 }
@@ -96,7 +94,6 @@ func TestClose(t *testing.T) {
 	assert.Equal(t, "", client.Network)
 	assert.Equal(t, "", client.Address)
 	assert.Nil(t, client.Conn)
-	assert.Equal(t, config.DefaultBufferSize, client.ReceiveBufferSize)
 }
 
 // TestIsConnected tests the IsConnected function.

@@ -1,6 +1,7 @@
 package network
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net"
@@ -28,7 +29,6 @@ type Client struct {
 
 	TCPKeepAlive       bool
 	TCPKeepAlivePeriod time.Duration
-	ReceiveBufferSize  int
 	ReceiveChunkSize   int
 	ReceiveDeadline    time.Duration
 	SendDeadline       time.Duration
@@ -133,13 +133,6 @@ func NewClient(ctx context.Context, clientConfig *config.Client, logger zerolog.
 		}
 	}
 
-	// Set the receive buffer size. This is the maximum size of the buffer.
-	if clientConfig.ReceiveBufferSize <= 0 {
-		client.ReceiveBufferSize = config.DefaultBufferSize
-	} else {
-		client.ReceiveBufferSize = clientConfig.ReceiveBufferSize
-	}
-
 	// Set the receive chunk size. This is the size of the buffer that is read from the connection
 	// in chunks.
 	if clientConfig.ReceiveChunkSize <= 0 {
@@ -186,7 +179,7 @@ func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 	defer span.End()
 
 	var received int
-	buffer := make([]byte, 0, c.ReceiveBufferSize)
+	buffer := bytes.NewBuffer(nil)
 	// Read the data in chunks.
 	for {
 		chunk := make([]byte, c.ReceiveChunkSize)
@@ -194,19 +187,19 @@ func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 		switch {
 		case read > 0 && err != nil:
 			received += read
-			buffer = append(buffer, chunk[:read]...)
+			buffer.Write(chunk[:read])
 			c.logger.Error().Err(err).Msg("Couldn't receive data from the server")
 			metrics.BytesReceivedFromServer.Observe(float64(received))
 			span.RecordError(err)
-			return received, buffer, gerr.ErrClientReceiveFailed.Wrap(err)
+			return received, buffer.Bytes(), gerr.ErrClientReceiveFailed.Wrap(err)
 		case err != nil:
 			c.logger.Error().Err(err).Msg("Couldn't receive data from the server")
 			metrics.BytesReceivedFromServer.Observe(float64(received))
 			span.RecordError(err)
-			return received, buffer, gerr.ErrClientReceiveFailed.Wrap(err)
+			return received, buffer.Bytes(), gerr.ErrClientReceiveFailed.Wrap(err)
 		default:
 			received += read
-			buffer = append(buffer, chunk[:read]...)
+			buffer.Write(chunk[:read])
 		}
 
 		if read == 0 || read < c.ReceiveChunkSize {
@@ -214,7 +207,7 @@ func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 		}
 	}
 	metrics.BytesReceivedFromServer.Observe(float64(received))
-	return received, buffer, nil
+	return received, buffer.Bytes(), nil
 }
 
 // Close closes the connection to the server.
