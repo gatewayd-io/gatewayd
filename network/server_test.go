@@ -144,7 +144,6 @@ func TestRunServer(t *testing.T) {
 	clientConfig := config.Client{
 		Network:            "tcp",
 		Address:            "localhost:5432",
-		ReceiveBufferSize:  config.DefaultBufferSize,
 		ReceiveChunkSize:   config.DefaultChunkSize,
 		ReceiveDeadline:    config.DefaultReceiveDeadline,
 		SendDeadline:       config.DefaultSendDeadline,
@@ -210,7 +209,6 @@ func TestRunServer(t *testing.T) {
 					&config.Client{
 						Network:            "tcp",
 						Address:            "127.0.0.1:15432",
-						ReceiveBufferSize:  config.DefaultBufferSize,
 						ReceiveChunkSize:   config.DefaultChunkSize,
 						ReceiveDeadline:    config.DefaultReceiveDeadline,
 						SendDeadline:       config.DefaultSendDeadline,
