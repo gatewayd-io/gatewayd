@@ -39,7 +39,6 @@ type Client struct {
 	Address            string        `koanf:"address"`
 	TCPKeepAlive       bool          `koanf:"tcpKeepAlive"`
 	TCPKeepAlivePeriod time.Duration `koanf:"tcpKeepAlivePeriod"`
-	ReceiveBufferSize  int           `koanf:"receiveBufferSize"`
 	ReceiveChunkSize   int           `koanf:"receiveChunkSize"`
 	ReceiveDeadline    time.Duration `koanf:"receiveDeadline"`
 	SendDeadline       time.Duration `koanf:"sendDeadline"`

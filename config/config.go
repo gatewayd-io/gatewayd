@@ -101,7 +101,6 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 		},
 		"clients": map[string]interface{}{
 			"default": map[string]interface{}{
-				"receiveBufferSize":  DefaultBufferSize,
 				"receiveChunkSize":   DefaultChunkSize,
 				"tcpKeepAlivePeriod": DefaultTCPKeepAlivePeriod.String(),
 			},

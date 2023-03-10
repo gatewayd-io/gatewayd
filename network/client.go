@@ -29,7 +29,6 @@ type Client struct {
 
 	TCPKeepAlive       bool
 	TCPKeepAlivePeriod time.Duration
-	ReceiveBufferSize  int
 	ReceiveChunkSize   int
 	ReceiveDeadline    time.Duration
 	SendDeadline       time.Duration
@@ -132,13 +131,6 @@ func NewClient(ctx context.Context, clientConfig *config.Client, logger zerolog.
 			logger.Debug().Str("duration", fmt.Sprint(client.SendDeadline)).Msg(
 				"Set send deadline")
 		}
-	}
-
-	// Set the receive buffer size. This is the maximum size of the buffer.
-	if clientConfig.ReceiveBufferSize <= 0 {
-		client.ReceiveBufferSize = config.DefaultBufferSize
-	} else {
-		client.ReceiveBufferSize = clientConfig.ReceiveBufferSize
 	}
 
 	// Set the receive chunk size. This is the size of the buffer that is read from the connection
