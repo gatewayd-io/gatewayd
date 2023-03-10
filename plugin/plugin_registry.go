@@ -499,9 +499,16 @@ func (reg *Registry) LoadPlugins(ctx context.Context, plugins []config.Plugin) {
 		span.AddEvent("Fetched plugin metadata")
 
 		// Retrieve plugin requirements.
-		if err := mapstructure.Decode(metadata.Fields["requires"].GetListValue().AsSlice(),
-			&plugin.Requires); err != nil {
-			reg.Logger.Debug().Err(err).Msg("Failed to decode plugin requirements")
+		if metadata.Fields["requires"] != nil &&
+			metadata.Fields["requires"].Kind != nil &&
+			metadata.Fields["requires"].GetListValue() != nil {
+			if err := mapstructure.Decode(metadata.Fields["requires"].GetListValue().AsSlice(),
+				&plugin.Requires); err != nil {
+				reg.Logger.Debug().Err(err).Msg("Failed to decode plugin requirements")
+			}
+		} else {
+			reg.Logger.Debug().Str("name", plugin.ID.Name).Msg(
+				"Plugin doesn't have any requirements")
 		}
 
 		// Too many requirements or not enough plugins loaded.
@@ -545,25 +552,47 @@ func (reg *Registry) LoadPlugins(ctx context.Context, plugins []config.Plugin) {
 		plugin.License = metadata.Fields["license"].GetStringValue()
 		plugin.ProjectURL = metadata.Fields["projectUrl"].GetStringValue()
 		// Retrieve authors.
-		if err := mapstructure.Decode(metadata.Fields["authors"].GetListValue().AsSlice(),
-			&plugin.Authors); err != nil {
-			reg.Logger.Debug().Err(err).Msg("Failed to decode plugin authors")
+		if metadata.Fields["authors"] != nil &&
+			metadata.Fields["authors"].Kind != nil &&
+			metadata.Fields["authors"].GetListValue() != nil {
+			if err := mapstructure.Decode(metadata.Fields["authors"].GetListValue().AsSlice(),
+				&plugin.Authors); err != nil {
+				reg.Logger.Debug().Err(err).Msg("Failed to decode plugin authors")
+			}
+		} else {
+			reg.Logger.Debug().Str("name", plugin.ID.Name).Msg(
+				"Plugin doesn't have any authors")
 		}
+
 		// Retrieve hooks.
-		if err := mapstructure.Decode(metadata.Fields["hooks"].GetListValue().AsSlice(),
-			&plugin.Hooks); err != nil {
-			reg.Logger.Debug().Err(err).Msg("Failed to decode plugin hooks")
+		if metadata.Fields["hooks"] != nil &&
+			metadata.Fields["hooks"].Kind != nil &&
+			metadata.Fields["hooks"].GetListValue() != nil {
+			if err := mapstructure.Decode(metadata.Fields["hooks"].GetListValue().AsSlice(),
+				&plugin.Hooks); err != nil {
+				reg.Logger.Debug().Err(err).Msg("Failed to decode plugin hooks")
+			}
+		} else {
+			reg.Logger.Debug().Str("name", plugin.ID.Name).Msg(
+				"Plugin doesn't attach to any hooks")
 		}
 
 		// Retrieve plugin config.
 		plugin.Config = make(map[string]string)
-		for key, value := range metadata.Fields["config"].GetStructValue().AsMap() {
-			if val, ok := value.(string); ok {
-				plugin.Config[key] = val
-			} else {
-				reg.Logger.Debug().Str("key", key).Msg(
-					"Failed to decode plugin config")
+		if metadata.Fields["config"] == nil &&
+			metadata.Fields["config"].Kind == nil &&
+			metadata.Fields["config"].GetStructValue() == nil {
+			for key, value := range metadata.Fields["config"].GetStructValue().AsMap() {
+				if val, ok := value.(string); ok {
+					plugin.Config[key] = val
+				} else {
+					reg.Logger.Debug().Str("key", key).Msg(
+						"Failed to decode plugin config")
+				}
 			}
+		} else {
+			reg.Logger.Debug().Str("name", plugin.ID.Name).Msg(
+				"Plugin doesn't have any config")
 		}
 
 		span.AddEvent("Decoded plugin metadata")
