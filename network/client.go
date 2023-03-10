@@ -1,6 +1,7 @@
 package network
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net"
@@ -186,7 +187,7 @@ func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 	defer span.End()
 
 	var received int
-	buffer := make([]byte, 0, c.ReceiveBufferSize)
+	buffer := bytes.NewBuffer(nil)
 	// Read the data in chunks.
 	for {
 		chunk := make([]byte, c.ReceiveChunkSize)
@@ -194,19 +195,19 @@ func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 		switch {
 		case read > 0 && err != nil:
 			received += read
-			buffer = append(buffer, chunk[:read]...)
+			buffer.Write(chunk[:read])
 			c.logger.Error().Err(err).Msg("Couldn't receive data from the server")
 			metrics.BytesReceivedFromServer.Observe(float64(received))
 			span.RecordError(err)
-			return received, buffer, gerr.ErrClientReceiveFailed.Wrap(err)
+			return received, buffer.Bytes(), gerr.ErrClientReceiveFailed.Wrap(err)
 		case err != nil:
 			c.logger.Error().Err(err).Msg("Couldn't receive data from the server")
 			metrics.BytesReceivedFromServer.Observe(float64(received))
 			span.RecordError(err)
-			return received, buffer, gerr.ErrClientReceiveFailed.Wrap(err)
+			return received, buffer.Bytes(), gerr.ErrClientReceiveFailed.Wrap(err)
 		default:
 			received += read
-			buffer = append(buffer, chunk[:read]...)
+			buffer.Write(chunk[:read])
 		}
 
 		if read == 0 || read < c.ReceiveChunkSize {
@@ -214,7 +215,7 @@ func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 		}
 	}
 	metrics.BytesReceivedFromServer.Observe(float64(received))
-	return received, buffer, nil
+	return received, buffer.Bytes(), nil
 }
 
 // Close closes the connection to the server.
