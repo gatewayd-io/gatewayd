@@ -31,7 +31,6 @@ clients:
     address: localhost:5432
     tcpKeepAlive: False
     tcpKeepAlivePeriod: 30s # duration
-    receiveBufferSize: 134217728
     receiveChunkSize: 8192
     receiveDeadline: 0s # duration, 0ms/0s means no deadline
     sendDeadline: 0s # duration, 0ms/0s means no deadline
