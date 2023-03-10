@@ -499,9 +499,7 @@ func (reg *Registry) LoadPlugins(ctx context.Context, plugins []config.Plugin) {
 		span.AddEvent("Fetched plugin metadata")
 
 		// Retrieve plugin requirements.
-		if metadata.Fields["requires"] != nil &&
-			metadata.Fields["requires"].Kind != nil &&
-			metadata.Fields["requires"].GetListValue() != nil {
+		if metadata.Fields["requires"] != nil && metadata.Fields["requires"].GetListValue() != nil {
 			if err := mapstructure.Decode(metadata.Fields["requires"].GetListValue().AsSlice(),
 				&plugin.Requires); err != nil {
 				reg.Logger.Debug().Err(err).Msg("Failed to decode plugin requirements")
@@ -552,9 +550,7 @@ func (reg *Registry) LoadPlugins(ctx context.Context, plugins []config.Plugin) {
 		plugin.License = metadata.Fields["license"].GetStringValue()
 		plugin.ProjectURL = metadata.Fields["projectUrl"].GetStringValue()
 		// Retrieve authors.
-		if metadata.Fields["authors"] != nil &&
-			metadata.Fields["authors"].Kind != nil &&
-			metadata.Fields["authors"].GetListValue() != nil {
+		if metadata.Fields["authors"] != nil && metadata.Fields["authors"].GetListValue() != nil {
 			if err := mapstructure.Decode(metadata.Fields["authors"].GetListValue().AsSlice(),
 				&plugin.Authors); err != nil {
 				reg.Logger.Debug().Err(err).Msg("Failed to decode plugin authors")
@@ -565,9 +561,7 @@ func (reg *Registry) LoadPlugins(ctx context.Context, plugins []config.Plugin) {
 		}
 
 		// Retrieve hooks.
-		if metadata.Fields["hooks"] != nil &&
-			metadata.Fields["hooks"].Kind != nil &&
-			metadata.Fields["hooks"].GetListValue() != nil {
+		if metadata.Fields["hooks"] != nil && metadata.Fields["hooks"].GetListValue() != nil {
 			if err := mapstructure.Decode(metadata.Fields["hooks"].GetListValue().AsSlice(),
 				&plugin.Hooks); err != nil {
 				reg.Logger.Debug().Err(err).Msg("Failed to decode plugin hooks")
@@ -579,9 +573,7 @@ func (reg *Registry) LoadPlugins(ctx context.Context, plugins []config.Plugin) {
 
 		// Retrieve plugin config.
 		plugin.Config = make(map[string]string)
-		if metadata.Fields["config"] == nil &&
-			metadata.Fields["config"].Kind == nil &&
-			metadata.Fields["config"].GetStructValue() == nil {
+		if metadata.Fields["config"] != nil && metadata.Fields["config"].GetStructValue() != nil {
 			for key, value := range metadata.Fields["config"].GetStructValue().AsMap() {
 				if val, ok := value.(string); ok {
 					plugin.Config[key] = val
