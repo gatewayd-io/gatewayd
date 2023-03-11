@@ -378,6 +378,12 @@ func (s *Server) Shutdown() {
 
 	// Set the server status to stopped. This is used to shutdown the server gracefully in OnClose.
 	s.Status = config.Stopped
+
+	// Shutdown the server.
+	if err := s.engine.Stop(context.Background()); err != nil {
+		s.logger.Error().Err(err).Msg("Failed to shutdown server")
+		span.RecordError(err)
+	}
 }
 
 // IsRunning returns true if the server is running.

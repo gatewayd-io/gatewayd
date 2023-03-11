@@ -646,7 +646,7 @@ var runCmd = &cobra.Command{
 							server.Shutdown()
 							span.AddEvent("Stopped server")
 						}
-						logger.Info().Msg("Stopped servers")
+						logger.Info().Msg("Stopped all servers")
 						pluginRegistry.Shutdown()
 						logger.Info().Msg("Stopped plugin registry")
 						span.AddEvent("Stopped plugin registry")
