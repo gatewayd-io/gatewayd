@@ -67,6 +67,6 @@ servers:
 
 api:
   enabled: True
-  httpAddress: localhost:8080
+  httpAddress: localhost:18080
   grpcNetwork: tcp
-  grpcAddress: localhost:9090
+  grpcAddress: localhost:19090
