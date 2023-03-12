@@ -114,6 +114,8 @@ jobs:
           acceptancePolicy: "accept"
           metricsMergerPeriod: 1s
           healthCheckPeriod: 1s
+          reloadOnCrash: true
+          timeout: 30s
 
           plugins:
             - name: gatewayd-plugin-template
