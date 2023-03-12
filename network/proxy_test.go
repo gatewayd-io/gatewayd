@@ -50,7 +50,8 @@ func TestNewProxy(t *testing.T) {
 		false,
 		config.DefaultHealthCheckPeriod,
 		nil,
-		logger)
+		logger,
+		config.DefaultPluginTimeout)
 	defer proxy.Shutdown()
 
 	assert.NotNil(t, proxy)
@@ -98,7 +99,8 @@ func TestNewProxyElastic(t *testing.T) {
 			TCPKeepAlive:       false,
 			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 		},
-		logger)
+		logger,
+		config.DefaultPluginTimeout)
 	defer proxy.Shutdown()
 
 	assert.NotNil(t, proxy)
