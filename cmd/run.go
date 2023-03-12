@@ -212,12 +212,14 @@ var runCmd = &cobra.Command{
 
 		span.End()
 
+		// Set the plugin timeout context.
+		pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), conf.Plugin.Timeout)
+		defer cancel()
+
 		// The config will be passed to the plugins that register to the "OnConfigLoaded" plugin.
 		// The plugins can modify the config and return it.
 		updatedGlobalConfig, err := pluginRegistry.Run(
-			context.Background(),
-			conf.GlobalKoanf.All(),
-			v1.HookName_HOOK_NAME_ON_CONFIG_LOADED)
+			pluginTimeoutCtx, conf.GlobalKoanf.All(), v1.HookName_HOOK_NAME_ON_CONFIG_LOADED)
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to run OnConfigLoaded hooks")
 			span.RecordError(err)
@@ -300,7 +302,7 @@ var runCmd = &cobra.Command{
 		// TODO: Use a context with a timeout
 		if data, ok := conf.GlobalKoanf.Get("loggers").(map[string]interface{}); ok {
 			_, err = pluginRegistry.Run(
-				context.Background(), data, v1.HookName_HOOK_NAME_ON_NEW_LOGGER)
+				pluginTimeoutCtx, data, v1.HookName_HOOK_NAME_ON_NEW_LOGGER)
 			if err != nil {
 				logger.Error().Err(err).Msg("Failed to run OnNewLogger hooks")
 				span.RecordError(err)
@@ -367,7 +369,7 @@ var runCmd = &cobra.Command{
 						"tcpKeepAlivePeriod": client.TCPKeepAlivePeriod.String(),
 					}
 					_, err := pluginRegistry.Run(
-						context.Background(), clientCfg, v1.HookName_HOOK_NAME_ON_NEW_CLIENT)
+						pluginTimeoutCtx, clientCfg, v1.HookName_HOOK_NAME_ON_NEW_CLIENT)
 					if err != nil {
 						logger.Error().Err(err).Msg("Failed to run OnNewClient hooks")
 						span.RecordError(err)
@@ -400,7 +402,7 @@ var runCmd = &cobra.Command{
 			}
 
 			_, err = pluginRegistry.Run(
-				context.Background(),
+				pluginTimeoutCtx,
 				map[string]interface{}{"name": name, "size": cfg.GetSize()},
 				v1.HookName_HOOK_NAME_ON_NEW_POOL)
 			if err != nil {
@@ -425,6 +427,7 @@ var runCmd = &cobra.Command{
 				cfg.HealthCheckPeriod,
 				&clientConfig,
 				logger,
+				conf.Plugin.Timeout,
 			)
 
 			span.AddEvent("Create proxy", trace.WithAttributes(
@@ -436,7 +439,7 @@ var runCmd = &cobra.Command{
 
 			if data, ok := conf.GlobalKoanf.Get("proxy").(map[string]interface{}); ok {
 				_, err = pluginRegistry.Run(
-					context.Background(), data, v1.HookName_HOOK_NAME_ON_NEW_PROXY)
+					pluginTimeoutCtx, data, v1.HookName_HOOK_NAME_ON_NEW_PROXY)
 				if err != nil {
 					logger.Error().Err(err).Msg("Failed to run OnNewProxy hooks")
 					span.RecordError(err)
@@ -487,6 +490,7 @@ var runCmd = &cobra.Command{
 				proxies[name],
 				logger,
 				pluginRegistry,
+				conf.Plugin.Timeout,
 			)
 
 			span.AddEvent("Create server", trace.WithAttributes(
@@ -508,11 +512,12 @@ var runCmd = &cobra.Command{
 				attribute.Bool("reusePort", cfg.ReusePort),
 				attribute.String("tcpKeepAlive", cfg.TCPKeepAlive.String()),
 				attribute.Bool("tcpNoDelay", cfg.TCPNoDelay),
+				attribute.String("pluginTimeout", conf.Plugin.Timeout.String()),
 			))
 
 			if data, ok := conf.GlobalKoanf.Get("servers").(map[string]interface{}); ok {
 				_, err = pluginRegistry.Run(
-					context.Background(), data, v1.HookName_HOOK_NAME_ON_NEW_SERVER)
+					pluginTimeoutCtx, data, v1.HookName_HOOK_NAME_ON_NEW_SERVER)
 				if err != nil {
 					logger.Error().Err(err).Msg("Failed to run OnNewServer hooks")
 					span.RecordError(err)
@@ -620,7 +625,7 @@ var runCmd = &cobra.Command{
 
 						logger.Info().Msg("Notifying the plugins that the server is shutting down")
 						_, err := pluginRegistry.Run(
-							context.Background(),
+							pluginTimeoutCtx,
 							map[string]interface{}{"signal": sig.String()},
 							v1.HookName_HOOK_NAME_ON_SIGNAL,
 						)
