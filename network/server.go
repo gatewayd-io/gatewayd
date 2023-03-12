@@ -25,7 +25,7 @@ type Server struct {
 	proxy          IProxy
 	logger         zerolog.Logger
 	pluginRegistry *plugin.Registry
-	ctx            context.Context // TODO: Move this near the function that uses it.
+	ctx            context.Context //nolint:containedctx
 	pluginTimeout  time.Duration
 
 	Network      string // tcp/udp/unix

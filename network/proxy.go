@@ -34,7 +34,7 @@ type Proxy struct {
 	logger               zerolog.Logger
 	pluginRegistry       *plugin.Registry
 	scheduler            *gocron.Scheduler
-	ctx                  context.Context // TODO: move it near the function.
+	ctx                  context.Context //nolint:containedctx
 	pluginTimeout        time.Duration
 
 	Elastic             bool
