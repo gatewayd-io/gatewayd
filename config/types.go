@@ -31,6 +31,7 @@ type PluginConfig struct {
 	MetricsMergerPeriod time.Duration `koanf:"metricsMergerPeriod"`
 	HealthCheckPeriod   time.Duration `koanf:"healthCheckPeriod"`
 	ReloadOnCrash       bool          `koanf:"reloadOnCrash"`
+	Timeout             time.Duration `koanf:"timeout"`
 	Plugins             []Plugin      `koanf:"plugins"`
 }
 
