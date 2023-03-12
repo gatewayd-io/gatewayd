@@ -1,4 +1,4 @@
-# Plugin configuration file for GatewayD
+# GatewayD Plugin Configuration
 
 # The verification policy controls how the output of the plugin's hook, that is, its result,
 # should be handled and whether to verify the output or not.

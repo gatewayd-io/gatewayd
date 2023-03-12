@@ -1,4 +1,4 @@
-# Gatewayd config
+# GatewayD Global Configuration
 
 loggers:
   default:
