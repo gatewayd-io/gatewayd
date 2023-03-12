@@ -26,6 +26,7 @@ type Server struct {
 	logger         zerolog.Logger
 	pluginRegistry *plugin.Registry
 	ctx            context.Context //nolint:containedctx
+	pluginTimeout  time.Duration
 
 	Network      string // tcp/udp/unix
 	Address      string
@@ -45,9 +46,11 @@ func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 
 	s.logger.Debug().Msg("GatewayD is booting...")
 
+	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.pluginTimeout)
+	defer cancel()
 	// Run the OnBooting hooks.
 	_, err := s.pluginRegistry.Run(
-		context.Background(),
+		pluginTimeoutCtx,
 		map[string]interface{}{"status": fmt.Sprint(s.Status)},
 		v1.HookName_HOOK_NAME_ON_BOOTING)
 	if err != nil {
@@ -63,7 +66,7 @@ func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 
 	// Run the OnBooted hooks.
 	_, err = s.pluginRegistry.Run(
-		context.Background(),
+		pluginTimeoutCtx,
 		map[string]interface{}{"status": fmt.Sprint(s.Status)},
 		v1.HookName_HOOK_NAME_ON_BOOTED)
 	if err != nil {
@@ -86,6 +89,8 @@ func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 	s.logger.Debug().Str("from", gconn.RemoteAddr().String()).Msg(
 		"GatewayD is opening a connection")
 
+	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.pluginTimeout)
+	defer cancel()
 	// Run the OnOpening hooks.
 	onOpeningData := map[string]interface{}{
 		"client": map[string]interface{}{
@@ -94,7 +99,7 @@ func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 		},
 	}
 	_, err := s.pluginRegistry.Run(
-		context.Background(), onOpeningData, v1.HookName_HOOK_NAME_ON_OPENING)
+		pluginTimeoutCtx, onOpeningData, v1.HookName_HOOK_NAME_ON_OPENING)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to run OnOpening hook")
 		span.RecordError(err)
@@ -140,7 +145,7 @@ func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 		},
 	}
 	_, err = s.pluginRegistry.Run(
-		context.Background(), onOpenedData, v1.HookName_HOOK_NAME_ON_OPENED)
+		pluginTimeoutCtx, onOpenedData, v1.HookName_HOOK_NAME_ON_OPENED)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to run OnOpened hook")
 		span.RecordError(err)
@@ -162,6 +167,8 @@ func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 	s.logger.Debug().Str("from", gconn.RemoteAddr().String()).Msg(
 		"GatewayD is closing a connection")
 
+	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.pluginTimeout)
+	defer cancel()
 	// Run the OnClosing hooks.
 	data := map[string]interface{}{
 		"client": map[string]interface{}{
@@ -174,7 +181,7 @@ func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 		data["error"] = err.Error()
 	}
 	_, gatewaydErr := s.pluginRegistry.Run(
-		context.Background(), data, v1.HookName_HOOK_NAME_ON_CLOSING)
+		pluginTimeoutCtx, data, v1.HookName_HOOK_NAME_ON_CLOSING)
 	if gatewaydErr != nil {
 		s.logger.Error().Err(gatewaydErr).Msg("Failed to run OnClosing hook")
 		span.RecordError(gatewaydErr)
@@ -209,7 +216,7 @@ func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 		data["error"] = err.Error()
 	}
 	_, gatewaydErr = s.pluginRegistry.Run(
-		context.Background(), data, v1.HookName_HOOK_NAME_ON_CLOSED)
+		pluginTimeoutCtx, data, v1.HookName_HOOK_NAME_ON_CLOSED)
 	if gatewaydErr != nil {
 		s.logger.Error().Err(gatewaydErr).Msg("Failed to run OnClosed hook")
 		span.RecordError(gatewaydErr)
@@ -227,6 +234,8 @@ func (s *Server) OnTraffic(gconn gnet.Conn) gnet.Action {
 	_, span := otel.Tracer("gatewayd").Start(s.ctx, "OnTraffic")
 	defer span.End()
 
+	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.pluginTimeout)
+	defer cancel()
 	// Run the OnTraffic hooks.
 	onTrafficData := map[string]interface{}{
 		"client": map[string]interface{}{
@@ -235,7 +244,7 @@ func (s *Server) OnTraffic(gconn gnet.Conn) gnet.Action {
 		},
 	}
 	_, err := s.pluginRegistry.Run(
-		context.Background(), onTrafficData, v1.HookName_HOOK_NAME_ON_TRAFFIC)
+		pluginTimeoutCtx, onTrafficData, v1.HookName_HOOK_NAME_ON_TRAFFIC)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to run OnTraffic hook")
 		span.RecordError(err)
@@ -272,9 +281,11 @@ func (s *Server) OnShutdown(engine gnet.Engine) {
 
 	s.logger.Debug().Msg("GatewayD is shutting down...")
 
+	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.pluginTimeout)
+	defer cancel()
 	// Run the OnShutdown hooks.
 	_, err := s.pluginRegistry.Run(
-		context.Background(),
+		pluginTimeoutCtx,
 		map[string]interface{}{"connections": s.engine.CountConnections()},
 		v1.HookName_HOOK_NAME_ON_SHUTDOWN)
 	if err != nil {
@@ -299,9 +310,11 @@ func (s *Server) OnTick() (time.Duration, gnet.Action) {
 	s.logger.Info().Str("count", fmt.Sprint(s.engine.CountConnections())).Msg(
 		"Active client connections")
 
+	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.pluginTimeout)
+	defer cancel()
 	// Run the OnTick hooks.
 	_, err := s.pluginRegistry.Run(
-		context.Background(),
+		pluginTimeoutCtx,
 		map[string]interface{}{"connections": s.engine.CountConnections()},
 		v1.HookName_HOOK_NAME_ON_TICK)
 	if err != nil {
@@ -333,6 +346,8 @@ func (s *Server) Run() error {
 		span.RecordError(err)
 	}
 
+	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.pluginTimeout)
+	defer cancel()
 	// Run the OnRun hooks.
 	// Since gnet.Run is blocking, we need to run OnRun before it.
 	onRunData := map[string]interface{}{"address": addr}
@@ -340,7 +355,7 @@ func (s *Server) Run() error {
 		onRunData["error"] = err.OriginalError.Error()
 	}
 	result, err := s.pluginRegistry.Run(
-		context.Background(), onRunData, v1.HookName_HOOK_NAME_ON_RUN)
+		pluginTimeoutCtx, onRunData, v1.HookName_HOOK_NAME_ON_RUN)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to run the hook")
 		span.RecordError(err)
@@ -405,18 +420,23 @@ func NewServer(
 	proxy IProxy,
 	logger zerolog.Logger,
 	pluginRegistry *plugin.Registry,
+	pluginTimeout time.Duration,
 ) *Server {
 	serverCtx, span := otel.Tracer(config.TracerName).Start(ctx, "NewServer")
 	defer span.End()
 
 	// Create the server.
 	server := Server{
-		ctx:          serverCtx,
-		Network:      network,
-		Address:      address,
-		Options:      options,
-		TickInterval: tickInterval,
-		Status:       config.Stopped,
+		ctx:            serverCtx,
+		Network:        network,
+		Address:        address,
+		Options:        options,
+		TickInterval:   tickInterval,
+		Status:         config.Stopped,
+		proxy:          proxy,
+		logger:         logger,
+		pluginRegistry: pluginRegistry,
+		pluginTimeout:  pluginTimeout,
 	}
 
 	// Try to resolve the address and log an error if it can't be resolved.
@@ -462,10 +482,6 @@ func NewServer(
 	} else {
 		server.TickInterval = tickInterval
 	}
-
-	server.proxy = proxy
-	server.logger = logger
-	server.pluginRegistry = pluginRegistry
 
 	return &server
 }

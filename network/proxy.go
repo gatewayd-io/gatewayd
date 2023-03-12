@@ -35,6 +35,7 @@ type Proxy struct {
 	pluginRegistry       *plugin.Registry
 	scheduler            *gocron.Scheduler
 	ctx                  context.Context //nolint:containedctx
+	pluginTimeout        time.Duration
 
 	Elastic             bool
 	ReuseElasticClients bool
@@ -53,6 +54,7 @@ func NewProxy(
 	elastic, reuseElasticClients bool,
 	healthCheckPeriod time.Duration,
 	clientConfig *config.Client, logger zerolog.Logger,
+	pluginTimeout time.Duration,
 ) *Proxy {
 	proxyCtx, span := otel.Tracer(config.TracerName).Start(ctx, "NewProxy")
 	defer span.End()
@@ -67,6 +69,7 @@ func NewProxy(
 		ReuseElasticClients:  reuseElasticClients,
 		ClientConfig:         clientConfig,
 		ctx:                  proxyCtx,
+		pluginTimeout:        pluginTimeout,
 	}
 
 	if healthCheckPeriod == 0 {
@@ -282,9 +285,11 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	request, origErr := pr.receiveTrafficFromClient(gconn)
 	span.AddEvent("Received traffic from client")
 
+	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), pr.pluginTimeout)
+	defer cancel()
 	// Run the OnTrafficFromClient hooks.
 	result, err := pr.pluginRegistry.Run(
-		context.Background(),
+		pluginTimeoutCtx,
 		trafficData(
 			gconn,
 			client,
@@ -328,7 +333,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 
 	// Run the OnTrafficToServer hooks.
 	_, err = pr.pluginRegistry.Run(
-		context.Background(),
+		pluginTimeoutCtx,
 		trafficData(
 			gconn,
 			client,
@@ -385,7 +390,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 
 	// Run the OnTrafficFromServer hooks.
 	result, err = pr.pluginRegistry.Run(
-		context.Background(),
+		pluginTimeoutCtx,
 		trafficData(
 			gconn,
 			client,
@@ -420,7 +425,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 
 	// Run the OnTrafficToClient hooks.
 	_, err = pr.pluginRegistry.Run(
-		context.Background(),
+		pluginTimeoutCtx,
 		trafficData(
 			gconn,
 			client,

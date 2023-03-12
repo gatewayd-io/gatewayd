@@ -82,6 +82,7 @@ const (
 	DefaultPluginAddress           = "http://plugins/metrics"
 	DefaultMetricsMergerPeriod     = 5 * time.Second
 	DefaultPluginHealthCheckPeriod = 5 * time.Second
+	DefaultPluginTimeout           = 30 * time.Second
 
 	// Client constants.
 	DefaultChunkSize          = 4096

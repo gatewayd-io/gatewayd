@@ -172,7 +172,8 @@ func TestRunServer(t *testing.T) {
 		false,
 		config.DefaultHealthCheckPeriod,
 		&clientConfig,
-		logger)
+		logger,
+		config.DefaultPluginTimeout)
 
 	// Create a server.
 	server := NewServer(
@@ -190,6 +191,7 @@ func TestRunServer(t *testing.T) {
 		proxy,
 		logger,
 		pluginRegistry,
+		config.DefaultPluginTimeout,
 	)
 	assert.NotNil(t, server)
 
