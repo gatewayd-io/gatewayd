@@ -11,7 +11,7 @@ require (
 	github.com/go-co-op/gocron v1.18.1
 	github.com/google/go-cmp v0.5.9
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.15.2
-	github.com/hashicorp/go-hclog v1.4.0
+	github.com/hashicorp/go-hclog v1.5.0
 	github.com/hashicorp/go-plugin v1.4.9
 	github.com/knadh/koanf v1.5.0
 	github.com/mitchellh/mapstructure v1.5.0
