@@ -115,8 +115,8 @@ github.com/gatewayd-io/gatewayd-plugin-sdk v0.0.16/go.mod h1:MtLfTjS9s2EFVRtB4o5
 github.com/getsentry/sentry-go v0.19.0 h1:BcCH3CN5tXt5aML+gwmbFwVptLLQA+eT866fCO9wVOM=
 github.com/getsentry/sentry-go v0.19.0/go.mod h1:y3+lGEFEFexZtpbG1GUE2WD/f9zGyKYwpEqryTOC/nE=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
-github.com/go-co-op/gocron v1.18.1 h1:erHHbIIav46xAV54lnyKKjrKLP+2RgjuDsbwGamBEvI=
-github.com/go-co-op/gocron v1.18.1/go.mod h1:UqVyvM90I1q/R1qGEX6cBORI6WArLuEgYlbncLMvzRM=
+github.com/go-co-op/gocron v1.19.0 h1:XlPLqNnxnKblmCRLdfcWV1UgbukQaU54QdNeR1jtgak=
+github.com/go-co-op/gocron v1.19.0/go.mod h1:UqVyvM90I1q/R1qGEX6cBORI6WArLuEgYlbncLMvzRM=
 github.com/go-errors/errors v1.4.2 h1:J6MZopCL4uSllY1OfXM374weqZFFItUbrImctkmUxIA=
 github.com/go-gl/glfw v0.0.0-20190409004039-e6da0acd62b1/go.mod h1:vR7hzQXu2zJy9AVAgeJqvqgH9Q5CA+iKCZ2gyEVpxRU=
 github.com/go-gl/glfw/v3.3/glfw v0.0.0-20191125211704-12ad95a8df72/go.mod h1:tQ2UAYgL5IevRw8kRxooKSPJfGvJ9fJQFa0TUsXzTg8=
