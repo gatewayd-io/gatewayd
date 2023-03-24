@@ -133,7 +133,7 @@ func (h HcLogAdapter) Named(name string) hclog.Logger {
 	return NewHcLogAdapter(h.logger, name)
 }
 
-func (h HcLogAdapter) ResetNamed(name string) hclog.Logger {
+func (h HcLogAdapter) ResetNamed(_ string) hclog.Logger {
 	return &h
 }
 
@@ -149,7 +149,7 @@ func (h HcLogAdapter) StandardLogger(opts *hclog.StandardLoggerOptions) *log.Log
 	return log.New(h.StandardWriter(opts), "", 0)
 }
 
-func (h HcLogAdapter) StandardWriter(opts *hclog.StandardLoggerOptions) io.Writer {
+func (h HcLogAdapter) StandardWriter(_ *hclog.StandardLoggerOptions) io.Writer {
 	v := reflect.ValueOf(h.logger)
 	w := v.FieldByName("w")
 	writer, ok := w.Interface().(zerolog.LevelWriter)

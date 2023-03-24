@@ -481,20 +481,20 @@ func (reg *Registry) LoadPlugins(ctx context.Context, plugins []config.Plugin) {
 
 		// Load metadata from the plugin.
 		var metadata *structpb.Struct
-		if pluginV1, err := plugin.Dispense(); err != nil {
+		pluginV1, err := plugin.Dispense()
+		if err != nil {
 			reg.Logger.Debug().Str("name", plugin.ID.Name).Err(err).Msg(
 				"Failed to dispense plugin")
 			continue
-		} else {
-			if meta, origErr := pluginV1.GetPluginConfig( //nolint:contextcheck
-				context.Background(), &structpb.Struct{}); err != nil {
-				reg.Logger.Debug().Str("name", plugin.ID.Name).Err(origErr).Msg(
-					"Failed to get plugin metadata")
-				continue
-			} else {
-				metadata = meta
-			}
 		}
+		meta, origErr := pluginV1.GetPluginConfig( //nolint:contextcheck
+			context.Background(), &structpb.Struct{})
+		if err != nil {
+			reg.Logger.Debug().Str("name", plugin.ID.Name).Err(origErr).Msg(
+				"Failed to get plugin metadata")
+			continue
+		}
+		metadata = meta
 
 		span.AddEvent("Fetched plugin metadata")
 
@@ -530,15 +530,14 @@ func (reg *Registry) LoadPlugins(ctx context.Context, plugins []config.Plugin) {
 						"Registry is in strict compatibility mode, so the plugin won't be loaded")
 					plugin.Stop() // Stop the plugin.
 					continue
-				} else {
-					reg.Logger.Debug().Fields(
-						map[string]interface{}{
-							"name":        plugin.ID.Name,
-							"requirement": req.Name,
-						},
-					).Msg("Registry is in loose compatibility mode, " +
-						"so the plugin will be loaded anyway")
 				}
+				reg.Logger.Debug().Fields(
+					map[string]interface{}{
+						"name":        plugin.ID.Name,
+						"requirement": req.Name,
+					},
+				).Msg("Registry is in loose compatibility mode, " +
+					"so the plugin will be loaded anyway")
 			}
 		}
 
