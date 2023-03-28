@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.2.0
 	github.com/NYTimes/gziphandler v1.1.1
 	github.com/envoyproxy/protoc-gen-validate v0.10.1
-	github.com/gatewayd-io/gatewayd-plugin-sdk v0.0.17
+	github.com/gatewayd-io/gatewayd-plugin-sdk v0.0.18
 	github.com/getsentry/sentry-go v0.19.0
 	github.com/go-co-op/gocron v1.19.0
 	github.com/google/go-cmp v0.5.9
@@ -58,7 +58,6 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/procfs v0.9.0 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
-	github.com/rogpeppe/go-internal v1.8.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.14.0 // indirect
 	go.opentelemetry.io/proto/otlp v0.19.0 // indirect
