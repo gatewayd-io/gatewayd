@@ -475,6 +475,8 @@ func (reg *Registry) LoadPlugins(ctx context.Context, plugins []config.Plugin) {
 		if _, err := plugin.Start(); err != nil {
 			reg.Logger.Debug().Str("name", plugin.ID.Name).Err(err).Msg(
 				"Failed to start plugin")
+			plugin.Client.Kill()
+			continue
 		}
 
 		span.AddEvent("Started plugin")
@@ -485,6 +487,7 @@ func (reg *Registry) LoadPlugins(ctx context.Context, plugins []config.Plugin) {
 		if err != nil {
 			reg.Logger.Debug().Str("name", plugin.ID.Name).Err(err).Msg(
 				"Failed to dispense plugin")
+			plugin.Client.Kill()
 			continue
 		}
 		meta, origErr := pluginV1.GetPluginConfig( //nolint:contextcheck
