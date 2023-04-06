@@ -499,9 +499,9 @@ func (reg *Registry) LoadPlugins(ctx context.Context, plugins []config.Plugin) {
 		span.AddEvent("Fetched plugin metadata")
 
 		// Retrieve plugin requirements.
-		if metadata.Fields["requires"] != nil && metadata.Fields["requires"].GetListValue() != nil {
-			if err := mapstructure.Decode(metadata.Fields["requires"].GetListValue().AsSlice(),
-				&plugin.Requires); err != nil {
+		if requires, ok := metadata.Fields["requires"]; ok && requires != nil && requires.GetListValue() != nil {
+			if err := mapstructure.Decode(
+				requires.GetListValue().AsSlice(), &plugin.Requires); err != nil {
 				reg.Logger.Debug().Err(err).Msg("Failed to decode plugin requirements")
 			}
 		} else {
@@ -510,6 +510,7 @@ func (reg *Registry) LoadPlugins(ctx context.Context, plugins []config.Plugin) {
 		}
 
 		// Too many requirements or not enough plugins loaded.
+		// Note: Plugin requirements won't cause the required plugins to be loaded.
 		if len(plugin.Requires) > reg.plugins.Size() {
 			reg.Logger.Debug().Msg(
 				"The plugin has too many requirements, " +
