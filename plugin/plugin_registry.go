@@ -489,7 +489,7 @@ func (reg *Registry) LoadPlugins(ctx context.Context, plugins []config.Plugin) {
 		}
 		meta, origErr := pluginV1.GetPluginConfig( //nolint:contextcheck
 			context.Background(), &structpb.Struct{})
-		if err != nil {
+		if err != nil || meta == nil {
 			reg.Logger.Debug().Str("name", plugin.ID.Name).Err(origErr).Msg(
 				"Failed to get plugin metadata")
 			continue
