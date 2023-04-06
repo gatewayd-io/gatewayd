@@ -93,8 +93,8 @@ var runCmd = &cobra.Command{
 				AttachStacktrace: config.DefaultAttachStacktrace,
 			})
 			if err != nil {
-				log.Fatalf("sentry.Init: %s", err)
 				span.RecordError(err)
+				log.Fatalf("sentry.Init: %s", err)
 			}
 
 			// Flush buffered events before the program terminates.

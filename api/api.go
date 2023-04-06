@@ -38,7 +38,7 @@ type API struct {
 }
 
 // Version returns the version information of the GatewayD.
-func (a *API) Version(ctx context.Context, _ *emptypb.Empty) (*v1.VersionResponse, error) {
+func (a *API) Version(context.Context, *emptypb.Empty) (*v1.VersionResponse, error) {
 	return &v1.VersionResponse{
 		Version:     config.Version,
 		VersionInfo: config.VersionInfo(),
@@ -46,7 +46,7 @@ func (a *API) Version(ctx context.Context, _ *emptypb.Empty) (*v1.VersionRespons
 }
 
 // GetGlobalConfig returns the global configuration of the GatewayD.
-func (a *API) GetGlobalConfig(ctx context.Context, _ *emptypb.Empty) (*structpb.Struct, error) {
+func (a *API) GetGlobalConfig(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
 	jsonData, err := json.Marshal(a.Config.Global)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to marshal global config: %v", err)
@@ -65,7 +65,7 @@ func (a *API) GetGlobalConfig(ctx context.Context, _ *emptypb.Empty) (*structpb.
 }
 
 // GetPluginConfig returns the plugin configuration of the GatewayD.
-func (a *API) GetPluginConfig(ctx context.Context, _ *emptypb.Empty) (*structpb.Struct, error) {
+func (a *API) GetPluginConfig(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
 	pluginConfig, err := structpb.NewStruct(a.Config.PluginKoanf.All())
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to marshal plugin config: %v", err)
@@ -115,7 +115,7 @@ func (a *API) GetPlugins(context.Context, *emptypb.Empty) (*v1.PluginConfigs, er
 }
 
 // GetPools returns the pool configuration of the GatewayD.
-func (a *API) GetPools(ctx context.Context, _ *emptypb.Empty) (*structpb.Struct, error) {
+func (a *API) GetPools(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
 	pools := make(map[string]interface{}, 0)
 	for name, p := range a.Pools {
 		pools[name] = map[string]interface{}{
@@ -131,7 +131,7 @@ func (a *API) GetPools(ctx context.Context, _ *emptypb.Empty) (*structpb.Struct,
 }
 
 // GetProxies returns the proxy configuration of the GatewayD.
-func (a *API) GetProxies(ctx context.Context, _ *emptypb.Empty) (*structpb.Struct, error) {
+func (a *API) GetProxies(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
 	proxies := make(map[string]interface{}, 0)
 	for name, proxy := range a.Proxies {
 		available := make([]interface{}, 0)
@@ -158,7 +158,7 @@ func (a *API) GetProxies(ctx context.Context, _ *emptypb.Empty) (*structpb.Struc
 }
 
 // GetServers returns the server configuration of the GatewayD.
-func (a *API) GetServers(ctx context.Context, _ *emptypb.Empty) (*structpb.Struct, error) {
+func (a *API) GetServers(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
 	servers := make(map[string]interface{}, 0)
 	for name, server := range a.Servers {
 		servers[name] = map[string]interface{}{

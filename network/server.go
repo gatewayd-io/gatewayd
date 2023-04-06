@@ -275,7 +275,7 @@ func (s *Server) OnTraffic(gconn gnet.Conn) gnet.Action {
 }
 
 // OnShutdown is called when the server is shutting down. It calls the OnShutdown hooks.
-func (s *Server) OnShutdown(engine gnet.Engine) {
+func (s *Server) OnShutdown(gnet.Engine) {
 	_, span := otel.Tracer("gatewayd").Start(s.ctx, "OnShutdown")
 	defer span.End()
 
