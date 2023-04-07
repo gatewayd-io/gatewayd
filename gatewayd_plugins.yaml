@@ -63,21 +63,19 @@ timeout: 30s
 # use when connecting to the database. The DEFAULT_DB_NAME environment variable is optional
 # and should only be used if one only has a single database in their PostgreSQL instance.
 plugins:
-  - name: gatewayd-plugin-cache
+  - name: plugin-template-python
+    # whether to enable or disable the plugin on the next run
     enabled: True
-    localPath: ../gatewayd-plugin-cache/gatewayd-plugin-cache
-    args: ["--log-level", "debug"]
+    # path to the plugin's binary file
+    localPath: poetry
+    args: ["-C", "../plugin-template-python", "run", "python", "../plugin-template-python/main.py"]
+    # Pass environment variables to the plugin
+    # System-wide environment variables are passed to the plugin normally
+    # and they can be accessed via os.Environ().
+    # Defining any environment variables below will override system-wide environment variables.
     env:
+      # The below environment variables are used by the plugin loader to verify the plugin's identity.
       - MAGIC_COOKIE_KEY=GATEWAYD_PLUGIN
       - MAGIC_COOKIE_VALUE=5712b87aa5d7e9f9e9ab643e6603181c5b796015cb1c09d6f5ada882bf2a1872
-      - REDIS_URL=redis://localhost:6379/0
-      - EXPIRY=1h
-      # - DEFAULT_DB_NAME=postgres
-      - METRICS_ENABLED=True
-      - METRICS_UNIX_DOMAIN_SOCKET=/tmp/gatewayd-plugin-cache.sock
-      - METRICS_PATH=/metrics
-      - PERIODIC_INVALIDATOR_ENABLED=True
-      - PERIODIC_INVALIDATOR_INTERVAL=1m
-      - PERIODIC_INVALIDATOR_START_DELAY=1m
-      - API_ADDRESS=localhost:18080
-    checksum: 28456728dd3427b91d2e22f38b909526355d1b2becc9379581e1b70bb9495aa9
+    # Checksum hash to verify the binary before loading
+    checksum: dee4aa014a722e1865d91744a4fd310772152467d9c6ab4ba17fd9dd40d3f724

@@ -3,6 +3,7 @@ package plugin
 import (
 	"context"
 	"sort"
+	"time"
 
 	semver "github.com/Masterminds/semver/v3"
 	sdkPlugin "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin"
@@ -454,9 +455,9 @@ func (reg *Registry) LoadPlugins(ctx context.Context, plugins []config.Plugin) {
 
 		plugin.Client = goplugin.NewClient(
 			&goplugin.ClientConfig{
-				HandshakeConfig: v1.Handshake,
-				Plugins:         v1.GetPluginMap(plugin.ID.Name),
-				Cmd:             NewCommand(plugin.LocalPath, plugin.Args, plugin.Env),
+				// HandshakeConfig: v1.Handshake,
+				Plugins: v1.GetPluginMap(plugin.ID.Name),
+				Cmd:     NewCommand(plugin.LocalPath, plugin.Args, plugin.Env),
 				AllowedProtocols: []goplugin.Protocol{
 					goplugin.ProtocolGRPC,
 				},
@@ -465,7 +466,7 @@ func (reg *Registry) LoadPlugins(ctx context.Context, plugins []config.Plugin) {
 				Managed:  true,
 				MinPort:  config.DefaultMinPort,
 				MaxPort:  config.DefaultMaxPort,
-				AutoMTLS: true,
+				AutoMTLS: false,
 			},
 		)
 
@@ -490,6 +491,7 @@ func (reg *Registry) LoadPlugins(ctx context.Context, plugins []config.Plugin) {
 			plugin.Client.Kill()
 			continue
 		}
+		time.Sleep(2 * time.Second)
 		meta, origErr := pluginV1.GetPluginConfig( //nolint:contextcheck
 			context.Background(), &structpb.Struct{})
 		if err != nil || meta == nil {
