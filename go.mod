@@ -3,7 +3,7 @@ module github.com/gatewayd-io/gatewayd
 go 1.20
 
 require (
-	github.com/Masterminds/semver/v3 v3.2.0
+	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/NYTimes/gziphandler v1.1.1
 	github.com/envoyproxy/protoc-gen-validate v0.10.1
 	github.com/gatewayd-io/gatewayd-plugin-sdk v0.0.19
