@@ -85,7 +85,7 @@ const (
 	DefaultPluginTimeout           = 30 * time.Second
 
 	// Client constants.
-	DefaultChunkSize          = 4096
+	DefaultChunkSize          = 8192
 	DefaultReceiveDeadline    = 0 // 0 means no deadline (timeout)
 	DefaultSendDeadline       = 0
 	DefaultTCPKeepAlivePeriod = 30 * time.Second
