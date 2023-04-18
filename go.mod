@@ -15,7 +15,7 @@ require (
 	github.com/hashicorp/go-plugin v1.4.9
 	github.com/knadh/koanf v1.5.0
 	github.com/mitchellh/mapstructure v1.5.0
-	github.com/panjf2000/gnet/v2 v2.2.6
+	github.com/panjf2000/gnet/v2 v2.2.7
 	github.com/prometheus/client_golang v1.14.0
 	github.com/prometheus/client_model v0.3.0
 	github.com/prometheus/common v0.42.0
