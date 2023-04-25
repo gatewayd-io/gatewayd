@@ -8,7 +8,7 @@ require (
 	github.com/envoyproxy/protoc-gen-validate v0.10.1
 	github.com/gatewayd-io/gatewayd-plugin-sdk v0.0.19
 	github.com/getsentry/sentry-go v0.20.0
-	github.com/go-co-op/gocron v1.22.2
+	github.com/go-co-op/gocron v1.23.0
 	github.com/google/go-cmp v0.5.9
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.15.2
 	github.com/hashicorp/go-hclog v1.5.0
@@ -64,7 +64,6 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect
 	golang.org/x/net v0.9.0 // indirect
-	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/sys v0.7.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
