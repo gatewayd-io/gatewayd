@@ -97,8 +97,8 @@ jobs:
       - name: Checkout test plugin 🛎️
         uses: actions/checkout@v3
         with:
-          repository: gatewayd-io/gatewayd-plugin-template
-          path: gatewayd-plugin-template
+          repository: gatewayd-io/plugin-template-go
+          path: plugin-template-go
           token: ${{ secrets.GH_PLUGIN_TOKEN }}
 
       - name: Build template plugin 🏗️
@@ -106,8 +106,8 @@ jobs:
           # Build GatewayD
           make build-dev
           # Build template plugin
-          cd gatewayd-plugin-template && make build && cp gatewayd-plugin-template ../gdp-template && cd ..
-          export SHA256SUM=$(sha256sum gdp-template | awk '{print $1}')
+          cd plugin-template-go && make build && cp plugin-template-go ../ptg && cd ..
+          export SHA256SUM=$(sha256sum ptg | awk '{print $1}')
           cat <<EOF > gatewayd_plugins.yaml
           verificationPolicy: "passdown"
           compatibilityPolicy: "strict"
@@ -118,9 +118,9 @@ jobs:
           timeout: 30s
 
           plugins:
-            - name: gatewayd-plugin-template
+            - name: plugin-template-go
               enabled: True
-              localPath: ./gdp-template
+              localPath: ./ptg
               args: ["--log-level", "debug"]
               env:
                 - MAGIC_COOKIE_KEY=GATEWAYD_PLUGIN
