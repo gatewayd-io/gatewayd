@@ -2,6 +2,8 @@ package plugin
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"sort"
 
 	semver "github.com/Masterminds/semver/v3"
@@ -414,6 +416,7 @@ func (reg *Registry) LoadPlugins(ctx context.Context, plugins []config.Plugin) {
 			continue
 		}
 
+		var secureConfig *goplugin.SecureConfig
 		if !reg.devMode {
 			// Checksum of the plugin.
 			if plugin.ID.Checksum == "" {
@@ -424,22 +427,24 @@ func (reg *Registry) LoadPlugins(ctx context.Context, plugins []config.Plugin) {
 
 			// Verify the checksum.
 			// TODO: Load the plugin from a remote location if the checksum didn't match?
-			if sum, err := SHA256SUM(plugin.LocalPath); err != nil {
+			checksum, err := hex.DecodeString(plugin.ID.Checksum)
+			if err != nil {
 				reg.Logger.Debug().Str("name", plugin.ID.Name).Err(err).Msg(
-					"Failed to calculate checksum")
-				continue
-			} else if sum != plugin.ID.Checksum {
-				reg.Logger.Debug().Fields(
-					map[string]interface{}{
-						"calculated": sum,
-						"expected":   plugin.ID.Checksum,
-						"name":       plugin.ID.Name,
-					},
-				).Msg("Checksum mismatch")
+					"Failed to decode checksum")
 				continue
 			}
 
-			span.AddEvent("Verified plugin checksum")
+			if len(checksum) != sha256.Size {
+				reg.Logger.Debug().Str("name", plugin.ID.Name).Msg("Invalid checksum length")
+				continue
+			}
+
+			secureConfig = &goplugin.SecureConfig{
+				Checksum: checksum,
+				Hash:     sha256.New(),
+			}
+
+			span.AddEvent("Created secure config for validating plugin checksum")
 		} else {
 			span.AddEvent("Skipping plugin checksum verification (dev mode)")
 		}
@@ -460,12 +465,12 @@ func (reg *Registry) LoadPlugins(ctx context.Context, plugins []config.Plugin) {
 				AllowedProtocols: []goplugin.Protocol{
 					goplugin.ProtocolGRPC,
 				},
-				// SecureConfig: nil,
-				Logger:   logAdapter,
-				Managed:  true,
-				MinPort:  config.DefaultMinPort,
-				MaxPort:  config.DefaultMaxPort,
-				AutoMTLS: true,
+				SecureConfig: secureConfig,
+				Logger:       logAdapter,
+				Managed:      true,
+				MinPort:      config.DefaultMinPort,
+				MaxPort:      config.DefaultMaxPort,
+				AutoMTLS:     true,
 			},
 		)
 
