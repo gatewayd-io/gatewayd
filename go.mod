@@ -23,11 +23,11 @@ require (
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.2
 	github.com/zenizh/go-capturer v0.0.0-20211219060012-52ea6c8fed04
-	go.opentelemetry.io/otel v1.14.0
+	go.opentelemetry.io/otel v1.15.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.14.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.14.0
 	go.opentelemetry.io/otel/sdk v1.14.0
-	go.opentelemetry.io/otel/trace v1.14.0
+	go.opentelemetry.io/otel/trace v1.15.0
 	golang.org/x/exp v0.0.0-20230425010034-47ecfdc1ba53
 	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1
 	google.golang.org/grpc v1.54.0
