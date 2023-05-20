@@ -181,7 +181,7 @@ func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 	var received int
 	buffer := bytes.NewBuffer(nil)
 	// Read the data in chunks.
-	select {
+	select { //nolint:gosimple
 	case <-time.After(time.Millisecond):
 		for {
 			chunk := make([]byte, c.ReceiveChunkSize)
