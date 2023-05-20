@@ -52,6 +52,9 @@ build-release: tidy
 run: tidy
 	@go run -tags embed_swagger main.go run --dev
 
+run-race: tidy
+	@go run -race -tags embed_swagger main.go run --dev
+
 run-tracing: tidy
 	@go run -tags embed_swagger main.go run --tracing --dev
 
