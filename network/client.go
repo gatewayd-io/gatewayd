@@ -181,20 +181,23 @@ func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 	var received int
 	buffer := bytes.NewBuffer(nil)
 	// Read the data in chunks.
-	for {
-		chunk := make([]byte, c.ReceiveChunkSize)
-		read, err := c.Conn.Read(chunk)
-		if err != nil {
-			c.logger.Error().Err(err).Msg("Couldn't receive data from the server")
-			span.RecordError(err)
-			metrics.BytesReceivedFromServer.Observe(float64(received))
-			return received, buffer.Bytes(), gerr.ErrClientReceiveFailed.Wrap(err)
-		}
-		received += read
-		buffer.Write(chunk[:read])
+	select {
+	case <-time.After(time.Millisecond):
+		for {
+			chunk := make([]byte, c.ReceiveChunkSize)
+			read, err := c.Conn.Read(chunk)
+			if err != nil {
+				c.logger.Error().Err(err).Msg("Couldn't receive data from the server")
+				span.RecordError(err)
+				metrics.BytesReceivedFromServer.Observe(float64(received))
+				return received, buffer.Bytes(), gerr.ErrClientReceiveFailed.Wrap(err)
+			}
+			received += read
+			buffer.Write(chunk[:read])
 
-		if read == 0 || read < c.ReceiveChunkSize {
-			break
+			if read == 0 || read < c.ReceiveChunkSize {
+				break
+			}
 		}
 	}
 	metrics.BytesReceivedFromServer.Observe(float64(received))
