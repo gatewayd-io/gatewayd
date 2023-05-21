@@ -48,13 +48,13 @@ var initCmd = &cobra.Command{
 		// Create or overwrite the global config file.
 		if err := os.WriteFile(configFile, globalCfg, filePermissions); err != nil {
 			log.Fatal(err)
-		} else {
-			verb := "created"
-			if exists && force {
-				verb = "overwritten"
-			}
-			log.Printf("Configuration file '%s' was %s successfully.", configFile, verb)
 		}
+
+		verb := "created"
+		if exists && force {
+			verb = "overwritten"
+		}
+		log.Printf("Configuration file '%s' was %s successfully.", configFile, verb)
 	},
 }
 
