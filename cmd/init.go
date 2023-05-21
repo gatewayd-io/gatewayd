@@ -23,7 +23,7 @@ var (
 // initCmd represents the init command.
 var initCmd = &cobra.Command{
 	Use:   "init",
-	Short: "Create or overwrite the GatewayD global configuration",
+	Short: "Create or overwrite the GatewayD global config",
 	Run: func(cmd *cobra.Command, args []string) {
 		// Create a new config object and load the defaults.
 		cfg := &config.Config{
@@ -40,7 +40,7 @@ var initCmd = &cobra.Command{
 		// Check if the config file already exists and if we should overwrite it.
 		exists := false
 		if _, err := os.Stat(configFile); err == nil && !force {
-			log.Fatal("Configuration file already exists. Use --force to overwrite.")
+			log.Fatal("Config file already exists. Use --force to overwrite.")
 		} else if err == nil {
 			exists = true
 		}
@@ -54,7 +54,7 @@ var initCmd = &cobra.Command{
 		if exists && force {
 			verb = "overwritten"
 		}
-		log.Printf("Configuration file '%s' was %s successfully.", configFile, verb)
+		log.Printf("Config file '%s' was %s successfully.", configFile, verb)
 	},
 }
 
@@ -62,7 +62,7 @@ func init() {
 	configCmd.AddCommand(initCmd)
 
 	initCmd.Flags().BoolVarP(
-		&force, "force", "f", false, "Force overwrite of existing configuration file")
+		&force, "force", "f", false, "Force overwrite of existing config file")
 	initCmd.Flags().StringVarP(
-		&configFile, "config", "c", "gatewayd.yaml", "Configuration file to write to")
+		&configFile, "config", "c", "gatewayd.yaml", "Config file to write to")
 }
