@@ -23,7 +23,7 @@ var (
 // initCmd represents the init command.
 var initCmd = &cobra.Command{
 	Use:   "init",
-	Short: "Create a new GatewayD configuration",
+	Short: "Create or overwrite the GatewayD global configuration",
 	Run: func(cmd *cobra.Command, args []string) {
 		// Create a new config object and load the defaults.
 		cfg := &config.Config{
