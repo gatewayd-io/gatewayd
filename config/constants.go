@@ -2,8 +2,6 @@ package config
 
 import (
 	"time"
-
-	"github.com/rs/zerolog"
 )
 
 type (
@@ -62,9 +60,10 @@ const (
 	DefaultLogOutput         = "console"
 	DefaultLogFileName       = "gatewayd.log"
 	DefaultLogLevel          = "info"
-	DefaultTimeFormat        = zerolog.TimeFormatUnix
-	DefaultConsoleTimeFormat = time.RFC3339
-	DefaultMaxSize           = 500 // megabytes
+	DefaultNoColor           = false
+	DefaultTimeFormat        = "unix"    // Must be zerolog.TimeFormatUnix, but it's an empty string.
+	DefaultConsoleTimeFormat = "RFC3339" // time.RFC3339
+	DefaultMaxSize           = 500       // megabytes
 	DefaultMaxBackups        = 5
 	DefaultMaxAge            = 30 // days
 	DefaultCompress          = true
@@ -100,9 +99,10 @@ const (
 	DefaultListenNetwork = "tcp"
 	DefaultListenAddress = "0.0.0.0:15432"
 	DefaultTickInterval  = 5 * time.Second
-	DefaultBufferSize    = 1 << 24 // 16777216 bytes
+	DefaultBufferSize    = 1 << 27 // 134217728 bytes
 	DefaultTCPKeepAlive  = 3 * time.Second
 	DefaultLoadBalancer  = "roundrobin"
+	DefaultTCPNoDelay    = true
 
 	// Utility constants.
 	DefaultSeed        = 1000
@@ -118,7 +118,7 @@ const (
 	DefaultFlushTimeout     = 2 * time.Second
 
 	// API constants.
-	DefaultHTTPAPIAddress = "localhost:8080"
+	DefaultHTTPAPIAddress = "localhost:18080"
 	DefaultGRPCAPINetwork = "tcp"
-	DefaultGRPCAPIAddress = "localhost:9090"
+	DefaultGRPCAPIAddress = "localhost:19090"
 )

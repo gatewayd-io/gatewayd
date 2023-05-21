@@ -77,8 +77,9 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 	c.globalDefaults = map[string]interface{}{
 		"loggers": map[string]interface{}{
 			"default": map[string]interface{}{
-				"output":            DefaultLogOutput,
+				"output":            []string{DefaultLogOutput},
 				"level":             DefaultLogLevel,
+				"noColor":           DefaultNoColor,
 				"timeFormat":        DefaultTimeFormat,
 				"consoleTimeFormat": DefaultConsoleTimeFormat,
 				"fileName":          DefaultLogFileName,
@@ -110,7 +111,7 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 				"size": DefaultPoolSize,
 			},
 		},
-		"proxy": map[string]interface{}{
+		"proxies": map[string]interface{}{
 			"default": map[string]interface{}{
 				"elastic":             false,
 				"reuseElasticClients": false,
@@ -124,6 +125,7 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 				"softLimit":        0,
 				"hardLimit":        0,
 				"enableTicker":     false,
+				"tickInterval":     DefaultTickInterval.String(),
 				"multiCore":        true,
 				"lockOSThread":     false,
 				"reuseAddress":     true,
@@ -133,6 +135,8 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 				"writeBufferCap":   DefaultBufferSize,
 				"socketRecvBuffer": DefaultBufferSize,
 				"socketSendBuffer": DefaultBufferSize,
+				"tcpKeepAlive":     DefaultTCPKeepAlive.String(),
+				"tcpNoDelay":       DefaultTCPNoDelay,
 			},
 		},
 		"api": map[string]interface{}{
