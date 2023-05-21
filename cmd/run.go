@@ -707,15 +707,15 @@ func init() {
 		&pluginConfigFile,
 		"plugin-config", "p", "./gatewayd_plugins.yaml",
 		"Plugin config file")
-	rootCmd.PersistentFlags().BoolVar(
+	runCmd.Flags().BoolVar(
+		&devMode, "dev", false, "Enable development mode for plugin development")
+	runCmd.Flags().BoolVar(
 		&enableTracing, "tracing", false, "Enable tracing with OpenTelemetry via gRPC")
-	rootCmd.PersistentFlags().StringVar(
+	runCmd.Flags().StringVar(
 		&collectorURL, "collector-url", "localhost:4317",
 		"Collector URL of OpenTelemetry gRPC endpoint")
-	rootCmd.PersistentFlags().BoolVar(
+	runCmd.Flags().BoolVar(
 		&enableSentry, "sentry", true, "Enable Sentry")
-	rootCmd.PersistentFlags().BoolVar(
-		&devMode, "dev", false, "Enable development mode for plugin development")
-	rootCmd.PersistentFlags().BoolVar(
+	runCmd.Flags().BoolVar(
 		&enableUsageReport, "usage-report", true, "Enable usage report")
 }
