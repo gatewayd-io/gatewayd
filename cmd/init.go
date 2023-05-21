@@ -29,7 +29,7 @@ var initCmd = &cobra.Command{
 		conf := &config.Config{
 			GlobalKoanf: koanf.New("."),
 		}
-		conf.LoadDefaults(context.Background())
+		conf.LoadDefaults(context.TODO())
 
 		// Marshal the global config to YAML.
 		globalCfg, err := conf.GlobalKoanf.Marshal(yaml.Parser())
