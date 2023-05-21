@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"log"
+
 	"github.com/spf13/cobra"
 )
 
@@ -9,7 +11,9 @@ var configCmd = &cobra.Command{
 	Use:   "config",
 	Short: "Manage GatewayD configuration",
 	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Help()
+		if err := cmd.Help(); err != nil {
+			log.Fatal(err)
+		}
 	},
 }
 
