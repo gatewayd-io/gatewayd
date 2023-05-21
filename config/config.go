@@ -158,16 +158,20 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 		"timeout":             DefaultPluginTimeout.String(),
 	}
 
-	if err := c.GlobalKoanf.Load(confmap.Provider(c.globalDefaults, ""), nil); err != nil {
-		span.RecordError(err)
-		span.End()
-		log.Fatal(fmt.Errorf("failed to load default global configuration: %w", err))
+	if c.GlobalKoanf != nil {
+		if err := c.GlobalKoanf.Load(confmap.Provider(c.globalDefaults, ""), nil); err != nil {
+			span.RecordError(err)
+			span.End()
+			log.Fatal(fmt.Errorf("failed to load default global configuration: %w", err))
+		}
 	}
 
-	if err := c.PluginKoanf.Load(confmap.Provider(c.pluginDefaults, ""), nil); err != nil {
-		span.RecordError(err)
-		span.End()
-		log.Fatal(fmt.Errorf("failed to load default plugin configuration: %w", err))
+	if c.PluginKoanf != nil {
+		if err := c.PluginKoanf.Load(confmap.Provider(c.pluginDefaults, ""), nil); err != nil {
+			span.RecordError(err)
+			span.End()
+			log.Fatal(fmt.Errorf("failed to load default plugin configuration: %w", err))
+		}
 	}
 
 	span.End()
