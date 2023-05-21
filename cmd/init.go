@@ -26,13 +26,13 @@ var initCmd = &cobra.Command{
 	Short: "Create or overwrite the GatewayD global config",
 	Run: func(cmd *cobra.Command, args []string) {
 		// Create a new config object and load the defaults.
-		cfg := &config.Config{
+		conf := &config.Config{
 			GlobalKoanf: koanf.New("."),
 		}
-		cfg.LoadDefaults(context.Background())
+		conf.LoadDefaults(context.Background())
 
 		// Marshal the global config to YAML.
-		globalCfg, err := cfg.GlobalKoanf.Marshal(yaml.Parser())
+		globalCfg, err := conf.GlobalKoanf.Marshal(yaml.Parser())
 		if err != nil {
 			log.Fatal(err)
 		}
