@@ -65,7 +65,7 @@ var (
 // runCmd represents the run command.
 var runCmd = &cobra.Command{
 	Use:   "run",
-	Short: "Run a gatewayd instance",
+	Short: "Run a GatewayD instance",
 	Run: func(cmd *cobra.Command, args []string) {
 		// Enable tracing with OpenTelemetry.
 		if enableTracing {
