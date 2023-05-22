@@ -28,10 +28,10 @@ type PluginConfig struct {
 	CompatibilityPolicy string        `json:"compatibilityPolicy"`
 	AcceptancePolicy    string        `json:"acceptancePolicy"`
 	EnableMetricsMerger bool          `json:"enableMetricsMerger"`
-	MetricsMergerPeriod time.Duration `json:"metricsMergerPeriod"`
-	HealthCheckPeriod   time.Duration `json:"healthCheckPeriod"`
+	MetricsMergerPeriod time.Duration `json:"metricsMergerPeriod" jsonschema:"oneof_type=string;integer"`
+	HealthCheckPeriod   time.Duration `json:"healthCheckPeriod" jsonschema:"oneof_type=string;integer"`
 	ReloadOnCrash       bool          `json:"reloadOnCrash"`
-	Timeout             time.Duration `json:"timeout"`
+	Timeout             time.Duration `json:"timeout" jsonschema:"oneof_type=string;integer"`
 	Plugins             []Plugin      `json:"plugins"`
 }
 
@@ -39,10 +39,10 @@ type Client struct {
 	Network            string        `json:"network"`
 	Address            string        `json:"address"`
 	TCPKeepAlive       bool          `json:"tcpKeepAlive"`
-	TCPKeepAlivePeriod time.Duration `json:"tcpKeepAlivePeriod"`
+	TCPKeepAlivePeriod time.Duration `json:"tcpKeepAlivePeriod" jsonschema:"oneof_type=string;integer"`
 	ReceiveChunkSize   int           `json:"receiveChunkSize"`
-	ReceiveDeadline    time.Duration `json:"receiveDeadline"`
-	SendDeadline       time.Duration `json:"sendDeadline"`
+	ReceiveDeadline    time.Duration `json:"receiveDeadline" jsonschema:"oneof_type=string;integer"`
+	SendDeadline       time.Duration `json:"sendDeadline" jsonschema:"oneof_type=string;integer"`
 }
 
 type Logger struct {
@@ -77,7 +77,7 @@ type Pool struct {
 type Proxy struct {
 	Elastic             bool          `json:"elastic"`
 	ReuseElasticClients bool          `json:"reuseElasticClients"`
-	HealthCheckPeriod   time.Duration `json:"healthCheckPeriod"`
+	HealthCheckPeriod   time.Duration `json:"healthCheckPeriod" jsonschema:"oneof_type=string;integer"`
 }
 
 type Server struct {
@@ -93,8 +93,8 @@ type Server struct {
 	SocketSendBuffer int           `json:"socketSendBuffer"`
 	SoftLimit        uint64        `json:"softLimit"`
 	HardLimit        uint64        `json:"hardLimit"`
-	TCPKeepAlive     time.Duration `json:"tcpKeepAlive"`
-	TickInterval     time.Duration `json:"tickInterval"`
+	TCPKeepAlive     time.Duration `json:"tcpKeepAlive" jsonschema:"oneof_type=string;integer"`
+	TickInterval     time.Duration `json:"tickInterval" jsonschema:"oneof_type=string;integer"`
 	Network          string        `json:"network"`
 	Address          string        `json:"address"`
 	LoadBalancer     string        `json:"loadBalancer"`
