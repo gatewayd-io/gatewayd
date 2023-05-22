@@ -12,7 +12,7 @@ var configCmd = &cobra.Command{
 	Short: "Manage GatewayD configuration",
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := cmd.Help(); err != nil {
-			log.Fatal(err)
+			log.New(cmd.OutOrStdout(), "", 0).Fatal(err)
 		}
 	},
 }
