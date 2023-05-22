@@ -59,8 +59,8 @@ type Logger struct {
 	Compress   bool   `json:"compress"`
 	LocalTime  bool   `json:"localTime"`
 
-	RSyslogNetwork string `json:"rSyslogNetwork"`
-	RSyslogAddress string `json:"rSyslogAddress"`
+	RSyslogNetwork string `json:"rsyslogNetwork"`
+	RSyslogAddress string `json:"rsyslogAddress"`
 	SyslogPriority string `json:"syslogPriority"`
 }
 
