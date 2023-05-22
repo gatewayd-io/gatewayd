@@ -15,104 +15,104 @@ import (
 // }
 
 type Plugin struct {
-	Name      string   `koanf:"name"`
-	Enabled   bool     `koanf:"enabled"`
-	LocalPath string   `koanf:"localPath"`
-	Args      []string `koanf:"args"`
-	Env       []string `koanf:"env"`
-	Checksum  string   `koanf:"checksum"`
+	Name      string   `json:"name"`
+	Enabled   bool     `json:"enabled"`
+	LocalPath string   `json:"localPath"`
+	Args      []string `json:"args"`
+	Env       []string `json:"env"`
+	Checksum  string   `json:"checksum"`
 }
 
 type PluginConfig struct {
-	VerificationPolicy  string        `koanf:"verificationPolicy"`
-	CompatibilityPolicy string        `koanf:"compatibilityPolicy"`
-	AcceptancePolicy    string        `koanf:"acceptancePolicy"`
-	EnableMetricsMerger bool          `koanf:"enableMetricsMerger"`
-	MetricsMergerPeriod time.Duration `koanf:"metricsMergerPeriod"`
-	HealthCheckPeriod   time.Duration `koanf:"healthCheckPeriod"`
-	ReloadOnCrash       bool          `koanf:"reloadOnCrash"`
-	Timeout             time.Duration `koanf:"timeout"`
-	Plugins             []Plugin      `koanf:"plugins"`
+	VerificationPolicy  string        `json:"verificationPolicy"`
+	CompatibilityPolicy string        `json:"compatibilityPolicy"`
+	AcceptancePolicy    string        `json:"acceptancePolicy"`
+	EnableMetricsMerger bool          `json:"enableMetricsMerger"`
+	MetricsMergerPeriod time.Duration `json:"metricsMergerPeriod"`
+	HealthCheckPeriod   time.Duration `json:"healthCheckPeriod"`
+	ReloadOnCrash       bool          `json:"reloadOnCrash"`
+	Timeout             time.Duration `json:"timeout"`
+	Plugins             []Plugin      `json:"plugins"`
 }
 
 type Client struct {
-	Network            string        `koanf:"network"`
-	Address            string        `koanf:"address"`
-	TCPKeepAlive       bool          `koanf:"tcpKeepAlive"`
-	TCPKeepAlivePeriod time.Duration `koanf:"tcpKeepAlivePeriod"`
-	ReceiveChunkSize   int           `koanf:"receiveChunkSize"`
-	ReceiveDeadline    time.Duration `koanf:"receiveDeadline"`
-	SendDeadline       time.Duration `koanf:"sendDeadline"`
+	Network            string        `json:"network"`
+	Address            string        `json:"address"`
+	TCPKeepAlive       bool          `json:"tcpKeepAlive"`
+	TCPKeepAlivePeriod time.Duration `json:"tcpKeepAlivePeriod"`
+	ReceiveChunkSize   int           `json:"receiveChunkSize"`
+	ReceiveDeadline    time.Duration `json:"receiveDeadline"`
+	SendDeadline       time.Duration `json:"sendDeadline"`
 }
 
 type Logger struct {
-	Output            []string `koanf:"output"`
-	TimeFormat        string   `koanf:"timeFormat"`
-	Level             string   `koanf:"level"`
-	ConsoleTimeFormat string   `koanf:"consoleTimeFormat"`
-	NoColor           bool     `koanf:"noColor"`
+	Output            []string `json:"output"`
+	TimeFormat        string   `json:"timeFormat"`
+	Level             string   `json:"level"`
+	ConsoleTimeFormat string   `json:"consoleTimeFormat"`
+	NoColor           bool     `json:"noColor"`
 
-	FileName   string `koanf:"fileName"`
-	MaxSize    int    `koanf:"maxSize"`
-	MaxBackups int    `koanf:"maxBackups"`
-	MaxAge     int    `koanf:"maxAge"`
-	Compress   bool   `koanf:"compress"`
-	LocalTime  bool   `koanf:"localTime"`
+	FileName   string `json:"fileName"`
+	MaxSize    int    `json:"maxSize"`
+	MaxBackups int    `json:"maxBackups"`
+	MaxAge     int    `json:"maxAge"`
+	Compress   bool   `json:"compress"`
+	LocalTime  bool   `json:"localTime"`
 
-	RSyslogNetwork string `koanf:"rSyslogNetwork"`
-	RSyslogAddress string `koanf:"rSyslogAddress"`
-	SyslogPriority string `koanf:"syslogPriority"`
+	RSyslogNetwork string `json:"rSyslogNetwork"`
+	RSyslogAddress string `json:"rSyslogAddress"`
+	SyslogPriority string `json:"syslogPriority"`
 }
 
 type Metrics struct {
-	Enabled bool   `koanf:"enabled"`
-	Address string `koanf:"address"`
-	Path    string `koanf:"path"`
+	Enabled bool   `json:"enabled"`
+	Address string `json:"address"`
+	Path    string `json:"path"`
 }
 
 type Pool struct {
-	Size int `koanf:"size"`
+	Size int `json:"size"`
 }
 
 type Proxy struct {
-	Elastic             bool          `koanf:"elastic"`
-	ReuseElasticClients bool          `koanf:"reuseElasticClients"`
-	HealthCheckPeriod   time.Duration `koanf:"healthCheckPeriod"`
+	Elastic             bool          `json:"elastic"`
+	ReuseElasticClients bool          `json:"reuseElasticClients"`
+	HealthCheckPeriod   time.Duration `json:"healthCheckPeriod"`
 }
 
 type Server struct {
-	EnableTicker     bool          `koanf:"enableTicker"`
-	MultiCore        bool          `koanf:"multiCore"`
-	LockOSThread     bool          `koanf:"lockOSThread"`
-	ReuseAddress     bool          `koanf:"reuseAddress"`
-	ReusePort        bool          `koanf:"reusePort"`
-	TCPNoDelay       bool          `koanf:"tcpNoDelay"`
-	ReadBufferCap    int           `koanf:"readBufferCap"`
-	WriteBufferCap   int           `koanf:"writeBufferCap"`
-	SocketRecvBuffer int           `koanf:"socketRecvBuffer"`
-	SocketSendBuffer int           `koanf:"socketSendBuffer"`
-	SoftLimit        uint64        `koanf:"softLimit"`
-	HardLimit        uint64        `koanf:"hardLimit"`
-	TCPKeepAlive     time.Duration `koanf:"tcpKeepAlive"`
-	TickInterval     time.Duration `koanf:"tickInterval"`
-	Network          string        `koanf:"network"`
-	Address          string        `koanf:"address"`
-	LoadBalancer     string        `koanf:"loadBalancer"`
+	EnableTicker     bool          `json:"enableTicker"`
+	MultiCore        bool          `json:"multiCore"`
+	LockOSThread     bool          `json:"lockOSThread"`
+	ReuseAddress     bool          `json:"reuseAddress"`
+	ReusePort        bool          `json:"reusePort"`
+	TCPNoDelay       bool          `json:"tcpNoDelay"`
+	ReadBufferCap    int           `json:"readBufferCap"`
+	WriteBufferCap   int           `json:"writeBufferCap"`
+	SocketRecvBuffer int           `json:"socketRecvBuffer"`
+	SocketSendBuffer int           `json:"socketSendBuffer"`
+	SoftLimit        uint64        `json:"softLimit"`
+	HardLimit        uint64        `json:"hardLimit"`
+	TCPKeepAlive     time.Duration `json:"tcpKeepAlive"`
+	TickInterval     time.Duration `json:"tickInterval"`
+	Network          string        `json:"network"`
+	Address          string        `json:"address"`
+	LoadBalancer     string        `json:"loadBalancer"`
 }
 
 type API struct {
-	Enabled     bool   `koanf:"enabled"`
-	HTTPAddress string `koanf:"httpAddress"`
-	GRPCAddress string `koanf:"grpcAddress"`
-	GRPCNetwork string `koanf:"grpcNetwork"`
+	Enabled     bool   `json:"enabled"`
+	HTTPAddress string `json:"httpAddress"`
+	GRPCAddress string `json:"grpcAddress"`
+	GRPCNetwork string `json:"grpcNetwork"`
 }
 
 type GlobalConfig struct {
-	API     API                `koanf:"api"`
-	Loggers map[string]Logger  `koanf:"loggers"`
-	Clients map[string]Client  `koanf:"clients"`
-	Pools   map[string]Pool    `koanf:"pools"`
-	Proxies map[string]Proxy   `koanf:"proxies"`
-	Servers map[string]Server  `koanf:"servers"`
-	Metrics map[string]Metrics `koanf:"metrics"`
+	API     API                `json:"api"`
+	Loggers map[string]Logger  `json:"loggers"`
+	Clients map[string]Client  `json:"clients"`
+	Pools   map[string]Pool    `json:"pools"`
+	Proxies map[string]Proxy   `json:"proxies"`
+	Servers map[string]Server  `json:"servers"`
+	Metrics map[string]Metrics `json:"metrics"`
 }
