@@ -84,10 +84,13 @@ const (
 	DefaultPluginTimeout           = 30 * time.Second
 
 	// Client constants.
+	DefaultNetwork            = "tcp"
+	DefaultAddress            = "localhost:5432"
 	DefaultChunkSize          = 8192
 	DefaultReceiveDeadline    = 0 // 0 means no deadline (timeout)
 	DefaultSendDeadline       = 0
 	DefaultTCPKeepAlivePeriod = 30 * time.Second
+	DefaultTCPKeepAlive       = false
 
 	// Pool constants.
 	EmptyPoolCapacity        = 0
@@ -96,13 +99,13 @@ const (
 	DefaultHealthCheckPeriod = 60 * time.Second // This must match PostgreSQL authentication timeout.
 
 	// Server constants.
-	DefaultListenNetwork = "tcp"
-	DefaultListenAddress = "0.0.0.0:15432"
-	DefaultTickInterval  = 5 * time.Second
-	DefaultBufferSize    = 1 << 27 // 134217728 bytes
-	DefaultTCPKeepAlive  = 3 * time.Second
-	DefaultLoadBalancer  = "roundrobin"
-	DefaultTCPNoDelay    = true
+	DefaultListenNetwork        = "tcp"
+	DefaultListenAddress        = "0.0.0.0:15432"
+	DefaultTickInterval         = 5 * time.Second
+	DefaultBufferSize           = 1 << 27 // 134217728 bytes
+	DefaultTCPKeepAliveDuration = 3 * time.Second
+	DefaultLoadBalancer         = "roundrobin"
+	DefaultTCPNoDelay           = true
 
 	// Utility constants.
 	DefaultSeed        = 1000

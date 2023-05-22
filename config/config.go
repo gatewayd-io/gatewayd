@@ -102,8 +102,13 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 		},
 		"clients": map[string]interface{}{
 			"default": map[string]interface{}{
-				"receiveChunkSize":   DefaultChunkSize,
+				"network":            DefaultNetwork,
+				"address":            DefaultAddress,
+				"tcpKeepAlive":       DefaultTCPKeepAlive,
 				"tcpKeepAlivePeriod": DefaultTCPKeepAlivePeriod.String(),
+				"receiveChunkSize":   DefaultChunkSize,
+				"receiveDeadline":    DefaultReceiveDeadline,
+				"sendDeadline":       DefaultSendDeadline,
 			},
 		},
 		"pools": map[string]interface{}{
@@ -135,7 +140,7 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 				"writeBufferCap":   DefaultBufferSize,
 				"socketRecvBuffer": DefaultBufferSize,
 				"socketSendBuffer": DefaultBufferSize,
-				"tcpKeepAlive":     DefaultTCPKeepAlive.String(),
+				"tcpKeepAlive":     DefaultTCPKeepAliveDuration.String(),
 				"tcpNoDelay":       DefaultTCPNoDelay,
 			},
 		},
