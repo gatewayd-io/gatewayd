@@ -16,7 +16,6 @@ import (
 
 var (
 	force           bool
-	configFile      string
 	filePermissions os.FileMode = 0o644
 )
 
@@ -39,14 +38,14 @@ var initCmd = &cobra.Command{
 
 		// Check if the config file already exists and if we should overwrite it.
 		exists := false
-		if _, err := os.Stat(configFile); err == nil && !force {
+		if _, err := os.Stat(globalConfigFile); err == nil && !force {
 			log.Fatal("Config file already exists. Use --force to overwrite.")
 		} else if err == nil {
 			exists = true
 		}
 
 		// Create or overwrite the global config file.
-		if err := os.WriteFile(configFile, globalCfg, filePermissions); err != nil {
+		if err := os.WriteFile(globalConfigFile, globalCfg, filePermissions); err != nil {
 			log.Fatal(err)
 		}
 
@@ -54,7 +53,7 @@ var initCmd = &cobra.Command{
 		if exists && force {
 			verb = "overwritten"
 		}
-		log.Printf("Config file '%s' was %s successfully.", configFile, verb)
+		log.Printf("Config file '%s' was %s successfully.", globalConfigFile, verb)
 	},
 }
 
@@ -64,5 +63,7 @@ func init() {
 	initCmd.Flags().BoolVarP(
 		&force, "force", "f", false, "Force overwrite of existing config file")
 	initCmd.Flags().StringVarP(
-		&configFile, "config", "c", "gatewayd.yaml", "Config file to write to")
+		&globalConfigFile, // Already exists in run.go
+		"config", "c", "./gatewayd.yaml",
+		"Global config file")
 }
