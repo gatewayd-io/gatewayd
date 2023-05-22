@@ -241,7 +241,9 @@ func (c *Config) LoadPluginConfigFile(ctx context.Context) {
 func (c *Config) UnmarshalGlobalConfig(ctx context.Context) {
 	_, span := otel.Tracer(TracerName).Start(ctx, "Unmarshal global config")
 
-	if err := c.GlobalKoanf.Unmarshal("", &c.Global); err != nil {
+	if err := c.GlobalKoanf.UnmarshalWithConf("", &c.Global, koanf.UnmarshalConf{
+		Tag: "json",
+	}); err != nil {
 		span.RecordError(err)
 		span.End()
 		log.Fatal(fmt.Errorf("failed to unmarshal global configuration: %w", err))
@@ -254,7 +256,9 @@ func (c *Config) UnmarshalGlobalConfig(ctx context.Context) {
 func (c *Config) UnmarshalPluginConfig(ctx context.Context) {
 	_, span := otel.Tracer(TracerName).Start(ctx, "Unmarshal plugin config")
 
-	if err := c.PluginKoanf.Unmarshal("", &c.Plugin); err != nil {
+	if err := c.PluginKoanf.UnmarshalWithConf("", &c.Plugin, koanf.UnmarshalConf{
+		Tag: "json",
+	}); err != nil {
 		span.RecordError(err)
 		span.End()
 		log.Fatal(fmt.Errorf("failed to unmarshal plugin configuration: %w", err))
@@ -274,7 +278,9 @@ func (c *Config) MergeGlobalConfig(
 		log.Fatal(fmt.Errorf("failed to merge global configuration: %w", err))
 	}
 
-	if err := c.GlobalKoanf.Unmarshal("", &c.Global); err != nil {
+	if err := c.GlobalKoanf.UnmarshalWithConf("", &c.Global, koanf.UnmarshalConf{
+		Tag: "json",
+	}); err != nil {
 		span.RecordError(err)
 		span.End()
 		log.Fatal(fmt.Errorf("failed to unmarshal global configuration: %w", err))
