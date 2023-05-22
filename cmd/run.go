@@ -437,7 +437,7 @@ var runCmd = &cobra.Command{
 				attribute.String("healthCheckPeriod", cfg.HealthCheckPeriod.String()),
 			))
 
-			if data, ok := conf.GlobalKoanf.Get("proxy").(map[string]interface{}); ok {
+			if data, ok := conf.GlobalKoanf.Get("proxies").(map[string]interface{}); ok {
 				_, err = pluginRegistry.Run(
 					pluginTimeoutCtx, data, v1.HookName_HOOK_NAME_ON_NEW_PROXY)
 				if err != nil {
