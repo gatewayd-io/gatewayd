@@ -89,7 +89,11 @@ func NewLogger(ctx context.Context, cfg LoggerConfig) zerolog.Logger {
 	}
 
 	zerolog.SetGlobalLevel(cfg.Level)
-	zerolog.TimeFieldFormat = cfg.TimeFormat
+	if cfg.TimeFormat == "unix" || cfg.TimeFormat == "" {
+		zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+	} else {
+		zerolog.TimeFieldFormat = cfg.TimeFormat
+	}
 
 	multiWriter := zerolog.MultiLevelWriter(output...)
 	logger := zerolog.New(multiWriter)

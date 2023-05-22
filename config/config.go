@@ -77,8 +77,9 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 	c.globalDefaults = map[string]interface{}{
 		"loggers": map[string]interface{}{
 			"default": map[string]interface{}{
-				"output":            DefaultLogOutput,
+				"output":            []string{DefaultLogOutput},
 				"level":             DefaultLogLevel,
+				"noColor":           DefaultNoColor,
 				"timeFormat":        DefaultTimeFormat,
 				"consoleTimeFormat": DefaultConsoleTimeFormat,
 				"fileName":          DefaultLogFileName,
@@ -101,8 +102,13 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 		},
 		"clients": map[string]interface{}{
 			"default": map[string]interface{}{
-				"receiveChunkSize":   DefaultChunkSize,
+				"network":            DefaultNetwork,
+				"address":            DefaultAddress,
+				"tcpKeepAlive":       DefaultTCPKeepAlive,
 				"tcpKeepAlivePeriod": DefaultTCPKeepAlivePeriod.String(),
+				"receiveChunkSize":   DefaultChunkSize,
+				"receiveDeadline":    DefaultReceiveDeadline,
+				"sendDeadline":       DefaultSendDeadline,
 			},
 		},
 		"pools": map[string]interface{}{
@@ -110,7 +116,7 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 				"size": DefaultPoolSize,
 			},
 		},
-		"proxy": map[string]interface{}{
+		"proxies": map[string]interface{}{
 			"default": map[string]interface{}{
 				"elastic":             false,
 				"reuseElasticClients": false,
@@ -124,6 +130,7 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 				"softLimit":        0,
 				"hardLimit":        0,
 				"enableTicker":     false,
+				"tickInterval":     DefaultTickInterval.String(),
 				"multiCore":        true,
 				"lockOSThread":     false,
 				"reuseAddress":     true,
@@ -133,6 +140,8 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 				"writeBufferCap":   DefaultBufferSize,
 				"socketRecvBuffer": DefaultBufferSize,
 				"socketSendBuffer": DefaultBufferSize,
+				"tcpKeepAlive":     DefaultTCPKeepAliveDuration.String(),
+				"tcpNoDelay":       DefaultTCPNoDelay,
 			},
 		},
 		"api": map[string]interface{}{
@@ -154,16 +163,20 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 		"timeout":             DefaultPluginTimeout.String(),
 	}
 
-	if err := c.GlobalKoanf.Load(confmap.Provider(c.globalDefaults, ""), nil); err != nil {
-		span.RecordError(err)
-		span.End()
-		log.Fatal(fmt.Errorf("failed to load default global configuration: %w", err))
+	if c.GlobalKoanf != nil {
+		if err := c.GlobalKoanf.Load(confmap.Provider(c.globalDefaults, ""), nil); err != nil {
+			span.RecordError(err)
+			span.End()
+			log.Fatal(fmt.Errorf("failed to load default global configuration: %w", err))
+		}
 	}
 
-	if err := c.PluginKoanf.Load(confmap.Provider(c.pluginDefaults, ""), nil); err != nil {
-		span.RecordError(err)
-		span.End()
-		log.Fatal(fmt.Errorf("failed to load default plugin configuration: %w", err))
+	if c.PluginKoanf != nil {
+		if err := c.PluginKoanf.Load(confmap.Provider(c.pluginDefaults, ""), nil); err != nil {
+			span.RecordError(err)
+			span.End()
+			log.Fatal(fmt.Errorf("failed to load default plugin configuration: %w", err))
+		}
 	}
 
 	span.End()
@@ -233,7 +246,9 @@ func (c *Config) LoadPluginConfigFile(ctx context.Context) {
 func (c *Config) UnmarshalGlobalConfig(ctx context.Context) {
 	_, span := otel.Tracer(TracerName).Start(ctx, "Unmarshal global config")
 
-	if err := c.GlobalKoanf.Unmarshal("", &c.Global); err != nil {
+	if err := c.GlobalKoanf.UnmarshalWithConf("", &c.Global, koanf.UnmarshalConf{
+		Tag: "json",
+	}); err != nil {
 		span.RecordError(err)
 		span.End()
 		log.Fatal(fmt.Errorf("failed to unmarshal global configuration: %w", err))
@@ -246,7 +261,9 @@ func (c *Config) UnmarshalGlobalConfig(ctx context.Context) {
 func (c *Config) UnmarshalPluginConfig(ctx context.Context) {
 	_, span := otel.Tracer(TracerName).Start(ctx, "Unmarshal plugin config")
 
-	if err := c.PluginKoanf.Unmarshal("", &c.Plugin); err != nil {
+	if err := c.PluginKoanf.UnmarshalWithConf("", &c.Plugin, koanf.UnmarshalConf{
+		Tag: "json",
+	}); err != nil {
 		span.RecordError(err)
 		span.End()
 		log.Fatal(fmt.Errorf("failed to unmarshal plugin configuration: %w", err))
@@ -266,7 +283,9 @@ func (c *Config) MergeGlobalConfig(
 		log.Fatal(fmt.Errorf("failed to merge global configuration: %w", err))
 	}
 
-	if err := c.GlobalKoanf.Unmarshal("", &c.Global); err != nil {
+	if err := c.GlobalKoanf.UnmarshalWithConf("", &c.Global, koanf.UnmarshalConf{
+		Tag: "json",
+	}); err != nil {
 		span.RecordError(err)
 		span.End()
 		log.Fatal(fmt.Errorf("failed to unmarshal global configuration: %w", err))
