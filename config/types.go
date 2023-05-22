@@ -1,3 +1,4 @@
+//nolint:lll
 package config
 
 import (
@@ -36,7 +37,7 @@ type PluginConfig struct {
 }
 
 type Client struct {
-	Network            string        `json:"network"`
+	Network            string        `json:"network" jsonschema:"enum=tcp,enum=udp,enum=unix"`
 	Address            string        `json:"address"`
 	TCPKeepAlive       bool          `json:"tcpKeepAlive"`
 	TCPKeepAlivePeriod time.Duration `json:"tcpKeepAlivePeriod" jsonschema:"oneof_type=string;integer"`
@@ -47,9 +48,9 @@ type Client struct {
 
 type Logger struct {
 	Output            []string `json:"output"`
-	TimeFormat        string   `json:"timeFormat"`
-	Level             string   `json:"level"`
-	ConsoleTimeFormat string   `json:"consoleTimeFormat"`
+	TimeFormat        string   `json:"timeFormat" jsonschema:"enum=unix,enum=unixms,enum=unixmicro,enum=unixnano"`
+	Level             string   `json:"level" jsonschema:"enum=trace,enum=debug,enum=info,enum=warn,enum=error,enum=fatal,enum=panic,enum=disabled"`
+	ConsoleTimeFormat string   `json:"consoleTimeFormat" jsonschema:"enum=Layout,enum=ANSIC,enum=UnixDate,enum=RubyDate,enum=RFC822,enum=RFC822Z,enum=RFC850,enum=RFC1123,enum=RFC1123Z,enum=RFC3339,enum=RFC3339Nano,enum=Kitchen,enum=Stamp,enum=StampMilli,enum=StampMicro,enum=StampNano"`
 	NoColor           bool     `json:"noColor"`
 
 	FileName   string `json:"fileName"`
@@ -59,9 +60,9 @@ type Logger struct {
 	Compress   bool   `json:"compress"`
 	LocalTime  bool   `json:"localTime"`
 
-	RSyslogNetwork string `json:"rsyslogNetwork"`
+	RSyslogNetwork string `json:"rsyslogNetwork" jsonschema:"enum=tcp,enum=udp,enum=unix"`
 	RSyslogAddress string `json:"rsyslogAddress"`
-	SyslogPriority string `json:"syslogPriority"`
+	SyslogPriority string `json:"syslogPriority" jsonschema:"enum=debug,enum=info,enum=notice,enum=warning,enum=err,enum=crit,enum=alert,enum=emerg"`
 }
 
 type Metrics struct {
@@ -95,16 +96,16 @@ type Server struct {
 	HardLimit        uint64        `json:"hardLimit"`
 	TCPKeepAlive     time.Duration `json:"tcpKeepAlive" jsonschema:"oneof_type=string;integer"`
 	TickInterval     time.Duration `json:"tickInterval" jsonschema:"oneof_type=string;integer"`
-	Network          string        `json:"network"`
+	Network          string        `json:"network" jsonschema:"enum=tcp,enum=udp,enum=unix"`
 	Address          string        `json:"address"`
-	LoadBalancer     string        `json:"loadBalancer"`
+	LoadBalancer     string        `json:"loadBalancer" jsonschema:"enum=roundrobin,enum=leastconnections,enum=sourceaddrhash"`
 }
 
 type API struct {
 	Enabled     bool   `json:"enabled"`
 	HTTPAddress string `json:"httpAddress"`
 	GRPCAddress string `json:"grpcAddress"`
-	GRPCNetwork string `json:"grpcNetwork"`
+	GRPCNetwork string `json:"grpcNetwork" jsonschema:"enum=tcp,enum=udp,enum=unix"`
 }
 
 type GlobalConfig struct {
