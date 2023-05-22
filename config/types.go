@@ -83,7 +83,7 @@ type Proxy struct {
 type Server struct {
 	EnableTicker     bool          `json:"enableTicker"`
 	MultiCore        bool          `json:"multiCore"`
-	LockOSThread     bool          `json:"lockOSThread"`
+	LockOSThread     bool          `json:"lockOSThread"` //nolint:tagliatelle
 	ReuseAddress     bool          `json:"reuseAddress"`
 	ReusePort        bool          `json:"reusePort"`
 	TCPNoDelay       bool          `json:"tcpNoDelay"`
