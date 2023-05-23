@@ -29,6 +29,17 @@ compatibilityPolicy: "strict"
 # - "reject": the new hook is rejected and not registered.
 acceptancePolicy: "accept"
 
+# The termination policy controls how to handle the termination of requests. If a plugin
+# terminates a request, the termination policy controls whether to stop executing the
+# remaining plugins or not. If the termination policy is set to "stop", the remaining plugins
+# are not executed. If the termination policy is set to "continue", the remaining plugins are
+# executed. Warning: if the termination policy is set to "continue", the output of the
+# remaining plugins might be passed down to the next plugin, and the result depends on the
+# what the remaining plugins do.
+# - "stop" (default): the remaining plugins are not executed.
+# - "continue": the remaining plugins are executed.
+terminationPolicy: "stop"
+
 # The metrics policy controls whether to collect and merge metrics from plugins or not.
 # The Prometheus metrics are collected from the plugins via a Unix domain socket. The metrics
 # are merged and exposed via the GatewayD metrics endpoint via HTTP.

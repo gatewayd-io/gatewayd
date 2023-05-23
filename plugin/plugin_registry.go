@@ -62,6 +62,7 @@ type Registry struct {
 	Compatibility config.CompatibilityPolicy
 	Verification  config.VerificationPolicy
 	Acceptance    config.AcceptancePolicy
+	Termination   config.TerminationPolicy
 }
 
 var _ IRegistry = &Registry{}
@@ -330,6 +331,17 @@ func (reg *Registry) Run(
 		if Verify(params, result) || reg.Verification == config.PassDown {
 			// Update the last return value with the current result
 			returnVal = result
+
+			// If the termination policy is set to Stop, check if the terminate flag
+			// is set to true. If it is, abort the execution of the rest of the registered hooks.
+			if reg.Termination == config.Stop {
+				// If the terminate flag is set to true,
+				// abort the execution of the rest of the registered hooks.
+				if terminate, ok := result.Fields["terminate"]; ok && terminate.GetBoolValue() {
+					break
+				}
+			}
+
 			continue
 		}
 

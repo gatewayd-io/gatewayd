@@ -28,6 +28,7 @@ type PluginConfig struct {
 	VerificationPolicy  string        `json:"verificationPolicy"`
 	CompatibilityPolicy string        `json:"compatibilityPolicy"`
 	AcceptancePolicy    string        `json:"acceptancePolicy"`
+	TerminationPolicy   string        `json:"terminationPolicy"`
 	EnableMetricsMerger bool          `json:"enableMetricsMerger"`
 	MetricsMergerPeriod time.Duration `json:"metricsMergerPeriod" jsonschema:"oneof_type=string;integer"`
 	HealthCheckPeriod   time.Duration `json:"healthCheckPeriod" jsonschema:"oneof_type=string;integer"`
