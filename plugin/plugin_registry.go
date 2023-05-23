@@ -331,6 +331,15 @@ func (reg *Registry) Run(
 		if Verify(params, result) || reg.Verification == config.PassDown {
 			// Update the last return value with the current result
 			returnVal = result
+
+			if reg.Termination == config.Stop {
+				// If the terminate flag is set to true,
+				// abort the execution of the rest of the registered hooks.
+				if terminate, ok := result.Fields["terminate"]; ok && terminate.GetBoolValue() {
+					break
+				}
+			}
+
 			continue
 		}
 
