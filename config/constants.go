@@ -9,6 +9,7 @@ type (
 	VerificationPolicy  uint
 	CompatibilityPolicy uint
 	AcceptancePolicy    uint
+	TerminationPolicy   uint
 	LogOutput           uint
 )
 
@@ -38,6 +39,13 @@ const (
 const (
 	Accept AcceptancePolicy = iota // Accept all custom hooks
 	Reject                         // Reject all custom hooks
+)
+
+// TerminationPolicy is the termination policy for
+// the functions registered to the OnTrafficFromClient hook.
+const (
+	Continue TerminationPolicy = iota // Continue to the next function
+	Stop                              // Stop the execution of the functions
 )
 
 // LogOutput is the output type for the logger.

@@ -153,9 +153,10 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 	}
 
 	c.pluginDefaults = map[string]interface{}{
-		"verificationPolicy":  "passdown",
-		"compatibilityPolicy": "strict",
-		"acceptancePolicy":    "accept",
+		"verificationPolicy":  PassDown,
+		"compatibilityPolicy": Strict,
+		"acceptancePolicy":    Accept,
+		"terminationPolicy":   Stop,
 		"enableMetricsMerger": true,
 		"metricsMergerPeriod": DefaultMetricsMergerPeriod.String(),
 		"healthCheckPeriod":   DefaultPluginHealthCheckPeriod.String(),

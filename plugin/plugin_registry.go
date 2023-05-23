@@ -62,6 +62,7 @@ type Registry struct {
 	Compatibility config.CompatibilityPolicy
 	Verification  config.VerificationPolicy
 	Acceptance    config.AcceptancePolicy
+	Termination   config.TerminationPolicy
 }
 
 var _ IRegistry = &Registry{}
