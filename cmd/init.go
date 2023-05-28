@@ -63,6 +63,6 @@ func init() {
 		&force, "force", "f", false, "Force overwrite of existing config file")
 	initCmd.Flags().StringVarP(
 		&globalConfigFile, // Already exists in run.go
-		"config", "c", "./gatewayd.yaml",
+		"config", "c", config.GetDefaultConfigFilePath(config.GlobalConfigFilename),
 		"Global config file")
 }
