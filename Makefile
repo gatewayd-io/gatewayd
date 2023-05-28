@@ -68,6 +68,12 @@ build-linux-packages:
 
 	@rm nfpm-current.yaml
 
+	@echo "Generating checksums"
+	@sha256sum dist/gatewayd_${VERSION}_amd64.deb | sed 's/dist\///g' > dist/checksums.txt
+	@sha256sum dist/gatewayd_${VERSION}_arm64.deb | sed 's/dist\///g' >> dist/checksums.txt
+	@sha256sum dist/gatewayd-${VERSION}.x86_64.rpm | sed 's/dist\///g' >> dist/checksums.txt
+	@sha256sum dist/gatewayd-${VERSION}.aarch64.rpm | sed 's/dist\///g' >> dist/checksums.txt
+
 run: tidy
 	@go run -tags embed_swagger main.go run --dev
 
