@@ -1,0 +1,25 @@
+name: "gatewayd"
+arch: "${GOARCH}"
+platform: "linux"
+version: "${VERSION}"
+version_schema: "semver"
+section: "default"
+priority: "extra"
+maintainer: "Mostafa Moradian <mostafa@gatewayd.io>"
+description: |
+  Cloud-native database gateway and framework for building data-driven applications
+vendor: "GatewayD Labs"
+homepage: "http://gatewayd.io"
+license: "AGPL-3.0"
+contents:
+  - src: ./dist/linux-${GOARCH}/gatewayd
+    dst: /usr/bin/gatewayd
+  - src: ./dist/linux-amd64/gatewayd.yaml
+    dst: /etc/gatewayd.yaml
+    type: config|noreplace
+  - src: ./dist/linux-amd64/gatewayd_plugins.yaml
+    dst: /etc/gatewayd_plugins.yaml
+    type: config|noreplace
+deb:
+  fields:
+    Bugs: https://github.com/gatewayd-io/gatewayd/issues
