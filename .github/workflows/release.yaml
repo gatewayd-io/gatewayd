@@ -3,7 +3,7 @@ name: Build and release GatewayD
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 permissions:
   contents: write
@@ -19,8 +19,10 @@ jobs:
       - name: Set up Go 1.20
         uses: actions/setup-go@v3
         with:
-          go-version: '1.20'
+          go-version: "1.20"
           cache: true
+      - name: Install nfpm for building Linux packages
+        run: go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
       - run: |
           git config --global url."https://mostafa:${TOKEN}@github.com/".insteadOf "https://github.com"
           go mod tidy
@@ -29,6 +31,8 @@ jobs:
           GOPRIVATE: github.com/gatewayd-io/gatewayd-*
       - name: Build and release binaries
         run: make build-release
+      - name: Build and release Linux packages
+        run: make build-linux-packages
       - name: Create release and add artifacts
         uses: softprops/action-gh-release@v1
         with:

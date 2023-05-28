@@ -49,6 +49,25 @@ build-release: tidy
 	@sha256sum dist/gatewayd-darwin-amd64-${VERSION}.tar.gz | sed 's/dist\///g' >> dist/checksums.txt
 	@sha256sum dist/gatewayd-darwin-arm64-${VERSION}.tar.gz | sed 's/dist\///g' >> dist/checksums.txt
 
+build-linux-packages:
+	@echo "Building gatewayd ${VERSION} for linux-amd64"
+	@VERSION=${VERSION} GOARCH=amd64 envsubst < nfpm.yaml > nfpm-current.yaml
+	@nfpm package -t dist -p deb -f nfpm-current.yaml
+
+	@echo "Building gatewayd ${VERSION} for linux-arm64"
+	@VERSION=${VERSION} GOARCH=arm64 envsubst < nfpm.yaml > nfpm-current.yaml
+	@nfpm package -t dist -p deb -f nfpm-current.yaml
+
+	@echo "Building gatewayd ${VERSION} for linux-amd64"
+	@VERSION=${VERSION} GOARCH=amd64 envsubst < nfpm.yaml > nfpm-current.yaml
+	@nfpm package -t dist -p rpm -f nfpm-current.yaml
+
+	@echo "Building gatewayd ${VERSION} for linux-arm64"
+	@VERSION=${VERSION} GOARCH=arm64 envsubst < nfpm.yaml > nfpm-current.yaml
+	@nfpm package -t dist -p rpm -f nfpm-current.yaml
+
+	@rm nfpm-current.yaml
+
 run: tidy
 	@go run -tags embed_swagger main.go run --dev
 
