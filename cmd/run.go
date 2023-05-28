@@ -701,11 +701,11 @@ func init() {
 
 	runCmd.Flags().StringVarP(
 		&globalConfigFile,
-		"config", "c", "./gatewayd.yaml",
+		"config", "c", config.GetDefaultConfigFilePath(config.GlobalConfigFilename),
 		"Global config file")
 	runCmd.Flags().StringVarP(
 		&pluginConfigFile,
-		"plugin-config", "p", "./gatewayd_plugins.yaml",
+		"plugin-config", "p", config.GetDefaultConfigFilePath(config.PluginsConfigFilename),
 		"Plugin config file")
 	runCmd.Flags().BoolVar(
 		&devMode, "dev", false, "Enable development mode for plugin development")

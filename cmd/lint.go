@@ -68,6 +68,6 @@ func init() {
 
 	lintCmd.Flags().StringVarP(
 		&globalConfigFile, // Already exists in run.go
-		"config", "c", "./gatewayd.yaml",
+		"config", "c", config.GetDefaultConfigFilePath(config.GlobalConfigFilename),
 		"Global config file")
 }
