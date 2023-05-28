@@ -60,9 +60,11 @@ const (
 
 const (
 	// Config constants.
-	Default    = "default"
-	EnvPrefix  = "GATEWAYD_"
-	TracerName = "gatewayd"
+	Default               = "default"
+	EnvPrefix             = "GATEWAYD_"
+	TracerName            = "gatewayd"
+	GlobalConfigFilename  = "gatewayd.yaml"
+	PluginsConfigFilename = "gatewayd_plugins.yaml"
 
 	// Logger constants.
 	DefaultLogOutput         = "console"

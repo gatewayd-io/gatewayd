@@ -2,6 +2,8 @@ package config
 
 import (
 	"log/syslog"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/panjf2000/gnet/v2"
@@ -182,6 +184,7 @@ func (l Logger) GetSyslogPriority() syslog.Priority {
 	return syslog.LOG_DAEMON | syslog.LOG_INFO
 }
 
+// GetPlugins returns the plugins from config file.
 func (p PluginConfig) GetPlugins(name ...string) []Plugin {
 	var plugins []Plugin
 	for _, plugin := range p.Plugins {
@@ -192,4 +195,22 @@ func (p PluginConfig) GetPlugins(name ...string) []Plugin {
 		}
 	}
 	return plugins
+}
+
+// GetDefaultConfigFilePath returns the path of the default config file.
+func GetDefaultConfigFilePath(filename string) string {
+	// Try to find the config file in the current directory.
+	path := filepath.Join("./", filename)
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		return path
+	}
+
+	// Try to find the config file in the /etc directory.
+	path = filepath.Join("/etc/", filename)
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		return path
+	}
+
+	// The fallback is the current directory.
+	return filepath.Join("./", filename)
 }
