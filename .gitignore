@@ -25,3 +25,6 @@ dist/
 
 # Logs
 *.log
+
+# Tensorflow files
+libtensorflow*
