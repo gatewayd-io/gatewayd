@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"reflect"
 	"strings"
 
 	"github.com/knadh/koanf"
@@ -11,6 +13,7 @@ import (
 	"github.com/knadh/koanf/providers/confmap"
 	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/providers/file"
+	"github.com/knadh/koanf/providers/structs"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 )
@@ -26,15 +29,17 @@ type IConfig interface {
 }
 
 type Config struct {
-	globalDefaults   map[string]interface{}
-	pluginDefaults   map[string]interface{}
+	globalDefaults GlobalConfig
+	pluginDefaults PluginConfig
+
 	globalConfigFile string
 	pluginConfigFile string
 
 	GlobalKoanf *koanf.Koanf
 	PluginKoanf *koanf.Koanf
-	Global      GlobalConfig
-	Plugin      PluginConfig
+
+	Global GlobalConfig
+	Plugin PluginConfig
 }
 
 var _ IConfig = &Config{}
@@ -48,8 +53,8 @@ func NewConfig(ctx context.Context, globalConfigFile, pluginConfigFile string) *
 	return &Config{
 		GlobalKoanf:      koanf.New("."),
 		PluginKoanf:      koanf.New("."),
-		globalDefaults:   make(map[string]interface{}),
-		pluginDefaults:   make(map[string]interface{}),
+		globalDefaults:   GlobalConfig{},
+		pluginDefaults:   PluginConfig{},
 		globalConfigFile: globalConfigFile,
 		pluginConfigFile: pluginConfigFile,
 	}
@@ -74,98 +79,144 @@ func (c *Config) InitConfig(ctx context.Context) {
 func (c *Config) LoadDefaults(ctx context.Context) {
 	_, span := otel.Tracer(TracerName).Start(ctx, "Load defaults")
 
-	c.globalDefaults = map[string]interface{}{
-		"loggers": map[string]interface{}{
-			"default": map[string]interface{}{
-				"output":            []string{DefaultLogOutput},
-				"level":             DefaultLogLevel,
-				"noColor":           DefaultNoColor,
-				"timeFormat":        DefaultTimeFormat,
-				"consoleTimeFormat": DefaultConsoleTimeFormat,
-				"fileName":          DefaultLogFileName,
-				"maxSize":           DefaultMaxSize,
-				"maxBackups":        DefaultMaxBackups,
-				"maxAge":            DefaultMaxAge,
-				"compress":          DefaultCompress,
-				"localTime":         DefaultLocalTime,
-				"rsyslogNetwork":    DefaultRSyslogNetwork,
-				"rsyslogAddress":    DefaultRSyslogAddress,
-				"syslogPriority":    DefaultSyslogPriority,
-			},
-		},
-		"metrics": map[string]interface{}{
-			"default": map[string]interface{}{
-				"enabled": true,
-				"address": DefaultMetricsAddress,
-				"path":    DefaultMetricsPath,
-			},
-		},
-		"clients": map[string]interface{}{
-			"default": map[string]interface{}{
-				"network":            DefaultNetwork,
-				"address":            DefaultAddress,
-				"tcpKeepAlive":       DefaultTCPKeepAlive,
-				"tcpKeepAlivePeriod": DefaultTCPKeepAlivePeriod.String(),
-				"receiveChunkSize":   DefaultChunkSize,
-				"receiveDeadline":    DefaultReceiveDeadline,
-				"sendDeadline":       DefaultSendDeadline,
-			},
-		},
-		"pools": map[string]interface{}{
-			"default": map[string]interface{}{
-				"size": DefaultPoolSize,
-			},
-		},
-		"proxies": map[string]interface{}{
-			"default": map[string]interface{}{
-				"elastic":             false,
-				"reuseElasticClients": false,
-				"healthCheckPeriod":   DefaultHealthCheckPeriod.String(),
-			},
-		},
-		"servers": map[string]interface{}{
-			"default": map[string]interface{}{
-				"network":          DefaultListenNetwork,
-				"address":          DefaultListenAddress,
-				"softLimit":        0,
-				"hardLimit":        0,
-				"enableTicker":     false,
-				"tickInterval":     DefaultTickInterval.String(),
-				"multiCore":        true,
-				"lockOSThread":     false,
-				"reuseAddress":     true,
-				"reusePort":        true,
-				"loadBalancer":     DefaultLoadBalancer,
-				"readBufferCap":    DefaultBufferSize,
-				"writeBufferCap":   DefaultBufferSize,
-				"socketRecvBuffer": DefaultBufferSize,
-				"socketSendBuffer": DefaultBufferSize,
-				"tcpKeepAlive":     DefaultTCPKeepAliveDuration.String(),
-				"tcpNoDelay":       DefaultTCPNoDelay,
-			},
-		},
-		"api": map[string]interface{}{
-			"enabled":     true,
-			"httpAddress": DefaultHTTPAPIAddress,
-			"grpcNetwork": DefaultGRPCAPINetwork,
-			"grpcAddress": DefaultGRPCAPIAddress,
+	defaultLogger := Logger{
+		Output:            []string{DefaultLogOutput},
+		Level:             DefaultLogLevel,
+		NoColor:           DefaultNoColor,
+		TimeFormat:        DefaultTimeFormat,
+		ConsoleTimeFormat: DefaultConsoleTimeFormat,
+		FileName:          DefaultLogFileName,
+		MaxSize:           DefaultMaxSize,
+		MaxBackups:        DefaultMaxBackups,
+		MaxAge:            DefaultMaxAge,
+		Compress:          DefaultCompress,
+		LocalTime:         DefaultLocalTime,
+		RSyslogNetwork:    DefaultRSyslogNetwork,
+		RSyslogAddress:    DefaultRSyslogAddress,
+		SyslogPriority:    DefaultSyslogPriority,
+	}
+
+	defaultMetric := Metrics{
+		Enabled: true,
+		Address: DefaultMetricsAddress,
+		Path:    DefaultMetricsPath,
+	}
+
+	defaultClient := Client{
+		Network:            DefaultNetwork,
+		Address:            DefaultAddress,
+		TCPKeepAlive:       DefaultTCPKeepAlive,
+		TCPKeepAlivePeriod: DefaultTCPKeepAlivePeriod,
+		ReceiveChunkSize:   DefaultChunkSize,
+		ReceiveDeadline:    DefaultReceiveDeadline,
+		SendDeadline:       DefaultSendDeadline,
+	}
+
+	defaultPool := Pool{
+		Size: DefaultPoolSize,
+	}
+
+	defaultProxy := Proxy{
+		Elastic:             false,
+		ReuseElasticClients: false,
+		HealthCheckPeriod:   DefaultHealthCheckPeriod,
+	}
+
+	defaultServer := Server{
+		Network:          DefaultListenNetwork,
+		Address:          DefaultListenAddress,
+		SoftLimit:        0,
+		HardLimit:        0,
+		EnableTicker:     false,
+		TickInterval:     DefaultTickInterval,
+		MultiCore:        true,
+		LockOSThread:     false,
+		ReuseAddress:     true,
+		ReusePort:        true,
+		LoadBalancer:     DefaultLoadBalancer,
+		ReadBufferCap:    DefaultBufferSize,
+		WriteBufferCap:   DefaultBufferSize,
+		SocketRecvBuffer: DefaultBufferSize,
+		SocketSendBuffer: DefaultBufferSize,
+		TCPKeepAlive:     DefaultTCPKeepAliveDuration,
+		TCPNoDelay:       DefaultTCPNoDelay,
+	}
+
+	c.globalDefaults = GlobalConfig{
+		Loggers: map[string]*Logger{Default: &defaultLogger},
+		Metrics: map[string]*Metrics{Default: &defaultMetric},
+		Clients: map[string]*Client{Default: &defaultClient},
+		Pools:   map[string]*Pool{Default: &defaultPool},
+		Proxies: map[string]*Proxy{Default: &defaultProxy},
+		Servers: map[string]*Server{Default: &defaultServer},
+		API: API{
+			Enabled:     true,
+			HTTPAddress: DefaultHTTPAPIAddress,
+			GRPCNetwork: DefaultGRPCAPINetwork,
+			GRPCAddress: DefaultGRPCAPIAddress,
 		},
 	}
 
-	c.pluginDefaults = map[string]interface{}{
-		"verificationPolicy":  PassDown,
-		"compatibilityPolicy": Strict,
-		"acceptancePolicy":    Accept,
-		"terminationPolicy":   Stop,
-		"enableMetricsMerger": true,
-		"metricsMergerPeriod": DefaultMetricsMergerPeriod.String(),
-		"healthCheckPeriod":   DefaultPluginHealthCheckPeriod.String(),
-		"reloadOnCrash":       true,
-		"timeout":             DefaultPluginTimeout.String(),
+	//nolint:nestif
+	if contents, err := os.ReadFile(c.globalConfigFile); err == nil {
+		gconf, err := yaml.Parser().Unmarshal(contents)
+		if err != nil {
+			span.RecordError(err)
+			span.End()
+			log.Fatal(fmt.Errorf("failed to unmarshal global configuration: %w", err))
+		}
+
+		for configObject, configMap := range gconf {
+			if configGroup, ok := configMap.(map[string]interface{}); ok {
+				for configGroupKey := range configGroup {
+					if configGroupKey == Default {
+						continue
+					}
+
+					switch configObject {
+					case "loggers":
+						c.globalDefaults.Loggers[configGroupKey] = &defaultLogger
+					case "metrics":
+						c.globalDefaults.Metrics[configGroupKey] = &defaultMetric
+					case "clients":
+						c.globalDefaults.Clients[configGroupKey] = &defaultClient
+					case "pools":
+						c.globalDefaults.Pools[configGroupKey] = &defaultPool
+					case "proxies":
+						c.globalDefaults.Proxies[configGroupKey] = &defaultProxy
+					case "servers":
+						c.globalDefaults.Servers[configGroupKey] = &defaultServer
+					case "api":
+						// TODO: Add support for multiple API config groups.
+					default:
+						err := fmt.Errorf("unknown config object: %s", configObject)
+						span.RecordError(err)
+						span.End()
+						log.Fatal(err)
+					}
+				}
+			}
+		}
+	} else if !os.IsNotExist(err) {
+		span.RecordError(err)
+		span.End()
+		log.Fatal(fmt.Errorf("failed to read global configuration file: %w", err))
+	}
+
+	c.pluginDefaults = PluginConfig{
+		VerificationPolicy:  string(PassDown),
+		CompatibilityPolicy: string(Strict),
+		AcceptancePolicy:    string(Accept),
+		TerminationPolicy:   string(Stop),
+		EnableMetricsMerger: true,
+		MetricsMergerPeriod: DefaultMetricsMergerPeriod,
+		HealthCheckPeriod:   DefaultPluginHealthCheckPeriod,
+		ReloadOnCrash:       true,
+		Timeout:             DefaultPluginTimeout,
 	}
 
 	if c.GlobalKoanf != nil {
-		if err := c.GlobalKoanf.Load(confmap.Provider(c.globalDefaults, ""), nil); err != nil {
+		if err := c.GlobalKoanf.Load(structs.Provider(c.globalDefaults, "json"), nil); err != nil {
 			span.RecordError(err)
 			span.End()
 			log.Fatal(fmt.Errorf("failed to load default global configuration: %w", err))
@@ -173,7 +224,7 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 	}
 
 	if c.PluginKoanf != nil {
-		if err := c.PluginKoanf.Load(confmap.Provider(c.pluginDefaults, ""), nil); err != nil {
+		if err := c.PluginKoanf.Load(structs.Provider(c.pluginDefaults, "json"), nil); err != nil {
 			span.RecordError(err)
 			span.End()
 			log.Fatal(fmt.Errorf("failed to load default plugin configuration: %w", err))
