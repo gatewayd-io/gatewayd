@@ -56,7 +56,7 @@ var (
 
 	loggers              = make(map[string]zerolog.Logger)
 	pools                = make(map[string]*pool.Pool)
-	clients              = make(map[string]config.Client)
+	clients              = make(map[string]*config.Client)
 	proxies              = make(map[string]*network.Proxy)
 	servers              = make(map[string]*network.Server)
 	healthCheckScheduler = gocron.NewScheduler(time.UTC)
@@ -138,13 +138,14 @@ var runCmd = &cobra.Command{
 		// Create a new plugin registry.
 		// The plugins are loaded and hooks registered before the configuration is loaded.
 		pluginRegistry = plugin.NewRegistry(
-			runCtx, config.Loose, config.PassDown, config.Accept, logger, devMode)
-		// Set the plugin requirement's compatibility policy.
-		pluginRegistry.Compatibility = conf.Plugin.GetPluginCompatibilityPolicy()
-		// Set hooks' signature verification policy.
-		pluginRegistry.Verification = conf.Plugin.GetVerificationPolicy()
-		// Set custom hook acceptance policy.
-		pluginRegistry.Acceptance = conf.Plugin.GetAcceptancePolicy()
+			runCtx,
+			conf.Plugin.GetPluginCompatibilityPolicy(),
+			conf.Plugin.GetVerificationPolicy(),
+			conf.Plugin.GetAcceptancePolicy(),
+			conf.Plugin.GetTerminationPolicy(),
+			logger,
+			devMode,
+		)
 
 		// Load plugins and register their hooks.
 		pluginRegistry.LoadPlugins(runCtx, conf.Plugin.Plugins)
@@ -237,7 +238,7 @@ var runCmd = &cobra.Command{
 		// Start the metrics server if enabled.
 		// TODO: Start multiple metrics servers. For now, only one default is supported.
 		// I should first find a use case for those multiple metrics servers.
-		go func(metricsConfig config.Metrics, logger zerolog.Logger) {
+		go func(metricsConfig *config.Metrics, logger zerolog.Logger) {
 			_, span := otel.Tracer(config.TracerName).Start(runCtx, "Start metrics server")
 			defer span.End()
 
@@ -335,7 +336,7 @@ var runCmd = &cobra.Command{
 			// Add clients to the pool.
 			for i := 0; i < cfg.GetSize(); i++ {
 				clientConfig := clients[name]
-				client := network.NewClient(runCtx, &clientConfig, logger)
+				client := network.NewClient(runCtx, clientConfig, logger)
 
 				if client != nil {
 					eventOptions := trace.WithAttributes(
@@ -425,7 +426,7 @@ var runCmd = &cobra.Command{
 				cfg.Elastic,
 				cfg.ReuseElasticClients,
 				cfg.HealthCheckPeriod,
-				&clientConfig,
+				clientConfig,
 				logger,
 				conf.Plugin.Timeout,
 			)
