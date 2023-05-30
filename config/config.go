@@ -6,8 +6,10 @@ import (
 	"log"
 	"os"
 	"reflect"
+	"sort"
 	"strings"
 
+	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/knadh/koanf"
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/confmap"
@@ -16,6 +18,7 @@ import (
 	"github.com/knadh/koanf/providers/structs"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"golang.org/x/exp/slices"
 )
 
 type IConfig interface {
@@ -71,6 +74,7 @@ func (c *Config) InitConfig(ctx context.Context) {
 	c.UnmarshalPluginConfig(newCtx)
 
 	c.LoadGlobalConfigFile(newCtx)
+	c.ValidateGlobalConfig(newCtx)
 	c.LoadGlobalEnvVars(newCtx)
 	c.UnmarshalGlobalConfig(newCtx)
 }
@@ -344,4 +348,125 @@ func (c *Config) MergeGlobalConfig(
 	}
 
 	span.End()
+}
+
+func (c *Config) ValidateGlobalConfig(ctx context.Context) {
+	_, span := otel.Tracer(TracerName).Start(ctx, "Validate global config")
+
+	var globalConfig GlobalConfig
+	if err := c.GlobalKoanf.Unmarshal("", &globalConfig); err != nil {
+		span.RecordError(err)
+		span.End()
+		log.Fatal(
+			gerr.ErrValidationFailed.Wrap(
+				fmt.Errorf("failed to unmarshal global configuration: %w", err)),
+		)
+	}
+
+	var errors []*gerr.GatewayDError
+	configObjects := []string{"loggers", "metrics", "clients", "pools", "proxies", "servers"}
+	sort.Strings(configObjects)
+	seenConfigObjects := []string{}
+
+	for configGroup := range globalConfig.Loggers {
+		if globalConfig.Loggers[configGroup] == nil {
+			err := fmt.Errorf("\"logger.%s\" is nil or empty", configGroup)
+			span.RecordError(err)
+			errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
+		}
+	}
+
+	if len(globalConfig.Loggers) > 1 {
+		seenConfigObjects = append(seenConfigObjects, "loggers")
+	}
+
+	for configGroup := range globalConfig.Metrics {
+		if globalConfig.Metrics[configGroup] == nil {
+			err := fmt.Errorf("\"metrics.%s\" is nil or empty", configGroup)
+			span.RecordError(err)
+			errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
+		}
+	}
+
+	if len(globalConfig.Metrics) > 1 {
+		seenConfigObjects = append(seenConfigObjects, "metrics")
+	}
+
+	for configGroup := range globalConfig.Clients {
+		if globalConfig.Clients[configGroup] == nil {
+			err := fmt.Errorf("\"clients.%s\" is nil or empty", configGroup)
+			span.RecordError(err)
+			errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
+		}
+	}
+
+	if len(globalConfig.Clients) > 1 {
+		seenConfigObjects = append(seenConfigObjects, "clients")
+	}
+
+	for configGroup := range globalConfig.Pools {
+		if globalConfig.Pools[configGroup] == nil {
+			err := fmt.Errorf("\"pools.%s\" is nil or empty", configGroup)
+			span.RecordError(err)
+			errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
+		}
+	}
+
+	if len(globalConfig.Pools) > 1 {
+		seenConfigObjects = append(seenConfigObjects, "pools")
+	}
+
+	for configGroup := range globalConfig.Proxies {
+		if globalConfig.Proxies[configGroup] == nil {
+			err := fmt.Errorf("\"proxies.%s\" is nil or empty", configGroup)
+			span.RecordError(err)
+			errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
+		}
+	}
+
+	if len(globalConfig.Proxies) > 1 {
+		seenConfigObjects = append(seenConfigObjects, "proxies")
+	}
+
+	for configGroup := range globalConfig.Servers {
+		if globalConfig.Servers[configGroup] == nil {
+			err := fmt.Errorf("\"servers.%s\" is nil or empty", configGroup)
+			span.RecordError(err)
+			errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
+		}
+	}
+
+	if len(globalConfig.Servers) > 1 {
+		seenConfigObjects = append(seenConfigObjects, "servers")
+	}
+
+	sort.Strings(seenConfigObjects)
+
+	if !reflect.DeepEqual(configObjects, seenConfigObjects) {
+		// Find all strings in configObjects that are not in seenConfigObjects
+		var missingConfigObjects []string
+		for _, configObject := range configObjects {
+			if !slices.Contains[string](seenConfigObjects, configObject) {
+				missingConfigObjects = append(missingConfigObjects, configObject)
+			}
+		}
+
+		// TODO: Add the actual missing config objects to the error message.
+		for _, missingConfigObject := range missingConfigObjects {
+			err := fmt.Errorf(
+				"global config is missing one or more config group(s) for \"%s\"",
+				missingConfigObject)
+			span.RecordError(err)
+			errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
+		}
+	}
+
+	if len(errors) > 0 {
+		for _, err := range errors {
+			log.Println(err)
+		}
+		span.RecordError(fmt.Errorf("failed to validate global configuration"))
+		span.End()
+		log.Fatal("failed to validate global configuration")
+	}
 }
