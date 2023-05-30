@@ -35,6 +35,9 @@ func CastToPrimitiveTypes(args map[string]interface{}) map[string]interface{} {
 		switch value := value.(type) {
 		case time.Duration:
 			args[key] = value.String()
+		case map[string]interface{}:
+			// Recursively cast nested maps.
+			args[key] = CastToPrimitiveTypes(value)
 		// TODO: Add more types here as needed.
 		default:
 			args[key] = value

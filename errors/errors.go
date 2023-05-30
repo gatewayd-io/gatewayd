@@ -31,6 +31,7 @@ const (
 	ErrCodeFileReadFailed
 	ErrCodeDuplicateMetricsCollector
 	ErrCodeInvalidMetricType
+	ErrCodeValidationFailed
 )
 
 var (
@@ -100,6 +101,9 @@ var (
 		ErrCodeDuplicateMetricsCollector, "duplicate metrics collector", nil)
 	ErrInvalidMetricType = NewGatewayDError(
 		ErrCodeInvalidMetricType, "invalid metric type", nil)
+
+	ErrValidationFailed = NewGatewayDError(
+		ErrCodeValidationFailed, "validation failed", nil)
 )
 
 const (

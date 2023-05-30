@@ -21,3 +21,4 @@ linters:
     - maintidx
     - musttag
     - nosnakecase
+    - goerr113

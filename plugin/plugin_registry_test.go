@@ -26,7 +26,14 @@ func NewPluginRegistry(t *testing.T) *Registry {
 	}
 	logger := logging.NewLogger(context.Background(), cfg)
 	reg := NewRegistry(
-		context.Background(), config.Loose, config.PassDown, config.Accept, logger, false)
+		context.Background(),
+		config.Loose,
+		config.PassDown,
+		config.Accept,
+		config.Stop,
+		logger,
+		false,
+	)
 	return reg
 }
 
@@ -121,7 +128,7 @@ func Test_PluginRegistry_Run_PassDown(t *testing.T) {
 		args *structpb.Struct,
 		opts ...grpc.CallOption,
 	) (*structpb.Struct, error) {
-		return nil, nil //nolint:nilnil
+		return args, nil
 	})
 	// The consolidated result should be {"test": "test"}.
 	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 1, func(
@@ -198,7 +205,7 @@ func Test_HookRegistry_Run_Ignore(t *testing.T) {
 		args *structpb.Struct,
 		opts ...grpc.CallOption,
 	) (*structpb.Struct, error) {
-		return nil, nil //nolint:nilnil
+		return args, nil
 	})
 	// This should run, because the return value is the same as the params
 	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 1, func(
@@ -234,7 +241,7 @@ func Test_HookRegistry_Run_Abort(t *testing.T) {
 		args *structpb.Struct,
 		opts ...grpc.CallOption,
 	) (*structpb.Struct, error) {
-		return nil, nil //nolint:nilnil
+		return args, nil
 	})
 	// This should not run, because the first hook returns nil, and its result is ignored.
 	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 1, func(
@@ -264,7 +271,7 @@ func Test_HookRegistry_Run_Remove(t *testing.T) {
 		args *structpb.Struct,
 		opts ...grpc.CallOption,
 	) (*structpb.Struct, error) {
-		return nil, nil //nolint:nilnil
+		return args, nil
 	})
 	// This should not run, because the first hook returns nil, and its result is ignored.
 	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 1, func(

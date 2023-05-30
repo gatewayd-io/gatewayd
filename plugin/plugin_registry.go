@@ -73,6 +73,7 @@ func NewRegistry(
 	compatibility config.CompatibilityPolicy,
 	verification config.VerificationPolicy,
 	acceptance config.AcceptancePolicy,
+	termination config.TerminationPolicy,
 	logger zerolog.Logger,
 	devMode bool,
 ) *Registry {
@@ -88,6 +89,7 @@ func NewRegistry(
 		Compatibility: compatibility,
 		Verification:  verification,
 		Acceptance:    acceptance,
+		Termination:   termination,
 	}
 }
 

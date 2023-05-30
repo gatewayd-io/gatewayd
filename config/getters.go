@@ -12,10 +12,10 @@ import (
 
 var (
 	verificationPolicies = map[string]VerificationPolicy{
+		"passdown": PassDown,
 		"ignore":   Ignore,
 		"abort":    Abort,
 		"remove":   Remove,
-		"passdown": PassDown,
 	}
 	compatibilityPolicies = map[string]CompatibilityPolicy{
 		"strict": Strict,
@@ -24,6 +24,10 @@ var (
 	acceptancePolicies = map[string]AcceptancePolicy{
 		"accept": Accept,
 		"reject": Reject,
+	}
+	terminationPolicies = map[string]TerminationPolicy{
+		"continue": Continue,
+		"stop":     Stop,
 	}
 	loadBalancers = map[string]gnet.LoadBalancing{
 		"roundrobin":       gnet.RoundRobin,
@@ -106,6 +110,14 @@ func (p PluginConfig) GetAcceptancePolicy() AcceptancePolicy {
 		return policy
 	}
 	return Accept
+}
+
+// GetTerminationPolicy returns the termination policy from plugin config file.
+func (p PluginConfig) GetTerminationPolicy() TerminationPolicy {
+	if policy, ok := terminationPolicies[p.TerminationPolicy]; ok {
+		return policy
+	}
+	return Stop
 }
 
 // GetLoadBalancer returns the load balancing algorithm to use.
