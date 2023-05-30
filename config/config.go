@@ -442,7 +442,7 @@ func (c *Config) ValidateGlobalConfig(ctx context.Context) {
 
 	sort.Strings(seenConfigObjects)
 
-	if !reflect.DeepEqual(configObjects, seenConfigObjects) {
+	if len(seenConfigObjects) > 0 && !reflect.DeepEqual(configObjects, seenConfigObjects) {
 		// Find all strings in configObjects that are not in seenConfigObjects
 		var missingConfigObjects []string
 		for _, configObject := range configObjects {
