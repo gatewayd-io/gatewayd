@@ -31,7 +31,14 @@ func TestRunServer(t *testing.T) {
 	})
 
 	pluginRegistry := plugin.NewRegistry(
-		context.Background(), config.Loose, config.PassDown, config.Accept, logger, false)
+		context.Background(),
+		config.Loose,
+		config.PassDown,
+		config.Accept,
+		config.Stop,
+		logger,
+		false,
+	)
 
 	onTrafficFromClient := func(
 		ctx context.Context,
