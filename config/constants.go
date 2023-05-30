@@ -6,10 +6,10 @@ import (
 
 type (
 	Status              uint
-	VerificationPolicy  uint
-	CompatibilityPolicy uint
-	AcceptancePolicy    uint
-	TerminationPolicy   uint
+	VerificationPolicy  string
+	CompatibilityPolicy string
+	AcceptancePolicy    string
+	TerminationPolicy   string
 	LogOutput           uint
 )
 
@@ -22,30 +22,30 @@ const (
 // Policy is the policy for hook verification.
 const (
 	// Non-strict (permissive) mode.
-	PassDown VerificationPolicy = iota // Pass down the extra keys/values in result to the next plugins
+	PassDown VerificationPolicy = "passdown" // Pass down the extra keys/values in result to the next plugins
 	// Strict mode.
-	Ignore // Ignore errors and continue
-	Abort  // Abort on first error and return results
-	Remove // Remove the hook from the list on error and continue
+	Ignore VerificationPolicy = "ignore" // Ignore errors and continue
+	Abort  VerificationPolicy = "abort"  // Abort on first error and return results
+	Remove VerificationPolicy = "remove" // Remove the hook from the list on error and continue
 )
 
 // CompatibilityPolicy is the compatibility policy for plugins.
 const (
-	Strict CompatibilityPolicy = iota // Expect all required plugins to be loaded and present
-	Loose                             // Load the plugin, even if the requirements are not met
+	Strict CompatibilityPolicy = "strict" // Expect all required plugins to be loaded and present
+	Loose  CompatibilityPolicy = "loose"  // Load the plugin, even if the requirements are not met
 )
 
 // AcceptancePolicy is the acceptance policy for custom hooks.
 const (
-	Accept AcceptancePolicy = iota // Accept all custom hooks
-	Reject                         // Reject all custom hooks
+	Accept AcceptancePolicy = "accept" // Accept all custom hooks
+	Reject AcceptancePolicy = "reject" // Reject all custom hooks
 )
 
 // TerminationPolicy is the termination policy for
 // the functions registered to the OnTrafficFromClient hook.
 const (
-	Continue TerminationPolicy = iota // Continue to the next function
-	Stop                              // Stop the execution of the functions
+	Continue TerminationPolicy = "continue" // Continue to the next function
+	Stop     TerminationPolicy = "stop"     // Stop the execution of the functions
 )
 
 // LogOutput is the output type for the logger.
