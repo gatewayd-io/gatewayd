@@ -110,11 +110,11 @@ type API struct {
 }
 
 type GlobalConfig struct {
-	API     API                `json:"api"`
-	Loggers map[string]Logger  `json:"loggers"`
-	Clients map[string]Client  `json:"clients"`
-	Pools   map[string]Pool    `json:"pools"`
-	Proxies map[string]Proxy   `json:"proxies"`
-	Servers map[string]Server  `json:"servers"`
-	Metrics map[string]Metrics `json:"metrics"`
+	API     API                 `json:"api"`
+	Loggers map[string]*Logger  `json:"loggers"`
+	Clients map[string]*Client  `json:"clients"`
+	Pools   map[string]*Pool    `json:"pools"`
+	Proxies map[string]*Proxy   `json:"proxies"`
+	Servers map[string]*Server  `json:"servers"`
+	Metrics map[string]*Metrics `json:"metrics"`
 }
