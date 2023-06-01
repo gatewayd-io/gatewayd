@@ -87,11 +87,7 @@ func NewClient(ctx context.Context, clientConfig *config.Client, logger zerolog.
 
 	// Set the TCP keep alive.
 	client.TCPKeepAlive = clientConfig.TCPKeepAlive
-	if clientConfig.TCPKeepAlivePeriod <= 0 {
-		client.TCPKeepAlivePeriod = config.DefaultTCPKeepAlivePeriod
-	} else {
-		client.TCPKeepAlivePeriod = clientConfig.TCPKeepAlivePeriod
-	}
+	client.TCPKeepAlivePeriod = clientConfig.TCPKeepAlivePeriod
 
 	if c, ok := client.Conn.(*net.TCPConn); ok {
 		if err := c.SetKeepAlive(client.TCPKeepAlive); err != nil {
@@ -106,40 +102,28 @@ func NewClient(ctx context.Context, clientConfig *config.Client, logger zerolog.
 	}
 
 	// Set the receive deadline (timeout).
-	if clientConfig.ReceiveDeadline <= 0 {
-		client.ReceiveDeadline = config.DefaultReceiveDeadline
+	client.ReceiveDeadline = clientConfig.ReceiveDeadline
+	if err := client.Conn.SetReadDeadline(time.Now().Add(client.ReceiveDeadline)); err != nil {
+		logger.Error().Err(err).Msg("Failed to set receive deadline")
+		span.RecordError(err)
 	} else {
-		client.ReceiveDeadline = clientConfig.ReceiveDeadline
-		if err := client.Conn.SetReadDeadline(time.Now().Add(client.ReceiveDeadline)); err != nil {
-			logger.Error().Err(err).Msg("Failed to set receive deadline")
-			span.RecordError(err)
-		} else {
-			logger.Debug().Str("duration", fmt.Sprint(client.ReceiveDeadline.String())).Msg(
-				"Set receive deadline")
-		}
+		logger.Debug().Str("duration", fmt.Sprint(client.ReceiveDeadline.String())).Msg(
+			"Set receive deadline")
 	}
 
 	// Set the send deadline (timeout).
-	if clientConfig.SendDeadline <= 0 {
-		client.SendDeadline = config.DefaultSendDeadline
+	client.SendDeadline = clientConfig.SendDeadline
+	if err := client.Conn.SetWriteDeadline(time.Now().Add(client.SendDeadline)); err != nil {
+		logger.Error().Err(err).Msg("Failed to set send deadline")
+		span.RecordError(err)
 	} else {
-		client.SendDeadline = clientConfig.SendDeadline
-		if err := client.Conn.SetWriteDeadline(time.Now().Add(client.SendDeadline)); err != nil {
-			logger.Error().Err(err).Msg("Failed to set send deadline")
-			span.RecordError(err)
-		} else {
-			logger.Debug().Str("duration", fmt.Sprint(client.SendDeadline)).Msg(
-				"Set send deadline")
-		}
+		logger.Debug().Str("duration", fmt.Sprint(client.SendDeadline)).Msg(
+			"Set send deadline")
 	}
 
 	// Set the receive chunk size. This is the size of the buffer that is read from the connection
 	// in chunks.
-	if clientConfig.ReceiveChunkSize <= 0 {
-		client.ReceiveChunkSize = config.DefaultChunkSize
-	} else {
-		client.ReceiveChunkSize = clientConfig.ReceiveChunkSize
-	}
+	client.ReceiveChunkSize = clientConfig.ReceiveChunkSize
 
 	logger.Trace().Str("address", client.Address).Msg("New client created")
 	client.ID = GetID(

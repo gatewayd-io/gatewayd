@@ -333,6 +333,12 @@ var runCmd = &cobra.Command{
 				clients[name] = clientConfig
 			}
 
+			// Fill the missing and zero value with the default one.
+			clients[name].TCPKeepAlivePeriod = clients[name].GetTCPKeepAlivePeriod()
+			clients[name].ReceiveDeadline = clients[name].GetReceiveDeadline()
+			clients[name].SendDeadline = clients[name].GetSendDeadline()
+			clients[name].ReceiveChunkSize = clients[name].GetReceiveChunkSize()
+
 			// Add clients to the pool.
 			for i := 0; i < cfg.GetSize(); i++ {
 				clientConfig := clients[name]

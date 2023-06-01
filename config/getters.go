@@ -121,6 +121,38 @@ func (p PluginConfig) GetTerminationPolicy() TerminationPolicy {
 	return Stop
 }
 
+// GetTCPKeepAlivePeriod returns the TCP keep alive period from config file or default value.
+func (c Client) GetTCPKeepAlivePeriod() time.Duration {
+	if c.TCPKeepAlivePeriod <= 0 {
+		return DefaultTCPKeepAlivePeriod
+	}
+	return c.TCPKeepAlivePeriod
+}
+
+// GetReceiveDeadline returns the receive deadline from config file or default value.
+func (c Client) GetReceiveDeadline() time.Duration {
+	if c.ReceiveDeadline <= 0 {
+		return DefaultReceiveDeadline
+	}
+	return c.ReceiveDeadline
+}
+
+// GetSendDeadline returns the send deadline from config file or default value.
+func (c Client) GetSendDeadline() time.Duration {
+	if c.SendDeadline <= 0 {
+		return DefaultSendDeadline
+	}
+	return c.SendDeadline
+}
+
+// GetReceiveChunkSize returns the receive chunk size from config file or default value.
+func (c Client) GetReceiveChunkSize() int {
+	if c.ReceiveChunkSize <= 0 {
+		return DefaultChunkSize
+	}
+	return c.ReceiveChunkSize
+}
+
 // GetLoadBalancer returns the load balancing algorithm to use.
 func (s Server) GetLoadBalancer() gnet.LoadBalancing {
 	if lb, ok := loadBalancers[s.LoadBalancer]; ok {
