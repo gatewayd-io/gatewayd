@@ -46,7 +46,6 @@ func NewLogger(ctx context.Context, cfg LoggerConfig) zerolog.Logger {
 	}
 
 	var output []io.Writer
-
 	for _, out := range cfg.Output {
 		switch out {
 		case config.Console:
@@ -84,7 +83,7 @@ func NewLogger(ctx context.Context, cfg LoggerConfig) zerolog.Logger {
 			}
 			output = append(output, zerolog.SyslogLevelWriter(rsyslogWriter))
 		default:
-			output = append(output, os.Stdout)
+			output = append(output, consoleWriter)
 		}
 	}
 
