@@ -43,6 +43,7 @@ var (
 		"rsyslog": RSyslog,
 	}
 	timeFormats = map[string]string{
+		"":          zerolog.TimeFormatUnix,
 		"unix":      zerolog.TimeFormatUnix,
 		"unixms":    zerolog.TimeFormatUnixMs,
 		"unixmicro": zerolog.TimeFormatUnixMicro,
