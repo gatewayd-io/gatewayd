@@ -45,18 +45,18 @@ func NewLogger(ctx context.Context, cfg LoggerConfig) zerolog.Logger {
 		NoColor:    cfg.NoColor,
 	}
 
-	var output []io.Writer
+	var outputs []io.Writer
 	for _, out := range cfg.Output {
 		switch out {
 		case config.Console:
-			output = append(output, consoleWriter)
+			outputs = append(outputs, consoleWriter)
 		case config.Stdout:
-			output = append(output, os.Stdout)
+			outputs = append(outputs, os.Stdout)
 		case config.Stderr:
-			output = append(output, os.Stderr)
+			outputs = append(outputs, os.Stderr)
 		case config.File:
-			output = append(
-				output, &lumberjack.Logger{
+			outputs = append(
+				outputs, &lumberjack.Logger{
 					Filename:   cfg.FileName,
 					MaxSize:    cfg.MaxSize,
 					MaxBackups: cfg.MaxBackups,
@@ -72,7 +72,7 @@ func NewLogger(ctx context.Context, cfg LoggerConfig) zerolog.Logger {
 				span.End()
 				log.Fatal(err)
 			}
-			output = append(output, syslogWriter)
+			outputs = append(outputs, syslogWriter)
 		case config.RSyslog:
 			// TODO: Add support for TLS.
 			// See: https://github.com/RackSec/srslog (deprecated)
@@ -81,9 +81,9 @@ func NewLogger(ctx context.Context, cfg LoggerConfig) zerolog.Logger {
 			if err != nil {
 				log.Fatal(err)
 			}
-			output = append(output, zerolog.SyslogLevelWriter(rsyslogWriter))
+			outputs = append(outputs, zerolog.SyslogLevelWriter(rsyslogWriter))
 		default:
-			output = append(output, consoleWriter)
+			outputs = append(outputs, consoleWriter)
 		}
 	}
 
@@ -94,7 +94,7 @@ func NewLogger(ctx context.Context, cfg LoggerConfig) zerolog.Logger {
 		zerolog.TimeFieldFormat = cfg.TimeFormat
 	}
 
-	multiWriter := zerolog.MultiLevelWriter(output...)
+	multiWriter := zerolog.MultiLevelWriter(outputs...)
 	logger := zerolog.New(multiWriter)
 	logger = logger.With().Timestamp().Logger()
 
