@@ -153,6 +153,14 @@ func (c Client) GetReceiveChunkSize() int {
 	return c.ReceiveChunkSize
 }
 
+// GetHealthCheckPeriod returns the health check period from config file or default value.
+func (pr Proxy) GetHealthCheckPeriod() time.Duration {
+	if pr.HealthCheckPeriod <= 0 {
+		return DefaultHealthCheckPeriod
+	}
+	return pr.HealthCheckPeriod
+}
+
 // GetLoadBalancer returns the load balancing algorithm to use.
 func (s Server) GetLoadBalancer() gnet.LoadBalancing {
 	if lb, ok := loadBalancers[s.LoadBalancer]; ok {

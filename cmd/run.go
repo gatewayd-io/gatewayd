@@ -425,6 +425,9 @@ var runCmd = &cobra.Command{
 		for name, cfg := range conf.Global.Proxies {
 			logger := loggers[name]
 			clientConfig := clients[name]
+			// Fill the missing and zero value with the default one.
+			cfg.HealthCheckPeriod = cfg.GetHealthCheckPeriod()
+
 			proxies[name] = network.NewProxy(
 				runCtx,
 				pools[name],
