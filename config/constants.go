@@ -122,7 +122,7 @@ const (
 	ChecksumBufferSize = 65536
 
 	// Metrics constants.
-	DefaultMetricsAddress = "localhost:2112"
+	DefaultMetricsAddress = "localhost:9090"
 	DefaultMetricsPath    = "/metrics"
 
 	// Sentry constants.
