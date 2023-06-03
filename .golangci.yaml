@@ -22,3 +22,54 @@ linters:
     - musttag
     - nosnakecase
     - goerr113
+    - ifshort
+    - deadcode
+    - interfacer
+    - scopelint
+    - structcheck
+    - varcheck
+    - golint
+linters-settings:
+  depguard:
+    rules:
+      main:
+        files:
+          - $all
+          - "!$test"
+        allow:
+          - $gostd
+          - "github.com/gatewayd-io"
+          - "github.com/getsentry/sentry-go"
+          - "github.com/rs/zerolog"
+          - "github.com/grpc-ecosystem/grpc-gateway"
+          - "github.com/knadh/koanf"
+          - "github.com/panjf2000/gnet/v2"
+          - "github.com/spf13/cobra"
+          - "github.com/invopop/jsonschema"
+          - "github.com/santhosh-tekuri/jsonschema/v5"
+          - "github.com/NYTimes/gziphandler"
+          - "github.com/go-co-op/gocron"
+          - "github.com/prometheus/client_golang/prometheus"
+          - "github.com/prometheus/client_model/go"
+          - "github.com/prometheus/common/expfmt"
+          - "github.com/hashicorp/go-hclog"
+          - "github.com/Masterminds/semver/v3"
+          - "github.com/hashicorp/go-plugin"
+          - "github.com/mitchellh/mapstructure"
+          - "github.com/google/go-cmp"
+          - ""
+          - ""
+      test:
+        files:
+          - $test
+        allow:
+          - $gostd
+          - "github.com/gatewayd-io"
+          - "github.com/stretchr/testify"
+          - "github.com/rs/zerolog"
+          - "github.com/zenizh/go-capturer"
+          - "github.com/hashicorp/go-hclog"
+          - "github.com/prometheus/client_golang/prometheus"
+          - "github.com/prometheus/client_model/go"
+          - "github.com/prometheus/common/expfmt"
+          - "github.com/panjf2000/gnet/v2"
