@@ -16,8 +16,8 @@ var (
 	filePermissions os.FileMode = 0o644
 )
 
-// initCmd represents the init command.
-var initCmd = &cobra.Command{
+// configInitCmd represents the plugin init command.
+var configInitCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Create or overwrite the GatewayD global config",
 	Run: func(cmd *cobra.Command, args []string) {
@@ -57,11 +57,11 @@ var initCmd = &cobra.Command{
 }
 
 func init() {
-	configCmd.AddCommand(initCmd)
+	configCmd.AddCommand(configInitCmd)
 
-	initCmd.Flags().BoolVarP(
+	configInitCmd.Flags().BoolVarP(
 		&force, "force", "f", false, "Force overwrite of existing config file")
-	initCmd.Flags().StringVarP(
+	configInitCmd.Flags().StringVarP(
 		&globalConfigFile, // Already exists in run.go
 		"config", "c", config.GetDefaultConfigFilePath(config.GlobalConfigFilename),
 		"Global config file")

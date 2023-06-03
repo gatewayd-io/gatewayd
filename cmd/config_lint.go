@@ -12,8 +12,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// lintCmd represents the lint command.
-var lintCmd = &cobra.Command{
+// configLintCmd represents the config lint command.
+var configLintCmd = &cobra.Command{
 	Use:   "lint",
 	Short: "Lint the GatewayD global config",
 	Run: func(cmd *cobra.Command, args []string) {
@@ -64,9 +64,9 @@ var lintCmd = &cobra.Command{
 }
 
 func init() {
-	configCmd.AddCommand(lintCmd)
+	configCmd.AddCommand(configLintCmd)
 
-	lintCmd.Flags().StringVarP(
+	configLintCmd.Flags().StringVarP(
 		&globalConfigFile, // Already exists in run.go
 		"config", "c", config.GetDefaultConfigFilePath(config.GlobalConfigFilename),
 		"Global config file")
