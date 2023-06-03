@@ -4,6 +4,7 @@ import (
 	"log/syslog"
 	"os"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	"github.com/panjf2000/gnet/v2"
@@ -43,6 +44,7 @@ var (
 		"rsyslog": RSyslog,
 	}
 	timeFormats = map[string]string{
+		"":          zerolog.TimeFormatUnix,
 		"unix":      zerolog.TimeFormatUnix,
 		"unixms":    zerolog.TimeFormatUnixMs,
 		"unixmicro": zerolog.TimeFormatUnixMicro,
@@ -118,6 +120,76 @@ func (p PluginConfig) GetTerminationPolicy() TerminationPolicy {
 		return policy
 	}
 	return Stop
+}
+
+// GetTCPKeepAlivePeriod returns the TCP keep alive period from config file or default value.
+func (c Client) GetTCPKeepAlivePeriod() time.Duration {
+	if c.TCPKeepAlivePeriod <= 0 {
+		return DefaultTCPKeepAlivePeriod
+	}
+	return c.TCPKeepAlivePeriod
+}
+
+// GetReceiveDeadline returns the receive deadline from config file or default value.
+func (c Client) GetReceiveDeadline() time.Duration {
+	if c.ReceiveDeadline <= 0 {
+		return DefaultReceiveDeadline
+	}
+	return c.ReceiveDeadline
+}
+
+// GetSendDeadline returns the send deadline from config file or default value.
+func (c Client) GetSendDeadline() time.Duration {
+	if c.SendDeadline <= 0 {
+		return DefaultSendDeadline
+	}
+	return c.SendDeadline
+}
+
+// GetReceiveChunkSize returns the receive chunk size from config file or default value.
+func (c Client) GetReceiveChunkSize() int {
+	if c.ReceiveChunkSize <= 0 {
+		return DefaultChunkSize
+	}
+	return c.ReceiveChunkSize
+}
+
+// GetHealthCheckPeriod returns the health check period from config file or default value.
+func (pr Proxy) GetHealthCheckPeriod() time.Duration {
+	if pr.HealthCheckPeriod <= 0 {
+		return DefaultHealthCheckPeriod
+	}
+	return pr.HealthCheckPeriod
+}
+
+// GetSystemLimits returns the current system limits or the configured limits.
+func (s Server) GetRLimits(logger zerolog.Logger) (uint64, uint64) {
+	var limits syscall.Rlimit
+	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &limits); err != nil {
+		logger.Debug().Msg("failed to get system limits")
+	}
+
+	if s.SoftLimit <= 0 && limits != (syscall.Rlimit{}) {
+		s.SoftLimit = limits.Cur
+		logger.Debug().Uint64("soft_limit", s.SoftLimit).Msg(
+			"Soft limit is not set, using system limit")
+	}
+
+	if s.HardLimit <= 0 && limits != (syscall.Rlimit{}) {
+		s.HardLimit = limits.Max
+		logger.Debug().Uint64("hard_limit", s.HardLimit).Msg(
+			"Hard limit is not set, using system limit")
+	}
+
+	return s.HardLimit, s.SoftLimit
+}
+
+// GetTickInterval returns the tick interval from config file or default value.
+func (s Server) GetTickInterval() time.Duration {
+	if s.TickInterval <= 0 {
+		return DefaultTickInterval
+	}
+	return s.TickInterval
 }
 
 // GetLoadBalancer returns the load balancing algorithm to use.

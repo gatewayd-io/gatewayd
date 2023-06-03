@@ -333,6 +333,12 @@ var runCmd = &cobra.Command{
 				clients[name] = clientConfig
 			}
 
+			// Fill the missing and zero values with the default ones.
+			clients[name].TCPKeepAlivePeriod = clients[name].GetTCPKeepAlivePeriod()
+			clients[name].ReceiveDeadline = clients[name].GetReceiveDeadline()
+			clients[name].SendDeadline = clients[name].GetSendDeadline()
+			clients[name].ReceiveChunkSize = clients[name].GetReceiveChunkSize()
+
 			// Add clients to the pool.
 			for i := 0; i < cfg.GetSize(); i++ {
 				clientConfig := clients[name]
@@ -419,6 +425,9 @@ var runCmd = &cobra.Command{
 		for name, cfg := range conf.Global.Proxies {
 			logger := loggers[name]
 			clientConfig := clients[name]
+			// Fill the missing and zero value with the default one.
+			cfg.HealthCheckPeriod = cfg.GetHealthCheckPeriod()
+
 			proxies[name] = network.NewProxy(
 				runCtx,
 				pools[name],
@@ -456,13 +465,14 @@ var runCmd = &cobra.Command{
 		// Create and initialize servers.
 		for name, cfg := range conf.Global.Servers {
 			logger := loggers[name]
+			softLimit, hardLimit := cfg.GetRLimits(logger)
 			servers[name] = network.NewServer(
 				runCtx,
 				cfg.Network,
 				cfg.Address,
-				cfg.SoftLimit,
-				cfg.HardLimit,
-				cfg.TickInterval,
+				softLimit,
+				hardLimit,
+				cfg.GetTickInterval(),
 				[]gnet.Option{
 					// Scheduling options
 					gnet.WithMulticore(cfg.MultiCore),

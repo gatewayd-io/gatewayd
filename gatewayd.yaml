@@ -22,7 +22,7 @@ loggers:
 metrics:
   default:
     enabled: True
-    address: localhost:2112
+    address: localhost:9090
     path: /metrics
 
 clients:
@@ -49,8 +49,8 @@ servers:
   default:
     network: tcp
     address: 0.0.0.0:15432
-    softLimit: 0
-    hardLimit: 0
+    softLimit: 0 # 0 means honor system limit
+    hardLimit: 0 # 0 means honor system limit
     enableTicker: False
     tickInterval: 5s # duration
     multiCore: True

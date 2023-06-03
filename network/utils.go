@@ -8,23 +8,11 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"syscall"
 
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
 )
-
-// GetRLimit returns the current system soft and hard limits for the number of open files.
-func GetRLimit(logger zerolog.Logger) syscall.Rlimit {
-	var limits syscall.Rlimit
-	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &limits); err != nil {
-		logger.Error().Err(err).Msg("Failed to get rlimit")
-	}
-	logger.Debug().Str("value", fmt.Sprint(limits.Cur)).Msg("Current system soft limit")
-	logger.Debug().Str("value", fmt.Sprint(limits.Max)).Msg("Current system hard limit")
-	return limits
-}
 
 // GetID returns a unique ID (hash) for a network connection.
 func GetID(network, address string, seed int, logger zerolog.Logger) string {

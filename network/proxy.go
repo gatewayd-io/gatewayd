@@ -65,17 +65,12 @@ func NewProxy(
 		logger:               logger,
 		pluginRegistry:       pluginRegistry,
 		scheduler:            gocron.NewScheduler(time.UTC),
+		ctx:                  proxyCtx,
+		pluginTimeout:        pluginTimeout,
 		Elastic:              elastic,
 		ReuseElasticClients:  reuseElasticClients,
 		ClientConfig:         clientConfig,
-		ctx:                  proxyCtx,
-		pluginTimeout:        pluginTimeout,
-	}
-
-	if healthCheckPeriod == 0 {
-		proxy.HealthCheckPeriod = config.DefaultHealthCheckPeriod
-	} else {
-		proxy.HealthCheckPeriod = healthCheckPeriod
+		HealthCheckPeriod:    healthCheckPeriod,
 	}
 
 	startDelay := time.Now().Add(proxy.HealthCheckPeriod)
