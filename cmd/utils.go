@@ -32,15 +32,16 @@ func generateConfig(cmd *cobra.Command, fileType configFileType, configFile stri
 	conf.LoadDefaults(context.TODO())
 
 	// Marshal the config file to YAML.
-	var k *koanf.Koanf
-	if fileType == Global {
-		k = conf.GlobalKoanf
-	} else if fileType == Plugin {
-		k = conf.PluginKoanf
-	} else {
+	var konfig *koanf.Koanf
+	switch fileType {
+	case Global:
+		konfig = conf.GlobalKoanf
+	case Plugin:
+		konfig = conf.PluginKoanf
+	default:
 		logger.Fatal("Invalid config file type")
 	}
-	cfg, err := k.Marshal(yaml.Parser())
+	cfg, err := konfig.Marshal(yaml.Parser())
 	if err != nil {
 		logger.Fatal(err)
 	}
