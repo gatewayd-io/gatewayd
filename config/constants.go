@@ -2,8 +2,6 @@ package config
 
 import (
 	"time"
-
-	"github.com/rs/zerolog"
 )
 
 type (
@@ -73,8 +71,8 @@ const (
 	DefaultLogFileName       = "gatewayd.log"
 	DefaultLogLevel          = "info"
 	DefaultNoColor           = false
-	DefaultTimeFormat        = zerolog.TimeFormatUnix
-	DefaultConsoleTimeFormat = time.RFC3339
+	DefaultTimeFormat        = "unix"
+	DefaultConsoleTimeFormat = "RFC3339"
 	DefaultMaxSize           = 500 // megabytes
 	DefaultMaxBackups        = 5
 	DefaultMaxAge            = 30 // days
