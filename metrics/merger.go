@@ -47,19 +47,17 @@ type Merger struct {
 var _ IMerger = &Merger{}
 
 // NewMerger creates a new metrics merger.
-func NewMerger(
-	ctx context.Context, metricsMergerPeriod time.Duration, logger zerolog.Logger,
-) *Merger {
+func NewMerger(ctx context.Context, merger Merger) *Merger {
 	mergerCtx, span := otel.Tracer(config.TracerName).Start(ctx, "NewMerger")
 	defer span.End()
 
 	return &Merger{
 		scheduler:           gocron.NewScheduler(time.UTC),
 		ctx:                 mergerCtx,
-		Logger:              logger,
+		Logger:              merger.Logger,
 		Addresses:           map[string]string{},
 		OutputMetrics:       []byte{},
-		MetricsMergerPeriod: metricsMergerPeriod,
+		MetricsMergerPeriod: merger.MetricsMergerPeriod,
 	}
 }
 
@@ -154,6 +152,7 @@ func (m *Merger) ReadMetrics() (map[string][]byte, *gerr.GatewayDError) {
 	return pluginMetrics, nil
 }
 
+// MergeMetrics merges metrics from plugins into a single output.
 func (m *Merger) MergeMetrics(pluginMetrics map[string][]byte) *gerr.GatewayDError {
 	_, span := otel.Tracer(config.TracerName).Start(m.ctx, "MergeMetrics")
 	defer span.End()
