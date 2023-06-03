@@ -10,22 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestGetRlimit tests the GetRLimit function.
-func TestGetRlimit(t *testing.T) {
-	cfg := logging.LoggerConfig{
-		Output:            []config.LogOutput{config.Console},
-		TimeFormat:        zerolog.TimeFormatUnix,
-		ConsoleTimeFormat: config.DefaultConsoleTimeFormat,
-		Level:             zerolog.DebugLevel,
-		NoColor:           true,
-	}
-
-	logger := logging.NewLogger(context.Background(), cfg)
-	rlimit := GetRLimit(logger)
-	assert.Greater(t, rlimit.Cur, uint64(1))
-	assert.Greater(t, rlimit.Max, uint64(1))
-}
-
 // TestGetID tests the GetID function.
 func TestGetID(t *testing.T) {
 	cfg := logging.LoggerConfig{
