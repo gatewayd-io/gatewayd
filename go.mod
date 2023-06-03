@@ -8,11 +8,11 @@ require (
 	github.com/envoyproxy/protoc-gen-validate v1.0.1
 	github.com/gatewayd-io/gatewayd-plugin-sdk v0.0.21
 	github.com/getsentry/sentry-go v0.21.0
-	github.com/go-co-op/gocron v1.28.0
+	github.com/go-co-op/gocron v1.28.2
 	github.com/google/go-cmp v0.5.9
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.15.2
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0
 	github.com/hashicorp/go-hclog v1.5.0
-	github.com/hashicorp/go-plugin v1.4.9
+	github.com/hashicorp/go-plugin v1.4.10
 	github.com/invopop/jsonschema v0.7.0
 	github.com/knadh/koanf v1.5.0
 	github.com/mitchellh/mapstructure v1.5.0
@@ -23,7 +23,7 @@ require (
 	github.com/rs/zerolog v1.29.1
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.0
 	github.com/spf13/cobra v1.7.0
-	github.com/stretchr/testify v1.8.3
+	github.com/stretchr/testify v1.8.4
 	github.com/zenizh/go-capturer v0.0.0-20211219060012-52ea6c8fed04
 	go.opentelemetry.io/otel v1.16.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.16.0
@@ -31,7 +31,7 @@ require (
 	go.opentelemetry.io/otel/sdk v1.16.0
 	go.opentelemetry.io/otel/trace v1.16.0
 	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1
-	google.golang.org/genproto/googleapis/api v0.0.0-20230526203410-71b5a4ffd15e
+	google.golang.org/genproto/googleapis/api v0.0.0-20230530153820-e85fd2cbaebc
 	google.golang.org/grpc v1.55.0
 	google.golang.org/protobuf v1.30.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
@@ -74,6 +74,6 @@ require (
 	golang.org/x/sys v0.8.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	google.golang.org/genproto v0.0.0-20230526203410-71b5a4ffd15e // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20230526203410-71b5a4ffd15e // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20230530153820-e85fd2cbaebc // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

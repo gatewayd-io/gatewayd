@@ -1,0 +1,7 @@
+* text=auto
+
+api/v1/* linguist-generated=true
+go.sum linguist-generated=true
+buf.lock linguist-generated=true
+usagereport/v1/* linguist-generated=true
+assets/* linguist-generated=true
