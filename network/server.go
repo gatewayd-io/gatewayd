@@ -107,6 +107,7 @@ func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 	span.AddEvent("Ran the OnOpening hooks")
 
 	// Check if the server is at the soft or hard limit.
+	// TODO: Get rid the hard/soft limit.
 	if uint64(s.engine.CountConnections()) >= s.SoftLimit {
 		s.logger.Warn().Msg("Soft limit reached")
 	}
@@ -433,6 +434,8 @@ func NewServer(
 		Options:        options,
 		TickInterval:   tickInterval,
 		Status:         config.Stopped,
+		HardLimit:      hardLimit,
+		SoftLimit:      softLimit,
 		proxy:          proxy,
 		logger:         logger,
 		pluginRegistry: pluginRegistry,
@@ -454,33 +457,6 @@ func NewServer(
 		logger.Error().Msg("Failed to resolve address")
 		logger.Warn().Str("address", server.Address).Msg(
 			"GatewayD is listening on an unresolved address")
-	}
-
-	// Get the current limits.
-	limits := GetRLimit(logger)
-
-	// Set the soft and hard limits if they are not set.
-	if softLimit == 0 {
-		server.SoftLimit = limits.Cur
-		logger.Debug().Msg("Soft limit is not set, using the current system soft limit")
-	} else {
-		server.SoftLimit = softLimit
-		logger.Debug().Str("value", fmt.Sprint(softLimit)).Msg("Set soft limit")
-	}
-
-	if hardLimit == 0 {
-		server.HardLimit = limits.Max
-		logger.Debug().Msg("Hard limit is not set, using the current system hard limit")
-	} else {
-		server.HardLimit = hardLimit
-		logger.Debug().Str("value", fmt.Sprint(hardLimit)).Msg("Set hard limit")
-	}
-
-	if tickInterval == 0 {
-		server.TickInterval = config.DefaultTickInterval
-		logger.Debug().Msg("Tick interval is not set, using the default value")
-	} else {
-		server.TickInterval = tickInterval
 	}
 
 	return &server
