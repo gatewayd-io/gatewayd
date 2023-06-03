@@ -108,11 +108,11 @@ func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 
 	// Check if the server is at the soft or hard limit.
 	// TODO: Get rid the hard/soft limit.
-	if uint64(s.engine.CountConnections()) >= s.SoftLimit {
+	if s.SoftLimit > 0 && uint64(s.engine.CountConnections()) >= s.SoftLimit {
 		s.logger.Warn().Msg("Soft limit reached")
 	}
 
-	if uint64(s.engine.CountConnections()) >= s.HardLimit {
+	if s.HardLimit > 0 && uint64(s.engine.CountConnections()) >= s.HardLimit {
 		s.logger.Error().Msg("Hard limit reached")
 		_, err := gconn.Write([]byte("Hard limit reached\n"))
 		if err != nil {
