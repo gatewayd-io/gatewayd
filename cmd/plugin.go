@@ -1,10 +1,8 @@
 package cmd
 
 import (
-	"context"
+	"log"
 
-	"github.com/gatewayd-io/gatewayd/config"
-	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/spf13/cobra"
 )
 
@@ -13,35 +11,9 @@ var pluginCmd = &cobra.Command{
 	Use:   "plugin",
 	Short: "Manage plugins",
 	Run: func(cmd *cobra.Command, args []string) {
-		pluginCtx := context.Background()
-		// Load global and plugin configuration.
-		conf = config.NewConfig(pluginCtx, globalConfigFile, pluginConfigFile)
-		conf.InitConfig(pluginCtx)
-
-		// Create and initialize loggers from the config.
-		for name, cfg := range conf.Global.Loggers {
-			loggers[name] = logging.NewLogger(pluginCtx, logging.LoggerConfig{
-				Output:            cfg.GetOutput(),
-				Level:             cfg.GetLevel(),
-				TimeFormat:        cfg.GetTimeFormat(),
-				ConsoleTimeFormat: cfg.GetConsoleTimeFormat(),
-				NoColor:           cfg.NoColor,
-				FileName:          cfg.FileName,
-				MaxSize:           cfg.MaxSize,
-				MaxBackups:        cfg.MaxBackups,
-				MaxAge:            cfg.MaxAge,
-				Compress:          cfg.Compress,
-				LocalTime:         cfg.LocalTime,
-				SyslogPriority:    cfg.GetSyslogPriority(),
-				RSyslogNetwork:    cfg.RSyslogNetwork,
-				RSyslogAddress:    cfg.RSyslogAddress,
-			})
+		if err := cmd.Help(); err != nil {
+			log.New(cmd.OutOrStdout(), "", 0).Fatal(err)
 		}
-
-		// Set the default logger.
-		logger := loggers[config.Default]
-
-		logger.Debug().Msg("Adding a new plugin")
 	},
 }
 
