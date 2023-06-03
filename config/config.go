@@ -28,6 +28,7 @@ type IConfig interface {
 	LoadGlobalEnvVars(context.Context)
 	LoadGlobalConfigFile(context.Context)
 	LoadPluginConfigFile(context.Context)
+	ValidateGlobalConfig(ctx context.Context)
 	MergeGlobalConfig(context.Context, map[string]interface{})
 }
 
@@ -45,6 +46,7 @@ type Config struct {
 
 var _ IConfig = &Config{}
 
+// NewConfig creates a new Config object.
 func NewConfig(ctx context.Context, config Config) *Config {
 	_, span := otel.Tracer(TracerName).Start(ctx, "Create new config")
 	defer span.End()
@@ -73,6 +75,7 @@ func NewConfig(ctx context.Context, config Config) *Config {
 	return &cfg
 }
 
+// InitConfig initializes all the configuration objects at once.
 func (c *Config) InitConfig(ctx context.Context) {
 	newCtx, span := otel.Tracer(TracerName).Start(ctx, "Initialize config")
 	defer span.End()
@@ -338,6 +341,7 @@ func (c *Config) UnmarshalPluginConfig(ctx context.Context) {
 	span.End()
 }
 
+// MergeGlobalConfig merges the global configuration from the plugins into the global configuration.
 func (c *Config) MergeGlobalConfig(
 	ctx context.Context, updatedGlobalConfig map[string]interface{},
 ) {
@@ -360,6 +364,7 @@ func (c *Config) MergeGlobalConfig(
 	span.End()
 }
 
+// ValidateGlobalConfig validates the global configuration.
 func (c *Config) ValidateGlobalConfig(ctx context.Context) {
 	_, span := otel.Tracer(TracerName).Start(ctx, "Validate global config")
 
