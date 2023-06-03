@@ -20,7 +20,9 @@ var lintCmd = &cobra.Command{
 		logger := log.New(cmd.OutOrStdout(), "", 0)
 
 		// Load the global configuration file and check it for errors.
-		conf := config.NewConfig(context.TODO(), globalConfigFile, "")
+		conf := config.NewConfig(context.TODO(), config.Config{
+			GlobalConfigFile: globalConfigFile,
+		})
 		conf.LoadDefaults(context.TODO())
 		conf.LoadGlobalConfigFile(context.TODO())
 		conf.UnmarshalGlobalConfig(context.TODO())
