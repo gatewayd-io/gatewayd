@@ -103,22 +103,26 @@ func NewClient(ctx context.Context, clientConfig *config.Client, logger zerolog.
 
 	// Set the receive deadline (timeout).
 	client.ReceiveDeadline = clientConfig.ReceiveDeadline
-	if err := client.Conn.SetReadDeadline(time.Now().Add(client.ReceiveDeadline)); err != nil {
-		logger.Error().Err(err).Msg("Failed to set receive deadline")
-		span.RecordError(err)
-	} else {
-		logger.Debug().Str("duration", fmt.Sprint(client.ReceiveDeadline.String())).Msg(
-			"Set receive deadline")
+	if client.ReceiveDeadline > 0 {
+		if err := client.Conn.SetReadDeadline(time.Now().Add(client.ReceiveDeadline)); err != nil {
+			logger.Error().Err(err).Msg("Failed to set receive deadline")
+			span.RecordError(err)
+		} else {
+			logger.Debug().Str("duration", fmt.Sprint(client.ReceiveDeadline.String())).Msg(
+				"Set receive deadline")
+		}
 	}
 
 	// Set the send deadline (timeout).
 	client.SendDeadline = clientConfig.SendDeadline
-	if err := client.Conn.SetWriteDeadline(time.Now().Add(client.SendDeadline)); err != nil {
-		logger.Error().Err(err).Msg("Failed to set send deadline")
-		span.RecordError(err)
-	} else {
-		logger.Debug().Str("duration", fmt.Sprint(client.SendDeadline)).Msg(
-			"Set send deadline")
+	if client.SendDeadline > 0 {
+		if err := client.Conn.SetWriteDeadline(time.Now().Add(client.SendDeadline)); err != nil {
+			logger.Error().Err(err).Msg("Failed to set send deadline")
+			span.RecordError(err)
+		} else {
+			logger.Debug().Str("duration", fmt.Sprint(client.SendDeadline)).Msg(
+				"Set send deadline")
+		}
 	}
 
 	// Set the receive chunk size. This is the size of the buffer that is read from the connection
