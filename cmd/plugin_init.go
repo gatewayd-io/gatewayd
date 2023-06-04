@@ -10,7 +10,7 @@ var pluginInitCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Create or overwrite the GatewayD plugins config",
 	Run: func(cmd *cobra.Command, args []string) {
-		generateConfig(cmd, Plugin, pluginConfigFile, force)
+		generateConfig(cmd, Plugins, pluginConfigFile, force)
 	},
 }
 

@@ -21,8 +21,8 @@ type (
 )
 
 var (
-	Global configFileType = "global"
-	Plugin configFileType = "plugin"
+	Global  configFileType = "global"
+	Plugins configFileType = "plugins"
 )
 
 // generateConfig generates a config file of the given type.
@@ -41,7 +41,7 @@ func generateConfig(cmd *cobra.Command, fileType configFileType, configFile stri
 	switch fileType {
 	case Global:
 		konfig = conf.GlobalKoanf
-	case Plugin:
+	case Plugins:
 		konfig = conf.PluginKoanf
 	default:
 		logger.Fatal("Invalid config file type")
@@ -82,7 +82,7 @@ func lintConfig(cmd *cobra.Command, fileType configFileType, configFile string) 
 		conf.LoadDefaults(context.TODO())
 		conf.LoadGlobalConfigFile(context.TODO())
 		conf.UnmarshalGlobalConfig(context.TODO())
-	case Plugin:
+	case Plugins:
 		conf = config.NewConfig(context.TODO(), "", configFile)
 		conf.LoadDefaults(context.TODO())
 		conf.LoadPluginConfigFile(context.TODO())
@@ -97,13 +97,13 @@ func lintConfig(cmd *cobra.Command, fileType configFileType, configFile string) 
 	switch fileType {
 	case Global:
 		jsonData, err = conf.GlobalKoanf.Marshal(koanfJson.Parser())
-	case Plugin:
+	case Plugins:
 		jsonData, err = conf.PluginKoanf.Marshal(koanfJson.Parser())
 	default:
 		logger.Fatal("Invalid config file type")
 	}
 	if err != nil {
-		logger.Fatal("Error marshalling global config to JSON:\n", err)
+		logger.Fatalf("Error marshalling %s config to JSON: %s\n", string(fileType), err)
 	}
 
 	// Unmarshal the JSON data into a map.
@@ -118,7 +118,7 @@ func lintConfig(cmd *cobra.Command, fileType configFileType, configFile string) 
 	switch fileType {
 	case Global:
 		generatedSchema = jsonSchemaGenerator.Reflect(&config.GlobalConfig{})
-	case Plugin:
+	case Plugins:
 		generatedSchema = jsonSchemaGenerator.Reflect(&config.PluginConfig{})
 	default:
 		logger.Fatal("Invalid config file type")
@@ -139,7 +139,7 @@ func lintConfig(cmd *cobra.Command, fileType configFileType, configFile string) 
 	// Validate the global config against the schema.
 	err = schema.Validate(jsonBytes)
 	if err != nil {
-		logger.Fatal("Error validating global config:\n", err)
+		logger.Fatalf("Error validating %s config: %s\n", string(fileType), err)
 	}
 
 	logger.Println(strings.Title(string(fileType)), "config is valid")
