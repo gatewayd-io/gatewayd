@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/gatewayd-io/gatewayd/config"
 	jsonSchemaGenerator "github.com/invopop/jsonschema"
@@ -142,5 +141,5 @@ func lintConfig(cmd *cobra.Command, fileType configFileType, configFile string) 
 		logger.Fatalf("Error validating %s config: %s\n", string(fileType), err)
 	}
 
-	logger.Println(strings.Title(string(fileType)), "config is valid")
+	logger.Printf("%s config is valid\n", fileType)
 }
