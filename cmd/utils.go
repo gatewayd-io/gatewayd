@@ -2,12 +2,17 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/gatewayd-io/gatewayd/config"
+	jsonSchemaGenerator "github.com/invopop/jsonschema"
 	"github.com/knadh/koanf"
+	koanfJson "github.com/knadh/koanf/parsers/json"
 	"github.com/knadh/koanf/parsers/yaml"
+	jsonSchemaV5 "github.com/santhosh-tekuri/jsonschema/v5"
 	"github.com/spf13/cobra"
 )
 
@@ -64,4 +69,78 @@ func generateConfig(cmd *cobra.Command, fileType configFileType, configFile stri
 		verb = "overwritten"
 	}
 	logger.Printf("Config file '%s' was %s successfully.", configFile, verb)
+}
+
+func lintConfig(cmd *cobra.Command, fileType configFileType, configFile string) {
+	logger := log.New(cmd.OutOrStdout(), "", 0)
+
+	// Load the config file and check it for errors.
+	var conf *config.Config
+	switch fileType {
+	case Global:
+		conf = config.NewConfig(context.TODO(), configFile, "")
+		conf.LoadDefaults(context.TODO())
+		conf.LoadGlobalConfigFile(context.TODO())
+		conf.UnmarshalGlobalConfig(context.TODO())
+	case Plugin:
+		conf = config.NewConfig(context.TODO(), "", configFile)
+		conf.LoadDefaults(context.TODO())
+		conf.LoadPluginConfigFile(context.TODO())
+		conf.UnmarshalPluginConfig(context.TODO())
+	default:
+		logger.Fatal("Invalid config file type")
+	}
+
+	// Marshal the config to JSON.
+	var jsonData []byte
+	var err error
+	switch fileType {
+	case Global:
+		jsonData, err = conf.GlobalKoanf.Marshal(koanfJson.Parser())
+	case Plugin:
+		jsonData, err = conf.PluginKoanf.Marshal(koanfJson.Parser())
+	default:
+		logger.Fatal("Invalid config file type")
+	}
+	if err != nil {
+		logger.Fatal("Error marshalling global config to JSON:\n", err)
+	}
+
+	// Unmarshal the JSON data into a map.
+	var jsonBytes map[string]interface{}
+	err = json.Unmarshal(jsonData, &jsonBytes)
+	if err != nil {
+		logger.Fatal("Error unmarshalling schema to JSON:\n", err)
+	}
+
+	// Generate a JSON schema from the config struct.
+	var generatedSchema *jsonSchemaGenerator.Schema
+	switch fileType {
+	case Global:
+		generatedSchema = jsonSchemaGenerator.Reflect(&config.GlobalConfig{})
+	case Plugin:
+		generatedSchema = jsonSchemaGenerator.Reflect(&config.PluginConfig{})
+	default:
+		logger.Fatal("Invalid config file type")
+	}
+
+	// Marshal the schema to JSON.
+	schemaBytes, err := json.Marshal(generatedSchema)
+	if err != nil {
+		logger.Fatal("Error marshalling schema to JSON:\n", err)
+	}
+
+	// Compile the schema for validation.
+	schema, err := jsonSchemaV5.CompileString("", string(schemaBytes))
+	if err != nil {
+		logger.Fatal("Error compiling schema:\n", err)
+	}
+
+	// Validate the global config against the schema.
+	err = schema.Validate(jsonBytes)
+	if err != nil {
+		logger.Fatal("Error validating global config:\n", err)
+	}
+
+	logger.Println(strings.Title(string(fileType)), "config is valid")
 }
