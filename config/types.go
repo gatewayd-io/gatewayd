@@ -16,19 +16,19 @@ import (
 // }
 
 type Plugin struct {
-	Name      string   `json:"name"`
+	Name      string   `json:"name" jsonschema:"required"`
 	Enabled   bool     `json:"enabled"`
-	LocalPath string   `json:"localPath"`
+	LocalPath string   `json:"localPath" jsonschema:"required"`
 	Args      []string `json:"args"`
-	Env       []string `json:"env"`
-	Checksum  string   `json:"checksum"`
+	Env       []string `json:"env" jsonschema:"required"`
+	Checksum  string   `json:"checksum" jsonschema:"required"`
 }
 
 type PluginConfig struct {
-	VerificationPolicy  string        `json:"verificationPolicy"`
-	CompatibilityPolicy string        `json:"compatibilityPolicy"`
-	AcceptancePolicy    string        `json:"acceptancePolicy"`
-	TerminationPolicy   string        `json:"terminationPolicy"`
+	VerificationPolicy  string        `json:"verificationPolicy" jsonschema:"enum=passdown,enum=ignore,enum=abort,enum=remove"`
+	CompatibilityPolicy string        `json:"compatibilityPolicy" jsonschema:"enum=strict,enum=loose"`
+	AcceptancePolicy    string        `json:"acceptancePolicy" jsonschema:"enum=accept,enum=reject"`
+	TerminationPolicy   string        `json:"terminationPolicy" jsonschema:"enum=continue,enum=stop"`
 	EnableMetricsMerger bool          `json:"enableMetricsMerger"`
 	MetricsMergerPeriod time.Duration `json:"metricsMergerPeriod" jsonschema:"oneof_type=string;integer"`
 	HealthCheckPeriod   time.Duration `json:"healthCheckPeriod" jsonschema:"oneof_type=string;integer"`

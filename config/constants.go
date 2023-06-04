@@ -19,7 +19,7 @@ const (
 	Stopped
 )
 
-// Policy is the policy for hook verification.
+// VerificationPolicy is the policy for hook verification.
 const (
 	// Non-strict (permissive) mode.
 	PassDown VerificationPolicy = "passdown" // Pass down the extra keys/values in result to the next plugins
