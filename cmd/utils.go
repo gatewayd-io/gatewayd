@@ -135,7 +135,7 @@ func lintConfig(cmd *cobra.Command, fileType configFileType, configFile string) 
 		logger.Fatal("Error compiling schema:\n", err)
 	}
 
-	// Validate the global config against the schema.
+	// Validate the config against the schema.
 	err = schema.Validate(jsonBytes)
 	if err != nil {
 		logger.Fatalf("Error validating %s config: %s\n", string(fileType), err)
