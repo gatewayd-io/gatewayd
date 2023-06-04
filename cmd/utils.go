@@ -53,7 +53,8 @@ func generateConfig(cmd *cobra.Command, fileType configFileType, configFile stri
 	// Check if the config file already exists and if we should overwrite it.
 	exists := false
 	if _, err := os.Stat(configFile); err == nil && !force {
-		logger.Fatal("Config file already exists. Use --force to overwrite.")
+		logger.Fatal(
+			"Config file already exists. Use --force to overwrite or choose a different filename.")
 	} else if err == nil {
 		exists = true
 	}
