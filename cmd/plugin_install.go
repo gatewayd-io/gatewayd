@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
@@ -204,10 +205,10 @@ var pluginInstallCmd = &cobra.Command{
 				checksum := strings.Split(line, " ")[0]
 				if checksum != sum {
 					log.Fatal("Checksum verification failed")
-				} else {
-					log.Println("Checksum verification passed")
-					break
 				}
+
+				log.Println("Checksum verification passed")
+				break
 			}
 		}
 
@@ -229,7 +230,7 @@ var pluginInstallCmd = &cobra.Command{
 				// TODO: Should we verify the checksum using the checksum.txt file instead?
 				pluginFileSum, err = checksum.SHA256sum(filename)
 				if err != nil {
-					log.Fatal("There was an error calculating the checksum:", err)
+					log.Fatal("There was an error calculating the checksum: ", err)
 				}
 				break
 			}
@@ -260,7 +261,9 @@ var pluginInstallCmd = &cobra.Command{
 
 		// Unmarshal the YAML into a map.
 		var config map[string]interface{}
-		yaml.Unmarshal([]byte(pluginsConfig), &config)
+		if err := yaml.Unmarshal(pluginsConfig, &config); err != nil {
+			log.Fatal("Failed to unmarshal the plugins configuration file: ", err)
+		}
 		currentPlugins, ok := config["plugins"].([]interface{})
 		if !ok {
 			log.Fatal("There was an error reading the plugins file from disk")
@@ -282,7 +285,9 @@ var pluginInstallCmd = &cobra.Command{
 
 		// Unmarshal the YAML into a map.
 		var pluginConfig map[string]interface{}
-		yaml.Unmarshal([]byte(contents), &pluginConfig)
+		if err := yaml.Unmarshal([]byte(contents), &pluginConfig); err != nil {
+			log.Fatal("Failed to unmarshal the downloaded plugins configuration file: ", err)
+		}
 
 		// Update the plugin's local path and checksum.
 		pluginConfig["localPath"] = localPath
@@ -309,13 +314,13 @@ var pluginInstallCmd = &cobra.Command{
 func extract(gzipStream io.Reader, dest string) []string {
 	uncompressedStream, err := gzip.NewReader(gzipStream)
 	if err != nil {
-		log.Fatal("Failed to extract tarball:", err)
+		log.Fatal("Failed to extract tarball: ", err)
 	}
 
 	tarReader := tar.NewReader(uncompressedStream)
 	filenames := []string{}
 
-	for true {
+	for {
 		header, err := tarReader.Next()
 
 		if errors.Is(err, io.EOF) {
@@ -323,23 +328,44 @@ func extract(gzipStream io.Reader, dest string) []string {
 		}
 
 		if err != nil {
-			log.Fatal("Failed to extract tarball:", err)
+			log.Fatal("Failed to extract tarball: ", err)
 		}
 
 		switch header.Typeflag {
 		case tar.TypeDir:
-			if err := os.MkdirAll(path.Join(dest, header.Name), FolderPermissions); err != nil {
-				log.Fatal("Failed to create directories:", err)
+			// Sanitize the path
+			cleanPath := filepath.Clean(header.Name)
+			// Ensure it is not an absolute path
+			if !path.IsAbs(cleanPath) {
+				destPath := path.Join(dest, cleanPath)
+				if err := os.MkdirAll(destPath, FolderPermissions); err != nil {
+					log.Fatal("Failed to create directories: ", err)
+				}
 			}
 		case tar.TypeReg:
-			outFile, err := os.Create(path.Join(dest, header.Name))
+			// Sanitize the path
+			outFilename := path.Join(filepath.Clean(dest), filepath.Clean(header.Name))
+			outFile, err := os.Create(outFilename)
 			if err != nil {
-				log.Fatal("Failed to create file:", err)
+				log.Fatal("Failed to create file: ", err)
 			}
-			if _, err := io.Copy(outFile, tarReader); err != nil {
-				log.Fatal("Failed to write to the file:", err)
+			if _, err := io.Copy(outFile, io.LimitReader(tarReader, MaxFileSize)); err != nil {
+				log.Fatal("Failed to write to the file: ", err)
 			}
 			outFile.Close()
+
+			fileMode := header.FileInfo().Mode()
+			// Set the file permissions
+			if fileMode.IsRegular() && fileMode&ExecFileMask != 0 {
+				if err := os.Chmod(outFilename, ExecFilePermissions); err != nil {
+					log.Fatal("Failed to set executable file permissions: ", err)
+				}
+			} else {
+				if err := os.Chmod(outFilename, FilePermissions); err != nil {
+					log.Fatal("Failed to set file permissions: ", err)
+				}
+			}
+
 			filenames = append(filenames, outFile.Name())
 		default:
 			log.Fatalf(

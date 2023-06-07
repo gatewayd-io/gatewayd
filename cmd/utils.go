@@ -20,7 +20,10 @@ type (
 )
 
 const (
-	FilePermissions os.FileMode = 0o644
+	FilePermissions     os.FileMode = 0o644
+	ExecFilePermissions os.FileMode = 0o755
+	ExecFileMask        os.FileMode = 0o111
+	MaxFileSize         int64       = 1024 * 1024 * 100 // 10MB
 )
 
 var (
