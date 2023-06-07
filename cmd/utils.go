@@ -19,6 +19,10 @@ type (
 	configFileType string
 )
 
+const (
+	FilePermissions os.FileMode = 0o644
+)
+
 var (
 	Global  configFileType = "global"
 	Plugins configFileType = "plugins"
@@ -60,7 +64,7 @@ func generateConfig(cmd *cobra.Command, fileType configFileType, configFile stri
 	}
 
 	// Create or overwrite the config file.
-	if err := os.WriteFile(configFile, cfg, filePermissions); err != nil {
+	if err := os.WriteFile(configFile, cfg, FilePermissions); err != nil {
 		logger.Fatal(err)
 	}
 

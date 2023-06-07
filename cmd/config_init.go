@@ -1,16 +1,11 @@
 package cmd
 
 import (
-	"os"
-
 	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/spf13/cobra"
 )
 
-var (
-	force           bool
-	filePermissions os.FileMode = 0o644
-)
+var force bool
 
 // configInitCmd represents the plugin init command.
 var configInitCmd = &cobra.Command{
