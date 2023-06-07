@@ -321,10 +321,12 @@ func extract(filename, dest string) []string {
 	if err != nil {
 		log.Fatal("There was an error opening the downloaded plugin file: ", err)
 	}
-	defer gzipStream.Close()
 
 	uncompressedStream, err := gzip.NewReader(gzipStream)
 	if err != nil {
+		if gzipStream != nil {
+			gzipStream.Close()
+		}
 		log.Fatal("Failed to extract tarball: ", err)
 	}
 
