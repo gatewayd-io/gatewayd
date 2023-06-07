@@ -17,6 +17,7 @@ import (
 
 	"github.com/codingsince1985/checksum"
 	"github.com/gatewayd-io/gatewayd/config"
+	"github.com/getsentry/sentry-go"
 	"github.com/google/go-github/v53/github"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -39,6 +40,24 @@ var pluginInstallCmd = &cobra.Command{
 	Short:   "Install a plugin from a local or remote location",
 	Example: "  gatewayd plugin install github.com/gatewayd-io/gatewayd-plugin-cache@latest",
 	Run: func(cmd *cobra.Command, args []string) {
+		// Enable Sentry.
+		if enableSentry {
+			// Initialize Sentry.
+			err := sentry.Init(sentry.ClientOptions{
+				Dsn:              DSN,
+				TracesSampleRate: config.DefaultTraceSampleRate,
+				AttachStacktrace: config.DefaultAttachStacktrace,
+			})
+			if err != nil {
+				log.Fatal("Sentry initialization failed: ", err)
+			}
+
+			// Flush buffered events before the program terminates.
+			defer sentry.Flush(config.DefaultFlushTimeout)
+			// Recover from panics and report the error to Sentry.
+			defer sentry.Recover()
+		}
+
 		// Validate the number of arguments.
 		if len(args) < 1 {
 			log.Fatal(
@@ -403,4 +422,6 @@ func init() {
 		&pluginOutputDir, "output-dir", "o", "./plugins", "Output directory for the plugin")
 	pluginInstallCmd.Flags().BoolVarP(
 		&pullOnly, "pull-only", "", false, "Only pull the plugin, don't install it")
+	pluginInstallCmd.Flags().BoolVar(
+		&enableSentry, "sentry", true, "Enable Sentry") // Already exists in run.go
 }

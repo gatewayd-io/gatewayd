@@ -94,7 +94,7 @@ var runCmd = &cobra.Command{
 			})
 			if err != nil {
 				span.RecordError(err)
-				log.Fatalf("sentry.Init: %s", err)
+				log.Fatal("Sentry initialization failed: ", err)
 			}
 
 			// Flush buffered events before the program terminates.

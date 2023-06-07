@@ -21,4 +21,6 @@ func init() {
 		&pluginConfigFile, // Already exists in run.go
 		"plugin-config", "p", config.GetDefaultConfigFilePath(config.PluginsConfigFilename),
 		"Plugin config file")
+	pluginLintCmd.Flags().BoolVar(
+		&enableSentry, "sentry", true, "Enable Sentry") // Already exists in run.go
 }
