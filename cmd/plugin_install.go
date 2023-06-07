@@ -28,7 +28,10 @@ const (
 	FolderPermissions os.FileMode = 0o755
 )
 
-var pluginOutputDir string
+var (
+	pluginOutputDir string
+	pullOnly        bool
+)
 
 // pluginInstallCmd represents the plugin install command.
 var pluginInstallCmd = &cobra.Command{
@@ -212,6 +215,11 @@ var pluginInstallCmd = &cobra.Command{
 			}
 		}
 
+		if pullOnly {
+			log.Println("Plugin binary downloaded to", pluginFilename)
+			return
+		}
+
 		// Extract the archive.
 		filenames := extract(pluginFilename, pluginOutputDir)
 
@@ -390,4 +398,6 @@ func init() {
 		"Plugin config file")
 	pluginInstallCmd.Flags().StringVarP(
 		&pluginOutputDir, "output-dir", "o", "./plugins", "Output directory for the plugin")
+	pluginInstallCmd.Flags().BoolVarP(
+		&pullOnly, "pull-only", "", false, "Only pull the plugin, don't install it")
 }
