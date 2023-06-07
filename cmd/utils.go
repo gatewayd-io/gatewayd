@@ -19,6 +19,13 @@ type (
 	configFileType string
 )
 
+const (
+	FilePermissions     os.FileMode = 0o644
+	ExecFilePermissions os.FileMode = 0o755
+	ExecFileMask        os.FileMode = 0o111
+	MaxFileSize         int64       = 1024 * 1024 * 100 // 10MB
+)
+
 var (
 	Global  configFileType = "global"
 	Plugins configFileType = "plugins"
@@ -53,13 +60,14 @@ func generateConfig(cmd *cobra.Command, fileType configFileType, configFile stri
 	// Check if the config file already exists and if we should overwrite it.
 	exists := false
 	if _, err := os.Stat(configFile); err == nil && !force {
-		logger.Fatal("Config file already exists. Use --force to overwrite.")
+		logger.Fatal(
+			"Config file already exists. Use --force to overwrite or choose a different filename.")
 	} else if err == nil {
 		exists = true
 	}
 
 	// Create or overwrite the config file.
-	if err := os.WriteFile(configFile, cfg, filePermissions); err != nil {
+	if err := os.WriteFile(configFile, cfg, FilePermissions); err != nil {
 		logger.Fatal(err)
 	}
 

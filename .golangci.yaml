@@ -57,8 +57,8 @@ linters-settings:
           - "github.com/hashicorp/go-plugin"
           - "github.com/mitchellh/mapstructure"
           - "github.com/google/go-cmp"
-          - ""
-          - ""
+          - "github.com/google/go-github/v53/github"
+          - "github.com/codingsince1985/checksum"
       test:
         files:
           - $test
