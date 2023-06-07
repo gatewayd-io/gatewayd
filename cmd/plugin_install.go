@@ -35,8 +35,9 @@ var (
 
 // pluginInstallCmd represents the plugin install command.
 var pluginInstallCmd = &cobra.Command{
-	Use:   "install",
-	Short: "Install a plugin from a local or remote location",
+	Use:     "install",
+	Short:   "Install a plugin from a local or remote location",
+	Example: "  gatewayd plugin install github.com/gatewayd-io/gatewayd-plugin-cache@latest",
 	Run: func(cmd *cobra.Command, args []string) {
 		// Validate the number of arguments.
 		if len(args) < 1 {
