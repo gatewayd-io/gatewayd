@@ -5,6 +5,7 @@ go 1.20
 require (
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/NYTimes/gziphandler v1.1.1
+	github.com/codingsince1985/checksum v1.3.0
 	github.com/envoyproxy/protoc-gen-validate v1.0.1
 	github.com/gatewayd-io/gatewayd-plugin-sdk v0.0.21
 	github.com/getsentry/sentry-go v0.21.0
@@ -36,6 +37,7 @@ require (
 	google.golang.org/grpc v1.55.0
 	google.golang.org/protobuf v1.30.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -82,5 +84,4 @@ require (
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20230530153820-e85fd2cbaebc // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230530153820-e85fd2cbaebc // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
