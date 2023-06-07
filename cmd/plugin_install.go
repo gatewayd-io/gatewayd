@@ -212,12 +212,8 @@ var pluginInstallCmd = &cobra.Command{
 			}
 		}
 
-		// Open and extract the tar.gz file.
-		reader, err := os.Open(pluginFilename)
-		if err != nil {
-			log.Fatal("There was an error opening the downloaded plugin file: ", err)
-		}
-		filenames := extract(reader, pluginOutputDir)
+		// Extract the archive.
+		filenames := extract(pluginFilename, pluginOutputDir)
 
 		// Find the extracted plugin binary.
 		localPath := ""
@@ -311,7 +307,14 @@ var pluginInstallCmd = &cobra.Command{
 	},
 }
 
-func extract(gzipStream io.Reader, dest string) []string {
+func extract(filename, dest string) []string {
+	// Open and extract the tar.gz file.
+	gzipStream, err := os.Open(filename)
+	if err != nil {
+		log.Fatal("There was an error opening the downloaded plugin file: ", err)
+	}
+	defer gzipStream.Close()
+
 	uncompressedStream, err := gzip.NewReader(gzipStream)
 	if err != nil {
 		log.Fatal("Failed to extract tarball: ", err)
