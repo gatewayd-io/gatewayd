@@ -37,7 +37,7 @@ var (
 // pluginInstallCmd represents the plugin install command.
 var pluginInstallCmd = &cobra.Command{
 	Use:     "install",
-	Short:   "Install a plugin from a local or remote location",
+	Short:   "Install a plugin from a remote location",
 	Example: "  gatewayd plugin install github.com/gatewayd-io/gatewayd-plugin-cache@latest",
 	Run: func(cmd *cobra.Command, args []string) {
 		// Enable Sentry.
@@ -420,8 +420,8 @@ func init() {
 		"Plugin config file")
 	pluginInstallCmd.Flags().StringVarP(
 		&pluginOutputDir, "output-dir", "o", "./plugins", "Output directory for the plugin")
-	pluginInstallCmd.Flags().BoolVarP(
-		&pullOnly, "pull-only", "", false, "Only pull the plugin, don't install it")
+	pluginInstallCmd.Flags().BoolVar(
+		&pullOnly, "pull-only", false, "Only pull the plugin, don't install it")
 	pluginInstallCmd.Flags().BoolVar(
 		&enableSentry, "sentry", true, "Enable Sentry") // Already exists in run.go
 }
