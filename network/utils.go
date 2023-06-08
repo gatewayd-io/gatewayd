@@ -58,16 +58,38 @@ func trafficData(
 	fields []Field,
 	err interface{},
 ) map[string]interface{} {
+	if gconn == nil || client == nil {
+		return nil
+	}
+
 	data := map[string]interface{}{
-		"client": map[string]interface{}{
-			"local":  gconn.LocalAddr().String(),
-			"remote": gconn.RemoteAddr().String(),
-		},
 		"server": map[string]interface{}{
-			"local":  client.Conn.LocalAddr().String(),
-			"remote": client.Conn.RemoteAddr().String(),
+			"local":  client.LocalAddr(),
+			"remote": client.RemoteAddr(),
 		},
 		"error": "",
+	}
+
+	//nolint:nestif
+	if gconn != nil {
+		data["client"] = map[string]interface{}{}
+		if gconn.LocalAddr() != nil {
+			if client, ok := data["client"].(map[string]interface{}); ok {
+				client["local"] = gconn.LocalAddr().String()
+			}
+		}
+		if gconn.RemoteAddr() != nil {
+			if client, ok := data["client"].(map[string]interface{}); ok {
+				client["remote"] = gconn.RemoteAddr().String()
+			}
+		}
+	}
+
+	if client != nil {
+		data["server"] = map[string]interface{}{
+			"local":  client.LocalAddr(),
+			"remote": client.RemoteAddr(),
+		}
 	}
 
 	for _, field := range fields {

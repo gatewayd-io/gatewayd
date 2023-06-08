@@ -19,6 +19,8 @@ type IClient interface {
 	Receive() (int, []byte, *gerr.GatewayDError)
 	Close()
 	IsConnected() bool
+	RemoteAddr() string
+	LocalAddr() string
 }
 
 type Client struct {
@@ -244,4 +246,20 @@ func (c *Client) IsConnected() bool {
 	}
 
 	return true
+}
+
+func (c *Client) RemoteAddr() string {
+	if c.Conn != nil && c.Conn.RemoteAddr() != nil {
+		return c.Conn.RemoteAddr().String()
+	}
+
+	return ""
+}
+
+func (c *Client) LocalAddr() string {
+	if c.Conn != nil && c.Conn.LocalAddr() != nil {
+		return c.Conn.LocalAddr().String()
+	}
+
+	return ""
 }

@@ -356,8 +356,8 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 		pr.logger.Debug().Fields(
 			map[string]interface{}{
 				"function": "proxy.passthrough",
-				"local":    client.Conn.LocalAddr().String(),
-				"remote":   client.Conn.RemoteAddr().String(),
+				"local":    client.LocalAddr(),
+				"remote":   client.RemoteAddr(),
 			}).Msg("Client disconnected")
 
 		client.Close()
@@ -375,8 +375,8 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 		pr.logger.Debug().Fields(
 			map[string]interface{}{
 				"function": "proxy.passthrough",
-				"local":    client.Conn.LocalAddr().String(),
-				"remote":   client.Conn.RemoteAddr().String(),
+				"local":    client.LocalAddr(),
+				"remote":   client.RemoteAddr(),
 			}).Msg("No data to send to client")
 		span.AddEvent("No data to send to client")
 		span.RecordError(err)
@@ -581,8 +581,8 @@ func (pr *Proxy) sendTrafficToServer(client *Client, request []byte) (int, *gerr
 		map[string]interface{}{
 			"function": "proxy.passthrough",
 			"length":   sent,
-			"local":    client.Conn.LocalAddr().String(),
-			"remote":   client.Conn.RemoteAddr().String(),
+			"local":    client.LocalAddr(),
+			"remote":   client.RemoteAddr(),
 		},
 	).Msg("Sent data to database")
 
@@ -603,8 +603,8 @@ func (pr *Proxy) receiveTrafficFromServer(client *Client) (int, []byte, *gerr.Ga
 		map[string]interface{}{
 			"function": "proxy.passthrough",
 			"length":   received,
-			"local":    client.Conn.LocalAddr().String(),
-			"remote":   client.Conn.RemoteAddr().String(),
+			"local":    client.LocalAddr(),
+			"remote":   client.RemoteAddr(),
 		},
 	).Msg("Received data from database")
 
