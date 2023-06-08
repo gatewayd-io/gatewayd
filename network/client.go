@@ -248,6 +248,7 @@ func (c *Client) IsConnected() bool {
 	return true
 }
 
+// RemoteAddr returns the remote address of the client safely.
 func (c *Client) RemoteAddr() string {
 	if c.Conn != nil && c.Conn.RemoteAddr() != nil {
 		return c.Conn.RemoteAddr().String()
@@ -256,6 +257,7 @@ func (c *Client) RemoteAddr() string {
 	return ""
 }
 
+// LocalAddr returns the local address of the client safely.
 func (c *Client) LocalAddr() string {
 	if c.Conn != nil && c.Conn.LocalAddr() != nil {
 		return c.Conn.LocalAddr().String()

@@ -63,33 +63,15 @@ func trafficData(
 	}
 
 	data := map[string]interface{}{
+		"client": map[string]interface{}{
+			"local":  LocalAddr(gconn),
+			"remote": RemoteAddr(gconn),
+		},
 		"server": map[string]interface{}{
 			"local":  client.LocalAddr(),
 			"remote": client.RemoteAddr(),
 		},
 		"error": "",
-	}
-
-	//nolint:nestif
-	if gconn != nil {
-		data["client"] = map[string]interface{}{}
-		if gconn.LocalAddr() != nil {
-			if client, ok := data["client"].(map[string]interface{}); ok {
-				client["local"] = gconn.LocalAddr().String()
-			}
-		}
-		if gconn.RemoteAddr() != nil {
-			if client, ok := data["client"].(map[string]interface{}); ok {
-				client["remote"] = gconn.RemoteAddr().String()
-			}
-		}
-	}
-
-	if client != nil {
-		data["server"] = map[string]interface{}{
-			"local":  client.LocalAddr(),
-			"remote": client.RemoteAddr(),
-		}
 	}
 
 	for _, field := range fields {
@@ -148,4 +130,20 @@ func IsConnTimedOut(err *gerr.GatewayDError) bool {
 // IsConnClosed returns true if the connection is closed.
 func IsConnClosed(received int, err *gerr.GatewayDError) bool {
 	return received == 0 && err != nil && err.Unwrap() != nil && errors.Is(err.Unwrap(), io.EOF)
+}
+
+// LocalAddr returns the local address of the connection.
+func LocalAddr(gconn gnet.Conn) string {
+	if gconn != nil && gconn.LocalAddr() != nil {
+		return gconn.LocalAddr().String()
+	}
+	return ""
+}
+
+// RemoteAddr returns the remote address of the connection.
+func RemoteAddr(gconn gnet.Conn) string {
+	if gconn != nil && gconn.RemoteAddr() != nil {
+		return gconn.RemoteAddr().String()
+	}
+	return ""
 }

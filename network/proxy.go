@@ -173,7 +173,7 @@ func (pr *Proxy) Connect(gconn gnet.Conn) *gerr.GatewayDError {
 	fields := map[string]interface{}{
 		"function": "proxy.connect",
 		"client":   "unknown",
-		"server":   gconn.RemoteAddr().String(),
+		"server":   RemoteAddr(gconn),
 	}
 	if client.ID != "" {
 		fields["client"] = client.ID[:7]
@@ -533,7 +533,7 @@ func (pr *Proxy) BusyConnections() []string {
 	connections := make([]string, 0)
 	pr.busyConnections.ForEach(func(key, _ interface{}) bool {
 		if gconn, ok := key.(gnet.Conn); ok {
-			connections = append(connections, gconn.RemoteAddr().String())
+			connections = append(connections, RemoteAddr(gconn))
 		}
 		return true
 	})
@@ -554,8 +554,8 @@ func (pr *Proxy) receiveTrafficFromClient(gconn gnet.Conn) ([]byte, error) {
 	pr.logger.Debug().Fields(
 		map[string]interface{}{
 			"length": len(request),
-			"local":  gconn.LocalAddr().String(),
-			"remote": gconn.RemoteAddr().String(),
+			"local":  LocalAddr(gconn),
+			"remote": RemoteAddr(gconn),
 		},
 	).Msg("Received data from client")
 
@@ -627,8 +627,8 @@ func (pr *Proxy) sendTrafficToClient(
 			map[string]interface{}{
 				"function": "proxy.passthrough",
 				"length":   received,
-				"local":    gconn.LocalAddr().String(),
-				"remote":   gconn.RemoteAddr().String(),
+				"local":    LocalAddr(gconn),
+				"remote":   RemoteAddr(gconn),
 			},
 		).Msg("Sent data to client")
 		span.RecordError(err)
