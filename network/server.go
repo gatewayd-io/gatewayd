@@ -266,6 +266,8 @@ func (s *Server) OnTraffic(gconn gnet.Conn) gnet.Action {
 			errors.Is(err, gerr.ErrClientReceiveFailed),
 			errors.Is(err, gerr.ErrHookTerminatedConnection),
 			errors.Is(err.Unwrap(), io.EOF):
+			// TODO: Fix bug in handling connection close
+			// See: https://github.com/gatewayd-io/gatewayd/issues/219
 			return gnet.Close
 		}
 	}

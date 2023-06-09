@@ -352,6 +352,8 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 
 	// The connection to the server is closed, so we MUST reconnect,
 	// otherwise the client will be stuck.
+	// TODO: Fix bug in handling connection close
+	// See: https://github.com/gatewayd-io/gatewayd/issues/219
 	if IsConnClosed(received, err) || IsConnTimedOut(err) {
 		pr.logger.Debug().Fields(
 			map[string]interface{}{
@@ -371,6 +373,8 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	}
 
 	// If the response is empty, don't send anything, instead just close the ingress connection.
+	// TODO: Fix bug in handling connection close
+	// See: https://github.com/gatewayd-io/gatewayd/issues/219
 	if received == 0 {
 		pr.logger.Debug().Fields(
 			map[string]interface{}{
