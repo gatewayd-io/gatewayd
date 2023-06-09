@@ -354,8 +354,8 @@ var runCmd = &cobra.Command{
 						attribute.String("sendDeadline", client.SendDeadline.String()),
 						attribute.Bool("tcpKeepAlive", client.TCPKeepAlive),
 						attribute.String("tcpKeepAlivePeriod", client.TCPKeepAlivePeriod.String()),
-						attribute.String("localAddress", client.Conn.LocalAddr().String()),
-						attribute.String("remoteAddress", client.Conn.RemoteAddr().String()),
+						attribute.String("localAddress", client.LocalAddr()),
+						attribute.String("remoteAddress", client.RemoteAddr()),
 					)
 					if client.ID != "" {
 						eventOptions = trace.WithAttributes(

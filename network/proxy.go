@@ -173,7 +173,7 @@ func (pr *Proxy) Connect(gconn gnet.Conn) *gerr.GatewayDError {
 	fields := map[string]interface{}{
 		"function": "proxy.connect",
 		"client":   "unknown",
-		"server":   gconn.RemoteAddr().String(),
+		"server":   RemoteAddr(gconn),
 	}
 	if client.ID != "" {
 		fields["client"] = client.ID[:7]
@@ -352,12 +352,14 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 
 	// The connection to the server is closed, so we MUST reconnect,
 	// otherwise the client will be stuck.
+	// TODO: Fix bug in handling connection close
+	// See: https://github.com/gatewayd-io/gatewayd/issues/219
 	if IsConnClosed(received, err) || IsConnTimedOut(err) {
 		pr.logger.Debug().Fields(
 			map[string]interface{}{
 				"function": "proxy.passthrough",
-				"local":    client.Conn.LocalAddr().String(),
-				"remote":   client.Conn.RemoteAddr().String(),
+				"local":    client.LocalAddr(),
+				"remote":   client.RemoteAddr(),
 			}).Msg("Client disconnected")
 
 		client.Close()
@@ -371,12 +373,14 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	}
 
 	// If the response is empty, don't send anything, instead just close the ingress connection.
+	// TODO: Fix bug in handling connection close
+	// See: https://github.com/gatewayd-io/gatewayd/issues/219
 	if received == 0 {
 		pr.logger.Debug().Fields(
 			map[string]interface{}{
 				"function": "proxy.passthrough",
-				"local":    client.Conn.LocalAddr().String(),
-				"remote":   client.Conn.RemoteAddr().String(),
+				"local":    client.LocalAddr(),
+				"remote":   client.RemoteAddr(),
 			}).Msg("No data to send to client")
 		span.AddEvent("No data to send to client")
 		span.RecordError(err)
@@ -533,7 +537,7 @@ func (pr *Proxy) BusyConnections() []string {
 	connections := make([]string, 0)
 	pr.busyConnections.ForEach(func(key, _ interface{}) bool {
 		if gconn, ok := key.(gnet.Conn); ok {
-			connections = append(connections, gconn.RemoteAddr().String())
+			connections = append(connections, RemoteAddr(gconn))
 		}
 		return true
 	})
@@ -554,8 +558,8 @@ func (pr *Proxy) receiveTrafficFromClient(gconn gnet.Conn) ([]byte, error) {
 	pr.logger.Debug().Fields(
 		map[string]interface{}{
 			"length": len(request),
-			"local":  gconn.LocalAddr().String(),
-			"remote": gconn.RemoteAddr().String(),
+			"local":  LocalAddr(gconn),
+			"remote": RemoteAddr(gconn),
 		},
 	).Msg("Received data from client")
 
@@ -581,8 +585,8 @@ func (pr *Proxy) sendTrafficToServer(client *Client, request []byte) (int, *gerr
 		map[string]interface{}{
 			"function": "proxy.passthrough",
 			"length":   sent,
-			"local":    client.Conn.LocalAddr().String(),
-			"remote":   client.Conn.RemoteAddr().String(),
+			"local":    client.LocalAddr(),
+			"remote":   client.RemoteAddr(),
 		},
 	).Msg("Sent data to database")
 
@@ -603,8 +607,8 @@ func (pr *Proxy) receiveTrafficFromServer(client *Client) (int, []byte, *gerr.Ga
 		map[string]interface{}{
 			"function": "proxy.passthrough",
 			"length":   received,
-			"local":    client.Conn.LocalAddr().String(),
-			"remote":   client.Conn.RemoteAddr().String(),
+			"local":    client.LocalAddr(),
+			"remote":   client.RemoteAddr(),
 		},
 	).Msg("Received data from database")
 
@@ -627,8 +631,8 @@ func (pr *Proxy) sendTrafficToClient(
 			map[string]interface{}{
 				"function": "proxy.passthrough",
 				"length":   received,
-				"local":    gconn.LocalAddr().String(),
-				"remote":   gconn.RemoteAddr().String(),
+				"local":    LocalAddr(gconn),
+				"remote":   RemoteAddr(gconn),
 			},
 		).Msg("Sent data to client")
 		span.RecordError(err)

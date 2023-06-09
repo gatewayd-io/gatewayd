@@ -86,7 +86,7 @@ func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 	_, span := otel.Tracer("gatewayd").Start(s.ctx, "OnOpen")
 	defer span.End()
 
-	s.logger.Debug().Str("from", gconn.RemoteAddr().String()).Msg(
+	s.logger.Debug().Str("from", RemoteAddr(gconn)).Msg(
 		"GatewayD is opening a connection")
 
 	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.pluginTimeout)
@@ -94,8 +94,8 @@ func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 	// Run the OnOpening hooks.
 	onOpeningData := map[string]interface{}{
 		"client": map[string]interface{}{
-			"local":  gconn.LocalAddr().String(),
-			"remote": gconn.RemoteAddr().String(),
+			"local":  LocalAddr(gconn),
+			"remote": RemoteAddr(gconn),
 		},
 	}
 	_, err := s.pluginRegistry.Run(
@@ -141,8 +141,8 @@ func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 	// Run the OnOpened hooks.
 	onOpenedData := map[string]interface{}{
 		"client": map[string]interface{}{
-			"local":  gconn.LocalAddr().String(),
-			"remote": gconn.RemoteAddr().String(),
+			"local":  LocalAddr(gconn),
+			"remote": RemoteAddr(gconn),
 		},
 	}
 	_, err = s.pluginRegistry.Run(
@@ -165,7 +165,7 @@ func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 	_, span := otel.Tracer("gatewayd").Start(s.ctx, "OnClose")
 	defer span.End()
 
-	s.logger.Debug().Str("from", gconn.RemoteAddr().String()).Msg(
+	s.logger.Debug().Str("from", RemoteAddr(gconn)).Msg(
 		"GatewayD is closing a connection")
 
 	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.pluginTimeout)
@@ -173,8 +173,8 @@ func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 	// Run the OnClosing hooks.
 	data := map[string]interface{}{
 		"client": map[string]interface{}{
-			"local":  gconn.LocalAddr().String(),
-			"remote": gconn.RemoteAddr().String(),
+			"local":  LocalAddr(gconn),
+			"remote": RemoteAddr(gconn),
 		},
 		"error": "",
 	}
@@ -208,8 +208,8 @@ func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 	// Run the OnClosed hooks.
 	data = map[string]interface{}{
 		"client": map[string]interface{}{
-			"local":  gconn.LocalAddr().String(),
-			"remote": gconn.RemoteAddr().String(),
+			"local":  LocalAddr(gconn),
+			"remote": RemoteAddr(gconn),
 		},
 		"error": "",
 	}
@@ -240,8 +240,8 @@ func (s *Server) OnTraffic(gconn gnet.Conn) gnet.Action {
 	// Run the OnTraffic hooks.
 	onTrafficData := map[string]interface{}{
 		"client": map[string]interface{}{
-			"local":  gconn.LocalAddr().String(),
-			"remote": gconn.RemoteAddr().String(),
+			"local":  LocalAddr(gconn),
+			"remote": RemoteAddr(gconn),
 		},
 	}
 	_, err := s.pluginRegistry.Run(
@@ -266,6 +266,8 @@ func (s *Server) OnTraffic(gconn gnet.Conn) gnet.Action {
 			errors.Is(err, gerr.ErrClientReceiveFailed),
 			errors.Is(err, gerr.ErrHookTerminatedConnection),
 			errors.Is(err.Unwrap(), io.EOF):
+			// TODO: Fix bug in handling connection close
+			// See: https://github.com/gatewayd-io/gatewayd/issues/219
 			return gnet.Close
 		}
 	}
