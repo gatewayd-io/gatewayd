@@ -119,8 +119,6 @@ var pluginInstallCmd = &cobra.Command{
 		downloadFile := func(downloadURL string, releaseID int64, filename string) {
 			log.Println("Downloading", downloadURL)
 
-			// Create a http.Client that follows redirects.
-
 			// Download the plugin.
 			readCloser, redirectURL, err := client.Repositories.DownloadReleaseAsset(
 				context.Background(), account, pluginName, releaseID, http.DefaultClient)
