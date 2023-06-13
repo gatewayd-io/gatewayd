@@ -11,7 +11,7 @@ require (
 	github.com/getsentry/sentry-go v0.21.0
 	github.com/go-co-op/gocron v1.28.3
 	github.com/google/go-cmp v0.5.9
-	github.com/google/go-github/v53 v53.0.0
+	github.com/google/go-github/v53 v53.1.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0
 	github.com/hashicorp/go-hclog v1.5.0
 	github.com/hashicorp/go-plugin v1.4.10
