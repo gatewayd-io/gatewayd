@@ -48,6 +48,8 @@ jobs:
 
       - name: Lint code issues 🚨
         uses: golangci/golangci-lint-action@v3
+        with:
+          skip-pkg-cache: true
 
       - name: Run Go tests 🔬
         run: go test -cover -covermode atomic -coverprofile=profile.cov -v ./...
