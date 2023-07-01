@@ -10,18 +10,16 @@ import (
 	"github.com/rs/zerolog"
 )
 
-var (
-	rSyslogPriorities = map[string]syslog.Priority{
-		"emerg":   syslog.LOG_EMERG,
-		"alert":   syslog.LOG_ALERT,
-		"crit":    syslog.LOG_CRIT,
-		"err":     syslog.LOG_ERR,
-		"warning": syslog.LOG_WARNING,
-		"notice":  syslog.LOG_NOTICE,
-		"info":    syslog.LOG_INFO,
-		"debug":   syslog.LOG_DEBUG,
-	}
-)
+var rSyslogPriorities = map[string]syslog.Priority{
+	"emerg":   syslog.LOG_EMERG,
+	"alert":   syslog.LOG_ALERT,
+	"crit":    syslog.LOG_CRIT,
+	"err":     syslog.LOG_ERR,
+	"warning": syslog.LOG_WARNING,
+	"notice":  syslog.LOG_NOTICE,
+	"info":    syslog.LOG_INFO,
+	"debug":   syslog.LOG_DEBUG,
+}
 
 // GetSyslogPriority returns the rsyslog facility from config file.
 func (l Logger) GetSyslogPriority() syslog.Priority {
