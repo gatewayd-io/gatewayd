@@ -19,6 +19,18 @@ build-dev:
 build-release: tidy
 	@mkdir -p dist
 
+	@echo "Building gatewayd ${VERSION} for windows-amd64"
+	@mkdir -p dist/windows-amd64
+	@cp README.md LICENSE gatewayd.yaml gatewayd_plugins.yaml dist/windows-amd64/
+	@GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -tags embed_swagger,windows -trimpath -ldflags "-s -w ${EXTRA_LDFLAGS}" -o dist/windows-amd64/gatewayd.exe
+	@zip -r dist/gatewayd-windows-amd64-${VERSION}.zip -j ./dist/windows-amd64/
+
+	@echo "Building gatewayd ${VERSION} for windows-arm64"
+	@mkdir -p dist/windows-arm64
+	@cp README.md LICENSE gatewayd.yaml gatewayd_plugins.yaml dist/windows-arm64/
+	@GOOS=windows GOARCH=arm64 CGO_ENABLED=0 go build -tags embed_swagger,windows -trimpath -ldflags "-s -w ${EXTRA_LDFLAGS}" -o dist/windows-arm64/gatewayd.exe
+	@zip -r dist/gatewayd-windows-arm64-${VERSION}.zip -j ./dist/windows-arm64/
+
 	@echo "Building gatewayd ${VERSION} for linux-amd64"
 	@mkdir -p dist/linux-amd64
 	@cp README.md LICENSE gatewayd.yaml gatewayd_plugins.yaml dist/linux-amd64/
@@ -46,6 +58,8 @@ build-release: tidy
 	@echo "Generating checksums"
 	@sha256sum dist/gatewayd-linux-amd64-${VERSION}.tar.gz | sed 's/dist\///g' > dist/checksums.txt
 	@sha256sum dist/gatewayd-linux-arm64-${VERSION}.tar.gz | sed 's/dist\///g' >> dist/checksums.txt
+	@sha256sum dist/gatewayd-windows-amd64-${VERSION}.zip | sed 's/dist\///g' >> dist/checksums.txt
+	@sha256sum dist/gatewayd-windows-arm64-${VERSION}.zip | sed 's/dist\///g' >> dist/checksums.txt
 	@sha256sum dist/gatewayd-darwin-amd64-${VERSION}.tar.gz | sed 's/dist\///g' >> dist/checksums.txt
 	@sha256sum dist/gatewayd-darwin-arm64-${VERSION}.tar.gz | sed 's/dist\///g' >> dist/checksums.txt
 
