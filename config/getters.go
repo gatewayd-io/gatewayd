@@ -1,7 +1,6 @@
 package config
 
 import (
-	"log/syslog"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -77,16 +76,6 @@ var (
 		"fatal":    zerolog.FatalLevel,
 		"panic":    zerolog.PanicLevel,
 		"disabled": zerolog.Disabled,
-	}
-	rSyslogPriorities = map[string]syslog.Priority{
-		"emerg":   syslog.LOG_EMERG,
-		"alert":   syslog.LOG_ALERT,
-		"crit":    syslog.LOG_CRIT,
-		"err":     syslog.LOG_ERR,
-		"warning": syslog.LOG_WARNING,
-		"notice":  syslog.LOG_NOTICE,
-		"info":    syslog.LOG_INFO,
-		"debug":   syslog.LOG_DEBUG,
 	}
 )
 
@@ -258,14 +247,6 @@ func (l Logger) GetLevel() zerolog.Level {
 		return level
 	}
 	return zerolog.InfoLevel
-}
-
-// GetSyslogPriority returns the rsyslog facility from config file.
-func (l Logger) GetSyslogPriority() syslog.Priority {
-	if priority, ok := rSyslogPriorities[l.SyslogPriority]; ok {
-		return priority | syslog.LOG_DAEMON
-	}
-	return syslog.LOG_DAEMON | syslog.LOG_INFO
 }
 
 // GetPlugins returns the plugins from config file.
