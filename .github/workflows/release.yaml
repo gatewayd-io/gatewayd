@@ -41,6 +41,7 @@ jobs:
             dist/checksums.txt
             dist/*.deb
             dist/*.rpm
+            dist/*.zip
           draft: false
           prerelease: false
           tag_name: ${{ github.ref_name }}
