@@ -1,5 +1,5 @@
-//go:build !windows
-// +build !windows
+//go:build windows
+// +build windows
 
 package logging
 
@@ -7,7 +7,6 @@ import (
 	"context"
 	"io"
 	"log"
-	"log/syslog"
 	"os"
 
 	"github.com/gatewayd-io/gatewayd/config"
@@ -26,7 +25,7 @@ type LoggerConfig struct {
 	// (R)Syslog configuration.
 	RSyslogNetwork string
 	RSyslogAddress string
-	SyslogPriority syslog.Priority
+	SyslogPriority int
 
 	// File output configuration.
 	FileName   string
@@ -69,22 +68,9 @@ func NewLogger(ctx context.Context, cfg LoggerConfig) zerolog.Logger {
 				},
 			)
 		case config.Syslog:
-			syslogWriter, err := syslog.New(cfg.SyslogPriority, config.DefaultSyslogTag)
-			if err != nil {
-				span.RecordError(err)
-				span.End()
-				log.Fatal(err)
-			}
-			outputs = append(outputs, syslogWriter)
+			log.Fatal("Syslog is not supported on Windows")
 		case config.RSyslog:
-			// TODO: Add support for TLS.
-			// See: https://github.com/RackSec/srslog (deprecated)
-			rsyslogWriter, err := syslog.Dial(
-				cfg.RSyslogNetwork, cfg.RSyslogAddress, cfg.SyslogPriority, config.DefaultSyslogTag)
-			if err != nil {
-				log.Fatal(err)
-			}
-			outputs = append(outputs, zerolog.SyslogLevelWriter(rsyslogWriter))
+			log.Fatal("RSyslog is not supported on Windows")
 		default:
 			outputs = append(outputs, consoleWriter)
 		}
