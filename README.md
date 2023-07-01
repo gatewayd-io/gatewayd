@@ -5,7 +5,7 @@
             <img alt="GatewayD logotype" src="https://github.com/gatewayd-io/gatewayd/blob/main/assets/gatewayd-logotype-light.png">
         </picture>
     </a>
-    <h3 align="center">Like API gateways, but for databases</h3>
+    <h3 align="center">Like API gateways, for databases</h3>
     <p align="center">Cloud-native database gateway and framework for building data-driven applications.</p>
 </p>
 
@@ -14,7 +14,7 @@
     <a href="https://gatewayd.io/docs">Documentation</a>
 </p>
 
-**GatewayD** is a free and open-source cloud-native database gateway and framework for building data-driven applications. It sits between your database servers and clients and proxies all their communication. It is like API gateways, but for databases.
+**GatewayD** is a free and open-source cloud-native database gateway and framework for building data-driven applications. It sits between your database servers and clients and proxies all their communication. It is like API gateways, for databases.
 
 GatewayD is an L4 proxy for SQL databases and clients. You can either write your own plugins or make use of our built-in, community and enterprise plugins.
 
