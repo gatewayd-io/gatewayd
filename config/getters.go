@@ -3,7 +3,6 @@ package config
 import (
 	"os"
 	"path/filepath"
-	"syscall"
 	"time"
 
 	"github.com/panjf2000/gnet/v2"
@@ -149,28 +148,6 @@ func (pr Proxy) GetHealthCheckPeriod() time.Duration {
 		return DefaultHealthCheckPeriod
 	}
 	return pr.HealthCheckPeriod
-}
-
-// GetSystemLimits returns the current system limits or the configured limits.
-func (s Server) GetRLimits(logger zerolog.Logger) (uint64, uint64) {
-	var limits syscall.Rlimit
-	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &limits); err != nil {
-		logger.Debug().Msg("failed to get system limits")
-	}
-
-	if s.SoftLimit <= 0 && limits != (syscall.Rlimit{}) {
-		s.SoftLimit = limits.Cur
-		logger.Debug().Uint64("soft_limit", s.SoftLimit).Msg(
-			"Soft limit is not set, using system limit")
-	}
-
-	if s.HardLimit <= 0 && limits != (syscall.Rlimit{}) {
-		s.HardLimit = limits.Max
-		logger.Debug().Uint64("hard_limit", s.HardLimit).Msg(
-			"Hard limit is not set, using system limit")
-	}
-
-	return s.HardLimit, s.SoftLimit
 }
 
 // GetTickInterval returns the tick interval from config file or default value.
