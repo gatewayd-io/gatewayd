@@ -1,0 +1,25 @@
+version: "3.8"
+services:
+  postgres:
+    image: postgres:latest
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  gatewayd:
+    image: gatewayd:latest
+    command: ["run"]
+    environment:
+      - GATEWAYD_CLIENTS_DEFAULT_ADDRESS=postgres:5432
+      # - GATEWAYD_LOGGERS_DEFAULT_LEVEL=debug
+    ports:
+      - "15432:15432"
+    links:
+      - postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
