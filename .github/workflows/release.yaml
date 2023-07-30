@@ -47,3 +47,12 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
           generate_release_notes: true
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/gatewayd-io/gatewayd:${{ github.ref_name }}
+            ghcr.io/gatewayd-io/gatewayd:latest
+          platforms: linux/amd64
