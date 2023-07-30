@@ -14,6 +14,8 @@ services:
     image: gatewayd:latest
     command: ["run"]
     environment:
+      # For more information about the environment variables, see:
+      # https://gatewayd.io/docs/using-gatewayd/configuration#environment-variables
       - GATEWAYD_CLIENTS_DEFAULT_ADDRESS=postgres:5432
       # - GATEWAYD_LOGGERS_DEFAULT_LEVEL=debug
     ports:
