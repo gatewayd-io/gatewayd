@@ -11,7 +11,7 @@
 
 <p align="center">
     <a href="https://github.com/gatewayd-io/gatewayd/releases">Download</a> ·
-    <a href="https://gatewayd.io/docs">Documentation</a>
+    <a href="https://docs.gatewayd.io">Documentation</a>
 </p>
 
 **GatewayD** is a free and open-source cloud-native database gateway and framework for building data-driven applications. It sits between your database servers and clients and proxies all their communication. It is like API gateways, for databases.
@@ -64,14 +64,14 @@ The plugins are *usually* written in Go and are compiled into stand-alone execut
 
 The docs cover all aspects of using GatewayD. Some highlights include:
 
-- [Getting Started](https://gatewayd.io/docs): install, run an instance of GatewayD and test it in action.
-- [Configuration](https://gatewayd.io/docs/using-gatewayd/configuration): learn how you can configure GatewayD to behave as you like.
-  - [Global Configuration](https://gatewayd.io/docs/using-gatewayd/configuration#global-configuration): control GatewayD's behavior.
-  - [Plugins Configuration](https://gatewayd.io/docs/using-gatewayd/configuration#plugins-configuration): control GatewayD's plugin registry and the plugins' behavior.
-- [Observability](https://gatewayd.io/docs/using-gatewayd/observability): logs, metrics, and traces are GatewayD's first-class citizens.
-- [Using Plugins](https://gatewayd.io/docs/using-plugins/plugins): learn how to use plugins.
-- [Developing Plugins](https://gatewayd.io/docs/developing-plugins/plugin-developers-guide): learn how to develop your own plugins.
-- [gatewayd-plugin-cache](https://gatewayd.io/docs/plugins/gatewayd-plugin-cache): learn how to use the `gatewayd-plugin-cache` plugin for caching queries and their results.
+- [Getting Started](https://docs.gatewayd.io): install, run an instance of GatewayD and test it in action.
+- [Configuration](https://docs.gatewayd.io/using-gatewayd/configuration): learn how you can configure GatewayD to behave as you like.
+  - [Global Configuration](https://docs.gatewayd.io/using-gatewayd/configuration#global-configuration): control GatewayD's behavior.
+  - [Plugins Configuration](https://docs.gatewayd.io/using-gatewayd/configuration#plugins-configuration): control GatewayD's plugin registry and the plugins' behavior.
+- [Observability](https://docs.gatewayd.io/using-gatewayd/observability): logs, metrics, and traces are GatewayD's first-class citizens.
+- [Using Plugins](https://docs.gatewayd.io/using-plugins/plugins): learn how to use plugins.
+- [Developing Plugins](https://docs.gatewayd.io/developing-plugins/plugin-developers-guide): learn how to develop your own plugins.
+- [gatewayd-plugin-cache](https://docs.gatewayd.io/plugins/gatewayd-plugin-cache): learn how to use the `gatewayd-plugin-cache` plugin for caching queries and their results.
 
 ## Contributing
 
