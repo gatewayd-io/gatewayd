@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"archive/tar"
+	"archive/zip"
 	"compress/gzip"
 	"context"
 	"errors"
@@ -24,9 +25,14 @@ import (
 )
 
 const (
-	NumParts          int         = 2
-	LatestVersion     string      = "latest"
-	FolderPermissions os.FileMode = 0o755
+	NumParts                    int         = 2
+	LatestVersion               string      = "latest"
+	FolderPermissions           os.FileMode = 0o755
+	DefaultPluginConfigFilename string      = "./gatewayd_plugins.yaml"
+	GitHubURLPrefix             string      = "github.com/"
+	GitHubURLRegex              string      = `^github.com\/[a-zA-Z0-9\-]+\/[a-zA-Z0-9\-]+@(?:latest|v(=|>=|<=|=>|=<|>|<|!=|~|~>|\^)?(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?)$` //nolint:lll
+	ExtWindows                  string      = ".zip"
+	ExtOthers                   string      = ".tar.gz"
 )
 
 var (
@@ -65,7 +71,7 @@ var pluginInstallCmd = &cobra.Command{
 		}
 
 		// Validate the URL.
-		validGitHubURL := regexp.MustCompile(`^github.com\/[a-zA-Z0-9\-]+\/[a-zA-Z0-9\-]+@(?:latest|v(=|>=|<=|=>|=<|>|<|!=|~|~>|\^)?(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?)$`) //nolint:lll
+		validGitHubURL := regexp.MustCompile(GitHubURLRegex)
 		if !validGitHubURL.MatchString(args[0]) {
 			log.Fatal(
 				"Invalid URL. Use the following format: github.com/account/repository@version")
@@ -83,7 +89,7 @@ var pluginInstallCmd = &cobra.Command{
 		}
 
 		// Get the plugin account and repository.
-		accountRepo := strings.Split(strings.TrimPrefix(splittedURL[0], "github.com/"), "/")
+		accountRepo := strings.Split(strings.TrimPrefix(splittedURL[0], GitHubURLPrefix), "/")
 		if len(accountRepo) != NumParts {
 			log.Fatal(
 				"Invalid URL. Use the following format: github.com/account/repository@version")
@@ -185,11 +191,17 @@ var pluginInstallCmd = &cobra.Command{
 			return "", "", 0
 		}
 
+		// Get the archive extension.
+		archiveExt := ExtOthers
+		if runtime.GOOS == "windows" {
+			archiveExt = ExtWindows
+		}
+
 		// Find and download the plugin binary from the release assets.
 		pluginFilename, downloadURL, releaseID := findAsset(func(name string) bool {
 			return strings.Contains(name, runtime.GOOS) &&
 				strings.Contains(name, runtime.GOARCH) &&
-				strings.Contains(name, ".tar.gz")
+				strings.Contains(name, archiveExt)
 		})
 		if downloadURL != "" && releaseID != 0 {
 			downloadFile(downloadURL, releaseID, pluginFilename)
@@ -239,7 +251,12 @@ var pluginInstallCmd = &cobra.Command{
 		}
 
 		// Extract the archive.
-		filenames := extract(pluginFilename, pluginOutputDir)
+		var filenames []string
+		if runtime.GOOS == "windows" {
+			filenames = extractZip(pluginFilename, pluginOutputDir)
+		} else {
+			filenames = extractTarGz(pluginFilename, pluginOutputDir)
+		}
 
 		// Find the extracted plugin binary.
 		localPath := ""
@@ -293,9 +310,8 @@ var pluginInstallCmd = &cobra.Command{
 
 		// Get the list of files in the repository.
 		var repoContents *github.RepositoryContent
-		defaultPluginFilename := "/.golangci.yml" // "./gatewayd_plugins.yaml"
 		repoContents, _, _, err = client.Repositories.GetContents(
-			context.Background(), account, pluginName, defaultPluginFilename, nil)
+			context.Background(), account, pluginName, DefaultPluginConfigFilename, nil)
 		if err != nil {
 			log.Fatal("There was an error getting the default plugins configuration file: ", err)
 		}
@@ -333,7 +349,91 @@ var pluginInstallCmd = &cobra.Command{
 	},
 }
 
-func extract(filename, dest string) []string {
+func extractZip(filename, dest string) []string {
+	// Open and extract the zip file.
+	zipRc, err := zip.OpenReader(filename)
+	if err != nil {
+		if zipRc != nil {
+			zipRc.Close()
+		}
+		log.Fatal("There was an error opening the downloaded plugin file: ", err)
+	}
+
+	// Create the output directory if it doesn't exist.
+	if err := os.MkdirAll(dest, FolderPermissions); err != nil {
+		log.Fatal("Failed to create directories: ", err)
+	}
+
+	// Extract the files.
+	filenames := []string{}
+	for _, file := range zipRc.File {
+		switch fileInfo := file.FileInfo(); {
+		case fileInfo.IsDir():
+			// Sanitize the path.
+			filename := filepath.Clean(file.Name)
+			if !path.IsAbs(filename) {
+				destPath := path.Join(dest, filename)
+				// Create the directory.
+
+				if err := os.MkdirAll(destPath, FolderPermissions); err != nil {
+					log.Fatal("Failed to create directories: ", err)
+				}
+			}
+		case fileInfo.Mode().IsRegular():
+			// Sanitize the path.
+			outFilename := filepath.Join(filepath.Clean(dest), filepath.Clean(file.Name))
+
+			// Check for ZipSlip.
+			if !strings.HasPrefix(outFilename, string(os.PathSeparator)) {
+				log.Fatal("Invalid file path in zip archive, aborting")
+			}
+
+			// Create the file.
+			outFile, err := os.Create(outFilename)
+			if err != nil {
+				log.Fatal("Failed to create file: ", err)
+			}
+
+			// Open the file in the zip archive.
+			fileRc, err := file.Open()
+			if err != nil {
+				log.Fatal("Failed to open file in zip archive: ", err)
+			}
+
+			// Copy the file contents.
+			if _, err := io.Copy(outFile, io.LimitReader(fileRc, MaxFileSize)); err != nil {
+				outFile.Close()
+				os.Remove(outFilename)
+				log.Fatal("Failed to write to the file: ", err)
+			}
+			outFile.Close()
+
+			fileMode := file.FileInfo().Mode()
+			// Set the file permissions.
+			if fileMode.IsRegular() && fileMode&ExecFileMask != 0 {
+				if err := os.Chmod(outFilename, ExecFilePermissions); err != nil {
+					log.Fatal("Failed to set executable file permissions: ", err)
+				}
+			} else {
+				if err := os.Chmod(outFilename, FilePermissions); err != nil {
+					log.Fatal("Failed to set file permissions: ", err)
+				}
+			}
+
+			filenames = append(filenames, outFile.Name())
+		default:
+			log.Fatalf("Failed to extract zip archive: unknown type: %s", file.Name)
+		}
+	}
+
+	if zipRc != nil {
+		zipRc.Close()
+	}
+
+	return filenames
+}
+
+func extractTarGz(filename, dest string) []string {
 	// Open and extract the tar.gz file.
 	gzipStream, err := os.Open(filename)
 	if err != nil {
@@ -376,11 +476,20 @@ func extract(filename, dest string) []string {
 		case tar.TypeReg:
 			// Sanitize the path
 			outFilename := path.Join(filepath.Clean(dest), filepath.Clean(header.Name))
+
+			// Check for TarSlip.
+			if !strings.HasPrefix(outFilename, string(os.PathSeparator)) {
+				log.Fatal("Invalid file path in tarball, aborting")
+			}
+
+			// Create the file.
 			outFile, err := os.Create(outFilename)
 			if err != nil {
 				log.Fatal("Failed to create file: ", err)
 			}
 			if _, err := io.Copy(outFile, io.LimitReader(tarReader, MaxFileSize)); err != nil {
+				outFile.Close()
+				os.Remove(outFilename)
 				log.Fatal("Failed to write to the file: ", err)
 			}
 			outFile.Close()
@@ -404,6 +513,10 @@ func extract(filename, dest string) []string {
 				string(header.Typeflag),
 				header.Name)
 		}
+	}
+
+	if gzipStream != nil {
+		gzipStream.Close()
 	}
 
 	return filenames
