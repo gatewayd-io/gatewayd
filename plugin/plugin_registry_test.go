@@ -11,7 +11,6 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 func NewPluginRegistry(t *testing.T) *Registry {
@@ -69,9 +68,9 @@ func TestPluginRegistry(t *testing.T) {
 func Test_PluginRegistry_AddHook(t *testing.T) {
 	testFunc := func(
 		ctx context.Context,
-		args *structpb.Struct,
+		args *v1.Struct,
 		opts ...grpc.CallOption,
-	) (*structpb.Struct, error) {
+	) (*v1.Struct, error) {
 		return args, nil
 	}
 
@@ -86,16 +85,16 @@ func Test_PluginRegistry_AddHook_Multiple(t *testing.T) {
 	reg := NewPluginRegistry(t)
 	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 0, func(
 		ctx context.Context,
-		args *structpb.Struct,
+		args *v1.Struct,
 		opts ...grpc.CallOption,
-	) (*structpb.Struct, error) {
+	) (*v1.Struct, error) {
 		return args, nil
 	})
 	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 1, func(
 		ctx context.Context,
-		args *structpb.Struct,
+		args *v1.Struct,
 		opts ...grpc.CallOption,
-	) (*structpb.Struct, error) {
+	) (*v1.Struct, error) {
 		return args, nil
 	})
 	assert.NotNil(t, reg.Hooks()[v1.HookName_HOOK_NAME_ON_NEW_LOGGER][0])
@@ -108,9 +107,9 @@ func Test_PluginRegistry_Run(t *testing.T) {
 	reg.Verification = config.Ignore
 	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 0, func(
 		ctx context.Context,
-		args *structpb.Struct,
+		args *v1.Struct,
 		opts ...grpc.CallOption,
-	) (*structpb.Struct, error) {
+	) (*v1.Struct, error) {
 		return args, nil
 	})
 	result, err := reg.Run(context.Background(), map[string]interface{}{}, v1.HookName_HOOK_NAME_ON_NEW_LOGGER)
@@ -125,18 +124,18 @@ func Test_PluginRegistry_Run_PassDown(t *testing.T) {
 	// The result of the hook will be nil and will be passed down to the next
 	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 0, func(
 		ctx context.Context,
-		args *structpb.Struct,
+		args *v1.Struct,
 		opts ...grpc.CallOption,
-	) (*structpb.Struct, error) {
+	) (*v1.Struct, error) {
 		return args, nil
 	})
 	// The consolidated result should be {"test": "test"}.
 	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 1, func(
 		ctx context.Context,
-		args *structpb.Struct,
+		args *v1.Struct,
 		opts ...grpc.CallOption,
-	) (*structpb.Struct, error) {
-		output, err := structpb.NewStruct(map[string]interface{}{
+	) (*v1.Struct, error) {
+		output, err := v1.NewStruct(map[string]interface{}{
 			"test": "test",
 		})
 		assert.Nil(t, err)
@@ -161,11 +160,11 @@ func Test_HookRegistry_Run_PassDown_2(t *testing.T) {
 	// The result of the hook will be nil and will be passed down to the next
 	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 0, func(
 		ctx context.Context,
-		args *structpb.Struct,
+		args *v1.Struct,
 		opts ...grpc.CallOption,
-	) (*structpb.Struct, error) {
-		args.Fields["test1"] = &structpb.Value{
-			Kind: &structpb.Value_StringValue{
+	) (*v1.Struct, error) {
+		args.Fields["test1"] = &v1.Value{
+			Kind: &v1.Value_StringValue{
 				StringValue: "test1",
 			},
 		}
@@ -174,11 +173,11 @@ func Test_HookRegistry_Run_PassDown_2(t *testing.T) {
 	// The consolidated result should be {"test1": "test1", "test2": "test2"}.
 	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 1, func(
 		ctx context.Context,
-		args *structpb.Struct,
+		args *v1.Struct,
 		opts ...grpc.CallOption,
-	) (*structpb.Struct, error) {
-		args.Fields["test2"] = &structpb.Value{
-			Kind: &structpb.Value_StringValue{
+	) (*v1.Struct, error) {
+		args.Fields["test2"] = &v1.Value{
+			Kind: &v1.Value_StringValue{
 				StringValue: "test2",
 			},
 		}
@@ -202,19 +201,19 @@ func Test_HookRegistry_Run_Ignore(t *testing.T) {
 	// This should not run, because the return value is not the same as the params
 	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 0, func(
 		ctx context.Context,
-		args *structpb.Struct,
+		args *v1.Struct,
 		opts ...grpc.CallOption,
-	) (*structpb.Struct, error) {
+	) (*v1.Struct, error) {
 		return args, nil
 	})
 	// This should run, because the return value is the same as the params
 	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 1, func(
 		ctx context.Context,
-		args *structpb.Struct,
+		args *v1.Struct,
 		opts ...grpc.CallOption,
-	) (*structpb.Struct, error) {
-		args.Fields["test"] = &structpb.Value{
-			Kind: &structpb.Value_StringValue{
+	) (*v1.Struct, error) {
+		args.Fields["test"] = &v1.Value{
+			Kind: &v1.Value_StringValue{
 				StringValue: "test",
 			},
 		}
@@ -238,18 +237,18 @@ func Test_HookRegistry_Run_Abort(t *testing.T) {
 	// This should not run, because the return value is not the same as the params
 	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 0, func(
 		ctx context.Context,
-		args *structpb.Struct,
+		args *v1.Struct,
 		opts ...grpc.CallOption,
-	) (*structpb.Struct, error) {
+	) (*v1.Struct, error) {
 		return args, nil
 	})
 	// This should not run, because the first hook returns nil, and its result is ignored.
 	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 1, func(
 		ctx context.Context,
-		args *structpb.Struct,
+		args *v1.Struct,
 		opts ...grpc.CallOption,
-	) (*structpb.Struct, error) {
-		output, err := structpb.NewStruct(map[string]interface{}{
+	) (*v1.Struct, error) {
+		output, err := v1.NewStruct(map[string]interface{}{
 			"test": "test",
 		})
 		assert.Nil(t, err)
@@ -268,18 +267,18 @@ func Test_HookRegistry_Run_Remove(t *testing.T) {
 	// This should not run, because the return value is not the same as the params
 	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 0, func(
 		ctx context.Context,
-		args *structpb.Struct,
+		args *v1.Struct,
 		opts ...grpc.CallOption,
-	) (*structpb.Struct, error) {
+	) (*v1.Struct, error) {
 		return args, nil
 	})
 	// This should not run, because the first hook returns nil, and its result is ignored.
 	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 1, func(
 		ctx context.Context,
-		args *structpb.Struct,
+		args *v1.Struct,
 		opts ...grpc.CallOption,
-	) (*structpb.Struct, error) {
-		output, err := structpb.NewStruct(map[string]interface{}{
+	) (*v1.Struct, error) {
+		output, err := v1.NewStruct(map[string]interface{}{
 			"test": "test",
 		})
 		assert.Nil(t, err)

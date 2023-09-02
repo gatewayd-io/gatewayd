@@ -2,7 +2,6 @@ package network
 
 import (
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -95,25 +94,20 @@ func trafficData(
 }
 
 // extractFieldValue extracts the given field name and error message from the result of the hook.
-func extractFieldValue(result map[string]interface{}, fieldName string) ([]byte, string, error) {
+func extractFieldValue(result map[string]interface{}, fieldName string) ([]byte, string) {
 	var data []byte
 	var err string
-	var conversionErr error
 
-	//nolint:nestif
 	if result != nil {
-		if fieldValue, ok := result[fieldName].(string); ok {
-			if base64Decoded, err := base64.StdEncoding.DecodeString(fieldValue); err == nil {
-				data = base64Decoded
-			} else {
-				conversionErr = err
-			}
+		if val, ok := result[fieldName].([]byte); ok {
+			data = val
 		}
+
 		if errMsg, ok := result["error"].(string); ok && errMsg != "" {
 			err = errMsg
 		}
 	}
-	return data, err, conversionErr
+	return data, err
 }
 
 // IsConnTimedOut returns true if the error is a timeout error.

@@ -20,7 +20,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"google.golang.org/grpc"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type IHook interface {
@@ -283,11 +282,11 @@ func (reg *Registry) Run(
 	// Cast custom fields to their primitive types, like time.Duration to float64.
 	args = CastToPrimitiveTypes(args)
 
-	// Create structpb.Struct from args.
-	var params *structpb.Struct
+	// Create v1.Struct from args.
+	var params *v1.Struct
 	if len(args) == 0 {
-		params = &structpb.Struct{}
-	} else if casted, err := structpb.NewStruct(args); err == nil {
+		params = &v1.Struct{}
+	} else if casted, err := v1.NewStruct(args); err == nil {
 		params = casted
 	} else {
 		span.RecordError(err)
@@ -304,11 +303,11 @@ func (reg *Registry) Run(
 	})
 
 	// Run hooks, passing the result of the previous hook to the next one.
-	returnVal := &structpb.Struct{}
+	returnVal := &v1.Struct{}
 	var removeList []sdkPlugin.Priority
 	// The signature of parameters and args MUST be the same for this to work.
 	for idx, priority := range priorities {
-		var result *structpb.Struct
+		var result *v1.Struct
 		var err error
 		if idx == 0 {
 			result, err = reg.hooks[hookName][priority](inheritedCtx, params, opts...)
@@ -501,7 +500,7 @@ func (reg *Registry) LoadPlugins(ctx context.Context, plugins []config.Plugin) {
 		span.AddEvent("Started plugin")
 
 		// Load metadata from the plugin.
-		var metadata *structpb.Struct
+		var metadata *v1.Struct
 		pluginV1, err := plugin.Dispense()
 		if err != nil {
 			reg.Logger.Debug().Str("name", plugin.ID.Name).Err(err).Msg(
@@ -509,13 +508,15 @@ func (reg *Registry) LoadPlugins(ctx context.Context, plugins []config.Plugin) {
 			plugin.Client.Kill()
 			continue
 		}
+
 		meta, origErr := pluginV1.GetPluginConfig( //nolint:contextcheck
-			context.Background(), &structpb.Struct{})
+			context.Background(), &v1.Struct{})
 		if err != nil || meta == nil {
 			reg.Logger.Debug().Str("name", plugin.ID.Name).Err(origErr).Msg(
 				"Failed to get plugin metadata")
 			continue
 		}
+
 		metadata = meta
 
 		span.AddEvent("Fetched plugin metadata")
