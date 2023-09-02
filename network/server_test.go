@@ -2,7 +2,6 @@ package network
 
 import (
 	"context"
-	"encoding/base64"
 	"errors"
 	"testing"
 
@@ -15,7 +14,6 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // TestRunServer tests an entire server run with a single client connection and hooks.
@@ -42,24 +40,17 @@ func TestRunServer(t *testing.T) {
 
 	onTrafficFromClient := func(
 		ctx context.Context,
-		params *structpb.Struct,
+		params *v1.Struct,
 		opts ...grpc.CallOption,
-	) (*structpb.Struct, error) {
+	) (*v1.Struct, error) {
 		paramsMap := params.AsMap()
 		if paramsMap["request"] == nil {
 			errs <- errors.New("request is nil") //nolint:goerr113
 		}
 
 		logger.Info().Msg("Ingress traffic")
-		// Decode the request.
-		// The request is []byte, but it is base64-encoded as a string
-		// via using the structpb.NewStruct function.
-		if req, ok := paramsMap["request"].(string); ok {
-			if request, err := base64.StdEncoding.DecodeString(req); err == nil {
-				assert.Equal(t, CreatePgStartupPacket(), request)
-			} else {
-				errs <- err
-			}
+		if req, ok := paramsMap["request"].([]byte); ok {
+			assert.Equal(t, CreatePgStartupPacket(), req)
 		} else {
 			errs <- errors.New("request is not a []byte") //nolint:goerr113
 		}
@@ -70,24 +61,17 @@ func TestRunServer(t *testing.T) {
 
 	onTrafficToServer := func(
 		ctx context.Context,
-		params *structpb.Struct,
+		params *v1.Struct,
 		opts ...grpc.CallOption,
-	) (*structpb.Struct, error) {
+	) (*v1.Struct, error) {
 		paramsMap := params.AsMap()
 		if paramsMap["request"] == nil {
 			errs <- errors.New("request is nil") //nolint:goerr113
 		}
 
 		logger.Info().Msg("Ingress traffic")
-		// Decode the request.
-		// The request is []byte, but it is base64-encoded as a string
-		// via using the structpb.NewStruct function.
-		if req, ok := paramsMap["request"].(string); ok {
-			if request, err := base64.StdEncoding.DecodeString(req); err == nil {
-				assert.Equal(t, CreatePgStartupPacket(), request)
-			} else {
-				errs <- err
-			}
+		if req, ok := paramsMap["request"].([]byte); ok {
+			assert.Equal(t, CreatePgStartupPacket(), req)
 		} else {
 			errs <- errors.New("request is not a []byte") //nolint:goerr113
 		}
@@ -98,23 +82,19 @@ func TestRunServer(t *testing.T) {
 
 	onTrafficFromServer := func(
 		ctx context.Context,
-		params *structpb.Struct,
+		params *v1.Struct,
 		opts ...grpc.CallOption,
-	) (*structpb.Struct, error) {
+	) (*v1.Struct, error) {
 		paramsMap := params.AsMap()
 		if paramsMap["response"] == nil {
 			errs <- errors.New("response is nil") //nolint:goerr113
 		}
 
 		logger.Info().Msg("Egress traffic")
-		if resp, ok := paramsMap["response"].(string); ok {
-			if response, err := base64.StdEncoding.DecodeString(resp); err == nil {
-				assert.Equal(t, CreatePostgreSQLPacket('R', []byte{
-					0x0, 0x0, 0x0, 0xa, 0x53, 0x43, 0x52, 0x41, 0x4d, 0x2d, 0x53, 0x48, 0x41, 0x2d, 0x32, 0x35, 0x36, 0x0, 0x0,
-				}), response)
-			} else {
-				errs <- err
-			}
+		if resp, ok := paramsMap["response"].([]byte); ok {
+			assert.Equal(t, CreatePostgreSQLPacket('R', []byte{
+				0x0, 0x0, 0x0, 0xa, 0x53, 0x43, 0x52, 0x41, 0x4d, 0x2d, 0x53, 0x48, 0x41, 0x2d, 0x32, 0x35, 0x36, 0x0, 0x0,
+			}), resp)
 		} else {
 			errs <- errors.New("response is not a []byte") //nolint:goerr113
 		}
@@ -125,21 +105,17 @@ func TestRunServer(t *testing.T) {
 
 	onTrafficToClient := func(
 		ctx context.Context,
-		params *structpb.Struct,
+		params *v1.Struct,
 		opts ...grpc.CallOption,
-	) (*structpb.Struct, error) {
+	) (*v1.Struct, error) {
 		paramsMap := params.AsMap()
 		if paramsMap["response"] == nil {
 			errs <- errors.New("response is nil") //nolint:goerr113
 		}
 
 		logger.Info().Msg("Egress traffic")
-		if resp, ok := paramsMap["response"].(string); ok {
-			if response, err := base64.StdEncoding.DecodeString(resp); err == nil {
-				assert.Equal(t, uint8(0x52), response[0])
-			} else {
-				errs <- err
-			}
+		if resp, ok := paramsMap["response"].([]byte); ok {
+			assert.Equal(t, uint8(0x52), resp[0])
 		} else {
 			errs <- errors.New("response is not a []byte") //nolint:goerr113
 		}

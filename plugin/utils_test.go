@@ -3,20 +3,20 @@ package plugin
 import (
 	"testing"
 
+	v1 "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin/v1"
 	"github.com/stretchr/testify/assert"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // Test_Verify tests the Verify function.
 func Test_Verify(t *testing.T) {
-	params, err := structpb.NewStruct(
+	params, err := v1.NewStruct(
 		map[string]interface{}{
 			"test": "test",
 		},
 	)
 	assert.Nil(t, err)
 
-	returnVal, err := structpb.NewStruct(
+	returnVal, err := v1.NewStruct(
 		map[string]interface{}{
 			"test": "test",
 		},
@@ -61,9 +61,9 @@ func Test_Verify_fail(t *testing.T) {
 	}
 
 	for _, d := range data {
-		params, err := structpb.NewStruct(d[0])
+		params, err := v1.NewStruct(d[0])
 		assert.Nil(t, err)
-		returnVal, err := structpb.NewStruct(d[1])
+		returnVal, err := v1.NewStruct(d[1])
 		assert.Nil(t, err)
 		assert.False(t, Verify(params, returnVal))
 	}

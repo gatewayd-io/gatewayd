@@ -674,11 +674,8 @@ func (pr *Proxy) getPluginModifiedRequest(result map[string]interface{}) []byte 
 	defer span.End()
 
 	// If the hook modified the request, use the modified request.
-	if modRequest, errMsg, convErr := extractFieldValue(result, "request"); errMsg != "" {
+	if modRequest, errMsg := extractFieldValue(result, "request"); errMsg != "" {
 		pr.logger.Error().Str("error", errMsg).Msg("Error in hook")
-	} else if convErr != nil {
-		pr.logger.Error().Err(convErr).Msg("Error in data conversion")
-		span.RecordError(convErr)
 	} else if modRequest != nil {
 		return modRequest
 	}
@@ -693,11 +690,8 @@ func (pr *Proxy) getPluginModifiedResponse(result map[string]interface{}) ([]byt
 	defer span.End()
 
 	// If the hook returns a response, use it instead of the original response.
-	if modResponse, errMsg, convErr := extractFieldValue(result, "response"); errMsg != "" {
+	if modResponse, errMsg := extractFieldValue(result, "response"); errMsg != "" {
 		pr.logger.Error().Str("error", errMsg).Msg("Error in hook")
-	} else if convErr != nil {
-		pr.logger.Error().Err(convErr).Msg("Error in data conversion")
-		span.RecordError(convErr)
 	} else if modResponse != nil {
 		return modResponse, len(modResponse)
 	}

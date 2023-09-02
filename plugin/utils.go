@@ -4,13 +4,13 @@ import (
 	"os/exec"
 	"time"
 
+	v1 "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin/v1"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // Verify compares two structs and returns true if they are equal.
-func Verify(params, returnVal *structpb.Struct) bool {
+func Verify(params, returnVal *v1.Struct) bool {
 	return cmp.Equal(params.AsMap(), returnVal.AsMap(), cmp.Options{
 		cmpopts.SortMaps(func(a, b string) bool {
 			return a < b
