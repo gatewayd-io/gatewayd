@@ -39,13 +39,6 @@ jobs:
         with:
           go-version: "1.20"
 
-      - run: |
-          git config --global url."https://mostafa:${TOKEN}@github.com/".insteadOf "https://github.com"
-          go mod tidy
-        env:
-          TOKEN: ${{ secrets.GH_SDK_TOKEN }}
-          GOPRIVATE: github.com/gatewayd-io/gatewayd-*
-
       - name: Lint code issues 🚨
         uses: golangci/golangci-lint-action@v3
         with:
@@ -89,19 +82,11 @@ jobs:
         with:
           go-version: "1.20"
 
-      - run: |
-          git config --global url."https://mostafa:${TOKEN}@github.com/".insteadOf "https://github.com"
-          go mod tidy
-        env:
-          TOKEN: ${{ secrets.GH_SDK_TOKEN }}
-          GOPRIVATE: github.com/gatewayd-io/gatewayd-*
-
       - name: Checkout test plugin 🛎️
         uses: actions/checkout@v3
         with:
           repository: gatewayd-io/plugin-template-go
           path: plugin-template-go
-          token: ${{ secrets.GH_PLUGIN_TOKEN }}
 
       - name: Build template plugin 🏗️
         run: |

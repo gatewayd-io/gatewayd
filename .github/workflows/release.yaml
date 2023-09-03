@@ -26,12 +26,6 @@ jobs:
           cache: true
       - name: Install nfpm for building Linux packages
         run: go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
-      - run: |
-          git config --global url."https://mostafa:${TOKEN}@github.com/".insteadOf "https://github.com"
-          go mod tidy
-        env:
-          TOKEN: ${{ secrets.GH_SDK_TOKEN }}
-          GOPRIVATE: github.com/gatewayd-io/gatewayd-*
       - name: Build and release binaries
         run: make build-release
       - name: Build and release Linux packages
