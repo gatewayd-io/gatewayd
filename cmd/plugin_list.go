@@ -8,10 +8,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// pluginLintCmd represents the plugin lint command.
-var pluginLintCmd = &cobra.Command{
-	Use:   "lint",
-	Short: "Lint the GatewayD plugins config",
+var onlyEnabled bool
+
+// pluginListCmd represents the plugin list command.
+var pluginListCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List the GatewayD plugins",
 	Run: func(cmd *cobra.Command, args []string) {
 		// Enable Sentry.
 		if enableSentry {
@@ -31,17 +33,21 @@ var pluginLintCmd = &cobra.Command{
 			defer sentry.Recover()
 		}
 
-		lintConfig(cmd, Plugins, pluginConfigFile)
+		listPlugins(cmd, pluginConfigFile, onlyEnabled)
 	},
 }
 
 func init() {
-	pluginCmd.AddCommand(pluginLintCmd)
+	pluginCmd.AddCommand(pluginListCmd)
 
-	pluginLintCmd.Flags().StringVarP(
+	pluginListCmd.Flags().StringVarP(
 		&pluginConfigFile, // Already exists in run.go
 		"plugin-config", "p", config.GetDefaultConfigFilePath(config.PluginsConfigFilename),
 		"Plugin config file")
-	pluginLintCmd.Flags().BoolVar(
+	pluginListCmd.Flags().BoolVarP(
+		&onlyEnabled,
+		"only-enabled", "e",
+		false, "Only list enabled plugins")
+	pluginListCmd.Flags().BoolVar(
 		&enableSentry, "sentry", true, "Enable Sentry") // Already exists in run.go
 }
