@@ -1,7 +1,10 @@
 package cmd
 
 import (
+	"log"
+
 	"github.com/gatewayd-io/gatewayd/config"
+	"github.com/getsentry/sentry-go"
 	"github.com/spf13/cobra"
 )
 
@@ -10,6 +13,24 @@ var pluginLintCmd = &cobra.Command{
 	Use:   "lint",
 	Short: "Lint the GatewayD plugins config",
 	Run: func(cmd *cobra.Command, args []string) {
+		// Enable Sentry.
+		if enableSentry {
+			// Initialize Sentry.
+			err := sentry.Init(sentry.ClientOptions{
+				Dsn:              DSN,
+				TracesSampleRate: config.DefaultTraceSampleRate,
+				AttachStacktrace: config.DefaultAttachStacktrace,
+			})
+			if err != nil {
+				log.Fatal("Sentry initialization failed: ", err)
+			}
+
+			// Flush buffered events before the program terminates.
+			defer sentry.Flush(config.DefaultFlushTimeout)
+			// Recover from panics and report the error to Sentry.
+			defer sentry.Recover()
+		}
+
 		lintConfig(cmd, Plugins, pluginConfigFile)
 	},
 }
