@@ -28,7 +28,7 @@ const (
 	NumParts                    int         = 2
 	LatestVersion               string      = "latest"
 	FolderPermissions           os.FileMode = 0o755
-	DefaultPluginConfigFilename string      = "./gatewayd_plugins.yaml"
+	DefaultPluginConfigFilename string      = "./gatewayd_plugin.yaml"
 	GitHubURLPrefix             string      = "github.com/"
 	GitHubURLRegex              string      = `^github.com\/[a-zA-Z0-9\-]+\/[a-zA-Z0-9\-]+@(?:latest|v(=|>=|<=|=>|=<|>|<|!=|~|~>|\^)?(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?)$` //nolint:lll
 	ExtWindows                  string      = ".zip"
@@ -298,12 +298,12 @@ var pluginInstallCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		// Unmarshal the YAML into a map.
-		var config map[string]interface{}
-		if err := yaml.Unmarshal(pluginsConfig, &config); err != nil {
+		// Get the registered plugins from the plugins configuration file.
+		var localPluginsConfig map[string]interface{}
+		if err := yaml.Unmarshal(pluginsConfig, &localPluginsConfig); err != nil {
 			log.Fatal("Failed to unmarshal the plugins configuration file: ", err)
 		}
-		currentPlugins, ok := config["plugins"].([]interface{})
+		pluginsList, ok := localPluginsConfig["plugins"].([]interface{})
 		if !ok {
 			log.Fatal("There was an error reading the plugins file from disk")
 		}
@@ -321,23 +321,34 @@ var pluginInstallCmd = &cobra.Command{
 			log.Fatal("There was an error getting the default plugins configuration file: ", err)
 		}
 
-		// Unmarshal the YAML into a map.
-		var pluginConfig map[string]interface{}
-		if err := yaml.Unmarshal([]byte(contents), &pluginConfig); err != nil {
+		// Get the plugin configuration from the downloaded plugins configuration file.
+		var downloadedPluginConfig map[string]interface{}
+		if err := yaml.Unmarshal([]byte(contents), &downloadedPluginConfig); err != nil {
 			log.Fatal("Failed to unmarshal the downloaded plugins configuration file: ", err)
+		}
+		defaultPluginConfig, ok := downloadedPluginConfig["plugins"].([]interface{})
+		if !ok {
+			log.Fatal("There was an error reading the plugins file from the repository")
+		}
+		// Get the plugin configuration.
+		pluginConfig, ok := defaultPluginConfig[0].(map[string]interface{})
+		if !ok {
+			log.Fatal("There was an error reading the default plugin configuration")
 		}
 
 		// Update the plugin's local path and checksum.
 		pluginConfig["localPath"] = localPath
 		pluginConfig["checksum"] = pluginFileSum
 
+		// TODO: Check if the plugin is already installed.
+
 		// Add the plugin config to the list of plugin configs.
-		currentPlugins = append(currentPlugins, pluginConfig)
+		pluginsList = append(pluginsList, pluginConfig)
 		// Merge the result back into the config map.
-		config["plugins"] = currentPlugins
+		localPluginsConfig["plugins"] = pluginsList
 
 		// Marshal the map into YAML.
-		updatedPlugins, err := yaml.Marshal(config)
+		updatedPlugins, err := yaml.Marshal(localPluginsConfig)
 		if err != nil {
 			log.Fatal("There was an error marshalling the plugins configuration: ", err)
 		}
@@ -346,6 +357,10 @@ var pluginInstallCmd = &cobra.Command{
 		if err = os.WriteFile(pluginConfigFile, updatedPlugins, FilePermissions); err != nil {
 			log.Fatal("There was an error writing the plugins configuration file: ", err)
 		}
+
+		// TODO: Clean up the plugin files if the installation fails.
+		// TODO: Add a rollback mechanism.
+		log.Println("Plugin installed successfully")
 	},
 }
 
@@ -384,7 +399,7 @@ func extractZip(filename, dest string) []string {
 			outFilename := filepath.Join(filepath.Clean(dest), filepath.Clean(file.Name))
 
 			// Check for ZipSlip.
-			if !strings.HasPrefix(outFilename, string(os.PathSeparator)) {
+			if strings.HasPrefix(outFilename, string(os.PathSeparator)) {
 				log.Fatal("Invalid file path in zip archive, aborting")
 			}
 
@@ -448,6 +463,11 @@ func extractTarGz(filename, dest string) []string {
 		log.Fatal("Failed to extract tarball: ", err)
 	}
 
+	// Create the output directory if it doesn't exist.
+	if err := os.MkdirAll(dest, FolderPermissions); err != nil {
+		log.Fatal("Failed to create directories: ", err)
+	}
+
 	tarReader := tar.NewReader(uncompressedStream)
 	filenames := []string{}
 
@@ -478,7 +498,7 @@ func extractTarGz(filename, dest string) []string {
 			outFilename := path.Join(filepath.Clean(dest), filepath.Clean(header.Name))
 
 			// Check for TarSlip.
-			if !strings.HasPrefix(outFilename, string(os.PathSeparator)) {
+			if strings.HasPrefix(outFilename, string(os.PathSeparator)) {
 				log.Fatal("Invalid file path in tarball, aborting")
 			}
 
