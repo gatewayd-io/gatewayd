@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/gatewayd-io/gatewayd/config"
 	jsonSchemaGenerator "github.com/invopop/jsonschema"
@@ -152,4 +153,35 @@ func lintConfig(cmd *cobra.Command, fileType configFileType, configFile string) 
 	}
 
 	logger.Printf("%s config is valid\n", fileType)
+}
+
+func listPlugins(cmd *cobra.Command, pluginConfigFile string, onlyEnabled bool) {
+	logger := log.New(cmd.OutOrStdout(), "", 0)
+
+	// Load the plugin config file.
+	conf := config.NewConfig(context.TODO(), "", pluginConfigFile)
+	conf.LoadDefaults(context.TODO())
+	conf.LoadPluginConfigFile(context.TODO())
+	conf.UnmarshalPluginConfig(context.TODO())
+
+	if len(conf.Plugin.Plugins) != 0 {
+		logger.Printf("Total plugins: %d\n", len(conf.Plugin.Plugins))
+		logger.Println("Plugins:")
+	}
+
+	// Print the list of plugins.
+	for _, plugin := range conf.Plugin.Plugins {
+		if onlyEnabled && !plugin.Enabled {
+			continue
+		}
+		logger.Printf("  Name: %s\n", plugin.Name)
+		logger.Printf("  Enabled: %t\n", plugin.Enabled)
+		logger.Printf("  Path: %s\n", plugin.LocalPath)
+		logger.Printf("  Args: %s\n", strings.Join(plugin.Args, " "))
+		logger.Println("  Env:")
+		for _, env := range plugin.Env {
+			logger.Printf("    %s\n", env)
+		}
+		logger.Printf("  Checksum: %s\n", plugin.Checksum)
+	}
 }
