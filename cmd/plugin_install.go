@@ -303,7 +303,7 @@ var pluginInstallCmd = &cobra.Command{
 		if err := yaml.Unmarshal(pluginsConfig, &localPluginsConfig); err != nil {
 			log.Fatal("Failed to unmarshal the plugins configuration file: ", err)
 		}
-		pluginsList, ok := localPluginsConfig["plugins"].([]interface{})
+		pluginsList, ok := localPluginsConfig["plugins"].([]interface{}) //nolint:varnamelen
 		if !ok {
 			log.Fatal("There was an error reading the plugins file from disk")
 		}
