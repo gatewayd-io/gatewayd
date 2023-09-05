@@ -167,7 +167,7 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 		if err != nil {
 			span.RecordError(err)
 			span.End()
-			log.Fatal(fmt.Errorf("failed to unmarshal global configuration: %w", err))
+			log.Panic(fmt.Errorf("failed to unmarshal global configuration: %w", err))
 		}
 
 		for configObject, configMap := range gconf {
@@ -196,7 +196,7 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 						err := fmt.Errorf("unknown config object: %s", configObject)
 						span.RecordError(err)
 						span.End()
-						log.Fatal(err)
+						log.Panic(err)
 					}
 				}
 			}
@@ -204,7 +204,7 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 	} else if !os.IsNotExist(err) {
 		span.RecordError(err)
 		span.End()
-		log.Fatal(fmt.Errorf("failed to read global configuration file: %w", err))
+		log.Panic(fmt.Errorf("failed to read global configuration file: %w", err))
 	}
 
 	c.pluginDefaults = PluginConfig{
@@ -223,7 +223,7 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 		if err := c.GlobalKoanf.Load(structs.Provider(c.globalDefaults, "json"), nil); err != nil {
 			span.RecordError(err)
 			span.End()
-			log.Fatal(fmt.Errorf("failed to load default global configuration: %w", err))
+			log.Panic(fmt.Errorf("failed to load default global configuration: %w", err))
 		}
 	}
 
@@ -231,7 +231,7 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 		if err := c.PluginKoanf.Load(structs.Provider(c.pluginDefaults, "json"), nil); err != nil {
 			span.RecordError(err)
 			span.End()
-			log.Fatal(fmt.Errorf("failed to load default plugin configuration: %w", err))
+			log.Panic(fmt.Errorf("failed to load default plugin configuration: %w", err))
 		}
 	}
 
@@ -246,7 +246,7 @@ func (c *Config) LoadGlobalEnvVars(ctx context.Context) {
 	if err := c.GlobalKoanf.Load(loadEnvVars(), nil); err != nil {
 		span.RecordError(err)
 		span.End()
-		log.Fatal(fmt.Errorf("failed to load environment variables: %w", err))
+		log.Panic(fmt.Errorf("failed to load environment variables: %w", err))
 	}
 
 	span.End()
@@ -260,7 +260,7 @@ func (c *Config) LoadPluginEnvVars(ctx context.Context) {
 	if err := c.PluginKoanf.Load(loadEnvVars(), nil); err != nil {
 		span.RecordError(err)
 		span.End()
-		log.Fatal(fmt.Errorf("failed to load environment variables: %w", err))
+		log.Panic(fmt.Errorf("failed to load environment variables: %w", err))
 	}
 
 	span.End()
@@ -279,7 +279,7 @@ func (c *Config) LoadGlobalConfigFile(ctx context.Context) {
 	if err := c.GlobalKoanf.Load(file.Provider(c.globalConfigFile), yaml.Parser()); err != nil {
 		span.RecordError(err)
 		span.End()
-		log.Fatal(fmt.Errorf("failed to load global configuration: %w", err))
+		log.Panic(fmt.Errorf("failed to load global configuration: %w", err))
 	}
 
 	span.End()
@@ -292,7 +292,7 @@ func (c *Config) LoadPluginConfigFile(ctx context.Context) {
 	if err := c.PluginKoanf.Load(file.Provider(c.pluginConfigFile), yaml.Parser()); err != nil {
 		span.RecordError(err)
 		span.End()
-		log.Fatal(fmt.Errorf("failed to load plugin configuration: %w", err))
+		log.Panic(fmt.Errorf("failed to load plugin configuration: %w", err))
 	}
 
 	span.End()
@@ -307,7 +307,7 @@ func (c *Config) UnmarshalGlobalConfig(ctx context.Context) {
 	}); err != nil {
 		span.RecordError(err)
 		span.End()
-		log.Fatal(fmt.Errorf("failed to unmarshal global configuration: %w", err))
+		log.Panic(fmt.Errorf("failed to unmarshal global configuration: %w", err))
 	}
 
 	span.End()
@@ -322,7 +322,7 @@ func (c *Config) UnmarshalPluginConfig(ctx context.Context) {
 	}); err != nil {
 		span.RecordError(err)
 		span.End()
-		log.Fatal(fmt.Errorf("failed to unmarshal plugin configuration: %w", err))
+		log.Panic(fmt.Errorf("failed to unmarshal plugin configuration: %w", err))
 	}
 
 	span.End()
@@ -336,7 +336,7 @@ func (c *Config) MergeGlobalConfig(
 	if err := c.GlobalKoanf.Load(confmap.Provider(updatedGlobalConfig, "."), nil); err != nil {
 		span.RecordError(err)
 		span.End()
-		log.Fatal(fmt.Errorf("failed to merge global configuration: %w", err))
+		log.Panic(fmt.Errorf("failed to merge global configuration: %w", err))
 	}
 
 	if err := c.GlobalKoanf.UnmarshalWithConf("", &c.Global, koanf.UnmarshalConf{
@@ -344,7 +344,7 @@ func (c *Config) MergeGlobalConfig(
 	}); err != nil {
 		span.RecordError(err)
 		span.End()
-		log.Fatal(fmt.Errorf("failed to unmarshal global configuration: %w", err))
+		log.Panic(fmt.Errorf("failed to unmarshal global configuration: %w", err))
 	}
 
 	span.End()
@@ -357,7 +357,7 @@ func (c *Config) ValidateGlobalConfig(ctx context.Context) {
 	if err := c.GlobalKoanf.Unmarshal("", &globalConfig); err != nil {
 		span.RecordError(err)
 		span.End()
-		log.Fatal(
+		log.Panic(
 			gerr.ErrValidationFailed.Wrap(
 				fmt.Errorf("failed to unmarshal global configuration: %w", err)),
 		)
@@ -467,6 +467,6 @@ func (c *Config) ValidateGlobalConfig(ctx context.Context) {
 		}
 		span.RecordError(fmt.Errorf("failed to validate global configuration"))
 		span.End()
-		log.Fatal("failed to validate global configuration")
+		log.Panic("failed to validate global configuration")
 	}
 }

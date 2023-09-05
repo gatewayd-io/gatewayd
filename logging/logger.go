@@ -73,7 +73,7 @@ func NewLogger(ctx context.Context, cfg LoggerConfig) zerolog.Logger {
 			if err != nil {
 				span.RecordError(err)
 				span.End()
-				log.Fatal(err)
+				log.Panic(err)
 			}
 			outputs = append(outputs, syslogWriter)
 		case config.RSyslog:
@@ -82,7 +82,7 @@ func NewLogger(ctx context.Context, cfg LoggerConfig) zerolog.Logger {
 			rsyslogWriter, err := syslog.Dial(
 				cfg.RSyslogNetwork, cfg.RSyslogAddress, cfg.SyslogPriority, config.DefaultSyslogTag)
 			if err != nil {
-				log.Fatal(err)
+				log.Panic(err)
 			}
 			outputs = append(outputs, zerolog.SyslogLevelWriter(rsyslogWriter))
 		default:

@@ -28,7 +28,7 @@ func OTLPTracer(insecure bool, collectorURL, serviceName string) func(context.Co
 		),
 	)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 
 	resources, err := resource.New(
@@ -41,7 +41,7 @@ func OTLPTracer(insecure bool, collectorURL, serviceName string) func(context.Co
 	)
 	if err != nil {
 		// logger.Error().Err(err).Msg("Could not set resources")
-		log.Fatal(err)
+		log.Panic(err)
 	}
 
 	resources, _ = resource.Merge(

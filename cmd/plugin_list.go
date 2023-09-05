@@ -24,7 +24,7 @@ var pluginListCmd = &cobra.Command{
 				AttachStacktrace: config.DefaultAttachStacktrace,
 			})
 			if err != nil {
-				log.Fatal("Sentry initialization failed: ", err)
+				log.Panic("Sentry initialization failed: ", err)
 			}
 
 			// Flush buffered events before the program terminates.

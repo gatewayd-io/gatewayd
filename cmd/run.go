@@ -73,7 +73,7 @@ var runCmd = &cobra.Command{
 			shutdown := tracing.OTLPTracer(true, collectorURL, config.TracerName)
 			defer func() {
 				if err := shutdown(context.Background()); err != nil {
-					log.Fatal(err)
+					log.Panic(err)
 				}
 			}()
 		}
@@ -94,7 +94,7 @@ var runCmd = &cobra.Command{
 			})
 			if err != nil {
 				span.RecordError(err)
-				log.Fatal("Sentry initialization failed: ", err)
+				log.Panic("Sentry initialization failed: ", err)
 			}
 
 			// Flush buffered events before the program terminates.
