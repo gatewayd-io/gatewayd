@@ -44,7 +44,12 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
           generate_release_notes: true
-      - name: Login to GitHub Container Registry
+      - name: Sign in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Sign in to GitHub Container Registry
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
@@ -56,6 +61,8 @@ jobs:
           context: .
           push: true
           tags: |
+            gatewaydio/gatewayd:${{ github.ref_name }}
+            gatewaydio/gatewayd:latest
             ghcr.io/gatewayd-io/gatewayd:${{ github.ref_name }}
             ghcr.io/gatewayd-io/gatewayd:latest
           platforms: linux/amd64
