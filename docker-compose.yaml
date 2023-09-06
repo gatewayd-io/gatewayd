@@ -11,7 +11,7 @@ services:
       timeout: 5s
       retries: 5
   gatewayd:
-    image: gatewayd:latest
+    image: ghcr.io/gatewayd-io/gatewayd:latest
     command: ["run"]
     environment:
       # For more information about the environment variables, see:
