@@ -11,7 +11,8 @@
 
 <p align="center">
     <a href="https://github.com/gatewayd-io/gatewayd/releases">Download</a> ·
-    <a href="https://docs.gatewayd.io">Documentation</a>
+    <a href="https://docs.gatewayd.io">Documentation</a> ·
+    <a href="https://coveralls.io/github/gatewayd-io/gatewayd">Coverage</a>
 </p>
 
 **GatewayD** is a free and open-source cloud-native database gateway and framework for building data-driven applications. It sits between your database servers and clients and proxies all their communication. It is like API gateways, for databases.
