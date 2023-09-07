@@ -47,11 +47,10 @@ jobs:
       - name: Run Go tests 🔬
         run: go test -cover -covermode atomic -coverprofile=profile.cov -v ./...
 
-      # Enable coverage reporting
-      # - name: Report coverage to coveralls 📈
-      #   uses: shogo82148/actions-goveralls@v1
-      #   with:
-      #     path-to-profile: profile.cov
+      - name: Report coverage to coveralls 📈
+        uses: shogo82148/actions-goveralls@v1
+        with:
+          path-to-profile: profile.cov
 
   test-plugin:
     name: Test GatewayD Plugins
@@ -117,9 +116,7 @@ jobs:
           EOF
 
       - name: Run GatewayD with template plugin 🚀
-        run: |
-          sed -i 's/level: "info"/level: "debug"/g' gatewayd.yaml # Enable debug logs
-          ./gatewayd run &
+        run: GATEWAYD_LOGGERS_DEFAULT_LEVEL=debug ./gatewayd run &
 
       - name: Run a test with PSQL 🧪
         run: |
