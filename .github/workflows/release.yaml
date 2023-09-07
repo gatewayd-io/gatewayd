@@ -53,12 +53,9 @@ jobs:
             ghcr.io/gatewayd-io/gatewayd:latest
           platforms: linux/amd64
       - name: Scan Docker image with Syft and generate SBOM
-        uses: anchore/sbom-action@v0
-        with:
-          artifact-name: gatewayd-image-${{ github.ref_name }}.cyclonedx.json
-          format: cyclonedx-json
-          dependency-snapshot: true
-          image: gatewaydio/gatewayd:${{ github.ref_name }}
+        run: |
+          go install github.com/anchore/syft/cmd/syft@latest
+          syft packages docker:gatewaydio/gatewayd:${{ github.ref_name }} --file gatewayd-image-${{ github.ref_name }}.cyclonedx.json --output cyclonedx-json
       - name: Scan source code and generate SBOM
         run: |
           go install github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@latest
