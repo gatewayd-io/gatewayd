@@ -44,7 +44,9 @@ var (
 )
 
 // generateConfig generates a config file of the given type.
-func generateConfig(cmd *cobra.Command, fileType configFileType, configFile string, force bool) {
+func generateConfig(
+	cmd *cobra.Command, fileType configFileType, configFile string, forceRewriteFile bool,
+) {
 	logger := log.New(cmd.OutOrStdout(), "", 0)
 
 	// Create a new config object and load the defaults.
@@ -71,7 +73,7 @@ func generateConfig(cmd *cobra.Command, fileType configFileType, configFile stri
 
 	// Check if the config file already exists and if we should overwrite it.
 	exists := false
-	if _, err := os.Stat(configFile); err == nil && !force {
+	if _, err := os.Stat(configFile); err == nil && !forceRewriteFile {
 		logger.Fatal(
 			"Config file already exists. Use --force to overwrite or choose a different filename.")
 	} else if err == nil {
@@ -84,7 +86,7 @@ func generateConfig(cmd *cobra.Command, fileType configFileType, configFile stri
 	}
 
 	verb := "created"
-	if exists && force {
+	if exists && forceRewriteFile {
 		verb = "overwritten"
 	}
 	logger.Printf("Config file '%s' was %s successfully.", configFile, verb)
