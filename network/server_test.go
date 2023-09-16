@@ -220,6 +220,9 @@ func TestRunServer(t *testing.T) {
 	go func(t *testing.T, server *Server, proxy *Proxy) {
 		for {
 			if server.IsRunning() {
+				// Pause for a while to allow the server to start.
+				time.Sleep(500 * time.Millisecond)
+
 				client := NewClient(
 					context.Background(),
 					&config.Client{
@@ -262,8 +265,10 @@ func TestRunServer(t *testing.T) {
 				CollectAndComparePrometheusMetrics(t)
 
 				// Clean up.
-				server.Shutdown()
 				client.Close()
+				// Pause for a while to allow the server to disconnect and shutdown.
+				time.Sleep(500 * time.Millisecond)
+				server.Shutdown()
 				break
 			}
 		}
