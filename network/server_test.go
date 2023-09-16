@@ -170,6 +170,7 @@ func TestRunServer(t *testing.T) {
 			gnet.WithMulticore(false),
 			gnet.WithReuseAddr(true),
 			gnet.WithReusePort(true),
+			gnet.WithTicker(true), // Enable ticker.
 		},
 		proxy,
 		logger,
