@@ -84,3 +84,58 @@ func TestNewHcLogAdapter_LogLevel_Difference(t *testing.T) {
 	assert.Contains(t, consoleOutput, "ERR This is an error message")
 	assert.NotContains(t, consoleOutput, "DBG This is a log message, but it should not be logged")
 }
+
+// TestNewHcLogAdapter_Log tests the HcLogAdapter.Log method.
+func TestNewHcLogAdapter_Log(t *testing.T) {
+	consoleOutput := capturer.CaptureStdout(func() {
+		logger := NewLogger(
+			context.Background(),
+			LoggerConfig{
+				Output:     []config.LogOutput{config.Console},
+				Level:      zerolog.TraceLevel,
+				TimeFormat: zerolog.TimeFormatUnix,
+				NoColor:    true,
+			},
+		)
+
+		hcLogAdapter := NewHcLogAdapter(&logger, "test")
+		hcLogAdapter.SetLevel(hclog.Trace)
+
+		hcLogAdapter.Log(hclog.Off, "This is a message")
+		hcLogAdapter.Log(hclog.NoLevel, "This is yet another message")
+		hcLogAdapter.Log(hclog.Trace, "This is a trace message")
+		hcLogAdapter.Log(hclog.Debug, "This is a debug message")
+		hcLogAdapter.Log(hclog.Info, "This is an info message")
+		hcLogAdapter.Log(hclog.Warn, "This is a warn message")
+		hcLogAdapter.Log(hclog.Error, "This is an error message")
+	})
+
+	assert.NotContains(t, consoleOutput, "This is a message")
+	assert.NotContains(t, consoleOutput, "This is yet another message")
+	assert.Contains(t, consoleOutput, "TRC This is a trace message")
+	assert.Contains(t, consoleOutput, "DBG This is a debug message")
+	assert.Contains(t, consoleOutput, "INF This is an info message")
+	assert.Contains(t, consoleOutput, "WRN This is a warn message")
+	assert.Contains(t, consoleOutput, "ERR This is an error message")
+}
+
+func TestNewHcLogAdapter_GetLevel(t *testing.T) {
+	logger := NewLogger(
+		context.Background(),
+		LoggerConfig{
+			Output:     []config.LogOutput{config.Console},
+			Level:      zerolog.TraceLevel,
+			TimeFormat: zerolog.TimeFormatUnix,
+			NoColor:    true,
+		},
+	)
+
+	hcLogAdapter := NewHcLogAdapter(&logger, "test")
+	hcLogAdapter.SetLevel(hclog.Trace)
+	assert.Equal(t, hclog.Trace, hcLogAdapter.GetLevel())
+
+	hcLogAdapter.SetLevel(hclog.Debug)
+	assert.Equal(t, hclog.Debug, hcLogAdapter.GetLevel())
+	assert.NotEqual(t, zerolog.DebugLevel, logger.GetLevel(),
+		"The logger should not be affected by the hclog adapter's level")
+}
