@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"testing"
+	"time"
 
 	v1 "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin/v1"
 	"github.com/gatewayd-io/gatewayd/config"
@@ -29,7 +30,7 @@ func TestRunServer(t *testing.T) {
 			config.File,
 		},
 		TimeFormat:        zerolog.TimeFormatUnix,
-		ConsoleTimeFormat: config.DefaultConsoleTimeFormat,
+		ConsoleTimeFormat: time.RFC3339,
 		Level:             zerolog.DebugLevel,
 		NoColor:           true,
 		FileName:          "server_test.log",

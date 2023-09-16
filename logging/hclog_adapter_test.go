@@ -3,6 +3,7 @@ package logging
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/hashicorp/go-hclog"
@@ -20,7 +21,7 @@ func TestNewHcLogAdapter(t *testing.T) {
 				Output:            []config.LogOutput{config.Console},
 				Level:             zerolog.TraceLevel,
 				TimeFormat:        zerolog.TimeFormatUnix,
-				ConsoleTimeFormat: config.DefaultConsoleTimeFormat,
+				ConsoleTimeFormat: time.RFC3339,
 				NoColor:           true,
 			},
 		)

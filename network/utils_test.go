@@ -3,6 +3,7 @@ package network
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/gatewayd-io/gatewayd/logging"
@@ -15,7 +16,7 @@ func TestGetID(t *testing.T) {
 	cfg := logging.LoggerConfig{
 		Output:            []config.LogOutput{config.Console},
 		TimeFormat:        zerolog.TimeFormatUnix,
-		ConsoleTimeFormat: config.DefaultConsoleTimeFormat,
+		ConsoleTimeFormat: time.RFC3339,
 		Level:             zerolog.DebugLevel,
 		NoColor:           true,
 	}
@@ -30,7 +31,7 @@ func TestResolve(t *testing.T) {
 	cfg := logging.LoggerConfig{
 		Output:            []config.LogOutput{config.Console},
 		TimeFormat:        zerolog.TimeFormatUnix,
-		ConsoleTimeFormat: config.DefaultConsoleTimeFormat,
+		ConsoleTimeFormat: time.RFC3339,
 		Level:             zerolog.DebugLevel,
 		NoColor:           true,
 	}
