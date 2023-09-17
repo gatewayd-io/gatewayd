@@ -10,7 +10,7 @@ var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Show version information",
 	Run: func(cmd *cobra.Command, _ []string) {
-		cmd.Println(config.VersionInfo()) //nolint:forbidigo
+		cmd.Println(config.VersionInfo())
 	},
 }
 

@@ -73,6 +73,7 @@ linters-settings:
           - "github.com/prometheus/client_model/go"
           - "github.com/prometheus/common/expfmt"
           - "github.com/panjf2000/gnet/v2"
+          - "github.com/spf13/cobra"
   tagalign:
     align: false
     sort: false
