@@ -139,7 +139,7 @@ var pluginInstallCmd = &cobra.Command{
 			})
 			if downloadURL != "" && releaseID != 0 {
 				cmd.Println("Downloading", downloadURL)
-				downloadFile(client, account, pluginName, downloadURL, releaseID, pluginFilename)
+				downloadFile(client, account, pluginName, releaseID, pluginFilename)
 				cmd.Println("Download completed successfully")
 			} else {
 				log.Panic("The plugin file could not be found in the release assets")
@@ -151,7 +151,7 @@ var pluginInstallCmd = &cobra.Command{
 			})
 			if checksumsFilename != "" && downloadURL != "" && releaseID != 0 {
 				cmd.Println("Downloading", downloadURL)
-				downloadFile(client, account, pluginName, downloadURL, releaseID, checksumsFilename)
+				downloadFile(client, account, pluginName, releaseID, checksumsFilename)
 				cmd.Println("Download completed successfully")
 			} else {
 				log.Panic("The checksum file could not be found in the release assets")

@@ -8,8 +8,7 @@ import (
 
 func Test_pluginLintCmd(t *testing.T) {
 	// Test plugin lint command.
-	pluginConfigFile := "../gatewayd_plugins.yaml"
-	output, err := executeCommandC(rootCmd, "plugin", "lint", "-p", pluginConfigFile)
+	output, err := executeCommandC(rootCmd, "plugin", "lint", "-p", "../gatewayd_plugins.yaml")
 	assert.NoError(t, err, "plugin lint command should not have returned an error")
 	assert.Equal(t,
 		"plugins config is valid\n",

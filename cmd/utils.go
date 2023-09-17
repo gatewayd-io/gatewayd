@@ -390,8 +390,7 @@ func findAsset(release *github.RepositoryRelease, match func(string) bool) (stri
 }
 
 func downloadFile(
-	client *github.Client, account, pluginName, downloadURL string,
-	releaseID int64, filename string,
+	client *github.Client, account, pluginName string, releaseID int64, filename string,
 ) {
 	// Download the plugin.
 	readCloser, redirectURL, err := client.Repositories.DownloadReleaseAsset(
