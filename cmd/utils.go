@@ -393,8 +393,6 @@ func downloadFile(
 	client *github.Client, account, pluginName, downloadURL string,
 	releaseID int64, filename string,
 ) {
-	log.Println("Downloading", downloadURL)
-
 	// Download the plugin.
 	readCloser, redirectURL, err := client.Repositories.DownloadReleaseAsset(
 		context.Background(), account, pluginName, releaseID, http.DefaultClient)
@@ -447,6 +445,4 @@ func downloadFile(
 	if err != nil {
 		log.Panic("There was an error downloading the plugin: ", err)
 	}
-
-	log.Println("Download completed successfully")
 }

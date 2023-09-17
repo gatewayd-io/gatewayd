@@ -85,7 +85,7 @@ var pluginInstallCmd = &cobra.Command{
 			splittedURL := strings.Split(args[0], "@")
 			// If the version is not specified, use the latest version.
 			if len(splittedURL) < NumParts {
-				log.Println("Version not specified. Using latest version")
+				cmd.Println("Version not specified. Using latest version")
 			}
 			if len(splittedURL) >= NumParts {
 				pluginVersion = splittedURL[1]
@@ -138,7 +138,9 @@ var pluginInstallCmd = &cobra.Command{
 					strings.Contains(name, archiveExt)
 			})
 			if downloadURL != "" && releaseID != 0 {
+				cmd.Println("Downloading", downloadURL)
 				downloadFile(client, account, pluginName, downloadURL, releaseID, pluginFilename)
+				cmd.Println("Download completed successfully")
 			} else {
 				log.Panic("The plugin file could not be found in the release assets")
 			}
@@ -148,7 +150,9 @@ var pluginInstallCmd = &cobra.Command{
 				return strings.Contains(name, "checksums.txt")
 			})
 			if checksumsFilename != "" && downloadURL != "" && releaseID != 0 {
+				cmd.Println("Downloading", downloadURL)
 				downloadFile(client, account, pluginName, downloadURL, releaseID, checksumsFilename)
+				cmd.Println("Download completed successfully")
 			} else {
 				log.Panic("The checksum file could not be found in the release assets")
 			}
@@ -174,13 +178,13 @@ var pluginInstallCmd = &cobra.Command{
 						log.Panic("Checksum verification failed")
 					}
 
-					log.Println("Checksum verification passed")
+					cmd.Println("Checksum verification passed")
 					break
 				}
 			}
 
 			if pullOnly {
-				log.Println("Plugin binary downloaded to", pluginFilename)
+				cmd.Println("Plugin binary downloaded to", pluginFilename)
 				return
 			}
 		} else {
@@ -204,7 +208,7 @@ var pluginInstallCmd = &cobra.Command{
 		pluginFileSum := ""
 		for _, filename := range filenames {
 			if strings.Contains(filename, pluginName) {
-				log.Println("Plugin binary extracted to", filename)
+				cmd.Println("Plugin binary extracted to", filename)
 				localPath = filename
 				// Get the checksum for the extracted plugin binary.
 				// TODO: Should we verify the checksum using the checksum.txt file instead?
@@ -303,7 +307,7 @@ var pluginInstallCmd = &cobra.Command{
 		}
 
 		// TODO: Add a rollback mechanism.
-		log.Println("Plugin installed successfully")
+		cmd.Println("Plugin installed successfully")
 	},
 }
 
