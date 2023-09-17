@@ -6,7 +6,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var pluginTestConfigFile = "./test.yaml"
+var (
+	globalTestConfigFile = "./test_global.yaml"
+	pluginTestConfigFile = "./test_plugins.yaml"
+)
 
 // executeCommandC executes a cobra command and returns the command, output, and error.
 // Taken from https://github.com/spf13/cobra/blob/0c72800b8dba637092b57a955ecee75949e79a73/command_test.go#L48.

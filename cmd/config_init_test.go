@@ -9,28 +9,25 @@ import (
 )
 
 func Test_configInitCmd(t *testing.T) {
-	// Reset globalConfigFile to avoid conflicts with other tests.
-	globalConfigFile = "./test_config.yaml"
-
 	// Test configInitCmd.
-	output, err := executeCommandC(rootCmd, "config", "init", "-c", globalConfigFile)
+	output, err := executeCommandC(rootCmd, "config", "init", "-c", globalTestConfigFile)
 	assert.NoError(t, err, "configInitCmd should not return an error")
 	assert.Equal(t,
-		fmt.Sprintf("Config file '%s' was created successfully.", globalConfigFile),
+		fmt.Sprintf("Config file '%s' was created successfully.", globalTestConfigFile),
 		output,
 		"configInitCmd should print the correct output")
 	// Check that the config file was created.
-	assert.FileExists(t, globalConfigFile, "configInitCmd should create a config file")
+	assert.FileExists(t, globalTestConfigFile, "configInitCmd should create a config file")
 
 	// Test configInitCmd with the --force flag to overwrite the config file.
 	output, err = executeCommandC(rootCmd, "config", "init", "--force")
 	assert.NoError(t, err, "configInitCmd should not return an error")
 	assert.Equal(t,
-		fmt.Sprintf("Config file '%s' was overwritten successfully.", globalConfigFile),
+		fmt.Sprintf("Config file '%s' was overwritten successfully.", globalTestConfigFile),
 		output,
 		"configInitCmd should print the correct output")
 
 	// Clean up.
-	err = os.Remove(globalConfigFile)
+	err = os.Remove(globalTestConfigFile)
 	assert.NoError(t, err)
 }

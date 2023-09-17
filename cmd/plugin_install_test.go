@@ -9,7 +9,7 @@ import (
 )
 
 func Test_pluginInstallCmd(t *testing.T) {
-	// Create a test config file.
+	// Create a test plugin config file.
 	output, err := executeCommandC(rootCmd, "plugin", "init", "-p", pluginTestConfigFile)
 	assert.NoError(t, err, "plugin init should not return an error")
 	assert.Equal(t,
