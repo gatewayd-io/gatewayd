@@ -89,7 +89,7 @@ func generateConfig(
 	if exists && forceRewriteFile {
 		verb = "overwritten"
 	}
-	logger.Printf("Config file '%s' was %s successfully.", configFile, verb)
+	cmd.Printf("Config file '%s' was %s successfully.", configFile, verb)
 }
 
 func lintConfig(cmd *cobra.Command, fileType configFileType, configFile string) {
@@ -163,12 +163,10 @@ func lintConfig(cmd *cobra.Command, fileType configFileType, configFile string) 
 		logger.Fatalf("Error validating %s config: %s\n", string(fileType), err)
 	}
 
-	logger.Printf("%s config is valid\n", fileType)
+	cmd.Printf("%s config is valid\n", fileType)
 }
 
 func listPlugins(cmd *cobra.Command, pluginConfigFile string, onlyEnabled bool) {
-	logger := log.New(cmd.OutOrStdout(), "", 0)
-
 	// Load the plugin config file.
 	conf := config.NewConfig(context.TODO(), "", pluginConfigFile)
 	conf.LoadDefaults(context.TODO())
@@ -176,8 +174,10 @@ func listPlugins(cmd *cobra.Command, pluginConfigFile string, onlyEnabled bool) 
 	conf.UnmarshalPluginConfig(context.TODO())
 
 	if len(conf.Plugin.Plugins) != 0 {
-		logger.Printf("Total plugins: %d\n", len(conf.Plugin.Plugins))
-		logger.Println("Plugins:")
+		cmd.Printf("Total plugins: %d\n", len(conf.Plugin.Plugins))
+		cmd.Println("Plugins:")
+	} else {
+		cmd.Println("No plugins found")
 	}
 
 	// Print the list of plugins.
@@ -185,15 +185,15 @@ func listPlugins(cmd *cobra.Command, pluginConfigFile string, onlyEnabled bool) 
 		if onlyEnabled && !plugin.Enabled {
 			continue
 		}
-		logger.Printf("  Name: %s\n", plugin.Name)
-		logger.Printf("  Enabled: %t\n", plugin.Enabled)
-		logger.Printf("  Path: %s\n", plugin.LocalPath)
-		logger.Printf("  Args: %s\n", strings.Join(plugin.Args, " "))
-		logger.Println("  Env:")
+		cmd.Printf("  Name: %s\n", plugin.Name)
+		cmd.Printf("  Enabled: %t\n", plugin.Enabled)
+		cmd.Printf("  Path: %s\n", plugin.LocalPath)
+		cmd.Printf("  Args: %s\n", strings.Join(plugin.Args, " "))
+		cmd.Println("  Env:")
 		for _, env := range plugin.Env {
-			logger.Printf("    %s\n", env)
+			cmd.Printf("    %s\n", env)
 		}
-		logger.Printf("  Checksum: %s\n", plugin.Checksum)
+		cmd.Printf("  Checksum: %s\n", plugin.Checksum)
 	}
 }
 
