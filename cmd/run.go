@@ -41,6 +41,8 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
+// TODO: Get rid of the global variables.
+// https://github.com/gatewayd-io/gatewayd/issues/324
 var (
 	enableTracing     bool
 	collectorURL      string
