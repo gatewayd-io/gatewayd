@@ -97,8 +97,8 @@ var pluginInstallCmd = &cobra.Command{
 				log.Panic(
 					"Invalid URL. Use the following format: github.com/account/repository@version")
 			}
-			account := accountRepo[0]
-			pluginName := accountRepo[1]
+			account = accountRepo[0]
+			pluginName = accountRepo[1]
 			if account == "" || pluginName == "" {
 				log.Panic(
 					"Invalid URL. Use the following format: github.com/account/repository@version")
