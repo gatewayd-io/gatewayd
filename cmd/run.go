@@ -355,7 +355,7 @@ var runCmd = &cobra.Command{
 				handler = mergedMetricsHandler(handler)
 			}
 			// Check if the metrics server is already running before registering the handler.
-			if _, err = http.Get(address); err != nil {
+			if _, err = http.Get(address); err != nil { //nolint:gosec
 				http.Handle(metricsConfig.Path, gziphandler.GzipHandler(handler))
 			} else {
 				logger.Warn().Msg("Metrics server is already running, consider changing the port")
