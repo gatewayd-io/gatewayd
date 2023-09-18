@@ -60,7 +60,70 @@ var (
 	proxies              = make(map[string]*network.Proxy)
 	servers              = make(map[string]*network.Server)
 	healthCheckScheduler = gocron.NewScheduler(time.UTC)
+
+	stopChan = make(chan struct{})
 )
+
+func StopGracefully(
+	runCtx context.Context,
+	pluginTimeoutCtx context.Context,
+	sig os.Signal,
+	metricsMerger *metrics.Merger,
+	pluginRegistry *plugin.Registry,
+	logger zerolog.Logger,
+	servers map[string]*network.Server,
+	stopChan chan struct{},
+) {
+	_, span := otel.Tracer(config.TracerName).Start(runCtx, "Shutdown server")
+	signal := "unknown"
+	if sig != nil {
+		signal = sig.String()
+	}
+
+	logger.Info().Msg("Notifying the plugins that the server is shutting down")
+	if pluginRegistry != nil {
+		_, err := pluginRegistry.Run(
+			pluginTimeoutCtx,
+			map[string]interface{}{"signal": signal},
+			v1.HookName_HOOK_NAME_ON_SIGNAL,
+		)
+		if err != nil {
+			logger.Error().Err(err).Msg("Failed to run OnSignal hooks")
+			span.RecordError(err)
+		}
+	}
+
+	logger.Info().Msg("Stopping GatewayD")
+	span.AddEvent("Stopping GatewayD", trace.WithAttributes(
+		attribute.String("signal", signal),
+	))
+	if healthCheckScheduler != nil {
+		healthCheckScheduler.Clear()
+		logger.Info().Msg("Stopped health check scheduler")
+		span.AddEvent("Stopped health check scheduler")
+	}
+	if metricsMerger != nil {
+		metricsMerger.Stop()
+		logger.Info().Msg("Stopped metrics merger")
+		span.AddEvent("Stopped metrics merger")
+	}
+	for name, server := range servers {
+		logger.Info().Str("name", name).Msg("Stopping server")
+		server.Shutdown()
+		span.AddEvent("Stopped server")
+	}
+	logger.Info().Msg("Stopped all servers")
+	if pluginRegistry != nil {
+		pluginRegistry.Shutdown()
+		logger.Info().Msg("Stopped plugin registry")
+		span.AddEvent("Stopped plugin registry")
+	}
+	span.End()
+
+	// Close the stop channel to notify the other goroutines to stop.
+	stopChan <- struct{}{}
+	close(stopChan)
+}
 
 // runCmd represents the run command.
 var runCmd = &cobra.Command{
@@ -632,42 +695,16 @@ var runCmd = &cobra.Command{
 			for sig := range signalsCh {
 				for _, s := range signals {
 					if sig != s {
-						_, span := otel.Tracer(config.TracerName).Start(runCtx, "Shutdown server")
-
-						logger.Info().Msg("Notifying the plugins that the server is shutting down")
-						_, err := pluginRegistry.Run(
+						StopGracefully(
+							runCtx,
 							pluginTimeoutCtx,
-							map[string]interface{}{"signal": sig.String()},
-							v1.HookName_HOOK_NAME_ON_SIGNAL,
+							sig,
+							metricsMerger,
+							pluginRegistry,
+							logger,
+							servers,
+							stopChan,
 						)
-						if err != nil {
-							logger.Error().Err(err).Msg("Failed to run OnSignal hooks")
-							span.RecordError(err)
-						}
-
-						logger.Info().Msg("Stopping GatewayD")
-						span.AddEvent("Stopping GatewayD", trace.WithAttributes(
-							attribute.String("signal", sig.String()),
-						))
-						healthCheckScheduler.Clear()
-						logger.Info().Msg("Stopped health check scheduler")
-						span.AddEvent("Stopped health check scheduler")
-						if metricsMerger != nil {
-							metricsMerger.Stop()
-							logger.Info().Msg("Stopped metrics merger")
-							span.AddEvent("Stopped metrics merger")
-						}
-						for name, server := range servers {
-							logger.Info().Str("name", name).Msg("Stopping server")
-							server.Shutdown()
-							span.AddEvent("Stopped server")
-						}
-						logger.Info().Msg("Stopped all servers")
-						pluginRegistry.Shutdown()
-						logger.Info().Msg("Stopped plugin registry")
-						span.AddEvent("Stopped plugin registry")
-
-						span.End()
 						os.Exit(0)
 					}
 				}
@@ -703,7 +740,7 @@ var runCmd = &cobra.Command{
 		span.End()
 
 		// Wait for the server to shutdown.
-		<-make(chan struct{})
+		<-stopChan
 	},
 }
 
