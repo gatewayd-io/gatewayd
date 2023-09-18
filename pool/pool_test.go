@@ -206,3 +206,21 @@ func TestPool_GetClientIDs(t *testing.T) {
 	assert.Contains(t, ids, "client2.ID")
 	pool.Clear()
 }
+
+func TestPool_Cap(t *testing.T) {
+	pool := NewPool(context.Background(), 1)
+	assert.NotNil(t, pool)
+	assert.NotNil(t, pool.Pool())
+	assert.Equal(t, 0, pool.Size())
+	assert.Equal(t, 1, pool.Cap())
+	err := pool.Put("client1.ID", "client1")
+	assert.Nil(t, err)
+	assert.Equal(t, 1, pool.Size())
+	err = pool.Put("client2.ID", "client2")
+	assert.NotNil(t, err)
+	assert.Equal(t, 1, pool.Size())
+	assert.Equal(t, 1, pool.Cap())
+	pool.Clear()
+	assert.Equal(t, 0, pool.Size())
+	assert.Equal(t, 1, pool.Cap())
+}

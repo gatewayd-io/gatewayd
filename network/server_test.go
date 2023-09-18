@@ -1,9 +1,13 @@
 package network
 
 import (
+	"bufio"
 	"context"
 	"errors"
+	"io"
+	"os"
 	"testing"
+	"time"
 
 	v1 "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin/v1"
 	"github.com/gatewayd-io/gatewayd/config"
@@ -21,11 +25,15 @@ func TestRunServer(t *testing.T) {
 	errs := make(chan error)
 
 	logger := logging.NewLogger(context.Background(), logging.LoggerConfig{
-		Output:            []config.LogOutput{config.Console},
+		Output: []config.LogOutput{
+			config.Console,
+			config.File,
+		},
 		TimeFormat:        zerolog.TimeFormatUnix,
-		ConsoleTimeFormat: config.DefaultConsoleTimeFormat,
-		Level:             zerolog.ErrorLevel,
+		ConsoleTimeFormat: time.RFC3339,
+		Level:             zerolog.DebugLevel,
 		NoColor:           true,
+		FileName:          "server_test.log",
 	})
 
 	pluginRegistry := plugin.NewRegistry(
@@ -54,7 +62,8 @@ func TestRunServer(t *testing.T) {
 		} else {
 			errs <- errors.New("request is not a []byte") //nolint:goerr113
 		}
-		assert.Empty(t, paramsMap["error"])
+		assert.Empty(t, paramsMap["error"], "The error MUST be empty.")
+
 		return params, nil
 	}
 	pluginRegistry.AddHook(v1.HookName_HOOK_NAME_ON_TRAFFIC_FROM_CLIENT, 1, onTrafficFromClient)
@@ -170,6 +179,7 @@ func TestRunServer(t *testing.T) {
 			gnet.WithMulticore(false),
 			gnet.WithReuseAddr(true),
 			gnet.WithReusePort(true),
+			gnet.WithTicker(true), // Enable ticker.
 		},
 		proxy,
 		logger,
@@ -183,12 +193,36 @@ func TestRunServer(t *testing.T) {
 			errs <- err
 		}
 		close(errs)
+
+		// Read the log file and check if the log file contains the expected log messages.
+		if _, err := os.Stat("server_test.log"); err == nil {
+			logFile, err := os.Open("server_test.log")
+			assert.NoError(t, err)
+			defer logFile.Close()
+
+			reader := bufio.NewReader(logFile)
+			assert.NotNil(t, reader)
+
+			buffer, err := io.ReadAll(reader)
+			assert.NoError(t, err)
+			assert.Greater(t, len(buffer), 0) // The log file should not be empty.
+
+			logLines := string(buffer)
+			assert.Contains(t, logLines, "GatewayD is running", "GatewayD should be running")
+			assert.Contains(t, logLines, "GatewayD is ticking...", "GatewayD should be ticking")
+			assert.Contains(t, logLines, "Ingress traffic", "Ingress traffic should be logged")
+			assert.Contains(t, logLines, "Egress traffic", "Egress traffic should be logged")
+			assert.Contains(t, logLines, "GatewayD is shutting down...", "GatewayD should be shutting down")
+		}
 	}(server, errs)
 
 	//nolint:thelper
 	go func(t *testing.T, server *Server, proxy *Proxy) {
 		for {
 			if server.IsRunning() {
+				// Pause for a while to allow the server to start.
+				time.Sleep(500 * time.Millisecond)
+
 				client := NewClient(
 					context.Background(),
 					&config.Client{
@@ -231,8 +265,10 @@ func TestRunServer(t *testing.T) {
 				CollectAndComparePrometheusMetrics(t)
 
 				// Clean up.
-				server.Shutdown()
 				client.Close()
+				// Pause for a while to allow the server to disconnect and shutdown.
+				time.Sleep(500 * time.Millisecond)
+				server.Shutdown()
 				break
 			}
 		}

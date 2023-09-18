@@ -3,6 +3,7 @@ package plugin
 import (
 	"context"
 	"testing"
+	"time"
 
 	sdkPlugin "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin"
 	v1 "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin/v1"
@@ -19,7 +20,7 @@ func NewPluginRegistry(t *testing.T) *Registry {
 	cfg := logging.LoggerConfig{
 		Output:            []config.LogOutput{config.Console},
 		TimeFormat:        zerolog.TimeFormatUnix,
-		ConsoleTimeFormat: config.DefaultConsoleTimeFormat,
+		ConsoleTimeFormat: time.RFC3339,
 		Level:             zerolog.DebugLevel,
 		NoColor:           true,
 	}

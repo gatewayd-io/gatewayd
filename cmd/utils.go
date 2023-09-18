@@ -44,7 +44,9 @@ var (
 )
 
 // generateConfig generates a config file of the given type.
-func generateConfig(cmd *cobra.Command, fileType configFileType, configFile string, force bool) {
+func generateConfig(
+	cmd *cobra.Command, fileType configFileType, configFile string, forceRewriteFile bool,
+) {
 	logger := log.New(cmd.OutOrStdout(), "", 0)
 
 	// Create a new config object and load the defaults.
@@ -71,7 +73,7 @@ func generateConfig(cmd *cobra.Command, fileType configFileType, configFile stri
 
 	// Check if the config file already exists and if we should overwrite it.
 	exists := false
-	if _, err := os.Stat(configFile); err == nil && !force {
+	if _, err := os.Stat(configFile); err == nil && !forceRewriteFile {
 		logger.Fatal(
 			"Config file already exists. Use --force to overwrite or choose a different filename.")
 	} else if err == nil {
@@ -84,10 +86,10 @@ func generateConfig(cmd *cobra.Command, fileType configFileType, configFile stri
 	}
 
 	verb := "created"
-	if exists && force {
+	if exists && forceRewriteFile {
 		verb = "overwritten"
 	}
-	logger.Printf("Config file '%s' was %s successfully.", configFile, verb)
+	cmd.Printf("Config file '%s' was %s successfully.", configFile, verb)
 }
 
 func lintConfig(cmd *cobra.Command, fileType configFileType, configFile string) {
@@ -161,12 +163,10 @@ func lintConfig(cmd *cobra.Command, fileType configFileType, configFile string) 
 		logger.Fatalf("Error validating %s config: %s\n", string(fileType), err)
 	}
 
-	logger.Printf("%s config is valid\n", fileType)
+	cmd.Printf("%s config is valid\n", fileType)
 }
 
 func listPlugins(cmd *cobra.Command, pluginConfigFile string, onlyEnabled bool) {
-	logger := log.New(cmd.OutOrStdout(), "", 0)
-
 	// Load the plugin config file.
 	conf := config.NewConfig(context.TODO(), "", pluginConfigFile)
 	conf.LoadDefaults(context.TODO())
@@ -174,8 +174,10 @@ func listPlugins(cmd *cobra.Command, pluginConfigFile string, onlyEnabled bool) 
 	conf.UnmarshalPluginConfig(context.TODO())
 
 	if len(conf.Plugin.Plugins) != 0 {
-		logger.Printf("Total plugins: %d\n", len(conf.Plugin.Plugins))
-		logger.Println("Plugins:")
+		cmd.Printf("Total plugins: %d\n", len(conf.Plugin.Plugins))
+		cmd.Println("Plugins:")
+	} else {
+		cmd.Println("No plugins found")
 	}
 
 	// Print the list of plugins.
@@ -183,15 +185,15 @@ func listPlugins(cmd *cobra.Command, pluginConfigFile string, onlyEnabled bool) 
 		if onlyEnabled && !plugin.Enabled {
 			continue
 		}
-		logger.Printf("  Name: %s\n", plugin.Name)
-		logger.Printf("  Enabled: %t\n", plugin.Enabled)
-		logger.Printf("  Path: %s\n", plugin.LocalPath)
-		logger.Printf("  Args: %s\n", strings.Join(plugin.Args, " "))
-		logger.Println("  Env:")
+		cmd.Printf("  Name: %s\n", plugin.Name)
+		cmd.Printf("  Enabled: %t\n", plugin.Enabled)
+		cmd.Printf("  Path: %s\n", plugin.LocalPath)
+		cmd.Printf("  Args: %s\n", strings.Join(plugin.Args, " "))
+		cmd.Println("  Env:")
 		for _, env := range plugin.Env {
-			logger.Printf("    %s\n", env)
+			cmd.Printf("    %s\n", env)
 		}
-		logger.Printf("  Checksum: %s\n", plugin.Checksum)
+		cmd.Printf("  Checksum: %s\n", plugin.Checksum)
 	}
 }
 
@@ -388,11 +390,8 @@ func findAsset(release *github.RepositoryRelease, match func(string) bool) (stri
 }
 
 func downloadFile(
-	client *github.Client, account, pluginName, downloadURL string,
-	releaseID int64, filename string,
+	client *github.Client, account, pluginName string, releaseID int64, filename string,
 ) {
-	log.Println("Downloading", downloadURL)
-
 	// Download the plugin.
 	readCloser, redirectURL, err := client.Repositories.DownloadReleaseAsset(
 		context.Background(), account, pluginName, releaseID, http.DefaultClient)
@@ -445,6 +444,4 @@ func downloadFile(
 	if err != nil {
 		log.Panic("There was an error downloading the plugin: ", err)
 	}
-
-	log.Println("Download completed successfully")
 }

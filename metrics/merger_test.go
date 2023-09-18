@@ -22,7 +22,7 @@ func TestMerger(t *testing.T) {
 		logging.LoggerConfig{
 			Output:            []config.LogOutput{config.Console},
 			TimeFormat:        zerolog.TimeFormatUnix,
-			ConsoleTimeFormat: config.DefaultConsoleTimeFormat,
+			ConsoleTimeFormat: time.RFC3339,
 			Level:             zerolog.InfoLevel,
 			NoColor:           true,
 		},

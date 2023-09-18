@@ -112,7 +112,7 @@ func CollectAndComparePrometheusMetrics(t *testing.T) {
 			gatewayd_bytes_sent_to_server_sum 282
 			gatewayd_bytes_sent_to_server_count 5
 			gatewayd_client_connections 1
-			gatewayd_plugin_hooks_executed_total 10
+			gatewayd_plugin_hooks_executed_total 11
 			gatewayd_plugin_hooks_registered_total 0
 			gatewayd_plugins_loaded_total 0
 			gatewayd_proxied_connections 1
@@ -122,6 +122,7 @@ func CollectAndComparePrometheusMetrics(t *testing.T) {
 			gatewayd_server_connections 5
 			gatewayd_traffic_bytes_sum 182
 			gatewayd_traffic_bytes_count 4
+			gatewayd_server_ticks_fired_total 1
 		`
 
 		metrics = []string{
@@ -139,6 +140,7 @@ func CollectAndComparePrometheusMetrics(t *testing.T) {
 			"gatewayd_proxy_passthroughs_total",
 			"gatewayd_server_connections",
 			"gatewayd_traffic_bytes",
+			"gatewayd_server_ticks_fired_total",
 		}
 	)
 	assert.NoError(t,

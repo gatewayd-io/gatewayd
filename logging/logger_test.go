@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/rs/zerolog"
@@ -40,7 +41,7 @@ func TestNewLogger_File(t *testing.T) {
 		LoggerConfig{
 			Output:            []config.LogOutput{config.File},
 			FileName:          "gatewayd.log",
-			ConsoleTimeFormat: config.DefaultConsoleTimeFormat,
+			ConsoleTimeFormat: time.RFC3339,
 			MaxSize:           config.DefaultMaxSize,
 			MaxBackups:        config.DefaultMaxBackups,
 			MaxAge:            config.DefaultMaxAge,

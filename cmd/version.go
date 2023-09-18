@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/spf13/cobra"
 )
@@ -11,8 +9,8 @@ import (
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Show version information",
-	Run: func(_ *cobra.Command, _ []string) {
-		fmt.Println(config.VersionInfo()) //nolint:forbidigo
+	Run: func(cmd *cobra.Command, _ []string) {
+		cmd.Println(config.VersionInfo())
 	},
 }
 
