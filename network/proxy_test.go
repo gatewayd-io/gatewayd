@@ -229,7 +229,7 @@ func BenchmarkProxyConnectDisconnect(b *testing.B) {
 		TCPKeepAlive:       false,
 		TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 	}
-	pool.Put("client", NewClient(context.Background(), &clientConfig, logger))
+	pool.Put("client", NewClient(context.Background(), &clientConfig, logger)) //nolint:errcheck
 
 	// Create a proxy with a fixed buffer pool
 	proxy := NewProxy(
@@ -256,8 +256,8 @@ func BenchmarkProxyConnectDisconnect(b *testing.B) {
 
 	// Connect to the proxy
 	for i := 0; i < b.N; i++ {
-		proxy.Connect(gconn.Conn)
-		proxy.Disconnect(&gconn)
+		proxy.Connect(gconn.Conn) //nolint:errcheck
+		proxy.Disconnect(&gconn)  //nolint:errcheck
 	}
 }
 
@@ -283,7 +283,7 @@ func BenchmarkProxyPassThrough(b *testing.B) {
 		TCPKeepAlive:       false,
 		TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 	}
-	pool.Put("client", NewClient(context.Background(), &clientConfig, logger))
+	pool.Put("client", NewClient(context.Background(), &clientConfig, logger)) //nolint:errcheck
 
 	// Create a proxy with a fixed buffer pool
 	proxy := NewProxy(
@@ -307,12 +307,12 @@ func BenchmarkProxyPassThrough(b *testing.B) {
 	defer proxy.Shutdown()
 
 	gconn := testGNetConnection{}
-	proxy.Connect(gconn.Conn)
-	defer proxy.Disconnect(&gconn)
+	proxy.Connect(gconn.Conn)      //nolint:errcheck
+	defer proxy.Disconnect(&gconn) //nolint:errcheck
 
 	// Connect to the proxy
 	for i := 0; i < b.N; i++ {
-		proxy.PassThrough(&gconn)
+		proxy.PassThrough(&gconn) //nolint:errcheck
 	}
 }
 
@@ -339,7 +339,7 @@ func BenchmarkProxyIsHealthyAndIsExhausted(b *testing.B) {
 		TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 	}
 	client := NewClient(context.Background(), &clientConfig, logger)
-	pool.Put("client", client)
+	pool.Put("client", client) //nolint:errcheck
 
 	// Create a proxy with a fixed buffer pool
 	proxy := NewProxy(
@@ -363,12 +363,12 @@ func BenchmarkProxyIsHealthyAndIsExhausted(b *testing.B) {
 	defer proxy.Shutdown()
 
 	gconn := testGNetConnection{}
-	proxy.Connect(gconn.Conn)
-	defer proxy.Disconnect(&gconn)
+	proxy.Connect(gconn.Conn)      //nolint:errcheck
+	defer proxy.Disconnect(&gconn) //nolint:errcheck
 
 	// Connect to the proxy
 	for i := 0; i < b.N; i++ {
-		proxy.IsHealty(client)
+		proxy.IsHealty(client) //nolint:errcheck
 		proxy.IsExhausted()
 	}
 }
@@ -396,7 +396,7 @@ func BenchmarkProxyAvailableAndBusyConnections(b *testing.B) {
 		TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 	}
 	client := NewClient(context.Background(), &clientConfig, logger)
-	pool.Put("client", client)
+	pool.Put("client", client) //nolint:errcheck
 
 	// Create a proxy with a fixed buffer pool
 	proxy := NewProxy(
@@ -420,8 +420,8 @@ func BenchmarkProxyAvailableAndBusyConnections(b *testing.B) {
 	defer proxy.Shutdown()
 
 	gconn := testGNetConnection{}
-	proxy.Connect(gconn.Conn)
-	defer proxy.Disconnect(&gconn)
+	proxy.Connect(gconn.Conn)      //nolint:errcheck
+	defer proxy.Disconnect(&gconn) //nolint:errcheck
 
 	// Connect to the proxy
 	for i := 0; i < b.N; i++ {

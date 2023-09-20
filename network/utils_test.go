@@ -78,7 +78,7 @@ func BenchmarkResolveUDP(b *testing.B) {
 
 	logger := logging.NewLogger(context.Background(), cfg)
 	for i := 0; i < b.N; i++ {
-		Resolve("udp", "localhost:53", logger)
+		Resolve("udp", "localhost:53", logger) //nolint:errcheck
 	}
 }
 
@@ -93,7 +93,7 @@ func BenchmarkResolveTCP(b *testing.B) {
 
 	logger := logging.NewLogger(context.Background(), cfg)
 	for i := 0; i < b.N; i++ {
-		Resolve("tcp", "localhost:5432", logger)
+		Resolve("tcp", "localhost:5432", logger) //nolint:errcheck
 	}
 }
 
@@ -108,7 +108,7 @@ func BenchmarkResolveUnix(b *testing.B) {
 
 	logger := logging.NewLogger(context.Background(), cfg)
 	for i := 0; i < b.N; i++ {
-		Resolve("unix", "/tmp/unix.sock", logger)
+		Resolve("unix", "/tmp/unix.sock", logger) //nolint:errcheck
 	}
 }
 

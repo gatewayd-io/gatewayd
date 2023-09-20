@@ -118,7 +118,7 @@ func BenchmarkNewClient(b *testing.B) {
 
 	logger := logging.NewLogger(context.Background(), cfg)
 	for i := 0; i < b.N; i++ {
-		c := NewClient(context.Background(), &config.Client{
+		client := NewClient(context.Background(), &config.Client{
 			Network:            "tcp",
 			Address:            "localhost:5432",
 			ReceiveChunkSize:   config.DefaultChunkSize,
@@ -127,7 +127,7 @@ func BenchmarkNewClient(b *testing.B) {
 			TCPKeepAlive:       false,
 			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 		}, logger)
-		c.Close()
+		client.Close()
 	}
 }
 
@@ -156,7 +156,7 @@ func BenchmarkSend(b *testing.B) {
 
 	packet := CreatePgStartupPacket()
 	for i := 0; i < b.N; i++ {
-		client.Send(packet)
+		client.Send(packet) //nolint:errcheck
 	}
 }
 
@@ -185,9 +185,9 @@ func BenchmarkReceive(b *testing.B) {
 	defer client.Close()
 
 	packet := CreatePgStartupPacket()
-	client.Send(packet)
+	client.Send(packet) //nolint:errcheck
 	for i := 0; i < b.N; i++ {
-		client.Receive()
+		client.Receive() //nolint:errcheck
 	}
 }
 
