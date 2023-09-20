@@ -44,6 +44,7 @@ type Client struct {
 	TCPKeepAlivePeriod time.Duration `json:"tcpKeepAlivePeriod" jsonschema:"oneof_type=string;integer"`
 	ReceiveChunkSize   int           `json:"receiveChunkSize"`
 	ReceiveDeadline    time.Duration `json:"receiveDeadline" jsonschema:"oneof_type=string;integer"`
+	ReceiveTimeout     time.Duration `json:"receiveTimeout" jsonschema:"oneof_type=string;integer"`
 	SendDeadline       time.Duration `json:"sendDeadline" jsonschema:"oneof_type=string;integer"`
 }
 

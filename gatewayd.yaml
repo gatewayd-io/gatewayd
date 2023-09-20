@@ -33,6 +33,7 @@ clients:
     tcpKeepAlivePeriod: 30s # duration
     receiveChunkSize: 8192
     receiveDeadline: 0s # duration, 0ms/0s means no deadline
+    receiveTimeout: 0s # duration, 0ms/0s means no timeout
     sendDeadline: 0s # duration, 0ms/0s means no deadline
 
 pools:

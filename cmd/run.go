@@ -407,6 +407,7 @@ var runCmd = &cobra.Command{
 			// Fill the missing and zero values with the default ones.
 			clients[name].TCPKeepAlivePeriod = clients[name].GetTCPKeepAlivePeriod()
 			clients[name].ReceiveDeadline = clients[name].GetReceiveDeadline()
+			clients[name].ReceiveTimeout = clients[name].GetReceiveTimeout()
 			clients[name].SendDeadline = clients[name].GetSendDeadline()
 			clients[name].ReceiveChunkSize = clients[name].GetReceiveChunkSize()
 

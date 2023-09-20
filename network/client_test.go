@@ -30,6 +30,7 @@ func CreateNewClient(t *testing.T) *Client {
 			Address:            "localhost:5432",
 			ReceiveChunkSize:   config.DefaultChunkSize,
 			ReceiveDeadline:    config.DefaultReceiveDeadline,
+			ReceiveTimeout:     config.DefaultReceiveTimeout,
 			SendDeadline:       config.DefaultSendDeadline,
 			TCPKeepAlive:       false,
 			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
