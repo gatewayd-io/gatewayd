@@ -34,6 +34,7 @@ type Client struct {
 	ReceiveChunkSize   int
 	ReceiveDeadline    time.Duration
 	SendDeadline       time.Duration
+	ReceiveTimeout     time.Duration
 	ID                 string
 	Network            string // tcp/udp/unix
 	Address            string
@@ -168,12 +169,21 @@ func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 	_, span := otel.Tracer(config.TracerName).Start(c.ctx, "Receive")
 	defer span.End()
 
+	var ctx context.Context
+	var cancel context.CancelFunc
+	if c.ReceiveTimeout > 0 {
+		ctx, cancel = context.WithTimeout(c.ctx, c.ReceiveTimeout)
+		defer cancel()
+	} else {
+		ctx = context.Background()
+	}
+
 	var received int
 	buffer := bytes.NewBuffer(nil)
 	// Read the data in chunks.
 	select { //nolint:gosimple
 	case <-time.After(time.Millisecond):
-		for {
+		for ctx.Err() == nil {
 			chunk := make([]byte, c.ReceiveChunkSize)
 			read, err := c.Conn.Read(chunk)
 			if err != nil {

@@ -101,6 +101,7 @@ const (
 	DefaultSendDeadline       = 0
 	DefaultTCPKeepAlivePeriod = 30 * time.Second
 	DefaultTCPKeepAlive       = false
+	DefaultReceiveTimeout     = 0
 
 	// Pool constants.
 	EmptyPoolCapacity        = 0

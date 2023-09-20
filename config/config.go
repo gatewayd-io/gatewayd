@@ -113,6 +113,7 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 		TCPKeepAlivePeriod: DefaultTCPKeepAlivePeriod,
 		ReceiveChunkSize:   DefaultChunkSize,
 		ReceiveDeadline:    DefaultReceiveDeadline,
+		ReceiveTimeout:     DefaultReceiveTimeout,
 		SendDeadline:       DefaultSendDeadline,
 	}
 

@@ -126,6 +126,14 @@ func (c Client) GetReceiveDeadline() time.Duration {
 	return c.ReceiveDeadline
 }
 
+// GetReceiveTimeout returns the receive timeout from config file or default value.
+func (c Client) GetReceiveTimeout() time.Duration {
+	if c.ReceiveTimeout <= 0 {
+		return DefaultReceiveTimeout
+	}
+	return c.ReceiveTimeout
+}
+
 // GetSendDeadline returns the send deadline from config file or default value.
 func (c Client) GetSendDeadline() time.Duration {
 	if c.SendDeadline <= 0 {
