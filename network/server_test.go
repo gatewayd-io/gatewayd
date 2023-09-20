@@ -213,6 +213,8 @@ func TestRunServer(t *testing.T) {
 			assert.Contains(t, logLines, "Ingress traffic", "Ingress traffic should be logged")
 			assert.Contains(t, logLines, "Egress traffic", "Egress traffic should be logged")
 			assert.Contains(t, logLines, "GatewayD is shutting down...", "GatewayD should be shutting down")
+
+			assert.NoError(t, os.Remove("server_test.log"))
 		}
 	}(server, errs)
 
