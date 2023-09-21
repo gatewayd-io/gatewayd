@@ -74,6 +74,7 @@ linters-settings:
           - "github.com/prometheus/common/expfmt"
           - "github.com/panjf2000/gnet/v2"
           - "github.com/spf13/cobra"
+          - "github.com/knadh/koanf"
   tagalign:
     align: false
     sort: false
