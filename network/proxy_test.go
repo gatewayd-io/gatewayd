@@ -126,3 +126,306 @@ func TestNewProxyElastic(t *testing.T) {
 	assert.Equal(t, "tcp", proxy.ClientConfig.Network)
 	assert.Equal(t, "localhost:5432", proxy.ClientConfig.Address)
 }
+
+func BenchmarkNewProxy(b *testing.B) {
+	logger := logging.NewLogger(context.Background(), logging.LoggerConfig{
+		Output:            []config.LogOutput{config.Console},
+		TimeFormat:        zerolog.TimeFormatUnix,
+		ConsoleTimeFormat: time.RFC3339,
+		Level:             zerolog.WarnLevel,
+		NoColor:           true,
+	})
+
+	// Create a connection pool
+	pool := pool.NewPool(context.Background(), config.EmptyPoolCapacity)
+
+	// Create a proxy with a fixed buffer pool
+	for i := 0; i < b.N; i++ {
+		proxy := NewProxy(
+			context.Background(),
+			pool,
+			plugin.NewRegistry(
+				context.Background(),
+				config.Loose,
+				config.PassDown,
+				config.Accept,
+				config.Stop,
+				logger,
+				false,
+			),
+			false,
+			false,
+			config.DefaultHealthCheckPeriod,
+			nil,
+			logger,
+			config.DefaultPluginTimeout)
+		proxy.Shutdown()
+	}
+}
+
+func BenchmarkNewProxyElastic(b *testing.B) {
+	logger := logging.NewLogger(context.Background(), logging.LoggerConfig{
+		Output:            []config.LogOutput{config.Console},
+		TimeFormat:        zerolog.TimeFormatUnix,
+		ConsoleTimeFormat: time.RFC3339,
+		Level:             zerolog.WarnLevel,
+		NoColor:           true,
+	})
+
+	// Create a connection pool
+	pool := pool.NewPool(context.Background(), config.EmptyPoolCapacity)
+
+	// Create a proxy with an elastic buffer pool
+	for i := 0; i < b.N; i++ {
+		proxy := NewProxy(
+			context.Background(),
+			pool,
+			plugin.NewRegistry(
+				context.Background(),
+				config.Loose,
+				config.PassDown,
+				config.Accept,
+				config.Stop,
+				logger,
+				false,
+			),
+			true,
+			false,
+			config.DefaultHealthCheckPeriod,
+			&config.Client{
+				Network:            "tcp",
+				Address:            "localhost:5432",
+				ReceiveChunkSize:   config.DefaultChunkSize,
+				ReceiveDeadline:    config.DefaultReceiveDeadline,
+				SendDeadline:       config.DefaultSendDeadline,
+				TCPKeepAlive:       false,
+				TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
+			},
+			logger,
+			config.DefaultPluginTimeout)
+		proxy.Shutdown()
+	}
+}
+
+func BenchmarkProxyConnectDisconnect(b *testing.B) {
+	logger := logging.NewLogger(context.Background(), logging.LoggerConfig{
+		Output:            []config.LogOutput{config.Console},
+		TimeFormat:        zerolog.TimeFormatUnix,
+		ConsoleTimeFormat: time.RFC3339,
+		Level:             zerolog.PanicLevel,
+		NoColor:           true,
+	})
+
+	// Create a connection pool
+	pool := pool.NewPool(context.Background(), 1)
+
+	clientConfig := config.Client{
+		Network:            "tcp",
+		Address:            "localhost:5432",
+		ReceiveChunkSize:   config.DefaultChunkSize,
+		ReceiveDeadline:    config.DefaultReceiveDeadline,
+		ReceiveTimeout:     config.DefaultReceiveTimeout,
+		SendDeadline:       config.DefaultSendDeadline,
+		TCPKeepAlive:       false,
+		TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
+	}
+	pool.Put("client", NewClient(context.Background(), &clientConfig, logger)) //nolint:errcheck
+
+	// Create a proxy with a fixed buffer pool
+	proxy := NewProxy(
+		context.Background(),
+		pool,
+		plugin.NewRegistry(
+			context.Background(),
+			config.Loose,
+			config.PassDown,
+			config.Accept,
+			config.Stop,
+			logger,
+			false,
+		),
+		false,
+		false,
+		config.DefaultHealthCheckPeriod,
+		&clientConfig,
+		logger,
+		config.DefaultPluginTimeout)
+	defer proxy.Shutdown()
+
+	gconn := testGNetConnection{}
+
+	// Connect to the proxy
+	for i := 0; i < b.N; i++ {
+		proxy.Connect(gconn.Conn) //nolint:errcheck
+		proxy.Disconnect(&gconn)  //nolint:errcheck
+	}
+}
+
+func BenchmarkProxyPassThrough(b *testing.B) {
+	logger := logging.NewLogger(context.Background(), logging.LoggerConfig{
+		Output:            []config.LogOutput{config.Console},
+		TimeFormat:        zerolog.TimeFormatUnix,
+		ConsoleTimeFormat: time.RFC3339,
+		Level:             zerolog.PanicLevel,
+		NoColor:           true,
+	})
+
+	// Create a connection pool
+	pool := pool.NewPool(context.Background(), 1)
+
+	clientConfig := config.Client{
+		Network:            "tcp",
+		Address:            "localhost:5432",
+		ReceiveChunkSize:   config.DefaultChunkSize,
+		ReceiveDeadline:    config.DefaultReceiveDeadline,
+		ReceiveTimeout:     config.DefaultReceiveTimeout,
+		SendDeadline:       config.DefaultSendDeadline,
+		TCPKeepAlive:       false,
+		TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
+	}
+	pool.Put("client", NewClient(context.Background(), &clientConfig, logger)) //nolint:errcheck
+
+	// Create a proxy with a fixed buffer pool
+	proxy := NewProxy(
+		context.Background(),
+		pool,
+		plugin.NewRegistry(
+			context.Background(),
+			config.Loose,
+			config.PassDown,
+			config.Accept,
+			config.Stop,
+			logger,
+			false,
+		),
+		false,
+		false,
+		config.DefaultHealthCheckPeriod,
+		&clientConfig,
+		logger,
+		config.DefaultPluginTimeout)
+	defer proxy.Shutdown()
+
+	gconn := testGNetConnection{}
+	proxy.Connect(gconn.Conn)      //nolint:errcheck
+	defer proxy.Disconnect(&gconn) //nolint:errcheck
+
+	// Connect to the proxy
+	for i := 0; i < b.N; i++ {
+		proxy.PassThrough(&gconn) //nolint:errcheck
+	}
+}
+
+func BenchmarkProxyIsHealthyAndIsExhausted(b *testing.B) {
+	logger := logging.NewLogger(context.Background(), logging.LoggerConfig{
+		Output:            []config.LogOutput{config.Console},
+		TimeFormat:        zerolog.TimeFormatUnix,
+		ConsoleTimeFormat: time.RFC3339,
+		Level:             zerolog.PanicLevel,
+		NoColor:           true,
+	})
+
+	// Create a connection pool
+	pool := pool.NewPool(context.Background(), 1)
+
+	clientConfig := config.Client{
+		Network:            "tcp",
+		Address:            "localhost:5432",
+		ReceiveChunkSize:   config.DefaultChunkSize,
+		ReceiveDeadline:    config.DefaultReceiveDeadline,
+		ReceiveTimeout:     config.DefaultReceiveTimeout,
+		SendDeadline:       config.DefaultSendDeadline,
+		TCPKeepAlive:       false,
+		TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
+	}
+	client := NewClient(context.Background(), &clientConfig, logger)
+	pool.Put("client", client) //nolint:errcheck
+
+	// Create a proxy with a fixed buffer pool
+	proxy := NewProxy(
+		context.Background(),
+		pool,
+		plugin.NewRegistry(
+			context.Background(),
+			config.Loose,
+			config.PassDown,
+			config.Accept,
+			config.Stop,
+			logger,
+			false,
+		),
+		false,
+		false,
+		config.DefaultHealthCheckPeriod,
+		&clientConfig,
+		logger,
+		config.DefaultPluginTimeout)
+	defer proxy.Shutdown()
+
+	gconn := testGNetConnection{}
+	proxy.Connect(gconn.Conn)      //nolint:errcheck
+	defer proxy.Disconnect(&gconn) //nolint:errcheck
+
+	// Connect to the proxy
+	for i := 0; i < b.N; i++ {
+		proxy.IsHealty(client) //nolint:errcheck
+		proxy.IsExhausted()
+	}
+}
+
+func BenchmarkProxyAvailableAndBusyConnections(b *testing.B) {
+	logger := logging.NewLogger(context.Background(), logging.LoggerConfig{
+		Output:            []config.LogOutput{config.Console},
+		TimeFormat:        zerolog.TimeFormatUnix,
+		ConsoleTimeFormat: time.RFC3339,
+		Level:             zerolog.PanicLevel,
+		NoColor:           true,
+	})
+
+	// Create a connection pool
+	pool := pool.NewPool(context.Background(), 1)
+
+	clientConfig := config.Client{
+		Network:            "tcp",
+		Address:            "localhost:5432",
+		ReceiveChunkSize:   config.DefaultChunkSize,
+		ReceiveDeadline:    config.DefaultReceiveDeadline,
+		ReceiveTimeout:     config.DefaultReceiveTimeout,
+		SendDeadline:       config.DefaultSendDeadline,
+		TCPKeepAlive:       false,
+		TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
+	}
+	client := NewClient(context.Background(), &clientConfig, logger)
+	pool.Put("client", client) //nolint:errcheck
+
+	// Create a proxy with a fixed buffer pool
+	proxy := NewProxy(
+		context.Background(),
+		pool,
+		plugin.NewRegistry(
+			context.Background(),
+			config.Loose,
+			config.PassDown,
+			config.Accept,
+			config.Stop,
+			logger,
+			false,
+		),
+		false,
+		false,
+		config.DefaultHealthCheckPeriod,
+		&clientConfig,
+		logger,
+		config.DefaultPluginTimeout)
+	defer proxy.Shutdown()
+
+	gconn := testGNetConnection{}
+	proxy.Connect(gconn.Conn)      //nolint:errcheck
+	defer proxy.Disconnect(&gconn) //nolint:errcheck
+
+	// Connect to the proxy
+	for i := 0; i < b.N; i++ {
+		proxy.AvailableConnections()
+		proxy.BusyConnections()
+	}
+}

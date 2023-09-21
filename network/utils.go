@@ -74,7 +74,6 @@ func trafficData(
 	}
 
 	for _, field := range fields {
-		// field.Value will be converted to base64-encoded string.
 		data[field.Name] = field.Value
 	}
 

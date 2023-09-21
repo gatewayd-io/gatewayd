@@ -110,6 +110,9 @@ clean:
 test:
 	@go test -v ./...
 
+benchmark:
+	@go test -bench=. -benchmem -run=^# ./...
+
 update-all:
 	@go get -u ./...
 	@go mod tidy
