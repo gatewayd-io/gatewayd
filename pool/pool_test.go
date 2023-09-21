@@ -235,7 +235,7 @@ func BenchmarkPool_PutPop(b *testing.B) {
 	pool := NewPool(context.Background(), config.EmptyPoolCapacity)
 	defer pool.Clear()
 	for i := 0; i < b.N; i++ {
-		pool.Put("client1.ID", "client1")
+		pool.Put("client1.ID", "client1") //nolint:errcheck
 		pool.Pop("client1.ID")
 	}
 }
@@ -250,8 +250,8 @@ func BenchmarkPool_Clear(b *testing.B) {
 func BenchmarkPool_ForEach(b *testing.B) {
 	pool := NewPool(context.Background(), config.EmptyPoolCapacity)
 	defer pool.Clear()
-	pool.Put("client1.ID", "client1")
-	pool.Put("client2.ID", "client2")
+	pool.Put("client1.ID", "client1") //nolint:errcheck
+	pool.Put("client2.ID", "client2") //nolint:errcheck
 	for i := 0; i < b.N; i++ {
 		pool.ForEach(func(key, value interface{}) bool {
 			return true
@@ -262,8 +262,8 @@ func BenchmarkPool_ForEach(b *testing.B) {
 func BenchmarkPool_Get(b *testing.B) {
 	pool := NewPool(context.Background(), config.EmptyPoolCapacity)
 	defer pool.Clear()
-	pool.Put("client1.ID", "client1")
-	pool.Put("client2.ID", "client2")
+	pool.Put("client1.ID", "client1") //nolint:errcheck
+	pool.Put("client2.ID", "client2") //nolint:errcheck
 	for i := 0; i < b.N; i++ {
 		pool.Get("client1.ID")
 		pool.Get("client2.ID")
@@ -273,11 +273,11 @@ func BenchmarkPool_Get(b *testing.B) {
 func BenchmarkPool_GetOrPut(b *testing.B) {
 	pool := NewPool(context.Background(), config.EmptyPoolCapacity)
 	defer pool.Clear()
-	pool.Put("client1.ID", "client1")
-	pool.Put("client2.ID", "client2")
+	pool.Put("client1.ID", "client1") //nolint:errcheck
+	pool.Put("client2.ID", "client2") //nolint:errcheck
 	for i := 0; i < b.N; i++ {
-		pool.GetOrPut("client1.ID", "client1")
-		pool.GetOrPut("client2.ID", "client2")
+		pool.GetOrPut("client1.ID", "client1") //nolint:errcheck
+		pool.GetOrPut("client2.ID", "client2") //nolint:errcheck
 	}
 }
 
@@ -285,7 +285,7 @@ func BenchmarkPool_Remove(b *testing.B) {
 	pool := NewPool(context.Background(), config.EmptyPoolCapacity)
 	defer pool.Clear()
 	for i := 0; i < b.N; i++ {
-		pool.Put("client1.ID", "client1")
+		pool.Put("client1.ID", "client1") //nolint:errcheck
 		pool.Remove("client1.ID")
 	}
 }

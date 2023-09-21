@@ -326,6 +326,7 @@ func BenchmarkHookRun(b *testing.B) {
 		)
 	}
 	for i := 0; i < b.N; i++ {
+		//nolint:errcheck
 		reg.Run(
 			context.Background(),
 			map[string]interface{}{
