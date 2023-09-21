@@ -293,3 +293,45 @@ func Test_HookRegistry_Run_Remove(t *testing.T) {
 	assert.Equal(t, map[string]interface{}{}, result)
 	assert.Equal(t, 1, len(reg.Hooks()[v1.HookName_HOOK_NAME_ON_NEW_LOGGER]))
 }
+
+func BenchmarkHookRun(b *testing.B) {
+	cfg := logging.LoggerConfig{
+		Output:            []config.LogOutput{config.Console},
+		TimeFormat:        zerolog.TimeFormatUnix,
+		ConsoleTimeFormat: time.RFC3339,
+		Level:             zerolog.DebugLevel,
+		NoColor:           true,
+	}
+	logger := logging.NewLogger(context.Background(), cfg)
+	reg := NewRegistry(
+		context.Background(),
+		config.Loose,
+		config.PassDown,
+		config.Accept,
+		config.Stop,
+		logger,
+		false,
+	)
+	reg.Verification = config.PassDown
+	hookFunction := func(
+		ctx context.Context, args *v1.Struct, opts ...grpc.CallOption,
+	) (*v1.Struct, error) {
+		args.Fields["test"] = v1.NewStringValue("test1")
+		return args, nil
+	}
+	for priority := 0; priority < 1000; priority++ {
+		reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER,
+			sdkPlugin.Priority(priority),
+			hookFunction,
+		)
+	}
+	for i := 0; i < b.N; i++ {
+		reg.Run(
+			context.Background(),
+			map[string]interface{}{
+				"test": "test",
+			},
+			v1.HookName_HOOK_NAME_ON_NEW_LOGGER,
+		)
+	}
+}
