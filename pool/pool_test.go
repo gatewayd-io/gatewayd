@@ -224,3 +224,84 @@ func TestPool_Cap(t *testing.T) {
 	assert.Equal(t, 0, pool.Size())
 	assert.Equal(t, 1, pool.Cap())
 }
+
+func BenchmarkNewPool(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		NewPool(context.Background(), config.EmptyPoolCapacity)
+	}
+}
+
+func BenchmarkPool_PutPop(b *testing.B) {
+	pool := NewPool(context.Background(), config.EmptyPoolCapacity)
+	defer pool.Clear()
+	for i := 0; i < b.N; i++ {
+		pool.Put("client1.ID", "client1")
+		pool.Pop("client1.ID")
+	}
+}
+
+func BenchmarkPool_Clear(b *testing.B) {
+	pool := NewPool(context.Background(), config.EmptyPoolCapacity)
+	for i := 0; i < b.N; i++ {
+		pool.Clear()
+	}
+}
+
+func BenchmarkPool_ForEach(b *testing.B) {
+	pool := NewPool(context.Background(), config.EmptyPoolCapacity)
+	defer pool.Clear()
+	pool.Put("client1.ID", "client1")
+	pool.Put("client2.ID", "client2")
+	for i := 0; i < b.N; i++ {
+		pool.ForEach(func(key, value interface{}) bool {
+			return true
+		})
+	}
+}
+
+func BenchmarkPool_Get(b *testing.B) {
+	pool := NewPool(context.Background(), config.EmptyPoolCapacity)
+	defer pool.Clear()
+	pool.Put("client1.ID", "client1")
+	pool.Put("client2.ID", "client2")
+	for i := 0; i < b.N; i++ {
+		pool.Get("client1.ID")
+		pool.Get("client2.ID")
+	}
+}
+
+func BenchmarkPool_GetOrPut(b *testing.B) {
+	pool := NewPool(context.Background(), config.EmptyPoolCapacity)
+	defer pool.Clear()
+	pool.Put("client1.ID", "client1")
+	pool.Put("client2.ID", "client2")
+	for i := 0; i < b.N; i++ {
+		pool.GetOrPut("client1.ID", "client1")
+		pool.GetOrPut("client2.ID", "client2")
+	}
+}
+
+func BenchmarkPool_Remove(b *testing.B) {
+	pool := NewPool(context.Background(), config.EmptyPoolCapacity)
+	defer pool.Clear()
+	for i := 0; i < b.N; i++ {
+		pool.Put("client1.ID", "client1")
+		pool.Remove("client1.ID")
+	}
+}
+
+func BenchmarkPool_Size(b *testing.B) {
+	pool := NewPool(context.Background(), config.EmptyPoolCapacity)
+	defer pool.Clear()
+	for i := 0; i < b.N; i++ {
+		pool.Size()
+	}
+}
+
+func BenchmarkPool_Cap(b *testing.B) {
+	pool := NewPool(context.Background(), config.EmptyPoolCapacity)
+	defer pool.Clear()
+	for i := 0; i < b.N; i++ {
+		pool.Cap()
+	}
+}
