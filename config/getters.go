@@ -207,6 +207,11 @@ func (l Logger) GetOutput() []LogOutput {
 			outputs = append(outputs, Console)
 		}
 	}
+
+	if len(outputs) == 0 {
+		outputs = append(outputs, Console)
+	}
+
 	return outputs
 }
 
