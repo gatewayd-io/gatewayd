@@ -56,6 +56,7 @@ var (
 
 	UsageReportURL = "localhost:59091"
 
+	metricRegisteries    = make(map[string]*metrics.MetricRegistry)
 	loggers              = make(map[string]zerolog.Logger)
 	pools                = make(map[string]*pool.Pool)
 	clients              = make(map[string]*config.Client)
@@ -216,6 +217,7 @@ var runCmd = &cobra.Command{
 		pluginRegistry.LoadPlugins(runCtx, conf.Plugin.Plugins)
 
 		// Start the metrics merger if enabled.
+		// TODO: This should handle different instances of metrics registry.
 		var metricsMerger *metrics.Merger
 		if conf.Plugin.EnableMetricsMerger {
 			metricsMerger = metrics.NewMerger(runCtx, conf.Plugin.MetricsMergerPeriod, logger)
@@ -303,72 +305,93 @@ var runCmd = &cobra.Command{
 		// Start the metrics server if enabled.
 		// TODO: Start multiple metrics servers. For now, only one default is supported.
 		// I should first find a use case for those multiple metrics servers.
-		go func(metricsConfig *config.Metrics, logger zerolog.Logger) {
-			_, span := otel.Tracer(config.TracerName).Start(runCtx, "Start metrics server")
-			defer span.End()
+		go func(metricsConfigs map[string]*config.Metrics, logger zerolog.Logger) {
+			for group, metricsConfig := range metricsConfigs {
+				_, span := otel.Tracer(config.TracerName).Start(runCtx, "Start metrics server")
+				defer span.End()
 
-			// TODO: refactor this to a separate function.
-			if !metricsConfig.Enabled {
-				logger.Info().Msg("Metrics server is disabled")
-				return
-			}
-
-			fqdn, err := url.Parse("http://" + metricsConfig.Address)
-			if err != nil {
-				logger.Error().Err(err).Msg("Failed to parse metrics address")
-				span.RecordError(err)
-				return
-			}
-
-			address, err := url.JoinPath(fqdn.String(), metricsConfig.Path)
-			if err != nil {
-				logger.Error().Err(err).Msg("Failed to parse metrics path")
-				span.RecordError(err)
-				return
-			}
-
-			// Merge the metrics from the plugins with the ones from GatewayD.
-			mergedMetricsHandler := func(next http.Handler) http.Handler {
-				handler := func(responseWriter http.ResponseWriter, request *http.Request) {
-					if _, err := responseWriter.Write(metricsMerger.OutputMetrics); err != nil {
-						logger.Error().Err(err).Msg("Failed to write metrics")
-						span.RecordError(err)
-						sentry.CaptureException(err)
-					}
-					next.ServeHTTP(responseWriter, request)
+				if !metricsConfig.Enabled {
+					logger.Debug().Str("group", group).Msg("Metrics server is disabled")
+					span.AddEvent("Metrics server is disabled",
+						trace.WithAttributes(attribute.KeyValue{
+							Key:   attribute.Key("group"),
+							Value: attribute.StringValue(group),
+						}),
+					)
+					metricRegisteries[group] = nil
+					continue
 				}
-				return http.HandlerFunc(handler)
-			}
 
-			handler := func() http.Handler {
-				return promhttp.InstrumentMetricHandler(
-					prometheus.DefaultRegisterer,
-					promhttp.HandlerFor(prometheus.DefaultGatherer, promhttp.HandlerOpts{
-						DisableCompression: true,
-					}),
-				)
-			}()
+				metricRegisteries[group] = metrics.NewMetricRegistry()
+				metricRegisteries[group].Init(
+					prometheus.Labels{metrics.DefaultGroupLabel: group}, true, true)
 
-			logger.Info().Str("address", address).Msg("Metrics are exposed")
+				fqdn, err := url.Parse("http://" + metricsConfig.Address)
+				if err != nil {
+					logger.Error().Str("group", group).Err(err).Msg(
+						"Failed to parse metrics address")
+					span.RecordError(err)
+					return
+				}
 
-			if conf.Plugin.EnableMetricsMerger && metricsMerger != nil {
-				handler = mergedMetricsHandler(handler)
-			}
-			// Check if the metrics server is already running before registering the handler.
-			if _, err = http.Get(address); err != nil { //nolint:gosec
-				http.Handle(metricsConfig.Path, gziphandler.GzipHandler(handler))
-			} else {
-				logger.Warn().Msg("Metrics server is already running, consider changing the port")
-				span.RecordError(err)
-			}
+				address, err := url.JoinPath(fqdn.String(), metricsConfig.Path)
+				if err != nil {
+					logger.Error().Str("group", group).Err(err).Msg("Failed to parse metrics path")
+					span.RecordError(err)
+					return
+				}
 
-			//nolint:gosec
-			if err = http.ListenAndServe(
-				metricsConfig.Address, nil); err != nil {
-				logger.Error().Err(err).Msg("Failed to start metrics server")
-				span.RecordError(err)
+				// Merge the metrics from the plugins with the ones from GatewayD.
+				mergedMetricsHandler := func(next http.Handler) http.Handler {
+					handler := func(responseWriter http.ResponseWriter, request *http.Request) {
+						if _, err := responseWriter.Write(metricsMerger.OutputMetrics); err != nil {
+							logger.Error().Str("group", group).Err(err).Msg(
+								"Failed to write metrics")
+							span.RecordError(err)
+							sentry.CaptureException(err)
+						}
+						next.ServeHTTP(responseWriter, request)
+					}
+					return http.HandlerFunc(handler)
+				}
+
+				handler := func() http.Handler {
+					return promhttp.InstrumentMetricHandler(
+						metricRegisteries[group].Registry,
+						promhttp.HandlerFor(metricRegisteries[group].Registry,
+							promhttp.HandlerOpts{
+								DisableCompression: true,
+							},
+						),
+					)
+				}()
+
+				logger.Info().Fields(
+					map[string]interface{}{
+						"address": address,
+						"group":   group,
+					}).Msg("Metrics are exposed")
+
+				if conf.Plugin.EnableMetricsMerger && metricsMerger != nil {
+					handler = mergedMetricsHandler(handler)
+				}
+				// Check if the metrics server is already running before registering the handler.
+				if _, err = http.Get(address); err != nil { //nolint:gosec
+					http.Handle(metricsConfig.Path, gziphandler.GzipHandler(handler))
+				} else {
+					logger.Warn().Str("group", group).Msg(
+						"Metrics server is already running, consider changing the port")
+					span.RecordError(err)
+				}
+
+				//nolint:gosec
+				if err = http.ListenAndServe(metricsConfig.Address, nil); err != nil {
+					logger.Error().Str("group", group).Err(err).Msg(
+						"Failed to start metrics server")
+					span.RecordError(err)
+				}
 			}
-		}(conf.Global.Metrics[config.Default], logger)
+		}(conf.Global.Metrics, logger)
 
 		// This is a notification hook, so we don't care about the result.
 		// TODO: Use a context with a timeout
