@@ -101,9 +101,10 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 	}
 
 	defaultMetric := Metrics{
-		Enabled: true,
-		Address: DefaultMetricsAddress,
-		Path:    DefaultMetricsPath,
+		Enabled:           true,
+		Address:           DefaultMetricsAddress,
+		Path:              DefaultMetricsPath,
+		ReadHeaderTimeout: DefaultReadHeaderTimeout,
 	}
 
 	defaultClient := Client{
