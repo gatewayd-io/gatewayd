@@ -31,7 +31,7 @@ func TestRunServer(t *testing.T) {
 		},
 		TimeFormat:        zerolog.TimeFormatUnix,
 		ConsoleTimeFormat: time.RFC3339,
-		Level:             zerolog.DebugLevel,
+		Level:             zerolog.WarnLevel,
 		NoColor:           true,
 		FileName:          "server_test.log",
 	})
