@@ -352,7 +352,14 @@ var runCmd = &cobra.Command{
 						span.RecordError(err)
 						sentry.CaptureException(err)
 					}
-					next.ServeHTTP(responseWriter, request)
+					// The WriteHeader method intentionally does nothing, to prevent a bug
+					// in the merging metrics that causes the headers to be written twice,
+					// which results in an error: "http: superfluous response.WriteHeader call".
+					next.ServeHTTP(
+						&metrics.HeaderBypassResponseWriter{
+							ResponseWriter: responseWriter,
+						},
+						request)
 				}
 				return http.HandlerFunc(handler)
 			}
