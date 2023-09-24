@@ -19,7 +19,7 @@ func TestNewProxy(t *testing.T) {
 		Output:            []config.LogOutput{config.Console},
 		TimeFormat:        zerolog.TimeFormatUnix,
 		ConsoleTimeFormat: time.RFC3339,
-		Level:             zerolog.DebugLevel,
+		Level:             zerolog.WarnLevel,
 		NoColor:           true,
 	})
 
@@ -82,7 +82,7 @@ func TestNewProxyElastic(t *testing.T) {
 		Output:            []config.LogOutput{config.Console},
 		TimeFormat:        zerolog.TimeFormatUnix,
 		ConsoleTimeFormat: time.RFC3339,
-		Level:             zerolog.DebugLevel,
+		Level:             zerolog.WarnLevel,
 		NoColor:           true,
 	})
 

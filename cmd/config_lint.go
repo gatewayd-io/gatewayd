@@ -31,7 +31,11 @@ var configLintCmd = &cobra.Command{
 			defer sentry.Recover()
 		}
 
-		lintConfig(cmd, Global, globalConfigFile)
+		if err := lintConfig(Global, globalConfigFile); err != nil {
+			log.Fatal(err)
+		}
+
+		cmd.Println("global config is valid")
 	},
 }
 

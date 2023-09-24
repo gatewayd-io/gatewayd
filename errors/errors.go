@@ -32,6 +32,7 @@ const (
 	ErrCodeDuplicateMetricsCollector
 	ErrCodeInvalidMetricType
 	ErrCodeValidationFailed
+	ErrCodeLintingFailed
 )
 
 var (
@@ -104,6 +105,8 @@ var (
 
 	ErrValidationFailed = NewGatewayDError(
 		ErrCodeValidationFailed, "validation failed", nil)
+	ErrLintingFailed = NewGatewayDError(
+		ErrCodeLintingFailed, "linting failed", nil)
 )
 
 const (

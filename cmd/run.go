@@ -45,6 +45,7 @@ import (
 // https://github.com/gatewayd-io/gatewayd/issues/324
 var (
 	enableTracing     bool
+	enableLinting     bool
 	collectorURL      string
 	enableSentry      bool
 	devMode           bool
@@ -166,6 +167,22 @@ var runCmd = &cobra.Command{
 			defer sentry.Flush(config.DefaultFlushTimeout)
 			// Recover from panics and report the error to Sentry.
 			defer sentry.Recover()
+		}
+
+		// Lint the configuration files before loading them.
+		if enableLinting {
+			_, span := otel.Tracer(config.TracerName).Start(runCtx, "Lint configuration files")
+			defer span.End()
+
+			// Lint the global configuration file and fail if it's not valid.
+			if err := lintConfig(Global, globalConfigFile); err != nil {
+				log.Fatal(err)
+			}
+
+			// Lint the plugin configuration file and fail if it's not valid.
+			if err := lintConfig(Plugins, pluginConfigFile); err != nil {
+				log.Fatal(err)
+			}
 		}
 
 		// Load global and plugin configuration.
@@ -775,4 +792,6 @@ func init() {
 		&enableSentry, "sentry", true, "Enable Sentry")
 	runCmd.Flags().BoolVar(
 		&enableUsageReport, "usage-report", true, "Enable usage report")
+	runCmd.Flags().BoolVar(
+		&enableLinting, "lint", true, "Enable linting of configuration files")
 }
