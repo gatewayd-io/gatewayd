@@ -130,8 +130,6 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 	defaultServer := Server{
 		Network:          DefaultListenNetwork,
 		Address:          DefaultListenAddress,
-		SoftLimit:        0,
-		HardLimit:        0,
 		EnableTicker:     false,
 		TickInterval:     DefaultTickInterval,
 		MultiCore:        true,

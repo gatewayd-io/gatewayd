@@ -94,8 +94,6 @@ type Server struct {
 	WriteBufferCap   int           `json:"writeBufferCap"`
 	SocketRecvBuffer int           `json:"socketRecvBuffer"`
 	SocketSendBuffer int           `json:"socketSendBuffer"`
-	SoftLimit        uint64        `json:"softLimit"`
-	HardLimit        uint64        `json:"hardLimit"`
 	TCPKeepAlive     time.Duration `json:"tcpKeepAlive" jsonschema:"oneof_type=string;integer"`
 	TickInterval     time.Duration `json:"tickInterval" jsonschema:"oneof_type=string;integer"`
 	Network          string        `json:"network" jsonschema:"enum=tcp,enum=udp,enum=unix"`

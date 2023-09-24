@@ -556,13 +556,10 @@ var runCmd = &cobra.Command{
 		// Create and initialize servers.
 		for name, cfg := range conf.Global.Servers {
 			logger := loggers[name]
-			softLimit, hardLimit := cfg.GetRLimits(logger)
 			servers[name] = network.NewServer(
 				runCtx,
 				cfg.Network,
 				cfg.Address,
-				softLimit,
-				hardLimit,
 				cfg.GetTickInterval(),
 				[]gnet.Option{
 					// Scheduling options
@@ -599,8 +596,6 @@ var runCmd = &cobra.Command{
 				attribute.String("name", name),
 				attribute.String("network", cfg.Network),
 				attribute.String("address", cfg.Address),
-				attribute.Int64("softLimit", int64(cfg.SoftLimit)),
-				attribute.Int64("hardLimit", int64(cfg.HardLimit)),
 				attribute.String("tickInterval", cfg.TickInterval.String()),
 				attribute.Bool("multiCore", cfg.MultiCore),
 				attribute.Bool("lockOSThread", cfg.LockOSThread),

@@ -172,8 +172,6 @@ func TestRunServer(t *testing.T) {
 		context.Background(),
 		"tcp",
 		"127.0.0.1:15432",
-		0,
-		0,
 		config.DefaultTickInterval,
 		[]gnet.Option{
 			gnet.WithMulticore(false),
