@@ -165,8 +165,6 @@ func (a *API) GetServers(context.Context, *emptypb.Empty) (*structpb.Struct, err
 			"network":      server.Network,
 			"address":      server.Address,
 			"status":       uint(server.Status),
-			"softLimit":    server.SoftLimit,
-			"hardLimit":    server.HardLimit,
 			"tickInterval": server.TickInterval.Nanoseconds(),
 		}
 	}

@@ -31,8 +31,6 @@ type Server struct {
 	Network      string // tcp/udp/unix
 	Address      string
 	Options      []gnet.Option
-	SoftLimit    uint64
-	HardLimit    uint64
 	Status       config.Status
 	TickInterval time.Duration
 }
@@ -105,22 +103,6 @@ func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 		span.RecordError(err)
 	}
 	span.AddEvent("Ran the OnOpening hooks")
-
-	// Check if the server is at the soft or hard limit.
-	// TODO: Get rid the hard/soft limit.
-	if s.SoftLimit > 0 && uint64(s.engine.CountConnections()) >= s.SoftLimit {
-		s.logger.Warn().Msg("Soft limit reached")
-	}
-
-	if s.HardLimit > 0 && uint64(s.engine.CountConnections()) >= s.HardLimit {
-		s.logger.Error().Msg("Hard limit reached")
-		_, err := gconn.Write([]byte("Hard limit reached\n"))
-		if err != nil {
-			s.logger.Error().Err(err).Msg("Failed to write to connection")
-			span.RecordError(err)
-		}
-		return nil, gnet.Close
-	}
 
 	// Use the proxy to connect to the backend. Close the connection if the pool is exhausted.
 	// This effectively get a connection from the pool and puts both the incoming and the server
@@ -417,7 +399,6 @@ func (s *Server) IsRunning() bool {
 func NewServer(
 	ctx context.Context,
 	network, address string,
-	softLimit, hardLimit uint64,
 	tickInterval time.Duration,
 	options []gnet.Option,
 	proxy IProxy,
@@ -436,8 +417,6 @@ func NewServer(
 		Options:        options,
 		TickInterval:   tickInterval,
 		Status:         config.Stopped,
-		HardLimit:      hardLimit,
-		SoftLimit:      softLimit,
 		proxy:          proxy,
 		logger:         logger,
 		pluginRegistry: pluginRegistry,

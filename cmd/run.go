@@ -440,6 +440,7 @@ var runCmd = &cobra.Command{
 						attribute.String("address", client.Address),
 						attribute.Int("receiveChunkSize", client.ReceiveChunkSize),
 						attribute.String("receiveDeadline", client.ReceiveDeadline.String()),
+						attribute.String("receiveTimeout", client.ReceiveTimeout.String()),
 						attribute.String("sendDeadline", client.SendDeadline.String()),
 						attribute.Bool("tcpKeepAlive", client.TCPKeepAlive),
 						attribute.String("tcpKeepAlivePeriod", client.TCPKeepAlivePeriod.String()),
@@ -460,6 +461,7 @@ var runCmd = &cobra.Command{
 						"address":            client.Address,
 						"receiveChunkSize":   client.ReceiveChunkSize,
 						"receiveDeadline":    client.ReceiveDeadline.String(),
+						"receiveTimeout":     client.ReceiveTimeout.String(),
 						"sendDeadline":       client.SendDeadline.String(),
 						"tcpKeepAlive":       client.TCPKeepAlive,
 						"tcpKeepAlivePeriod": client.TCPKeepAlivePeriod.String(),
@@ -554,13 +556,10 @@ var runCmd = &cobra.Command{
 		// Create and initialize servers.
 		for name, cfg := range conf.Global.Servers {
 			logger := loggers[name]
-			softLimit, hardLimit := cfg.GetRLimits(logger)
 			servers[name] = network.NewServer(
 				runCtx,
 				cfg.Network,
 				cfg.Address,
-				softLimit,
-				hardLimit,
 				cfg.GetTickInterval(),
 				[]gnet.Option{
 					// Scheduling options
@@ -597,8 +596,6 @@ var runCmd = &cobra.Command{
 				attribute.String("name", name),
 				attribute.String("network", cfg.Network),
 				attribute.String("address", cfg.Address),
-				attribute.Int64("softLimit", int64(cfg.SoftLimit)),
-				attribute.Int64("hardLimit", int64(cfg.HardLimit)),
 				attribute.String("tickInterval", cfg.TickInterval.String()),
 				attribute.Bool("multiCore", cfg.MultiCore),
 				attribute.Bool("lockOSThread", cfg.LockOSThread),
