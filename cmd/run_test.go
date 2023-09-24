@@ -34,6 +34,7 @@ func Test_runCmd(t *testing.T) {
 			nil,
 			nil,
 			nil,
+			nil,
 			loggers[config.Default],
 			servers,
 			stopChan,
@@ -112,6 +113,7 @@ func Test_runCmdWithCachePlugin(t *testing.T) {
 		StopGracefully(
 			runCmd.Context(),
 			runCmd.Context(),
+			nil,
 			nil,
 			nil,
 			nil,

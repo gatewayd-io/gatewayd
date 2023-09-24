@@ -11,9 +11,9 @@ type HeaderBypassResponseWriter struct {
 
 // WriteHeader intentionally does nothing, but is required to
 // implement the http.ResponseWriter.
-func (w *HeaderBypassResponseWriter) WriteHeader(code int) {}
+func (w *HeaderBypassResponseWriter) WriteHeader(int) {}
 
 // Write writes the data to the response.
 func (w *HeaderBypassResponseWriter) Write(data []byte) (int, error) {
-	return w.ResponseWriter.Write(data)
+	return w.ResponseWriter.Write(data) //nolint:wrapcheck
 }

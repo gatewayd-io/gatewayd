@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -54,6 +55,7 @@ var (
 	globalConfigFile  string
 	conf              *config.Config
 	pluginRegistry    *plugin.Registry
+	metricsServer     *http.Server
 
 	UsageReportURL = "localhost:59091"
 
@@ -72,6 +74,7 @@ func StopGracefully(
 	pluginTimeoutCtx context.Context,
 	sig os.Signal,
 	metricsMerger *metrics.Merger,
+	metricsServer *http.Server,
 	pluginRegistry *plugin.Registry,
 	logger zerolog.Logger,
 	servers map[string]*network.Server,
@@ -109,6 +112,16 @@ func StopGracefully(
 		metricsMerger.Stop()
 		logger.Info().Msg("Stopped metrics merger")
 		span.AddEvent("Stopped metrics merger")
+	}
+	if metricsServer != nil {
+		//nolint:contextcheck
+		if err := metricsServer.Shutdown(context.Background()); err != nil {
+			logger.Error().Err(err).Msg("Failed to stop metrics server")
+			span.RecordError(err)
+		} else {
+			logger.Info().Msg("Stopped metrics server")
+			span.AddEvent("Stopped metrics server")
+		}
 	}
 	for name, server := range servers {
 		logger.Info().Str("name", name).Msg("Stopping server")
@@ -378,6 +391,7 @@ var runCmd = &cobra.Command{
 			if conf.Plugin.EnableMetricsMerger && metricsMerger != nil {
 				handler = mergedMetricsHandler(handler)
 			}
+
 			// Check if the metrics server is already running before registering the handler.
 			if _, err = http.Get(address); err != nil { //nolint:gosec
 				http.Handle(metricsConfig.Path, gziphandler.GzipHandler(handler))
@@ -386,9 +400,14 @@ var runCmd = &cobra.Command{
 				span.RecordError(err)
 			}
 
-			//nolint:gosec
-			if err = http.ListenAndServe(
-				metricsConfig.Address, nil); err != nil {
+			// Create a new metrics server.
+			metricsServer = &http.Server{
+				Addr:    metricsConfig.Address,
+				Handler: handler,
+			}
+
+			// Start the metrics server.
+			if err = metricsServer.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 				logger.Error().Err(err).Msg("Failed to start metrics server")
 				span.RecordError(err)
 			}
@@ -730,6 +749,7 @@ var runCmd = &cobra.Command{
 							pluginTimeoutCtx,
 							sig,
 							metricsMerger,
+							metricsServer,
 							pluginRegistry,
 							logger,
 							servers,
