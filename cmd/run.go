@@ -402,8 +402,9 @@ var runCmd = &cobra.Command{
 
 			// Create a new metrics server.
 			metricsServer = &http.Server{
-				Addr:    metricsConfig.Address,
-				Handler: handler,
+				Addr:              metricsConfig.Address,
+				Handler:           handler,
+				ReadHeaderTimeout: metricsConfig.GetReadHeaderTimeout(),
 			}
 
 			// Start the metrics server.
@@ -414,7 +415,6 @@ var runCmd = &cobra.Command{
 		}(conf.Global.Metrics[config.Default], logger)
 
 		// This is a notification hook, so we don't care about the result.
-		// TODO: Use a context with a timeout
 		if data, ok := conf.GlobalKoanf.Get("loggers").(map[string]interface{}); ok {
 			_, err = pluginRegistry.Run(
 				pluginTimeoutCtx, data, v1.HookName_HOOK_NAME_ON_NEW_LOGGER)

@@ -123,8 +123,9 @@ const (
 	ChecksumBufferSize = 65536
 
 	// Metrics constants.
-	DefaultMetricsAddress = "localhost:9090"
-	DefaultMetricsPath    = "/metrics"
+	DefaultMetricsAddress    = "localhost:9090"
+	DefaultMetricsPath       = "/metrics"
+	DefaultReadHeaderTimeout = 10 * time.Second
 
 	// Sentry constants.
 	DefaultTraceSampleRate  = 0.2

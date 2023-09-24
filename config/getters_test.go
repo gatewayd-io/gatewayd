@@ -128,3 +128,9 @@ func TestGetPlugins(t *testing.T) {
 func TestGetDefaultConfigFilePath(t *testing.T) {
 	assert.Equal(t, GlobalConfigFilename, GetDefaultConfigFilePath(GlobalConfigFilename))
 }
+
+// TestGetReadTimeout tests the GetReadTimeout function.
+func TestGetReadHeaderTimeout(t *testing.T) {
+	metrics := Metrics{}
+	assert.Equal(t, DefaultReadHeaderTimeout, metrics.GetReadHeaderTimeout())
+}

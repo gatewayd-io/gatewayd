@@ -24,6 +24,7 @@ metrics:
     enabled: True
     address: localhost:9090
     path: /metrics
+    readHeaderTimeout: 10s # duration, prevents Slowloris attacks
 
 clients:
   default:

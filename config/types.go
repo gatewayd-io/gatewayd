@@ -68,9 +68,10 @@ type Logger struct {
 }
 
 type Metrics struct {
-	Enabled bool   `json:"enabled"`
-	Address string `json:"address"`
-	Path    string `json:"path"`
+	Enabled           bool          `json:"enabled"`
+	Address           string        `json:"address"`
+	Path              string        `json:"path"`
+	ReadHeaderTimeout time.Duration `json:"readHeaderTimeout" jsonschema:"oneof_type=string;integer"`
 }
 
 type Pool struct {

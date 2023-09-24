@@ -269,3 +269,10 @@ func GetDefaultConfigFilePath(filename string) string {
 	// The fallback is the current directory.
 	return filepath.Join("./", filename)
 }
+
+func (m Metrics) GetReadHeaderTimeout() time.Duration {
+	if m.ReadHeaderTimeout <= 0 {
+		return DefaultReadHeaderTimeout
+	}
+	return m.ReadHeaderTimeout
+}
