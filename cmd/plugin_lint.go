@@ -31,7 +31,11 @@ var pluginLintCmd = &cobra.Command{
 			defer sentry.Recover()
 		}
 
-		lintConfig(cmd, Plugins, pluginConfigFile)
+		if err := lintConfig(Plugins, pluginConfigFile); err != nil {
+			log.Fatal(err)
+		}
+
+		cmd.Println("plugins config is valid")
 	},
 }
 

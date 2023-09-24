@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/gatewayd-io/gatewayd/config"
+	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/google/go-github/v53/github"
 	jsonSchemaGenerator "github.com/invopop/jsonschema"
 	"github.com/knadh/koanf"
@@ -92,9 +93,7 @@ func generateConfig(
 	cmd.Printf("Config file '%s' was %s successfully.", configFile, verb)
 }
 
-func lintConfig(cmd *cobra.Command, fileType configFileType, configFile string) {
-	logger := log.New(cmd.OutOrStdout(), "", 0)
-
+func lintConfig(fileType configFileType, configFile string) error {
 	// Load the config file and check it for errors.
 	var conf *config.Config
 	switch fileType {
@@ -109,7 +108,7 @@ func lintConfig(cmd *cobra.Command, fileType configFileType, configFile string) 
 		conf.LoadPluginConfigFile(context.TODO())
 		conf.UnmarshalPluginConfig(context.TODO())
 	default:
-		logger.Fatal("Invalid config file type")
+		return gerr.ErrLintingFailed
 	}
 
 	// Marshal the config to JSON.
@@ -121,17 +120,17 @@ func lintConfig(cmd *cobra.Command, fileType configFileType, configFile string) 
 	case Plugins:
 		jsonData, err = conf.PluginKoanf.Marshal(koanfJson.Parser())
 	default:
-		logger.Fatal("Invalid config file type")
+		return gerr.ErrLintingFailed
 	}
 	if err != nil {
-		logger.Fatalf("Error marshalling %s config to JSON: %s\n", string(fileType), err)
+		return gerr.ErrLintingFailed.Wrap(err)
 	}
 
 	// Unmarshal the JSON data into a map.
 	var jsonBytes map[string]interface{}
 	err = json.Unmarshal(jsonData, &jsonBytes)
 	if err != nil {
-		logger.Fatal("Error unmarshalling schema to JSON:\n", err)
+		return gerr.ErrLintingFailed.Wrap(err)
 	}
 
 	// Generate a JSON schema from the config struct.
@@ -142,28 +141,28 @@ func lintConfig(cmd *cobra.Command, fileType configFileType, configFile string) 
 	case Plugins:
 		generatedSchema = jsonSchemaGenerator.Reflect(&config.PluginConfig{})
 	default:
-		logger.Fatal("Invalid config file type")
+		return gerr.ErrLintingFailed
 	}
 
 	// Marshal the schema to JSON.
 	schemaBytes, err := json.Marshal(generatedSchema)
 	if err != nil {
-		logger.Fatal("Error marshalling schema to JSON:\n", err)
+		return gerr.ErrLintingFailed.Wrap(err)
 	}
 
 	// Compile the schema for validation.
 	schema, err := jsonSchemaV5.CompileString("", string(schemaBytes))
 	if err != nil {
-		logger.Fatal("Error compiling schema:\n", err)
+		return gerr.ErrLintingFailed.Wrap(err)
 	}
 
 	// Validate the config against the schema.
 	err = schema.Validate(jsonBytes)
 	if err != nil {
-		logger.Fatalf("Error validating %s config: %s\n", string(fileType), err)
+		return gerr.ErrLintingFailed.Wrap(err)
 	}
 
-	cmd.Printf("%s config is valid\n", fileType)
+	return nil
 }
 
 func listPlugins(cmd *cobra.Command, pluginConfigFile string, onlyEnabled bool) {
