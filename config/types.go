@@ -72,6 +72,9 @@ type Metrics struct {
 	Address           string        `json:"address"`
 	Path              string        `json:"path"`
 	ReadHeaderTimeout time.Duration `json:"readHeaderTimeout" jsonschema:"oneof_type=string;integer"`
+	Timeout           time.Duration `json:"timeout" jsonschema:"oneof_type=string;integer"`
+	CertFile          string        `json:"certFile"`
+	KeyFile           string        `json:"keyFile"`
 }
 
 type Pool struct {

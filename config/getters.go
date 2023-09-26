@@ -276,3 +276,10 @@ func (m Metrics) GetReadHeaderTimeout() time.Duration {
 	}
 	return m.ReadHeaderTimeout
 }
+
+func (m Metrics) GetTimeout() time.Duration {
+	if m.Timeout <= 0 {
+		return DefaultMetricsServerTimeout
+	}
+	return m.Timeout
+}
