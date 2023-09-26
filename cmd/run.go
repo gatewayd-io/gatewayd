@@ -343,7 +343,12 @@ var runCmd = &cobra.Command{
 				return
 			}
 
-			fqdn, err := url.Parse("http://" + metricsConfig.Address)
+			scheme := "http://"
+			if metricsConfig.KeyFile != "" && metricsConfig.CertFile != "" {
+				scheme = "https://"
+			}
+
+			fqdn, err := url.Parse(scheme + metricsConfig.Address)
 			if err != nil {
 				logger.Error().Err(err).Msg("Failed to parse metrics address")
 				span.RecordError(err)
@@ -386,7 +391,18 @@ var runCmd = &cobra.Command{
 				)
 			}()
 
-			logger.Info().Str("address", address).Msg("Metrics are exposed")
+			mux := http.NewServeMux()
+			mux.HandleFunc("/", func(responseWriter http.ResponseWriter, request *http.Request) {
+				// Serve a static page with a link to the metrics endpoint.
+				if _, err := responseWriter.Write([]byte(fmt.Sprintf(
+					`<html><head><title>GatewayD Prometheus Metrics Server</title></head><body><a href="%s">Metrics</a></body></html>`,
+					address,
+				))); err != nil {
+					logger.Error().Err(err).Msg("Failed to write metrics")
+					span.RecordError(err)
+					sentry.CaptureException(err)
+				}
+			})
 
 			if conf.Plugin.EnableMetricsMerger && metricsMerger != nil {
 				handler = mergedMetricsHandler(handler)
@@ -394,7 +410,7 @@ var runCmd = &cobra.Command{
 
 			// Check if the metrics server is already running before registering the handler.
 			if _, err = http.Get(address); err != nil { //nolint:gosec
-				http.Handle(metricsConfig.Path, gziphandler.GzipHandler(handler))
+				mux.Handle(metricsConfig.Path, gziphandler.GzipHandler(handler))
 			} else {
 				logger.Warn().Msg("Metrics server is already running, consider changing the port")
 				span.RecordError(err)
@@ -403,14 +419,44 @@ var runCmd = &cobra.Command{
 			// Create a new metrics server.
 			metricsServer = &http.Server{
 				Addr:              metricsConfig.Address,
-				Handler:           handler,
+				Handler:           mux,
 				ReadHeaderTimeout: metricsConfig.GetReadHeaderTimeout(),
 			}
 
-			// Start the metrics server.
-			if err = metricsServer.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
-				logger.Error().Err(err).Msg("Failed to start metrics server")
-				span.RecordError(err)
+			logger.Info().Str("address", address).Msg("Metrics are exposed")
+
+			if metricsConfig.CertFile != "" && metricsConfig.KeyFile != "" {
+				// Set up TLS.
+				metricsServer.TLSConfig = &tls.Config{
+					MinVersion: tls.VersionTLS13,
+					CurvePreferences: []tls.CurveID{
+						tls.CurveP521,
+						tls.CurveP384,
+						tls.CurveP256,
+					},
+					PreferServerCipherSuites: true,
+					CipherSuites: []uint16{
+						tls.TLS_AES_128_GCM_SHA256,
+						tls.TLS_AES_256_GCM_SHA384,
+						tls.TLS_CHACHA20_POLY1305_SHA256,
+					},
+				}
+				metricsServer.TLSNextProto = make(
+					map[string]func(*http.Server, *tls.Conn, http.Handler), 0)
+				logger.Debug().Msg("Metrics server is running with TLS")
+
+				// Start the metrics server with TLS.
+				if err = metricsServer.ListenAndServeTLS(
+					metricsConfig.CertFile, metricsConfig.KeyFile); !errors.Is(err, http.ErrServerClosed) {
+					logger.Error().Err(err).Msg("Failed to start metrics server")
+					span.RecordError(err)
+				}
+			} else {
+				// Start the metrics server without TLS.
+				if err = metricsServer.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+					logger.Error().Err(err).Msg("Failed to start metrics server")
+					span.RecordError(err)
+				}
 			}
 		}(conf.Global.Metrics[config.Default], logger)
 
