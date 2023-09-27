@@ -72,6 +72,61 @@ func Test_runCmd(t *testing.T) {
 	assert.NoError(t, os.Remove(globalTestConfigFile))
 }
 
+func Test_runCmdWithMultiTenancy(t *testing.T) {
+	// Create a test plugins config file.
+	_, err := executeCommandC(rootCmd, "plugin", "init", "--force", "-p", pluginTestConfigFile)
+	assert.NoError(t, err, "plugin init command should not have returned an error")
+	assert.FileExists(t, pluginTestConfigFile, "plugin init command should have created a config file")
+
+	stopChan = make(chan struct{})
+
+	var waitGroup sync.WaitGroup
+	waitGroup.Add(1)
+	go func(waitGroup *sync.WaitGroup) {
+		time.Sleep(500 * time.Millisecond)
+
+		StopGracefully(
+			runCmd.Context(),
+			runCmd.Context(),
+			nil,
+			nil,
+			nil,
+			nil,
+			loggers[config.Default],
+			servers,
+			stopChan,
+		)
+
+		waitGroup.Done()
+	}(&waitGroup)
+
+	waitGroup.Add(1)
+	go func(waitGroup *sync.WaitGroup) {
+		// Test run command.
+		output := capturer.CaptureOutput(func() {
+			_, err := executeCommandC(
+				rootCmd, "run", "-c", "testdata/gatewayd.yaml", "-p", pluginTestConfigFile)
+			assert.NoError(t, err, "run command should not have returned an error")
+		})
+		// Print the output for debugging purposes.
+		runCmd.Print(output)
+		// Check if GatewayD started and stopped correctly.
+		assert.Contains(t, output, "GatewayD is running")
+		assert.Contains(t, output, "There are clients available in the pool count=10 name=default")
+		assert.Contains(t, output, "There are clients available in the pool count=10 name=test")
+		assert.Contains(t, output, "GatewayD is listening address=0.0.0.0:15432")
+		assert.Contains(t, output, "GatewayD is listening address=0.0.0.0:15433")
+		assert.Contains(t, output, "Stopped all servers\n")
+
+		waitGroup.Done()
+	}(&waitGroup)
+
+	waitGroup.Wait()
+
+	// Clean up.
+	assert.NoError(t, os.Remove(pluginTestConfigFile))
+}
+
 func Test_runCmdWithCachePlugin(t *testing.T) {
 	// TODO: Remove this once these global variables are removed from cmd/run.go.
 	// https://github.com/gatewayd-io/gatewayd/issues/324

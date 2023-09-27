@@ -1,0 +1,44 @@
+# GatewayD Global Configuration
+
+loggers:
+  default:
+    level: info
+    output: ["console"]
+    noColor: True
+  test:
+    level: info
+    output: ["console"]
+    noColor: True
+
+metrics:
+  default:
+    enabled: True
+  test:
+    enabled: True
+
+clients:
+  default:
+    address: localhost:5432
+  test:
+    address: localhost:5433
+
+pools:
+  default:
+    size: 10
+  test:
+    size: 10
+
+proxies:
+  default:
+    elastic: False
+  test:
+    elastic: False
+
+servers:
+  default:
+    address: 0.0.0.0:15432
+  test:
+    address: 0.0.0.0:15433
+
+api:
+  enabled: True
