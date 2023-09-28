@@ -390,7 +390,7 @@ func findAsset(release *github.RepositoryRelease, match func(string) bool) (stri
 
 func downloadFile(
 	client *github.Client, account, pluginName string, releaseID int64, filename string,
-) {
+) string {
 	// Download the plugin.
 	readCloser, redirectURL, err := client.Repositories.DownloadReleaseAsset(
 		context.Background(), account, pluginName, releaseID, http.DefaultClient)
@@ -432,7 +432,8 @@ func downloadFile(
 	if err != nil {
 		log.Panic("There was an error downloading the plugin: ", err)
 	}
-	output, err := os.Create(path.Join([]string{cwd, filename}...))
+	filePath := path.Join([]string{cwd, filename}...)
+	output, err := os.Create(filePath)
 	if err != nil {
 		log.Panic("There was an error downloading the plugin: ", err)
 	}
@@ -443,4 +444,6 @@ func downloadFile(
 	if err != nil {
 		log.Panic("There was an error downloading the plugin: ", err)
 	}
+
+	return filePath
 }
