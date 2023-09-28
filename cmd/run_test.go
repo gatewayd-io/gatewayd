@@ -72,6 +72,8 @@ func Test_runCmd(t *testing.T) {
 	assert.NoError(t, os.Remove(globalTestConfigFile))
 }
 
+// Test_runCmdWithMultiTenancy tests the run command with multi-tenancy enabled.
+// Note: This test needs two instances of PostgreSQL running on ports 5432 and 5433.
 func Test_runCmdWithMultiTenancy(t *testing.T) {
 	// Create a test plugins config file.
 	_, err := executeCommandC(rootCmd, "plugin", "init", "--force", "-p", pluginTestConfigFile)
@@ -206,8 +208,6 @@ func Test_runCmdWithCachePlugin(t *testing.T) {
 
 	// Clean up.
 	assert.NoError(t, os.RemoveAll("plugins/"))
-	assert.NoError(t, os.Remove("checksums.txt"))
-	assert.NoError(t, os.Remove("gatewayd-plugin-cache-linux-amd64-v0.2.4.tar.gz"))
 	assert.NoError(t, os.Remove(pluginTestConfigFile))
 	assert.NoError(t, os.Remove(globalTestConfigFile))
 }

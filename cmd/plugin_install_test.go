@@ -36,8 +36,14 @@ func Test_pluginInstallCmd(t *testing.T) {
 	assert.Contains(t, output, "Name: gatewayd-plugin-cache")
 
 	// Clean up.
+	assert.FileExists(t, "plugins/gatewayd-plugin-cache")
+	assert.NoFileExists(t, "gatewayd-plugin-cache-linux-amd64-v0.2.4.tar.gz")
+	assert.NoFileExists(t, "checksums.txt")
+	assert.NoFileExists(t, "plugins/LICENSE")
+	assert.NoFileExists(t, "plugins/README.md")
+	assert.NoFileExists(t, "plugins/checksum.txt")
+	assert.NoFileExists(t, "plugins/gatewayd_plugin.yaml")
+
 	assert.NoError(t, os.RemoveAll("plugins/"))
-	assert.NoError(t, os.Remove("checksums.txt"))
-	assert.NoError(t, os.Remove("gatewayd-plugin-cache-linux-amd64-v0.2.4.tar.gz"))
 	assert.NoError(t, os.Remove(pluginTestConfigFile))
 }
