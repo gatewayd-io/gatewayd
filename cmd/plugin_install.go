@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"strings"
 
 	"github.com/codingsince1985/checksum"
@@ -31,6 +32,7 @@ const (
 var (
 	pluginOutputDir string
 	pullOnly        bool
+	cleanup         bool
 )
 
 // pluginInstallCmd represents the plugin install command.
@@ -39,6 +41,9 @@ var pluginInstallCmd = &cobra.Command{
 	Short:   "Install a plugin from a local archive or a GitHub repository",
 	Example: "  gatewayd plugin install github.com/gatewayd-io/gatewayd-plugin-cache@latest",
 	Run: func(cmd *cobra.Command, args []string) {
+		// This is a list of files that will be deleted after the plugin is installed.
+		toBeDeleted := []string{}
+
 		// Enable Sentry.
 		if enableSentry {
 			// Initialize Sentry.
@@ -139,7 +144,8 @@ var pluginInstallCmd = &cobra.Command{
 			})
 			if downloadURL != "" && releaseID != 0 {
 				cmd.Println("Downloading", downloadURL)
-				downloadFile(client, account, pluginName, releaseID, pluginFilename)
+				filePath := downloadFile(client, account, pluginName, releaseID, pluginFilename)
+				toBeDeleted = append(toBeDeleted, filePath)
 				cmd.Println("Download completed successfully")
 			} else {
 				log.Panic("The plugin file could not be found in the release assets")
@@ -151,7 +157,8 @@ var pluginInstallCmd = &cobra.Command{
 			})
 			if checksumsFilename != "" && downloadURL != "" && releaseID != 0 {
 				cmd.Println("Downloading", downloadURL)
-				downloadFile(client, account, pluginName, releaseID, checksumsFilename)
+				filePath := downloadFile(client, account, pluginName, releaseID, checksumsFilename)
+				toBeDeleted = append(toBeDeleted, filePath)
 				cmd.Println("Download completed successfully")
 			} else {
 				log.Panic("The checksum file could not be found in the release assets")
@@ -185,6 +192,10 @@ var pluginInstallCmd = &cobra.Command{
 
 			if pullOnly {
 				cmd.Println("Plugin binary downloaded to", pluginFilename)
+				// Only the checksums file will be deleted if the --pull-only flag is set.
+				if err := os.Remove(checksumsFilename); err != nil {
+					log.Panic("There was an error deleting the file: ", err)
+				}
 				return
 			}
 		} else {
@@ -203,12 +214,22 @@ var pluginInstallCmd = &cobra.Command{
 			filenames = extractTarGz(pluginFilename, pluginOutputDir)
 		}
 
+		// Delete all the files except the extracted plugin binary,
+		// which will be deleted from the list further down.
+		toBeDeleted = append(toBeDeleted, filenames...)
+
 		// Find the extracted plugin binary.
 		localPath := ""
 		pluginFileSum := ""
 		for _, filename := range filenames {
 			if strings.Contains(filename, pluginName) {
 				cmd.Println("Plugin binary extracted to", filename)
+
+				// Remove the plugin binary from the list of files to be deleted.
+				toBeDeleted = slices.DeleteFunc[[]string, string](toBeDeleted, func(s string) bool {
+					return s == filename
+				})
+
 				localPath = filename
 				// Get the checksum for the extracted plugin binary.
 				// TODO: Should we verify the checksum using the checksum.txt file instead?
@@ -219,9 +240,6 @@ var pluginInstallCmd = &cobra.Command{
 				break
 			}
 		}
-
-		// TODO: Clean up after installing the plugin.
-		// https://github.com/gatewayd-io/gatewayd/issues/311
 
 		// Create a new gatewayd_plugins.yaml file if it doesn't exist.
 		if _, err := os.Stat(pluginConfigFile); os.IsNotExist(err) {
@@ -306,6 +324,16 @@ var pluginInstallCmd = &cobra.Command{
 			log.Panic("There was an error writing the plugins configuration file: ", err)
 		}
 
+		// Delete the downloaded and extracted files, except the plugin binary,
+		// if the --cleanup flag is set.
+		if cleanup {
+			for _, filename := range toBeDeleted {
+				if err := os.Remove(filename); err != nil {
+					log.Panic("There was an error deleting the file: ", err)
+				}
+			}
+		}
+
 		// TODO: Add a rollback mechanism.
 		cmd.Println("Plugin installed successfully")
 	},
@@ -322,6 +350,9 @@ func init() {
 		&pluginOutputDir, "output-dir", "o", "./plugins", "Output directory for the plugin")
 	pluginInstallCmd.Flags().BoolVar(
 		&pullOnly, "pull-only", false, "Only pull the plugin, don't install it")
+	pluginInstallCmd.Flags().BoolVar(
+		&cleanup, "cleanup", true,
+		"Delete downloaded and extracted files after installing the plugin (except the plugin binary)")
 	pluginInstallCmd.Flags().BoolVar(
 		&enableSentry, "sentry", true, "Enable Sentry") // Already exists in run.go
 }
