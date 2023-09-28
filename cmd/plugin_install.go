@@ -32,6 +32,7 @@ const (
 var (
 	pluginOutputDir string
 	pullOnly        bool
+	cleanup         bool
 )
 
 // pluginInstallCmd represents the plugin install command.
@@ -323,10 +324,13 @@ var pluginInstallCmd = &cobra.Command{
 			log.Panic("There was an error writing the plugins configuration file: ", err)
 		}
 
-		// Delete the downloaded files.
-		for _, filename := range toBeDeleted {
-			if err := os.Remove(filename); err != nil {
-				log.Panic("There was an error deleting the file: ", err)
+		// Delete the downloaded and extracted files, except the plugin binary,
+		// if the --cleanup flag is set.
+		if cleanup {
+			for _, filename := range toBeDeleted {
+				if err := os.Remove(filename); err != nil {
+					log.Panic("There was an error deleting the file: ", err)
+				}
 			}
 		}
 
@@ -346,6 +350,9 @@ func init() {
 		&pluginOutputDir, "output-dir", "o", "./plugins", "Output directory for the plugin")
 	pluginInstallCmd.Flags().BoolVar(
 		&pullOnly, "pull-only", false, "Only pull the plugin, don't install it")
+	pluginInstallCmd.Flags().BoolVar(
+		&cleanup, "cleanup", true,
+		"Delete downloaded and extracted files after installing the plugin (except the plugin binary)")
 	pluginInstallCmd.Flags().BoolVar(
 		&enableSentry, "sentry", true, "Enable Sentry") // Already exists in run.go
 }
