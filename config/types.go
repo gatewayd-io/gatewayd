@@ -5,16 +5,6 @@ import (
 	"time"
 )
 
-// // getPath returns the path to the referenced config value.
-// func getPath(cfg *koanf.Koanf, path string) string {
-// 	ref := cfg.String(path)
-// 	if cfg.Exists(path) && cfg.StringMap(ref) != nil {
-// 		return ref
-// 	}
-
-// 	return path
-// }
-
 type Plugin struct {
 	Name      string   `json:"name" jsonschema:"required"`
 	Enabled   bool     `json:"enabled"`
@@ -88,21 +78,10 @@ type Proxy struct {
 }
 
 type Server struct {
-	EnableTicker     bool          `json:"enableTicker"`
-	MultiCore        bool          `json:"multiCore"`
-	LockOSThread     bool          `json:"lockOSThread"` //nolint:tagliatelle
-	ReuseAddress     bool          `json:"reuseAddress"`
-	ReusePort        bool          `json:"reusePort"`
-	TCPNoDelay       bool          `json:"tcpNoDelay"`
-	ReadBufferCap    int           `json:"readBufferCap"`
-	WriteBufferCap   int           `json:"writeBufferCap"`
-	SocketRecvBuffer int           `json:"socketRecvBuffer"`
-	SocketSendBuffer int           `json:"socketSendBuffer"`
-	TCPKeepAlive     time.Duration `json:"tcpKeepAlive" jsonschema:"oneof_type=string;integer"`
-	TickInterval     time.Duration `json:"tickInterval" jsonschema:"oneof_type=string;integer"`
-	Network          string        `json:"network" jsonschema:"enum=tcp,enum=udp,enum=unix"`
-	Address          string        `json:"address"`
-	LoadBalancer     string        `json:"loadBalancer" jsonschema:"enum=roundrobin,enum=leastconnections,enum=sourceaddrhash"`
+	EnableTicker bool          `json:"enableTicker"`
+	TickInterval time.Duration `json:"tickInterval" jsonschema:"oneof_type=string;integer"`
+	Network      string        `json:"network" jsonschema:"enum=tcp,enum=udp,enum=unix"`
+	Address      string        `json:"address"`
 }
 
 type API struct {

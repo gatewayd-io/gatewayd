@@ -30,7 +30,6 @@ import (
 	usage "github.com/gatewayd-io/gatewayd/usagereport/v1"
 	"github.com/getsentry/sentry-go"
 	"github.com/go-co-op/gocron"
-	"github.com/panjf2000/gnet/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
@@ -633,30 +632,9 @@ var runCmd = &cobra.Command{
 				cfg.Network,
 				cfg.Address,
 				cfg.GetTickInterval(),
-				[]gnet.Option{
-					// Scheduling options
-					gnet.WithMulticore(cfg.MultiCore),
-					gnet.WithLockOSThread(cfg.LockOSThread),
-					// NumEventLoop overrides Multicore option.
-					// gnet.WithNumEventLoop(1),
-
+				network.Option{
 					// Can be used to send keepalive messages to the client.
-					gnet.WithTicker(cfg.EnableTicker),
-
-					// Internal event-loop load balancing options
-					gnet.WithLoadBalancing(cfg.GetLoadBalancer()),
-
-					// Buffer options
-					gnet.WithReadBufferCap(cfg.ReadBufferCap),
-					gnet.WithWriteBufferCap(cfg.WriteBufferCap),
-					gnet.WithSocketRecvBuffer(cfg.SocketRecvBuffer),
-					gnet.WithSocketSendBuffer(cfg.SocketSendBuffer),
-
-					// TCP options
-					gnet.WithReuseAddr(cfg.ReuseAddress),
-					gnet.WithReusePort(cfg.ReusePort),
-					gnet.WithTCPKeepAlive(cfg.TCPKeepAlive),
-					gnet.WithTCPNoDelay(cfg.GetTCPNoDelay()),
+					EnableTicker: cfg.EnableTicker,
 				},
 				proxies[name],
 				logger,
@@ -669,18 +647,6 @@ var runCmd = &cobra.Command{
 				attribute.String("network", cfg.Network),
 				attribute.String("address", cfg.Address),
 				attribute.String("tickInterval", cfg.TickInterval.String()),
-				attribute.Bool("multiCore", cfg.MultiCore),
-				attribute.Bool("lockOSThread", cfg.LockOSThread),
-				attribute.Bool("enableTicker", cfg.EnableTicker),
-				attribute.String("loadBalancer", cfg.LoadBalancer),
-				attribute.Int("readBufferCap", cfg.ReadBufferCap),
-				attribute.Int("writeBufferCap", cfg.WriteBufferCap),
-				attribute.Int("socketRecvBuffer", cfg.SocketRecvBuffer),
-				attribute.Int("socketSendBuffer", cfg.SocketSendBuffer),
-				attribute.Bool("reuseAddress", cfg.ReuseAddress),
-				attribute.Bool("reusePort", cfg.ReusePort),
-				attribute.String("tcpKeepAlive", cfg.TCPKeepAlive.String()),
-				attribute.Bool("tcpNoDelay", cfg.TCPNoDelay),
 				attribute.String("pluginTimeout", conf.Plugin.Timeout.String()),
 			))
 

@@ -166,23 +166,6 @@ func (s Server) GetTickInterval() time.Duration {
 	return s.TickInterval
 }
 
-// GetLoadBalancer returns the load balancing algorithm to use.
-func (s Server) GetLoadBalancer() gnet.LoadBalancing {
-	if lb, ok := loadBalancers[s.LoadBalancer]; ok {
-		return lb
-	}
-	return gnet.RoundRobin
-}
-
-// GetTCPNoDelay returns the TCP no delay option from config file.
-func (s Server) GetTCPNoDelay() gnet.TCPSocketOpt {
-	if s.TCPNoDelay {
-		return gnet.TCPNoDelay
-	}
-
-	return gnet.TCPDelay
-}
-
 // GetSize returns the pool size from config file.
 func (p Pool) GetSize() int {
 	if p.Size == 0 {

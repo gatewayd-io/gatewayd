@@ -56,17 +56,6 @@ servers:
     address: 0.0.0.0:15432
     enableTicker: False
     tickInterval: 5s # duration
-    multiCore: True
-    lockOSThread: False
-    loadBalancer: roundrobin
-    readBufferCap: 134217728
-    writeBufferCap: 134217728
-    socketRecvBuffer: 134217728
-    socketSendBuffer: 134217728
-    reuseAddress: True
-    reusePort: True
-    tcpKeepAlive: 3s # duration
-    tcpNoDelay: True
 
 api:
   enabled: True
