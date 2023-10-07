@@ -4,7 +4,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 )
@@ -73,18 +72,6 @@ func TestGetHealthCheckPeriod(t *testing.T) {
 func TestGetTickInterval(t *testing.T) {
 	server := Server{}
 	assert.Equal(t, DefaultTickInterval, server.GetTickInterval())
-}
-
-// TestGetLoadBalancer tests the GetLoadBalancer function.
-func TestGetLoadBalancer(t *testing.T) {
-	server := Server{}
-	assert.Equal(t, gnet.RoundRobin, server.GetLoadBalancer())
-}
-
-// TestGetTCPNoDelay tests the GetTCPNoDelay function.
-func TestGetTCPNoDelay(t *testing.T) {
-	server := Server{}
-	assert.Equal(t, gnet.TCPDelay, server.GetTCPNoDelay())
 }
 
 // TestGetSize tests the GetSize function.

@@ -14,7 +14,6 @@ import (
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
-	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
@@ -173,11 +172,8 @@ func TestRunServer(t *testing.T) {
 		"tcp",
 		"127.0.0.1:15432",
 		config.DefaultTickInterval,
-		[]gnet.Option{
-			gnet.WithMulticore(false),
-			gnet.WithReuseAddr(true),
-			gnet.WithReusePort(true),
-			gnet.WithTicker(true), // Enable ticker.
+		Option{
+			EnableTicker: false,
 		},
 		proxy,
 		logger,
