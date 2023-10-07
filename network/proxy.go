@@ -1,7 +1,11 @@
 package network
 
 import (
+	"bytes"
 	"context"
+	"errors"
+	"io"
+	"net"
 	"time"
 
 	v1 "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin/v1"
@@ -12,15 +16,15 @@ import (
 	"github.com/gatewayd-io/gatewayd/pool"
 	"github.com/getsentry/sentry-go"
 	"github.com/go-co-op/gocron"
-	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/otel"
 )
 
 type IProxy interface {
-	Connect(gconn gnet.Conn) *gerr.GatewayDError
-	Disconnect(gconn gnet.Conn) *gerr.GatewayDError
-	PassThrough(gconn gnet.Conn) *gerr.GatewayDError
+	Connect(conn net.Conn) *gerr.GatewayDError
+	Disconnect(conn net.Conn) *gerr.GatewayDError
+	PassThroughToServer(conn net.Conn) *gerr.GatewayDError
+	PassThroughToClient(conn net.Conn) *gerr.GatewayDError
 	IsHealty(cl *Client) (*Client, *gerr.GatewayDError)
 	IsExhausted() bool
 	Shutdown()
@@ -123,7 +127,7 @@ func NewProxy(
 // Connect maps a server connection from the available connection pool to a incoming connection.
 // It returns an error if the pool is exhausted. If the pool is elastic, it creates a new client
 // and maps it to the incoming connection.
-func (pr *Proxy) Connect(gconn gnet.Conn) *gerr.GatewayDError {
+func (pr *Proxy) Connect(conn net.Conn) *gerr.GatewayDError {
 	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "Connect")
 	defer span.End()
 
@@ -162,7 +166,7 @@ func (pr *Proxy) Connect(gconn gnet.Conn) *gerr.GatewayDError {
 		span.RecordError(err)
 	}
 
-	if err := pr.busyConnections.Put(gconn, client); err != nil {
+	if err := pr.busyConnections.Put(conn, client); err != nil {
 		// This should never happen.
 		span.RecordError(err)
 		return err
@@ -173,7 +177,7 @@ func (pr *Proxy) Connect(gconn gnet.Conn) *gerr.GatewayDError {
 	fields := map[string]interface{}{
 		"function": "proxy.connect",
 		"client":   "unknown",
-		"server":   RemoteAddr(gconn),
+		"server":   RemoteAddr(conn),
 	}
 	if client.ID != "" {
 		fields["client"] = client.ID[:7]
@@ -198,11 +202,11 @@ func (pr *Proxy) Connect(gconn gnet.Conn) *gerr.GatewayDError {
 
 // Disconnect removes the client from the busy connection pool and tries to recycle
 // the server connection.
-func (pr *Proxy) Disconnect(gconn gnet.Conn) *gerr.GatewayDError {
+func (pr *Proxy) Disconnect(conn net.Conn) *gerr.GatewayDError {
 	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "Disconnect")
 	defer span.End()
 
-	client := pr.busyConnections.Pop(gconn)
+	client := pr.busyConnections.Pop(conn)
 	//nolint:nestif
 	if client != nil {
 		if client, ok := client.(*Client); ok {
@@ -251,24 +255,20 @@ func (pr *Proxy) Disconnect(gconn gnet.Conn) *gerr.GatewayDError {
 	return nil
 }
 
-// PassThrough sends the data from the client to the server and vice versa.
-func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
+// PassThrough sends the data from the client to the server.
+func (pr *Proxy) PassThroughToServer(conn net.Conn) *gerr.GatewayDError {
 	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "PassThrough")
 	defer span.End()
-	// TODO: Handle bi-directional traffic
-	// Currently the passthrough is a one-way street from the client to the server, that is,
-	// the client can send data to the server and receive the response back, but the server
-	// cannot take initiative and send data to the client. So, there should be another event-loop
-	// that listens for data from the server and sends it to the client.
 
+	// Check if the proxy has a egress client for the incoming connection.
 	var client *Client
-	if pr.busyConnections.Get(gconn) == nil {
+	if pr.busyConnections.Get(conn) == nil {
 		span.RecordError(gerr.ErrClientNotFound)
 		return gerr.ErrClientNotFound
 	}
 
 	// Get the client from the busy connection pool.
-	if cl, ok := pr.busyConnections.Get(gconn).(*Client); ok {
+	if cl, ok := pr.busyConnections.Get(conn).(*Client); ok {
 		client = cl
 	} else {
 		span.RecordError(gerr.ErrCastFailed)
@@ -276,17 +276,22 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	}
 	span.AddEvent("Got the client from the busy connection pool")
 
+	if !client.IsConnected() || !pr.isConnectionHealthy(conn) {
+		return gerr.ErrClientNotConnected
+	}
+
 	// Receive the request from the client.
-	request, origErr := pr.receiveTrafficFromClient(gconn)
+	request, origErr := pr.receiveTrafficFromClient(conn)
 	span.AddEvent("Received traffic from client")
 
+	// Run the OnTrafficFromClient hooks.
 	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), pr.pluginTimeout)
 	defer cancel()
-	// Run the OnTrafficFromClient hooks.
+
 	result, err := pr.pluginRegistry.Run(
 		pluginTimeoutCtx,
 		trafficData(
-			gconn,
+			conn,
 			client,
 			[]Field{
 				{
@@ -302,6 +307,12 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	}
 	span.AddEvent("Ran the OnTrafficFromClient hooks")
 
+	if errors.Is(origErr, io.EOF) {
+		// Client closed the connection.
+		span.AddEvent("Client closed the connection")
+		return gerr.ErrClientNotConnected
+	}
+
 	// If the hook wants to terminate the connection, do it.
 	if pr.shouldTerminate(result) {
 		if modResponse, modReceived := pr.getPluginModifiedResponse(result); modResponse != nil {
@@ -311,7 +322,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 			metrics.TotalTrafficBytes.Observe(float64(modReceived))
 
 			span.AddEvent("Terminating connection")
-			return pr.sendTrafficToClient(gconn, modResponse, modReceived)
+			return pr.sendTrafficToClient(conn, modResponse, modReceived)
 		}
 		span.RecordError(gerr.ErrHookTerminatedConnection)
 		return gerr.ErrHookTerminatedConnection
@@ -330,7 +341,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	_, err = pr.pluginRegistry.Run(
 		pluginTimeoutCtx,
 		trafficData(
-			gconn,
+			conn,
 			client,
 			[]Field{
 				{
@@ -346,36 +357,39 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	}
 	span.AddEvent("Ran the OnTrafficToServer hooks")
 
+	return nil
+}
+
+// PassThroughToClient sends the data from the server to the client.
+func (pr *Proxy) PassThroughToClient(conn net.Conn) *gerr.GatewayDError {
+	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "PassThrough")
+	defer span.End()
+
+	var client *Client
+	if pr.busyConnections.Get(conn) == nil {
+		span.RecordError(gerr.ErrClientNotFound)
+		return gerr.ErrClientNotFound
+	}
+
+	// Get the client from the busy connection pool.
+	if cl, ok := pr.busyConnections.Get(conn).(*Client); ok {
+		client = cl
+	} else {
+		span.RecordError(gerr.ErrCastFailed)
+		return gerr.ErrCastFailed
+	}
+	span.AddEvent("Got the client from the busy connection pool")
+
+	if !client.IsConnected() || !pr.isConnectionHealthy(conn) {
+		return gerr.ErrClientNotConnected
+	}
+
 	// Receive the response from the server.
 	received, response, err := pr.receiveTrafficFromServer(client)
 	span.AddEvent("Received traffic from server")
 
-	// The connection to the server is closed, so we MUST reconnect,
-	// otherwise the client will be stuck.
-	// TODO: Fix bug in handling connection close
-	// See: https://github.com/gatewayd-io/gatewayd/issues/219
-	if IsConnClosed(received, err) || IsConnTimedOut(err) {
-		pr.logger.Debug().Fields(
-			map[string]interface{}{
-				"function": "proxy.passthrough",
-				"local":    client.LocalAddr(),
-				"remote":   client.RemoteAddr(),
-			}).Msg("Client disconnected")
-
-		client.Close()
-		client = NewClient(pr.ctx, pr.ClientConfig, pr.logger)
-		pr.busyConnections.Remove(gconn)
-		if err := pr.busyConnections.Put(gconn, client); err != nil {
-			span.RecordError(err)
-			// This should never happen
-			return err
-		}
-	}
-
 	// If the response is empty, don't send anything, instead just close the ingress connection.
-	// TODO: Fix bug in handling connection close
-	// See: https://github.com/gatewayd-io/gatewayd/issues/219
-	if received == 0 {
+	if received == 0 || err != nil {
 		pr.logger.Debug().Fields(
 			map[string]interface{}{
 				"function": "proxy.passthrough",
@@ -387,17 +401,16 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 		return err
 	}
 
+	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), pr.pluginTimeout)
+	defer cancel()
+
 	// Run the OnTrafficFromServer hooks.
-	result, err = pr.pluginRegistry.Run(
+	result, err := pr.pluginRegistry.Run(
 		pluginTimeoutCtx,
 		trafficData(
-			gconn,
+			conn,
 			client,
 			[]Field{
-				{
-					Name:  "request",
-					Value: request,
-				},
 				{
 					Name:  "response",
 					Value: response[:received],
@@ -419,26 +432,22 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	}
 
 	// Send the response to the client.
-	errVerdict := pr.sendTrafficToClient(gconn, response, received)
+	errVerdict := pr.sendTrafficToClient(conn, response, received)
 	span.AddEvent("Sent traffic to client")
 
 	// Run the OnTrafficToClient hooks.
 	_, err = pr.pluginRegistry.Run(
 		pluginTimeoutCtx,
 		trafficData(
-			gconn,
+			conn,
 			client,
 			[]Field{
-				{
-					Name:  "request",
-					Value: request,
-				},
 				{
 					Name:  "response",
 					Value: response[:received],
 				},
 			},
-			err,
+			nil,
 		),
 		v1.HookName_HOOK_NAME_ON_TRAFFIC_TO_CLIENT)
 	if err != nil {
@@ -501,8 +510,8 @@ func (pr *Proxy) Shutdown() {
 	pr.logger.Debug().Msg("All available connections have been closed")
 
 	pr.busyConnections.ForEach(func(key, value interface{}) bool {
-		if gconn, ok := key.(gnet.Conn); ok {
-			gconn.Close()
+		if conn, ok := key.(net.Conn); ok {
+			conn.Close()
 		}
 		if cl, ok := value.(*Client); ok {
 			cl.Close()
@@ -536,44 +545,71 @@ func (pr *Proxy) BusyConnections() []string {
 
 	connections := make([]string, 0)
 	pr.busyConnections.ForEach(func(key, _ interface{}) bool {
-		if gconn, ok := key.(gnet.Conn); ok {
-			connections = append(connections, RemoteAddr(gconn))
+		if conn, ok := key.(net.Conn); ok {
+			connections = append(connections, RemoteAddr(conn))
 		}
 		return true
 	})
 	return connections
 }
 
-// receiveTrafficFromClient is a function that receives data from the client.
-func (pr *Proxy) receiveTrafficFromClient(gconn gnet.Conn) ([]byte, error) {
+// receiveTrafficFromClient is a function that waits to receive data from the client.
+func (pr *Proxy) receiveTrafficFromClient(conn net.Conn) ([]byte, error) {
 	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "receiveTrafficFromClient")
 	defer span.End()
 
 	// request contains the data from the client.
-	request, err := gconn.Next(-1)
-	if err != nil {
-		pr.logger.Error().Err(err).Msg("Error reading from client")
-		span.RecordError(err)
+	received := 0
+	buffer := bytes.NewBuffer(nil)
+	for {
+		chunk := make([]byte, pr.ClientConfig.ReceiveChunkSize)
+		read, err := conn.Read(chunk)
+		if read == 0 || err != nil {
+			pr.logger.Debug().Err(err).Msg("Error reading from client")
+			span.RecordError(err)
+
+			metrics.BytesReceivedFromClient.Observe(float64(read))
+			metrics.TotalTrafficBytes.Observe(float64(read))
+
+			return chunk[:read], err
+		}
+
+		received += read
+		buffer.Write(chunk[:read])
+
+		if received == 0 || received < pr.ClientConfig.ReceiveChunkSize {
+			break
+		}
+
+		if !pr.isConnectionHealthy(conn) {
+			break
+		}
 	}
+
+	length := len(buffer.Bytes())
 	pr.logger.Debug().Fields(
 		map[string]interface{}{
-			"length": len(request),
-			"local":  LocalAddr(gconn),
-			"remote": RemoteAddr(gconn),
+			"length": length,
+			"local":  LocalAddr(conn),
+			"remote": RemoteAddr(conn),
 		},
 	).Msg("Received data from client")
-
-	metrics.BytesReceivedFromClient.Observe(float64(len(request)))
-	metrics.TotalTrafficBytes.Observe(float64(len(request)))
+	metrics.BytesReceivedFromClient.Observe(float64(length))
+	metrics.TotalTrafficBytes.Observe(float64(length))
 
 	//nolint:wrapcheck
-	return request, err
+	return buffer.Bytes(), nil
 }
 
 // sendTrafficToServer is a function that sends data to the server.
 func (pr *Proxy) sendTrafficToServer(client *Client, request []byte) (int, *gerr.GatewayDError) {
 	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "sendTrafficToServer")
 	defer span.End()
+
+	if len(request) == 0 {
+		pr.logger.Trace().Msg("Empty request")
+		return 0, nil
+	}
 
 	// Send the request to the server.
 	sent, err := client.Send(request)
@@ -620,29 +656,38 @@ func (pr *Proxy) receiveTrafficFromServer(client *Client) (int, []byte, *gerr.Ga
 
 // sendTrafficToClient is a function that sends data to the client.
 func (pr *Proxy) sendTrafficToClient(
-	gconn gnet.Conn, response []byte, received int,
+	conn net.Conn, response []byte, received int,
 ) *gerr.GatewayDError {
 	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "sendTrafficToClient")
 	defer span.End()
 
 	// Send the response to the client async.
-	origErr := gconn.AsyncWrite(response[:received], func(gconn gnet.Conn, err error) error {
-		pr.logger.Debug().Fields(
-			map[string]interface{}{
-				"function": "proxy.passthrough",
-				"length":   received,
-				"local":    LocalAddr(gconn),
-				"remote":   RemoteAddr(gconn),
-			},
-		).Msg("Sent data to client")
-		span.RecordError(err)
-		return err
-	})
-	if origErr != nil {
-		pr.logger.Error().Err(origErr).Msg("Error writing to client")
-		span.RecordError(origErr)
-		return gerr.ErrServerSendFailed.Wrap(origErr)
+	sent := 0
+	for {
+		if sent >= received {
+			break
+		}
+
+		n, origErr := conn.Write(response[:received])
+		if origErr != nil {
+			pr.logger.Error().Err(origErr).Msg("Error writing to client")
+			span.RecordError(origErr)
+			return gerr.ErrServerSendFailed.Wrap(origErr)
+		}
+
+		sent += n
 	}
+
+	pr.logger.Debug().Fields(
+		map[string]interface{}{
+			"function": "proxy.passthrough",
+			"length":   sent,
+			"local":    LocalAddr(conn),
+			"remote":   RemoteAddr(conn),
+		},
+	).Msg("Sent data to client")
+
+	span.AddEvent("Sent data to client")
 
 	metrics.BytesSentToClient.Observe(float64(received))
 	metrics.TotalTrafficBytes.Observe(float64(received))
@@ -697,4 +742,18 @@ func (pr *Proxy) getPluginModifiedResponse(result map[string]interface{}) ([]byt
 	}
 
 	return nil, 0
+}
+
+func (pr *Proxy) isConnectionHealthy(conn net.Conn) bool {
+	if n, err := conn.Read([]byte{}); n == 0 && err != nil {
+		pr.logger.Debug().Fields(
+			map[string]interface{}{
+				"remote": RemoteAddr(conn),
+				"local":  LocalAddr(conn),
+				"reason": "read 0 bytes",
+			}).Msg("Connection to client is closed")
+		return false
+	}
+
+	return true
 }

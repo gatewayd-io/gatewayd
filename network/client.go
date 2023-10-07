@@ -146,12 +146,23 @@ func (c *Client) Send(data []byte) (int, *gerr.GatewayDError) {
 	_, span := otel.Tracer(config.TracerName).Start(c.ctx, "Send")
 	defer span.End()
 
-	sent, err := c.Conn.Write(data)
-	if err != nil {
-		c.logger.Error().Err(err).Msg("Couldn't send data to the server")
-		span.RecordError(err)
-		return 0, gerr.ErrClientSendFailed.Wrap(err)
+	sent := 0
+	received := len(data)
+	for {
+		if sent >= received {
+			break
+		}
+
+		n, err := c.Conn.Write(data)
+		if err != nil {
+			c.logger.Error().Err(err).Msg("Couldn't send data to the server")
+			span.RecordError(err)
+			return 0, gerr.ErrClientSendFailed.Wrap(err)
+		}
+
+		sent += n
 	}
+
 	c.logger.Debug().Fields(
 		map[string]interface{}{
 			"length":  sent,
