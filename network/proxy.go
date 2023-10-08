@@ -307,10 +307,10 @@ func (pr *Proxy) PassThroughToServer(conn net.Conn) *gerr.GatewayDError {
 	}
 	span.AddEvent("Ran the OnTrafficFromClient hooks")
 
-	if errors.Is(origErr, io.EOF) {
+	if origErr != nil && errors.Is(origErr, io.EOF) {
 		// Client closed the connection.
 		span.AddEvent("Client closed the connection")
-		return gerr.ErrClientNotConnected
+		return gerr.ErrClientNotConnected.Wrap(origErr)
 	}
 
 	// If the hook wants to terminate the connection, do it.
