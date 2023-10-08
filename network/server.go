@@ -371,7 +371,7 @@ func (s *Server) Run() error {
 	}
 
 	// Start the server.
-	origErr := Run(s.Network, addr, s, s.Options)
+	origErr := Run(s.Network, addr, s)
 	if origErr != nil {
 		s.logger.Error().Err(origErr).Msg("Failed to start server")
 		span.RecordError(origErr)

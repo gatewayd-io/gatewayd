@@ -5,6 +5,9 @@ import (
 	"net"
 	"strconv"
 	"time"
+
+	"github.com/gatewayd-io/gatewayd/config"
+	gerr "github.com/gatewayd-io/gatewayd/errors"
 )
 
 type Option struct {
@@ -39,7 +42,7 @@ func (engine *Engine) CountConnections() int {
 }
 
 func (engine *Engine) Stop(ctx context.Context) error {
-	ctx, cancel := context.WithDeadline(ctx, time.Now().Add(2*time.Second))
+	_, cancel := context.WithDeadline(ctx, time.Now().Add(config.DefaultEngineStopTimeout))
 	defer cancel()
 
 	engine.stopServer <- struct{}{}
@@ -47,7 +50,7 @@ func (engine *Engine) Stop(ctx context.Context) error {
 }
 
 // Run starts a server and connects all the handlers.
-func Run(network, address string, server *Server, opts Option) error {
+func Run(network, address string, server *Server) *gerr.GatewayDError {
 	server.engine = Engine{
 		connections: 0,
 		stopServer:  make(chan struct{}),
@@ -57,11 +60,11 @@ func Run(network, address string, server *Server, opts Option) error {
 		return nil
 	}
 
-	if ln, err := net.Listen(network, address); err != nil {
+	var err error
+	server.engine.listener, err = net.Listen(network, address)
+	if err != nil {
 		server.logger.Error().Err(err).Msg("Server failed to start listening")
-		return err
-	} else {
-		server.engine.listener = ln
+		return gerr.ErrServerListenFailed.Wrap(err)
 	}
 	defer server.engine.listener.Close()
 
@@ -70,25 +73,22 @@ func Run(network, address string, server *Server, opts Option) error {
 		return nil
 	}
 
-	if host, port, err := net.SplitHostPort(server.engine.listener.Addr().String()); err != nil {
+	var port string
+	server.engine.host, port, err = net.SplitHostPort(server.engine.listener.Addr().String())
+	if err != nil {
 		server.logger.Error().Err(err).Msg("Failed to split host and port")
-		return err
-	} else {
-		server.engine.host = host
-		if server.engine.port, err = strconv.Atoi(port); err != nil {
-			server.logger.Error().Err(err).Msg("Failed to convert port to integer")
-			return err
-		}
+		return gerr.ErrSplitHostPortFailed.Wrap(err)
+	}
+
+	if server.engine.port, err = strconv.Atoi(port); err != nil {
+		server.logger.Error().Err(err).Msg("Failed to convert port to integer")
+		return gerr.ErrCastFailed.Wrap(err)
 	}
 
 	go func(server *Server) {
-		for {
-			select {
-			case <-server.engine.stopServer:
-				server.OnShutdown(server.engine)
-				server.logger.Debug().Msg("Server stopped")
-			}
-		}
+		<-server.engine.stopServer
+		server.OnShutdown(server.engine)
+		server.logger.Debug().Msg("Server stopped")
 	}(server)
 
 	go func(server *Server) {
@@ -113,11 +113,13 @@ func Run(network, address string, server *Server, opts Option) error {
 		conn, err := server.engine.listener.Accept()
 		if err != nil {
 			server.logger.Error().Err(err).Msg("Failed to accept connection")
-			return err
+			return gerr.ErrAcceptFailed.Wrap(err)
 		}
 
 		if out, action := server.OnOpen(conn); action != None {
-			conn.Write(out)
+			if _, err := conn.Write(out); err != nil {
+				server.logger.Error().Err(err).Msg("Failed to write to connection")
+			}
 			conn.Close()
 			if action == Shutdown {
 				server.OnShutdown(server.engine)
@@ -136,14 +138,10 @@ func Run(network, address string, server *Server, opts Option) error {
 		}(server, conn, stopConnection)
 
 		go func(server *Server, conn net.Conn, stopConnection chan struct{}) {
-			for {
-				select {
-				case <-stopConnection:
-					server.engine.connections--
-					if action := server.OnClose(conn, err); action == Close {
-						return
-					}
-				}
+			<-stopConnection
+			server.engine.connections--
+			if action := server.OnClose(conn, err); action == Close {
+				return
 			}
 		}(server, conn, stopConnection)
 	}

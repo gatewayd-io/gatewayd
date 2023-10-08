@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
 )
 
@@ -27,11 +26,6 @@ var (
 	terminationPolicies = map[string]TerminationPolicy{
 		"continue": Continue,
 		"stop":     Stop,
-	}
-	loadBalancers = map[string]gnet.LoadBalancing{
-		"roundrobin":       gnet.RoundRobin,
-		"leastconnections": gnet.LeastConnections,
-		"sourceaddrhash":   gnet.SourceAddrHash,
 	}
 	logOutputs = map[string]LogOutput{
 		"console": Console,

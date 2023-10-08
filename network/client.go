@@ -153,14 +153,14 @@ func (c *Client) Send(data []byte) (int, *gerr.GatewayDError) {
 			break
 		}
 
-		n, err := c.Conn.Write(data)
+		written, err := c.Conn.Write(data)
 		if err != nil {
 			c.logger.Error().Err(err).Msg("Couldn't send data to the server")
 			span.RecordError(err)
 			return 0, gerr.ErrClientSendFailed.Wrap(err)
 		}
 
-		sent += n
+		sent += written
 	}
 
 	c.logger.Debug().Fields(

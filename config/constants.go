@@ -117,6 +117,7 @@ const (
 	DefaultTCPKeepAliveDuration = 3 * time.Second
 	DefaultLoadBalancer         = "roundrobin"
 	DefaultTCPNoDelay           = true
+	DefaultEngineStopTimeout    = 5 * time.Second
 
 	// Utility constants.
 	DefaultSeed        = 1000

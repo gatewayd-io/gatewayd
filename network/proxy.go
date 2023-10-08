@@ -554,7 +554,7 @@ func (pr *Proxy) BusyConnections() []string {
 }
 
 // receiveTrafficFromClient is a function that waits to receive data from the client.
-func (pr *Proxy) receiveTrafficFromClient(conn net.Conn) ([]byte, error) {
+func (pr *Proxy) receiveTrafficFromClient(conn net.Conn) ([]byte, *gerr.GatewayDError) {
 	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "receiveTrafficFromClient")
 	defer span.End()
 
@@ -571,7 +571,7 @@ func (pr *Proxy) receiveTrafficFromClient(conn net.Conn) ([]byte, error) {
 			metrics.BytesReceivedFromClient.Observe(float64(read))
 			metrics.TotalTrafficBytes.Observe(float64(read))
 
-			return chunk[:read], err
+			return chunk[:read], gerr.ErrReadFailed.Wrap(err)
 		}
 
 		received += read
@@ -597,7 +597,6 @@ func (pr *Proxy) receiveTrafficFromClient(conn net.Conn) ([]byte, error) {
 	metrics.BytesReceivedFromClient.Observe(float64(length))
 	metrics.TotalTrafficBytes.Observe(float64(length))
 
-	//nolint:wrapcheck
 	return buffer.Bytes(), nil
 }
 
@@ -668,14 +667,14 @@ func (pr *Proxy) sendTrafficToClient(
 			break
 		}
 
-		n, origErr := conn.Write(response[:received])
+		written, origErr := conn.Write(response[:received])
 		if origErr != nil {
 			pr.logger.Error().Err(origErr).Msg("Error writing to client")
 			span.RecordError(origErr)
 			return gerr.ErrServerSendFailed.Wrap(origErr)
 		}
 
-		sent += n
+		sent += written
 	}
 
 	pr.logger.Debug().Fields(
