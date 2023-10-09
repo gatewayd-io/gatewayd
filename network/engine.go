@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/gatewayd-io/gatewayd/config"
@@ -35,9 +36,12 @@ type Engine struct {
 	port        int
 	connections uint32
 	stopServer  chan struct{}
+	mu          *sync.RWMutex
 }
 
 func (engine *Engine) CountConnections() int {
+	engine.mu.RLock()
+	defer engine.mu.RUnlock()
 	return int(engine.connections)
 }
 
@@ -54,6 +58,7 @@ func Run(network, address string, server *Server) *gerr.GatewayDError {
 	server.engine = Engine{
 		connections: 0,
 		stopServer:  make(chan struct{}),
+		mu:          &sync.RWMutex{},
 	}
 
 	if action := server.OnBoot(server.engine); action != None {
@@ -126,7 +131,9 @@ func Run(network, address string, server *Server) *gerr.GatewayDError {
 				return nil
 			}
 		}
+		server.engine.mu.Lock()
 		server.engine.connections++
+		server.engine.mu.Unlock()
 
 		// For every new connection, a new unbuffered channel is created to help
 		// stop the proxy, recycle the server connection and close stale connections.
@@ -139,7 +146,9 @@ func Run(network, address string, server *Server) *gerr.GatewayDError {
 
 		go func(server *Server, conn net.Conn, stopConnection chan struct{}) {
 			<-stopConnection
+			server.engine.mu.Lock()
 			server.engine.connections--
+			server.engine.mu.Unlock()
 			if action := server.OnClose(conn, err); action == Close {
 				return
 			}

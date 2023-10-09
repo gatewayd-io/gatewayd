@@ -58,7 +58,9 @@ func (s *Server) OnBoot(engine Engine) Action {
 	s.engine = engine
 
 	// Set the server status to running.
+	s.engine.mu.Lock()
 	s.Status = config.Running
+	s.engine.mu.Unlock()
 
 	// Run the OnBooted hooks.
 	_, err = s.pluginRegistry.Run(
@@ -296,7 +298,9 @@ func (s *Server) OnShutdown(Engine) {
 	s.proxy.Shutdown()
 
 	// Set the server status to stopped. This is used to shutdown the server gracefully in OnClose.
+	s.engine.mu.Lock()
 	s.Status = config.Stopped
+	s.engine.mu.Unlock()
 }
 
 // OnTick is called every TickInterval. It calls the OnTick hooks.
@@ -390,7 +394,9 @@ func (s *Server) Shutdown() {
 	s.proxy.Shutdown()
 
 	// Set the server status to stopped. This is used to shutdown the server gracefully in OnClose.
+	s.engine.mu.Lock()
 	s.Status = config.Stopped
+	s.engine.mu.Unlock()
 
 	// Shutdown the server.
 	if err := s.engine.Stop(context.Background()); err != nil {
