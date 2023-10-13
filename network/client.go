@@ -18,6 +18,7 @@ import (
 type IClient interface {
 	Send(data []byte) (int, *gerr.GatewayDError)
 	Receive() (int, []byte, *gerr.GatewayDError)
+	Reconnect() error
 	Close()
 	IsConnected() bool
 	RemoteAddr() string
@@ -220,6 +221,41 @@ func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 		}
 	}
 	return received, buffer.Bytes(), nil
+}
+
+// Reconnect reconnects to the server.
+func (c *Client) Reconnect() error {
+	_, span := otel.Tracer(config.TracerName).Start(c.ctx, "Reconnect")
+	defer span.End()
+
+	// Save the current address and network.
+	address := c.Address
+	network := c.Network
+
+	if c.Conn != nil {
+		c.Close()
+	}
+	c.connected.Store(false)
+
+	// Restore the address and network.
+	c.Address = address
+	c.Network = network
+
+	conn, err := net.Dial(c.Network, c.Address)
+	if err != nil {
+		c.logger.Error().Err(err).Msg("Failed to reconnect")
+		span.RecordError(err)
+		return gerr.ErrClientConnectionFailed.Wrap(err)
+	}
+
+	c.Conn = conn
+	c.ID = GetID(
+		conn.LocalAddr().Network(), conn.LocalAddr().String(), config.DefaultSeed, c.logger)
+	c.connected.Store(true)
+	c.logger.Debug().Str("address", c.Address).Msg("Reconnected to server")
+	metrics.ServerConnections.Inc()
+
+	return nil
 }
 
 // Close closes the connection to the server.
