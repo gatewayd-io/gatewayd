@@ -245,13 +245,17 @@ func (s *Server) OnTraffic(conn net.Conn, stopConnection chan struct{}) Action {
 
 	// Pass the traffic from the client to server.
 	// If there is an error, log it and close the connection.
-	go func(s *Server, conn net.Conn, stopConnection chan struct{}) {
+	go func(server *Server, conn net.Conn, stopConnection chan struct{}) {
 		for {
-			s.logger.Trace().Msg("Passing through traffic from client to server")
-			if err := s.proxy.PassThroughToServer(conn); err != nil {
-				s.logger.Trace().Err(err).Msg("Failed to pass through traffic")
+			server.logger.Trace().Msg("Passing through traffic from client to server")
+			if err := server.proxy.PassThroughToServer(conn); err != nil {
+				server.logger.Trace().Err(err).Msg("Failed to pass through traffic")
 				span.RecordError(err)
-				stopConnection <- struct{}{}
+				server.engine.mu.Lock()
+				if server.Status == config.Stopped {
+					stopConnection <- struct{}{}
+				}
+				server.engine.mu.Unlock()
 				break
 			}
 		}
@@ -259,13 +263,17 @@ func (s *Server) OnTraffic(conn net.Conn, stopConnection chan struct{}) Action {
 
 	// Pass the traffic from the server to client.
 	// If there is an error, log it and close the connection.
-	go func(s *Server, conn net.Conn, stopConnection chan struct{}) {
+	go func(server *Server, conn net.Conn, stopConnection chan struct{}) {
 		for {
-			s.logger.Debug().Msg("Passing through traffic from server to client")
-			if err := s.proxy.PassThroughToClient(conn); err != nil {
-				s.logger.Trace().Err(err).Msg("Failed to pass through traffic")
+			server.logger.Debug().Msg("Passing through traffic from server to client")
+			if err := server.proxy.PassThroughToClient(conn); err != nil {
+				server.logger.Trace().Err(err).Msg("Failed to pass through traffic")
 				span.RecordError(err)
-				stopConnection <- struct{}{}
+				server.engine.mu.Lock()
+				if server.Status == config.Stopped {
+					stopConnection <- struct{}{}
+				}
+				server.engine.mu.Unlock()
 				break
 			}
 		}
@@ -279,7 +287,7 @@ func (s *Server) OnShutdown(Engine) {
 	_, span := otel.Tracer("gatewayd").Start(s.ctx, "OnShutdown")
 	defer span.End()
 
-	s.logger.Debug().Msg("GatewayD is shutting down...")
+	s.logger.Debug().Msg("GatewayD is shutting down")
 
 	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.pluginTimeout)
 	defer cancel()
@@ -376,7 +384,7 @@ func (s *Server) Run() error {
 
 	// Start the server.
 	origErr := Run(s.Network, addr, s)
-	if origErr != nil {
+	if origErr != nil && origErr.Unwrap() != nil {
 		s.logger.Error().Err(origErr).Msg("Failed to start server")
 		span.RecordError(origErr)
 		return gerr.ErrFailedToStartServer.Wrap(origErr)
@@ -411,6 +419,8 @@ func (s *Server) IsRunning() bool {
 	defer span.End()
 	span.SetAttributes(attribute.Bool("status", s.Status == config.Running))
 
+	s.engine.mu.Lock()
+	defer s.engine.mu.Unlock()
 	return s.Status == config.Running
 }
 
