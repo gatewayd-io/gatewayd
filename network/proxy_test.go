@@ -71,7 +71,7 @@ func TestNewProxy(t *testing.T) {
 	assert.Equal(t, false, proxy.Elastic)
 	assert.Equal(t, false, proxy.ReuseElasticClients)
 	assert.Equal(t, false, proxy.IsExhausted())
-	c, err := proxy.IsHealty(client)
+	c, err := proxy.IsHealthy(client)
 	assert.Nil(t, err)
 	assert.Equal(t, client, c)
 }
@@ -369,7 +369,7 @@ func BenchmarkProxyIsHealthyAndIsExhausted(b *testing.B) {
 
 	// Connect to the proxy
 	for i := 0; i < b.N; i++ {
-		proxy.IsHealty(client) //nolint:errcheck
+		proxy.IsHealthy(client) //nolint:errcheck
 		proxy.IsExhausted()
 	}
 }

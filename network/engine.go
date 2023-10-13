@@ -163,7 +163,7 @@ func Run(network, address string, server *Server) *gerr.GatewayDError {
 			stopConnection := make(chan struct{})
 			go func(server *Server, conn net.Conn, stopConnection chan struct{}) {
 				if action := server.OnTraffic(conn, stopConnection); action == Close {
-					return
+					stopConnection <- struct{}{}
 				}
 			}(server, conn, stopConnection)
 
@@ -174,9 +174,7 @@ func Run(network, address string, server *Server) *gerr.GatewayDError {
 						server.engine.mu.Lock()
 						server.engine.connections--
 						server.engine.mu.Unlock()
-						if action := server.OnClose(conn, err); action == Close {
-							return
-						}
+						server.OnClose(conn, err)
 						return
 					case <-server.engine.stopServer:
 						return

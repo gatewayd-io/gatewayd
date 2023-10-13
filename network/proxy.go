@@ -25,7 +25,7 @@ type IProxy interface {
 	Disconnect(conn net.Conn) *gerr.GatewayDError
 	PassThroughToServer(conn net.Conn) *gerr.GatewayDError
 	PassThroughToClient(conn net.Conn) *gerr.GatewayDError
-	IsHealty(cl *Client) (*Client, *gerr.GatewayDError)
+	IsHealthy(cl *Client) (*Client, *gerr.GatewayDError)
 	IsExhausted() bool
 	Shutdown()
 	AvailableConnections() []string
@@ -160,7 +160,7 @@ func (pr *Proxy) Connect(conn net.Conn) *gerr.GatewayDError {
 		}
 	}
 
-	client, err := pr.IsHealty(client)
+	client, err := pr.IsHealthy(client)
 	if err != nil {
 		pr.logger.Error().Err(err).Msg("Failed to connect to the client")
 		span.RecordError(err)
@@ -207,34 +207,38 @@ func (pr *Proxy) Disconnect(conn net.Conn) *gerr.GatewayDError {
 	defer span.End()
 
 	client := pr.busyConnections.Pop(conn)
-	//nolint:nestif
-	if client != nil {
-		if client, ok := client.(*Client); ok {
-			if (pr.Elastic && pr.ReuseElasticClients) || !pr.Elastic {
-				_, err := pr.IsHealty(client)
-				if err != nil {
-					pr.logger.Error().Err(err).Msg("Failed to reconnect to the client")
-					span.RecordError(err)
-				}
-				// If the client is not in the pool, put it back.
-				err = pr.availableConnections.Put(client.ID, client)
-				if err != nil {
-					pr.logger.Error().Err(err).Msg("Failed to put the client back in the pool")
-					span.RecordError(err)
-				}
-			} else {
-				span.RecordError(gerr.ErrClientNotConnected)
-				return gerr.ErrClientNotConnected
-			}
-		} else {
-			// This should never happen, but if it does,
-			// then there are some serious issues with the pool.
-			span.RecordError(gerr.ErrCastFailed)
-			return gerr.ErrCastFailed
-		}
-	} else {
+	if client == nil {
+		// If this ever happens, it means that the client connection
+		// is pre-empted from the busy connections pool.
+		pr.logger.Debug().Msg("Client connection is pre-empted from the busy connections pool")
 		span.RecordError(gerr.ErrClientNotFound)
 		return gerr.ErrClientNotFound
+	}
+
+	//nolint:nestif
+	if client, ok := client.(*Client); ok {
+		if (pr.Elastic && pr.ReuseElasticClients) || !pr.Elastic {
+			// Recycle the server connection by reconnecting.
+			if err := client.Reconnect(); err != nil {
+				pr.logger.Error().Err(err).Msg("Failed to reconnect to the client")
+				span.RecordError(err)
+			}
+
+			// If the client is not in the pool, put it back.
+			if err := pr.availableConnections.Put(client.ID, client); err != nil {
+				pr.logger.Error().Err(err).Msg("Failed to put the client back in the pool")
+				span.RecordError(err)
+			}
+		} else {
+			span.RecordError(gerr.ErrClientNotConnected)
+			return gerr.ErrClientNotConnected
+		}
+	} else {
+		// This should never happen, but if it does,
+		// then there are some serious issues with the pool.
+		pr.logger.Error().Msg("Failed to cast the client to the Client type")
+		span.RecordError(gerr.ErrCastFailed)
+		return gerr.ErrCastFailed
 	}
 
 	metrics.ProxiedConnections.Dec()
@@ -255,7 +259,7 @@ func (pr *Proxy) Disconnect(conn net.Conn) *gerr.GatewayDError {
 	return nil
 }
 
-// PassThrough sends the data from the client to the server.
+// PassThroughToServer sends the data from the client to the server.
 func (pr *Proxy) PassThroughToServer(conn net.Conn) *gerr.GatewayDError {
 	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "PassThrough")
 	defer span.End()
@@ -466,9 +470,9 @@ func (pr *Proxy) PassThroughToClient(conn net.Conn) *gerr.GatewayDError {
 	return errVerdict
 }
 
-// IsHealty checks if the pool is exhausted or the client is disconnected.
-func (pr *Proxy) IsHealty(client *Client) (*Client, *gerr.GatewayDError) {
-	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "IsHealty")
+// IsHealthy checks if the pool is exhausted or the client is disconnected.
+func (pr *Proxy) IsHealthy(client *Client) (*Client, *gerr.GatewayDError) {
+	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "IsHealthy")
 	defer span.End()
 
 	if pr.IsExhausted() {
@@ -526,7 +530,10 @@ func (pr *Proxy) Shutdown() {
 				pr.logger.Error().Err(err).Msg("Error setting the deadline")
 				span.RecordError(err)
 			}
-			conn.Close()
+			if err := conn.Close(); err != nil {
+				pr.logger.Error().Err(err).Msg("Failed to close the connection")
+				span.RecordError(err)
+			}
 		}
 		if client, ok := value.(*Client); ok {
 			if client != nil {

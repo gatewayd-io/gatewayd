@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"sync"
 	"time"
 
 	v1 "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin/v1"
@@ -25,6 +26,7 @@ type Server struct {
 	pluginRegistry *plugin.Registry
 	ctx            context.Context //nolint:containedctx
 	pluginTimeout  time.Duration
+	mu             *sync.RWMutex
 
 	Network      string // tcp/udp/unix
 	Address      string
@@ -58,9 +60,9 @@ func (s *Server) OnBoot(engine Engine) Action {
 	s.engine = engine
 
 	// Set the server status to running.
-	s.engine.mu.Lock()
+	s.mu.Lock()
 	s.Status = config.Running
-	s.engine.mu.Unlock()
+	s.mu.Unlock()
 
 	// Run the OnBooted hooks.
 	_, err = s.pluginRegistry.Run(
@@ -173,11 +175,14 @@ func (s *Server) OnClose(conn net.Conn, err error) Action {
 	span.AddEvent("Ran the OnClosing hooks")
 
 	// Shutdown the server if there are no more connections and the server is stopped.
-	// This is used to shutdown the server gracefully.
+	// This is used to shut down the server gracefully.
+	s.mu.Lock()
 	if uint64(s.engine.CountConnections()) == 0 && s.Status == config.Stopped {
 		span.AddEvent("Shutting down the server")
+		s.mu.Unlock()
 		return Shutdown
 	}
+	s.mu.Unlock()
 
 	// Disconnect the connection from the proxy. This effectively removes the mapping between
 	// the incoming and the server connections in the pool of the busy connections and either
@@ -251,11 +256,7 @@ func (s *Server) OnTraffic(conn net.Conn, stopConnection chan struct{}) Action {
 			if err := server.proxy.PassThroughToServer(conn); err != nil {
 				server.logger.Trace().Err(err).Msg("Failed to pass through traffic")
 				span.RecordError(err)
-				server.engine.mu.Lock()
-				if server.Status == config.Stopped {
-					stopConnection <- struct{}{}
-				}
-				server.engine.mu.Unlock()
+				stopConnection <- struct{}{}
 				break
 			}
 		}
@@ -269,17 +270,14 @@ func (s *Server) OnTraffic(conn net.Conn, stopConnection chan struct{}) Action {
 			if err := server.proxy.PassThroughToClient(conn); err != nil {
 				server.logger.Trace().Err(err).Msg("Failed to pass through traffic")
 				span.RecordError(err)
-				server.engine.mu.Lock()
-				if server.Status == config.Stopped {
-					stopConnection <- struct{}{}
-				}
-				server.engine.mu.Unlock()
+				stopConnection <- struct{}{}
 				break
 			}
 		}
 	}(s, conn, stopConnection)
 
-	return None
+	<-stopConnection
+	return Close
 }
 
 // OnShutdown is called when the server is shutting down. It calls the OnShutdown hooks.
@@ -306,9 +304,9 @@ func (s *Server) OnShutdown(Engine) {
 	s.proxy.Shutdown()
 
 	// Set the server status to stopped. This is used to shutdown the server gracefully in OnClose.
-	s.engine.mu.Lock()
+	s.mu.Lock()
 	s.Status = config.Stopped
-	s.engine.mu.Unlock()
+	s.mu.Unlock()
 }
 
 // OnTick is called every TickInterval. It calls the OnTick hooks.
@@ -402,9 +400,9 @@ func (s *Server) Shutdown() {
 	s.proxy.Shutdown()
 
 	// Set the server status to stopped. This is used to shutdown the server gracefully in OnClose.
-	s.engine.mu.Lock()
+	s.mu.Lock()
 	s.Status = config.Stopped
-	s.engine.mu.Unlock()
+	s.mu.Unlock()
 
 	// Shutdown the server.
 	if err := s.engine.Stop(context.Background()); err != nil {
@@ -419,8 +417,8 @@ func (s *Server) IsRunning() bool {
 	defer span.End()
 	span.SetAttributes(attribute.Bool("status", s.Status == config.Running))
 
-	s.engine.mu.Lock()
-	defer s.engine.mu.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	return s.Status == config.Running
 }
 
@@ -450,6 +448,7 @@ func NewServer(
 		logger:         logger,
 		pluginRegistry: pluginRegistry,
 		pluginTimeout:  pluginTimeout,
+		mu:             &sync.RWMutex{},
 	}
 
 	// Try to resolve the address and log an error if it can't be resolved.
