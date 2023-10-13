@@ -23,8 +23,8 @@ func TestNewProxy(t *testing.T) {
 		NoColor:           true,
 	})
 
-	// Create a connection pool
-	pool := pool.NewPool(context.Background(), config.EmptyPoolCapacity)
+	// Create a connection newPool
+	newPool := pool.NewPool(context.Background(), config.EmptyPoolCapacity)
 
 	client := NewClient(
 		context.Background(),
@@ -38,13 +38,13 @@ func TestNewProxy(t *testing.T) {
 			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 		},
 		logger)
-	err := pool.Put(client.ID, client)
+	err := newPool.Put(client.ID, client)
 	assert.Nil(t, err)
 
-	// Create a proxy with a fixed buffer pool
+	// Create a proxy with a fixed buffer newPool
 	proxy := NewProxy(
 		context.Background(),
-		pool,
+		newPool,
 		plugin.NewRegistry(
 			context.Background(),
 			config.Loose,
@@ -86,13 +86,13 @@ func TestNewProxyElastic(t *testing.T) {
 		NoColor:           true,
 	})
 
-	// Create a connection pool
-	pool := pool.NewPool(context.Background(), config.EmptyPoolCapacity)
+	// Create a connection newPool
+	newPool := pool.NewPool(context.Background(), config.EmptyPoolCapacity)
 
-	// Create a proxy with an elastic buffer pool
+	// Create a proxy with an elastic buffer newPool
 	proxy := NewProxy(
 		context.Background(),
-		pool,
+		newPool,
 		plugin.NewRegistry(
 			context.Background(),
 			config.Loose,
@@ -136,14 +136,14 @@ func BenchmarkNewProxy(b *testing.B) {
 		NoColor:           true,
 	})
 
-	// Create a connection pool
-	pool := pool.NewPool(context.Background(), config.EmptyPoolCapacity)
+	// Create a connection newPool
+	newPool := pool.NewPool(context.Background(), config.EmptyPoolCapacity)
 
-	// Create a proxy with a fixed buffer pool
+	// Create a proxy with a fixed buffer newPool
 	for i := 0; i < b.N; i++ {
 		proxy := NewProxy(
 			context.Background(),
-			pool,
+			newPool,
 			plugin.NewRegistry(
 				context.Background(),
 				config.Loose,
@@ -172,14 +172,14 @@ func BenchmarkNewProxyElastic(b *testing.B) {
 		NoColor:           true,
 	})
 
-	// Create a connection pool
-	pool := pool.NewPool(context.Background(), config.EmptyPoolCapacity)
+	// Create a connection newPool
+	newPool := pool.NewPool(context.Background(), config.EmptyPoolCapacity)
 
-	// Create a proxy with an elastic buffer pool
+	// Create a proxy with an elastic buffer newPool
 	for i := 0; i < b.N; i++ {
 		proxy := NewProxy(
 			context.Background(),
-			pool,
+			newPool,
 			plugin.NewRegistry(
 				context.Background(),
 				config.Loose,
@@ -216,8 +216,8 @@ func BenchmarkProxyConnectDisconnect(b *testing.B) {
 		NoColor:           true,
 	})
 
-	// Create a connection pool
-	pool := pool.NewPool(context.Background(), 1)
+	// Create a connection newPool
+	newPool := pool.NewPool(context.Background(), 1)
 
 	clientConfig := config.Client{
 		Network:            "tcp",
@@ -229,12 +229,12 @@ func BenchmarkProxyConnectDisconnect(b *testing.B) {
 		TCPKeepAlive:       false,
 		TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 	}
-	pool.Put("client", NewClient(context.Background(), &clientConfig, logger)) //nolint:errcheck
+	newPool.Put("client", NewClient(context.Background(), &clientConfig, logger)) //nolint:errcheck
 
-	// Create a proxy with a fixed buffer pool
+	// Create a proxy with a fixed buffer newPool
 	proxy := NewProxy(
 		context.Background(),
-		pool,
+		newPool,
 		plugin.NewRegistry(
 			context.Background(),
 			config.Loose,
@@ -270,8 +270,8 @@ func BenchmarkProxyPassThrough(b *testing.B) {
 		NoColor:           true,
 	})
 
-	// Create a connection pool
-	pool := pool.NewPool(context.Background(), 1)
+	// Create a connection newPool
+	newPool := pool.NewPool(context.Background(), 1)
 
 	clientConfig := config.Client{
 		Network:            "tcp",
@@ -283,12 +283,12 @@ func BenchmarkProxyPassThrough(b *testing.B) {
 		TCPKeepAlive:       false,
 		TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 	}
-	pool.Put("client", NewClient(context.Background(), &clientConfig, logger)) //nolint:errcheck
+	newPool.Put("client", NewClient(context.Background(), &clientConfig, logger)) //nolint:errcheck
 
-	// Create a proxy with a fixed buffer pool
+	// Create a proxy with a fixed buffer newPool
 	proxy := NewProxy(
 		context.Background(),
-		pool,
+		newPool,
 		plugin.NewRegistry(
 			context.Background(),
 			config.Loose,
@@ -326,8 +326,8 @@ func BenchmarkProxyIsHealthyAndIsExhausted(b *testing.B) {
 		NoColor:           true,
 	})
 
-	// Create a connection pool
-	pool := pool.NewPool(context.Background(), 1)
+	// Create a connection newPool
+	newPool := pool.NewPool(context.Background(), 1)
 
 	clientConfig := config.Client{
 		Network:            "tcp",
@@ -340,12 +340,12 @@ func BenchmarkProxyIsHealthyAndIsExhausted(b *testing.B) {
 		TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 	}
 	client := NewClient(context.Background(), &clientConfig, logger)
-	pool.Put("client", client) //nolint:errcheck
+	newPool.Put("client", client) //nolint:errcheck
 
-	// Create a proxy with a fixed buffer pool
+	// Create a proxy with a fixed buffer newPool
 	proxy := NewProxy(
 		context.Background(),
-		pool,
+		newPool,
 		plugin.NewRegistry(
 			context.Background(),
 			config.Loose,
@@ -383,8 +383,8 @@ func BenchmarkProxyAvailableAndBusyConnections(b *testing.B) {
 		NoColor:           true,
 	})
 
-	// Create a connection pool
-	pool := pool.NewPool(context.Background(), 1)
+	// Create a connection newPool
+	newPool := pool.NewPool(context.Background(), 1)
 
 	clientConfig := config.Client{
 		Network:            "tcp",
@@ -397,12 +397,12 @@ func BenchmarkProxyAvailableAndBusyConnections(b *testing.B) {
 		TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 	}
 	client := NewClient(context.Background(), &clientConfig, logger)
-	pool.Put("client", client) //nolint:errcheck
+	newPool.Put("client", client) //nolint:errcheck
 
-	// Create a proxy with a fixed buffer pool
+	// Create a proxy with a fixed buffer newPool
 	proxy := NewProxy(
 		context.Background(),
-		pool,
+		newPool,
 		plugin.NewRegistry(
 			context.Background(),
 			config.Loose,

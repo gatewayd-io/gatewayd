@@ -45,6 +45,7 @@ func TestNewClient(t *testing.T) {
 	client := CreateNewClient(t)
 	defer client.Close()
 
+	assert.NotNil(t, client)
 	assert.Equal(t, "tcp", client.Network)
 	assert.Equal(t, "127.0.0.1:5432", client.Address)
 	assert.NotEmpty(t, client.ID)
