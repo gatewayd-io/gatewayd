@@ -23,6 +23,7 @@ const (
 	ErrCodeServerSendFailed
 	ErrCodeServerListenFailed
 	ErrCodeSplitHostPortFailed
+	ErrCodeCloseListenerFailed
 	ErrCodeAcceptFailed
 	ErrCodeReadFailed
 	ErrCodePutFailed
@@ -85,6 +86,8 @@ var (
 		ErrCodeServerListenFailed, "couldn't listen on the server", nil)
 	ErrSplitHostPortFailed = NewGatewayDError(
 		ErrCodeSplitHostPortFailed, "failed to split host:port", nil)
+	ErrCloseListenerFailed = NewGatewayDError(
+		ErrCodeCloseListenerFailed, "failed to close listener", nil)
 	ErrAcceptFailed = NewGatewayDError(
 		ErrCodeAcceptFailed, "failed to accept connection", nil)
 
