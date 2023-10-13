@@ -98,11 +98,12 @@ func StopGracefully(
 		}
 	}
 
-	logger.Info().Msg("Stopping GatewayD")
-	span.AddEvent("Stopping GatewayD", trace.WithAttributes(
+	logger.Info().Msg("GatewayD is shutting down")
+	span.AddEvent("GatewayD is shutting down", trace.WithAttributes(
 		attribute.String("signal", signal),
 	))
 	if healthCheckScheduler != nil {
+		healthCheckScheduler.Stop()
 		healthCheckScheduler.Clear()
 		logger.Info().Msg("Stopped health check scheduler")
 		span.AddEvent("Stopped health check scheduler")
@@ -268,7 +269,7 @@ var runCmd = &cobra.Command{
 		startDelay := time.Now().Add(conf.Plugin.HealthCheckPeriod)
 		if _, err := healthCheckScheduler.Every(
 			conf.Plugin.HealthCheckPeriod).SingletonMode().StartAt(startDelay).Do(func() {
-			_, span = otel.Tracer(config.TracerName).Start(ctx, "Run plugin health check")
+			_, span := otel.Tracer(config.TracerName).Start(ctx, "Run plugin health check")
 			defer span.End()
 
 			var plugins []string
@@ -749,9 +750,13 @@ var runCmd = &cobra.Command{
 		)
 		signalsCh := make(chan os.Signal, 1)
 		signal.Notify(signalsCh, signals...)
-		go func(pluginRegistry *plugin.Registry,
+		go func(pluginTimeoutCtx context.Context,
+			pluginRegistry *plugin.Registry,
 			logger zerolog.Logger,
 			servers map[string]*network.Server,
+			metricsMerger *metrics.Merger,
+			metricsServer *http.Server,
+			stopChan chan struct{},
 		) {
 			for sig := range signalsCh {
 				for _, s := range signals {
@@ -771,13 +776,14 @@ var runCmd = &cobra.Command{
 					}
 				}
 			}
-		}(pluginRegistry, logger, servers)
+		}(pluginTimeoutCtx, pluginRegistry, logger, servers, metricsMerger, metricsServer, stopChan)
 
 		_, span = otel.Tracer(config.TracerName).Start(runCtx, "Start servers")
 		// Start the server.
 		for name, server := range servers {
 			logger := loggers[name]
 			go func(
+				span trace.Span,
 				server *network.Server,
 				logger zerolog.Logger,
 				healthCheckScheduler *gocron.Scheduler,
@@ -797,7 +803,7 @@ var runCmd = &cobra.Command{
 					pluginRegistry.Shutdown()
 					os.Exit(gerr.FailedToStartServer)
 				}
-			}(server, logger, healthCheckScheduler, metricsMerger, pluginRegistry)
+			}(span, server, logger, healthCheckScheduler, metricsMerger, pluginRegistry)
 		}
 		span.End()
 
