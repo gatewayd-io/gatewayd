@@ -75,10 +75,15 @@ var (
 		Name:      "proxied_connections",
 		Help:      "Number of proxy connects",
 	})
-	ProxyPassThroughs = promauto.NewCounter(prometheus.CounterOpts{
+	ProxyPassThroughsToClient = promauto.NewCounter(prometheus.CounterOpts{
 		Namespace: Namespace,
-		Name:      "proxy_passthroughs_total",
-		Help:      "Number of successful proxy passthroughs",
+		Name:      "proxy_passthroughs_to_client_total",
+		Help:      "Number of successful proxy passthroughs from server to client",
+	})
+	ProxyPassThroughsToServer = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: Namespace,
+		Name:      "proxy_passthroughs_to_server_total",
+		Help:      "Number of successful proxy passthroughs from client to server",
 	})
 	ProxyPassThroughTerminations = promauto.NewCounter(prometheus.CounterOpts{
 		Namespace: Namespace,

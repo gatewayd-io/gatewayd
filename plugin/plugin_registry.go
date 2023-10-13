@@ -271,6 +271,8 @@ func (reg *Registry) Run(
 	_, span := otel.Tracer(config.TracerName).Start(reg.ctx, "Run")
 	defer span.End()
 
+	metrics.PluginHooksExecuted.Inc()
+
 	if ctx == nil {
 		return nil, gerr.ErrNilContext
 	}
@@ -376,8 +378,6 @@ func (reg *Registry) Run(
 	for _, priority := range removeList {
 		delete(reg.hooks[hookName], priority)
 	}
-
-	metrics.PluginHooksExecuted.Inc()
 
 	return returnVal.AsMap(), nil
 }

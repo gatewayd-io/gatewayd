@@ -316,7 +316,7 @@ func (pr *Proxy) PassThroughToServer(conn net.Conn) *gerr.GatewayDError {
 	// If the hook wants to terminate the connection, do it.
 	if pr.shouldTerminate(result) {
 		if modResponse, modReceived := pr.getPluginModifiedResponse(result); modResponse != nil {
-			metrics.ProxyPassThroughs.Inc()
+			metrics.ProxyPassThroughsToClient.Inc()
 			metrics.ProxyPassThroughTerminations.Inc()
 			metrics.BytesSentToClient.Observe(float64(modReceived))
 			metrics.TotalTrafficBytes.Observe(float64(modReceived))
@@ -356,6 +356,8 @@ func (pr *Proxy) PassThroughToServer(conn net.Conn) *gerr.GatewayDError {
 		span.RecordError(err)
 	}
 	span.AddEvent("Ran the OnTrafficToServer hooks")
+
+	metrics.ProxyPassThroughsToServer.Inc()
 
 	return nil
 }
@@ -459,7 +461,7 @@ func (pr *Proxy) PassThroughToClient(conn net.Conn) *gerr.GatewayDError {
 		span.RecordError(errVerdict)
 	}
 
-	metrics.ProxyPassThroughs.Inc()
+	metrics.ProxyPassThroughsToClient.Inc()
 
 	return errVerdict
 }
@@ -501,8 +503,16 @@ func (pr *Proxy) Shutdown() {
 	defer span.End()
 
 	pr.availableConnections.ForEach(func(key, value interface{}) bool {
-		if cl, ok := value.(*Client); ok {
-			cl.Close()
+		if client, ok := value.(*Client); ok {
+			if client.IsConnected() {
+				// This will stop all the Conn.Read() and Conn.Write() calls.
+				// Ref: https://groups.google.com/g/golang-nuts/c/VPVWFrpIEyo
+				if err := client.Conn.SetDeadline(time.Now()); err != nil {
+					pr.logger.Error().Err(err).Msg("Error setting the deadline")
+					span.RecordError(err)
+				}
+				client.Close()
+			}
 		}
 		return true
 	})
@@ -511,14 +521,27 @@ func (pr *Proxy) Shutdown() {
 
 	pr.busyConnections.ForEach(func(key, value interface{}) bool {
 		if conn, ok := key.(net.Conn); ok {
+			// This will stop all the Conn.Read() and Conn.Write() calls.
+			if err := conn.SetDeadline(time.Now()); err != nil {
+				pr.logger.Error().Err(err).Msg("Error setting the deadline")
+				span.RecordError(err)
+			}
 			conn.Close()
 		}
-		if cl, ok := value.(*Client); ok {
-			cl.Close()
+		if client, ok := value.(*Client); ok {
+			if client != nil {
+				// This will stop all the Conn.Read() and Conn.Write() calls.
+				if err := client.Conn.SetDeadline(time.Now()); err != nil {
+					pr.logger.Error().Err(err).Msg("Error setting the deadline")
+					span.RecordError(err)
+				}
+				client.Close()
+			}
 		}
 		return true
 	})
 	pr.busyConnections.Clear()
+	pr.scheduler.Stop()
 	pr.scheduler.Clear()
 	pr.logger.Debug().Msg("All busy connections have been closed")
 }
