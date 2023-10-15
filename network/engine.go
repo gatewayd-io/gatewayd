@@ -100,7 +100,7 @@ func Run(network, address string, server *Server) *gerr.GatewayDError {
 
 	go func(server *Server) {
 		<-server.engine.stopServer
-		server.OnShutdown(server.engine)
+		server.OnShutdown()
 		server.logger.Debug().Msg("Server stopped")
 	}(server)
 
@@ -116,7 +116,7 @@ func Run(network, address string, server *Server) *gerr.GatewayDError {
 			default:
 				interval, action := server.OnTick()
 				if action == Shutdown {
-					server.OnShutdown(server.engine)
+					server.OnShutdown()
 					return
 				}
 				if interval == time.Duration(0) {
@@ -150,7 +150,7 @@ func Run(network, address string, server *Server) *gerr.GatewayDError {
 				}
 				conn.Close()
 				if action == Shutdown {
-					server.OnShutdown(server.engine)
+					server.OnShutdown()
 					return nil
 				}
 			}

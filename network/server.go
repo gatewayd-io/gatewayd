@@ -281,7 +281,7 @@ func (s *Server) OnTraffic(conn net.Conn, stopConnection chan struct{}) Action {
 }
 
 // OnShutdown is called when the server is shutting down. It calls the OnShutdown hooks.
-func (s *Server) OnShutdown(Engine) {
+func (s *Server) OnShutdown() {
 	_, span := otel.Tracer("gatewayd").Start(s.ctx, "OnShutdown")
 	defer span.End()
 
