@@ -69,6 +69,7 @@ jobs:
     name: Test GatewayD Plugins
     runs-on: ubuntu-latest
     needs: test
+    timeout-minutes: 3
     services:
       postgres:
         image: postgres
