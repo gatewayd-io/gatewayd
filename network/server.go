@@ -78,6 +78,9 @@ func (s *Server) OnBoot(engine Engine) Action {
 	s.mu.Unlock()
 
 	// Run the OnBooted hooks.
+	pluginTimeoutCtx, cancel = context.WithTimeout(context.Background(), s.pluginTimeout)
+	defer cancel()
+
 	_, err = s.pluginRegistry.Run(
 		pluginTimeoutCtx,
 		map[string]interface{}{"status": fmt.Sprint(s.Status)},
@@ -136,6 +139,9 @@ func (s *Server) OnOpen(conn net.Conn) ([]byte, Action) {
 	}
 
 	// Run the OnOpened hooks.
+	pluginTimeoutCtx, cancel = context.WithTimeout(context.Background(), s.pluginTimeout)
+	defer cancel()
+
 	onOpenedData := map[string]interface{}{
 		"client": map[string]interface{}{
 			"local":  LocalAddr(conn),
@@ -214,6 +220,9 @@ func (s *Server) OnClose(conn net.Conn, err error) Action {
 	}
 
 	// Run the OnClosed hooks.
+	pluginTimeoutCtx, cancel = context.WithTimeout(context.Background(), s.pluginTimeout)
+	defer cancel()
+
 	data = map[string]interface{}{
 		"client": map[string]interface{}{
 			"local":  LocalAddr(conn),

@@ -31,7 +31,6 @@ func Test_runCmd(t *testing.T) {
 
 		StopGracefully(
 			context.Background(),
-			context.Background(),
 			nil,
 			nil,
 			nil,
@@ -89,7 +88,6 @@ func Test_runCmdWithMultiTenancy(t *testing.T) {
 		time.Sleep(500 * time.Millisecond)
 
 		StopGracefully(
-			context.Background(),
 			context.Background(),
 			nil,
 			nil,
@@ -169,7 +167,6 @@ func Test_runCmdWithCachePlugin(t *testing.T) {
 		time.Sleep(time.Second)
 
 		StopGracefully(
-			context.Background(),
 			context.Background(),
 			nil,
 			nil,

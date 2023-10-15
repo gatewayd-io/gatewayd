@@ -70,7 +70,6 @@ var (
 
 func StopGracefully(
 	runCtx context.Context,
-	pluginTimeoutCtx context.Context,
 	sig os.Signal,
 	metricsMerger *metrics.Merger,
 	metricsServer *http.Server,
@@ -87,6 +86,9 @@ func StopGracefully(
 
 	logger.Info().Msg("Notifying the plugins that the server is shutting down")
 	if pluginRegistry != nil {
+		pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), conf.Plugin.Timeout)
+		defer cancel()
+
 		_, err := pluginRegistry.Run(
 			pluginTimeoutCtx,
 			map[string]interface{}{"signal": signal},
@@ -461,6 +463,9 @@ var runCmd = &cobra.Command{
 		}(conf.Global.Metrics[config.Default], logger)
 
 		// This is a notification hook, so we don't care about the result.
+		pluginTimeoutCtx, cancel = context.WithTimeout(context.Background(), conf.Plugin.Timeout)
+		defer cancel()
+
 		if data, ok := conf.GlobalKoanf.Get("loggers").(map[string]interface{}); ok {
 			_, err = pluginRegistry.Run(
 				pluginTimeoutCtx, data, v1.HookName_HOOK_NAME_ON_NEW_LOGGER)
@@ -527,6 +532,10 @@ var runCmd = &cobra.Command{
 
 					span.AddEvent("Create client", eventOptions)
 
+					pluginTimeoutCtx, cancel = context.WithTimeout(
+						context.Background(), conf.Plugin.Timeout)
+					defer cancel()
+
 					clientCfg := map[string]interface{}{
 						"id":                 client.ID,
 						"network":            client.Network,
@@ -571,6 +580,10 @@ var runCmd = &cobra.Command{
 				os.Exit(gerr.FailedToInitializePool)
 			}
 
+			pluginTimeoutCtx, cancel = context.WithTimeout(
+				context.Background(), conf.Plugin.Timeout)
+			defer cancel()
+
 			_, err = pluginRegistry.Run(
 				pluginTimeoutCtx,
 				map[string]interface{}{"name": name, "size": cfg.GetSize()},
@@ -609,6 +622,10 @@ var runCmd = &cobra.Command{
 				attribute.Bool("reuseElasticClients", cfg.ReuseElasticClients),
 				attribute.String("healthCheckPeriod", cfg.HealthCheckPeriod.String()),
 			))
+
+			pluginTimeoutCtx, cancel = context.WithTimeout(
+				context.Background(), conf.Plugin.Timeout)
+			defer cancel()
 
 			if data, ok := conf.GlobalKoanf.Get("proxies").(map[string]interface{}); ok {
 				_, err = pluginRegistry.Run(
@@ -650,6 +667,10 @@ var runCmd = &cobra.Command{
 				attribute.String("tickInterval", cfg.TickInterval.String()),
 				attribute.String("pluginTimeout", conf.Plugin.Timeout.String()),
 			))
+
+			pluginTimeoutCtx, cancel = context.WithTimeout(
+				context.Background(), conf.Plugin.Timeout)
+			defer cancel()
 
 			if data, ok := conf.GlobalKoanf.Get("servers").(map[string]interface{}); ok {
 				_, err = pluginRegistry.Run(
@@ -750,8 +771,7 @@ var runCmd = &cobra.Command{
 		)
 		signalsCh := make(chan os.Signal, 1)
 		signal.Notify(signalsCh, signals...)
-		go func(pluginTimeoutCtx context.Context,
-			pluginRegistry *plugin.Registry,
+		go func(pluginRegistry *plugin.Registry,
 			logger zerolog.Logger,
 			servers map[string]*network.Server,
 			metricsMerger *metrics.Merger,
@@ -763,7 +783,6 @@ var runCmd = &cobra.Command{
 					if sig != s {
 						StopGracefully(
 							runCtx,
-							pluginTimeoutCtx,
 							sig,
 							metricsMerger,
 							metricsServer,
@@ -776,7 +795,7 @@ var runCmd = &cobra.Command{
 					}
 				}
 			}
-		}(pluginTimeoutCtx, pluginRegistry, logger, servers, metricsMerger, metricsServer, stopChan)
+		}(pluginRegistry, logger, servers, metricsMerger, metricsServer, stopChan)
 
 		_, span = otel.Tracer(config.TracerName).Start(runCtx, "Start servers")
 		// Start the server.
