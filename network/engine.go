@@ -47,7 +47,7 @@ func (engine *Engine) Stop(ctx context.Context) error {
 	}
 	engine.stopServer <- struct{}{}
 	close(engine.stopServer)
-	return err
+	return err //nolint:wrapcheck
 }
 
 // NewEngine creates a new engine.
