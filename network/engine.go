@@ -54,6 +54,7 @@ func (engine *Engine) Stop(ctx context.Context) error {
 	engine.running.Store(false)
 	if err := engine.listener.Close(); err != nil {
 		engine.stopServer <- struct{}{}
+		close(engine.stopServer)
 		return gerr.ErrCloseListenerFailed.Wrap(err)
 	}
 	engine.stopServer <- struct{}{}
