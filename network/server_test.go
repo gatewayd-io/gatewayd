@@ -16,6 +16,7 @@ import (
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
@@ -24,6 +25,9 @@ import (
 // TestRunServer tests an entire server run with a single client connection and hooks.
 func TestRunServer(t *testing.T) {
 	errs := make(chan error)
+
+	// Reset prometheus metrics.
+	prometheus.DefaultRegisterer = prometheus.NewRegistry()
 
 	logger := logging.NewLogger(context.Background(), logging.LoggerConfig{
 		Output: []config.LogOutput{

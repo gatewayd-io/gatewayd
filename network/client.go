@@ -236,6 +236,8 @@ func (c *Client) Reconnect() error {
 
 	if c.conn != nil {
 		c.Close()
+	} else {
+		metrics.ServerConnections.Dec()
 	}
 	c.connected.Store(false)
 
