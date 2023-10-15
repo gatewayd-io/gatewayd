@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	v1 "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin/v1"
@@ -341,7 +343,7 @@ func (s *Server) OnTick() (time.Duration, Action) {
 }
 
 // Run starts the server and blocks until the server is stopped. It calls the OnRun hooks.
-func (s *Server) Run() error {
+func (s *Server) Run() *gerr.GatewayDError {
 	_, span := otel.Tracer("gatewayd").Start(s.ctx, "Run")
 	defer span.End()
 
@@ -381,14 +383,127 @@ func (s *Server) Run() error {
 	}
 
 	// Start the server.
-	origErr := Run(s.Network, addr, s)
-	if origErr != nil && origErr.Unwrap() != nil {
-		s.logger.Error().Err(origErr).Msg("Failed to start server")
-		span.RecordError(origErr)
-		return gerr.ErrFailedToStartServer.Wrap(origErr)
+	s.engine = Engine{
+		connections: 0,
+		logger:      s.logger,
+		stopServer:  make(chan struct{}),
+		mu:          &sync.RWMutex{},
+		running:     &atomic.Bool{},
 	}
 
-	return nil
+	if action := s.OnBoot(s.engine); action != None {
+		return nil
+	}
+
+	listener, origErr := net.Listen(s.Network, addr)
+	if origErr != nil {
+		s.logger.Error().Err(origErr).Msg("Server failed to start listening")
+		return gerr.ErrServerListenFailed.Wrap(origErr)
+	}
+	s.engine.listener = listener
+
+	if s.engine.listener == nil {
+		s.logger.Error().Msg("Server is not properly initialized")
+		return nil
+	}
+
+	var port string
+	s.engine.host, port, origErr = net.SplitHostPort(s.engine.listener.Addr().String())
+	if origErr != nil {
+		s.logger.Error().Err(origErr).Msg("Failed to split host and port")
+		return gerr.ErrSplitHostPortFailed.Wrap(origErr)
+	}
+
+	if s.engine.port, origErr = strconv.Atoi(port); origErr != nil {
+		s.logger.Error().Err(origErr).Msg("Failed to convert port to integer")
+		return gerr.ErrCastFailed.Wrap(origErr)
+	}
+
+	go func(server *Server) {
+		<-server.engine.stopServer
+		server.OnShutdown()
+		server.logger.Debug().Msg("Server stopped")
+	}(s)
+
+	go func(server *Server) {
+		if !server.Options.EnableTicker {
+			return
+		}
+
+		for {
+			select {
+			case <-server.engine.stopServer:
+				return
+			default:
+				interval, action := server.OnTick()
+				if action == Shutdown {
+					server.OnShutdown()
+					return
+				}
+				if interval == time.Duration(0) {
+					return
+				}
+				time.Sleep(interval)
+			}
+		}
+	}(s)
+
+	s.engine.running.Store(true)
+
+	for {
+		select {
+		case <-s.engine.stopServer:
+			s.logger.Info().Msg("Server stopped")
+			return nil
+		default:
+			conn, err := s.engine.listener.Accept()
+			if err != nil {
+				if !s.engine.running.Load() {
+					return nil
+				}
+				s.logger.Error().Err(err).Msg("Failed to accept connection")
+				return gerr.ErrAcceptFailed.Wrap(err)
+			}
+
+			if out, action := s.OnOpen(conn); action != None {
+				if _, err := conn.Write(out); err != nil {
+					s.logger.Error().Err(err).Msg("Failed to write to connection")
+				}
+				conn.Close()
+				if action == Shutdown {
+					s.OnShutdown()
+					return nil
+				}
+			}
+			s.engine.mu.Lock()
+			s.engine.connections++
+			s.engine.mu.Unlock()
+
+			// For every new connection, a new unbuffered channel is created to help
+			// stop the proxy, recycle the server connection and close stale connections.
+			stopConnection := make(chan struct{})
+			go func(server *Server, conn net.Conn, stopConnection chan struct{}) {
+				if action := server.OnTraffic(conn, stopConnection); action == Close {
+					stopConnection <- struct{}{}
+				}
+			}(s, conn, stopConnection)
+
+			go func(server *Server, conn net.Conn, stopConnection chan struct{}) {
+				for {
+					select {
+					case <-stopConnection:
+						server.engine.mu.Lock()
+						server.engine.connections--
+						server.engine.mu.Unlock()
+						server.OnClose(conn, err)
+						return
+					case <-server.engine.stopServer:
+						return
+					}
+				}
+			}(s, conn, stopConnection)
+		}
+	}
 }
 
 // Shutdown stops the server.

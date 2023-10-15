@@ -9,7 +9,6 @@ const (
 	ErrCodeNetworkNotSupported
 	ErrCodeResolveFailed
 	ErrCodePoolExhausted
-	ErrCodeStartServerFailed
 	ErrCodePluginNotFound
 	ErrCodePluginNotReady
 	ErrCodeStartPluginFailed
@@ -23,7 +22,6 @@ const (
 	ErrCodeServerSendFailed
 	ErrCodeServerListenFailed
 	ErrCodeSplitHostPortFailed
-	ErrCodeCloseListenerFailed
 	ErrCodeAcceptFailed
 	ErrCodeReadFailed
 	ErrCodePutFailed
@@ -56,8 +54,6 @@ var (
 		ErrCodeResolveFailed, "failed to resolve address", nil)
 	ErrPoolExhausted = NewGatewayDError(
 		ErrCodePoolExhausted, "pool is exhausted", nil)
-	ErrFailedToStartServer = NewGatewayDError(
-		ErrCodeStartServerFailed, "failed to start server", nil)
 
 	ErrPluginNotFound = NewGatewayDError(
 		ErrCodePluginNotFound, "plugin not found", nil)
@@ -87,8 +83,6 @@ var (
 		ErrCodeServerListenFailed, "couldn't listen on the server", nil)
 	ErrSplitHostPortFailed = NewGatewayDError(
 		ErrCodeSplitHostPortFailed, "failed to split host:port", nil)
-	ErrCloseListenerFailed = NewGatewayDError(
-		ErrCodeCloseListenerFailed, "failed to close listener", nil)
 	ErrAcceptFailed = NewGatewayDError(
 		ErrCodeAcceptFailed, "failed to accept connection", nil)
 
