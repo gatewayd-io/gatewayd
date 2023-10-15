@@ -8,7 +8,6 @@ import (
 	"os"
 	"strconv"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	v1 "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin/v1"
@@ -19,6 +18,18 @@ import (
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+)
+
+type Option struct {
+	EnableTicker bool
+}
+
+type Action int
+
+const (
+	None Action = iota
+	Close
+	Shutdown
 )
 
 type Server struct {
@@ -382,15 +393,6 @@ func (s *Server) Run() *gerr.GatewayDError {
 		}
 	}
 
-	// Start the server.
-	s.engine = Engine{
-		connections: 0,
-		logger:      s.logger,
-		stopServer:  make(chan struct{}),
-		mu:          &sync.RWMutex{},
-		running:     &atomic.Bool{},
-	}
-
 	if action := s.OnBoot(s.engine); action != None {
 		return nil
 	}
@@ -564,6 +566,7 @@ func NewServer(
 		pluginRegistry: pluginRegistry,
 		pluginTimeout:  pluginTimeout,
 		mu:             &sync.RWMutex{},
+		engine:         NewEngine(logger),
 	}
 
 	// Try to resolve the address and log an error if it can't be resolved.

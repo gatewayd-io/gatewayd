@@ -11,25 +11,8 @@ import (
 	"github.com/rs/zerolog"
 )
 
-type Option struct {
-	EnableTicker bool
-}
-
-type Action int
-
-const (
-	None Action = iota
-	Close
-	Shutdown
-)
-
-type TCPSocketOpt int
-
-const (
-	TCPNoDelay TCPSocketOpt = iota
-	TCPDelay
-)
-
+// Engine is the network engine.
+// TODO: Move this to the Server struct.
 type Engine struct {
 	listener    net.Listener
 	host        string
@@ -41,19 +24,22 @@ type Engine struct {
 	mu          *sync.RWMutex
 }
 
+// CountConnections returns the current number of connections.
 func (engine *Engine) CountConnections() int {
 	engine.mu.RLock()
 	defer engine.mu.RUnlock()
 	return int(engine.connections)
 }
 
+// Stop stops the engine.
 func (engine *Engine) Stop(ctx context.Context) error {
 	_, cancel := context.WithDeadline(ctx, time.Now().Add(config.DefaultEngineStopTimeout))
 	defer cancel()
 
+	var err error
 	engine.running.Store(false)
 	if engine.listener != nil {
-		if err := engine.listener.Close(); err != nil {
+		if err = engine.listener.Close(); err != nil {
 			engine.logger.Error().Err(err).Msg("Failed to close listener")
 		}
 	} else {
@@ -61,5 +47,16 @@ func (engine *Engine) Stop(ctx context.Context) error {
 	}
 	engine.stopServer <- struct{}{}
 	close(engine.stopServer)
-	return nil
+	return err
+}
+
+// NewEngine creates a new engine.
+func NewEngine(logger zerolog.Logger) Engine {
+	return Engine{
+		connections: 0,
+		logger:      logger,
+		running:     &atomic.Bool{},
+		stopServer:  make(chan struct{}),
+		mu:          &sync.RWMutex{},
+	}
 }
