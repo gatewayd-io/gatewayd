@@ -57,6 +57,12 @@ func (p *Pool) Put(key, value interface{}) *gerr.GatewayDError {
 		span.RecordError(gerr.ErrPoolExhausted)
 		return gerr.ErrPoolExhausted
 	}
+
+	if value == nil {
+		span.RecordError(gerr.ErrNilPointer)
+		return gerr.ErrNilPointer
+	}
+
 	p.pool.Store(key, value)
 	return nil
 }
@@ -80,6 +86,12 @@ func (p *Pool) GetOrPut(key, value interface{}) (interface{}, bool, *gerr.Gatewa
 		span.RecordError(gerr.ErrPoolExhausted)
 		return nil, false, gerr.ErrPoolExhausted
 	}
+
+	if value == nil {
+		span.RecordError(gerr.ErrNilPointer)
+		return nil, false, gerr.ErrNilPointer
+	}
+
 	val, loaded := p.pool.LoadOrStore(key, value)
 	return val, loaded, nil
 }

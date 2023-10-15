@@ -27,6 +27,7 @@ const (
 	ErrCodeAcceptFailed
 	ErrCodeReadFailed
 	ErrCodePutFailed
+	ErrCodeNilPointer
 	ErrCodeCastFailed
 	ErrCodeHookVerificationFailed
 	ErrCodeHookReturnedError
@@ -96,6 +97,8 @@ var (
 
 	ErrPutFailed = NewGatewayDError(
 		ErrCodePutFailed, "failed to put in pool", nil)
+	ErrNilPointer = NewGatewayDError(
+		ErrCodeNilPointer, "nil pointer", nil)
 
 	ErrCastFailed = NewGatewayDError(
 		ErrCodeCastFailed, "failed to cast", nil)
