@@ -273,9 +273,11 @@ func (c *Client) Close() {
 	// Set the deadline to now so that the connection is closed immediately.
 	// This will stop all the Conn.Read() and Conn.Write() calls.
 	// Ref: https://groups.google.com/g/golang-nuts/c/VPVWFrpIEyo
-	if err := c.conn.SetDeadline(time.Now()); err != nil {
-		c.logger.Error().Err(err).Msg("Failed to set deadline")
-		span.RecordError(err)
+	if c.conn != nil {
+		if err := c.conn.SetDeadline(time.Now()); err != nil {
+			c.logger.Error().Err(err).Msg("Failed to set deadline")
+			span.RecordError(err)
+		}
 	}
 
 	c.connected.Store(false)
