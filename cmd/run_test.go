@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"os"
 	"sync"
 	"testing"
@@ -29,8 +30,8 @@ func Test_runCmd(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 
 		StopGracefully(
-			runCmd.Context(),
-			runCmd.Context(),
+			context.Background(),
+			context.Background(),
 			nil,
 			nil,
 			nil,
@@ -88,8 +89,8 @@ func Test_runCmdWithMultiTenancy(t *testing.T) {
 		time.Sleep(500 * time.Millisecond)
 
 		StopGracefully(
-			runCmd.Context(),
-			runCmd.Context(),
+			context.Background(),
+			context.Background(),
 			nil,
 			nil,
 			nil,
@@ -168,8 +169,8 @@ func Test_runCmdWithCachePlugin(t *testing.T) {
 		time.Sleep(time.Second)
 
 		StopGracefully(
-			runCmd.Context(),
-			runCmd.Context(),
+			context.Background(),
+			context.Background(),
 			nil,
 			nil,
 			nil,
