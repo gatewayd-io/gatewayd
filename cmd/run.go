@@ -89,6 +89,7 @@ func StopGracefully(
 		pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), conf.Plugin.Timeout)
 		defer cancel()
 
+		//nolint:contextcheck
 		_, err := pluginRegistry.Run(
 			pluginTimeoutCtx,
 			map[string]interface{}{"signal": signal},

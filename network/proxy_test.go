@@ -310,10 +310,12 @@ func BenchmarkProxyPassThrough(b *testing.B) {
 	proxy.Connect(conn.Conn)      //nolint:errcheck
 	defer proxy.Disconnect(&conn) //nolint:errcheck
 
+	stack := NewStack()
+
 	// Connect to the proxy
 	for i := 0; i < b.N; i++ {
-		proxy.PassThroughToClient(&conn) //nolint:errcheck
-		proxy.PassThroughToServer(&conn) //nolint:errcheck
+		proxy.PassThroughToClient(&conn, stack) //nolint:errcheck
+		proxy.PassThroughToServer(&conn, stack) //nolint:errcheck
 	}
 }
 

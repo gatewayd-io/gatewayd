@@ -270,35 +270,39 @@ func (s *Server) OnTraffic(conn net.Conn, stopConnection chan struct{}) Action {
 	}
 	span.AddEvent("Ran the OnTraffic hooks")
 
+	stack := NewStack()
+
 	// Pass the traffic from the client to server.
 	// If there is an error, log it and close the connection.
-	go func(server *Server, conn net.Conn, stopConnection chan struct{}) {
+	go func(server *Server, conn net.Conn, stopConnection chan struct{}, stack *Stack) {
 		for {
 			server.logger.Trace().Msg("Passing through traffic from client to server")
-			if err := server.proxy.PassThroughToServer(conn); err != nil {
+			if err := server.proxy.PassThroughToServer(conn, stack); err != nil {
 				server.logger.Trace().Err(err).Msg("Failed to pass through traffic")
 				span.RecordError(err)
 				stopConnection <- struct{}{}
 				break
 			}
 		}
-	}(s, conn, stopConnection)
+	}(s, conn, stopConnection, stack)
 
 	// Pass the traffic from the server to client.
 	// If there is an error, log it and close the connection.
-	go func(server *Server, conn net.Conn, stopConnection chan struct{}) {
+	go func(server *Server, conn net.Conn, stopConnection chan struct{}, stack *Stack) {
 		for {
 			server.logger.Debug().Msg("Passing through traffic from server to client")
-			if err := server.proxy.PassThroughToClient(conn); err != nil {
+			if err := server.proxy.PassThroughToClient(conn, stack); err != nil {
 				server.logger.Trace().Err(err).Msg("Failed to pass through traffic")
 				span.RecordError(err)
 				stopConnection <- struct{}{}
 				break
 			}
 		}
-	}(s, conn, stopConnection)
+	}(s, conn, stopConnection, stack)
 
 	<-stopConnection
+	stack.Clear()
+
 	return Close
 }
 

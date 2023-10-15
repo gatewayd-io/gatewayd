@@ -23,8 +23,8 @@ import (
 type IProxy interface {
 	Connect(conn net.Conn) *gerr.GatewayDError
 	Disconnect(conn net.Conn) *gerr.GatewayDError
-	PassThroughToServer(conn net.Conn) *gerr.GatewayDError
-	PassThroughToClient(conn net.Conn) *gerr.GatewayDError
+	PassThroughToServer(conn net.Conn, stack *Stack) *gerr.GatewayDError
+	PassThroughToClient(conn net.Conn, stack *Stack) *gerr.GatewayDError
 	IsHealthy(cl *Client) (*Client, *gerr.GatewayDError)
 	IsExhausted() bool
 	Shutdown()
@@ -260,7 +260,7 @@ func (pr *Proxy) Disconnect(conn net.Conn) *gerr.GatewayDError {
 }
 
 // PassThroughToServer sends the data from the client to the server.
-func (pr *Proxy) PassThroughToServer(conn net.Conn) *gerr.GatewayDError {
+func (pr *Proxy) PassThroughToServer(conn net.Conn, stack *Stack) *gerr.GatewayDError {
 	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "PassThrough")
 	defer span.End()
 
@@ -317,6 +317,9 @@ func (pr *Proxy) PassThroughToServer(conn net.Conn) *gerr.GatewayDError {
 		return gerr.ErrClientNotConnected.Wrap(origErr)
 	}
 
+	// Push the client's request to the stack.
+	stack.Push(&Request{Data: request})
+
 	// If the hook wants to terminate the connection, do it.
 	if pr.shouldTerminate(result) {
 		if modResponse, modReceived := pr.getPluginModifiedResponse(result); modResponse != nil {
@@ -326,6 +329,10 @@ func (pr *Proxy) PassThroughToServer(conn net.Conn) *gerr.GatewayDError {
 			metrics.TotalTrafficBytes.Observe(float64(modReceived))
 
 			span.AddEvent("Terminating connection")
+
+			// Remove the request from the stack if the response is modified.
+			stack.PopLastRequest()
+
 			return pr.sendTrafficToClient(conn, modResponse, modReceived)
 		}
 		span.RecordError(gerr.ErrHookTerminatedConnection)
@@ -336,6 +343,8 @@ func (pr *Proxy) PassThroughToServer(conn net.Conn) *gerr.GatewayDError {
 		request = modRequest
 		span.AddEvent("Plugin(s) modified the request")
 	}
+
+	stack.UpdateLastRequest(&Request{Data: request})
 
 	// Send the request to the server.
 	_, err = pr.sendTrafficToServer(client, request)
@@ -370,7 +379,7 @@ func (pr *Proxy) PassThroughToServer(conn net.Conn) *gerr.GatewayDError {
 }
 
 // PassThroughToClient sends the data from the server to the client.
-func (pr *Proxy) PassThroughToClient(conn net.Conn) *gerr.GatewayDError {
+func (pr *Proxy) PassThroughToClient(conn net.Conn, stack *Stack) *gerr.GatewayDError {
 	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "PassThrough")
 	defer span.End()
 
@@ -410,11 +419,21 @@ func (pr *Proxy) PassThroughToClient(conn net.Conn) *gerr.GatewayDError {
 		pr.logger.Debug().Fields(fields).Msg("No data to send to client")
 		span.AddEvent("No data to send to client")
 		span.RecordError(err)
+
+		stack.PopLastRequest()
+
 		return err
 	}
 
 	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), pr.pluginTimeout)
 	defer cancel()
+
+	// Get the last request from the stack.
+	lastRequest := stack.PopLastRequest()
+	request := make([]byte, 0)
+	if lastRequest != nil {
+		request = lastRequest.Data
+	}
 
 	// Run the OnTrafficFromServer hooks.
 	result, err := pr.pluginRegistry.Run(
@@ -423,6 +442,10 @@ func (pr *Proxy) PassThroughToClient(conn net.Conn) *gerr.GatewayDError {
 			conn,
 			client,
 			[]Field{
+				{
+					Name:  "request",
+					Value: request,
+				},
 				{
 					Name:  "response",
 					Value: response[:received],
@@ -457,6 +480,10 @@ func (pr *Proxy) PassThroughToClient(conn net.Conn) *gerr.GatewayDError {
 			conn,
 			client,
 			[]Field{
+				{
+					Name:  "request",
+					Value: request,
+				},
 				{
 					Name:  "response",
 					Value: response[:received],
