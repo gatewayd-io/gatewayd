@@ -264,8 +264,8 @@ func (pr *Proxy) PassThroughToServer(conn net.Conn) *gerr.GatewayDError {
 	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "PassThrough")
 	defer span.End()
 
-	// Check if the proxy has a egress client for the incoming connection.
 	var client *Client
+	// Check if the proxy has a egress client for the incoming connection.
 	if pr.busyConnections.Get(conn) == nil {
 		span.RecordError(gerr.ErrClientNotFound)
 		return gerr.ErrClientNotFound
@@ -280,7 +280,7 @@ func (pr *Proxy) PassThroughToServer(conn net.Conn) *gerr.GatewayDError {
 	}
 	span.AddEvent("Got the client from the busy connection pool")
 
-	if !client.IsConnected() || !pr.isConnectionHealthy(conn) {
+	if !client.IsConnected() {
 		return gerr.ErrClientNotConnected
 	}
 
@@ -375,6 +375,7 @@ func (pr *Proxy) PassThroughToClient(conn net.Conn) *gerr.GatewayDError {
 	defer span.End()
 
 	var client *Client
+	// Check if the proxy has a egress client for the incoming connection.
 	if pr.busyConnections.Get(conn) == nil {
 		span.RecordError(gerr.ErrClientNotFound)
 		return gerr.ErrClientNotFound
@@ -389,7 +390,7 @@ func (pr *Proxy) PassThroughToClient(conn net.Conn) *gerr.GatewayDError {
 	}
 	span.AddEvent("Got the client from the busy connection pool")
 
-	if !client.IsConnected() || !pr.isConnectionHealthy(conn) {
+	if !client.IsConnected() {
 		return gerr.ErrClientNotConnected
 	}
 
