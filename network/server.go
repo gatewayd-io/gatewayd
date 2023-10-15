@@ -403,6 +403,7 @@ func (s *Server) Run() *gerr.GatewayDError {
 		return gerr.ErrServerListenFailed.Wrap(origErr)
 	}
 	s.engine.listener = listener
+	defer s.engine.listener.Close()
 
 	if s.engine.listener == nil {
 		s.logger.Error().Msg("Server is not properly initialized")

@@ -110,6 +110,9 @@ clean:
 test:
 	@go test -v ./...
 
+test-race:
+	@go test -race -v ./...
+
 benchmark:
 	@go test -bench=. -benchmem -run=^# ./...
 
