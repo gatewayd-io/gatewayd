@@ -165,7 +165,7 @@ func Test_runCmdWithCachePlugin(t *testing.T) {
 	var waitGroup sync.WaitGroup
 	waitGroup.Add(1)
 	go func(waitGroup *sync.WaitGroup) {
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(time.Second)
 
 		StopGracefully(
 			runCmd.Context(),
