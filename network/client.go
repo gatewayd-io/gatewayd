@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -26,11 +27,11 @@ type IClient interface {
 }
 
 type Client struct {
-	net.Conn
-
+	conn      net.Conn
 	logger    zerolog.Logger
 	ctx       context.Context //nolint:containedctx
 	connected atomic.Bool
+	mu        sync.Mutex
 
 	TCPKeepAlive       bool
 	TCPKeepAlivePeriod time.Duration
@@ -69,6 +70,7 @@ func NewClient(ctx context.Context, clientConfig *config.Client, logger zerolog.
 	// Create a resolved client.
 	client = Client{
 		ctx:     clientCtx,
+		mu:      sync.Mutex{},
 		Network: clientConfig.Network,
 		Address: addr,
 	}
@@ -90,14 +92,14 @@ func NewClient(ctx context.Context, clientConfig *config.Client, logger zerolog.
 		return nil
 	}
 
-	client.Conn = conn
+	client.conn = conn
 	client.connected.Store(true)
 
 	// Set the TCP keep alive.
 	client.TCPKeepAlive = clientConfig.TCPKeepAlive
 	client.TCPKeepAlivePeriod = clientConfig.TCPKeepAlivePeriod
 
-	if c, ok := client.Conn.(*net.TCPConn); ok {
+	if c, ok := client.conn.(*net.TCPConn); ok {
 		if err := c.SetKeepAlive(client.TCPKeepAlive); err != nil {
 			logger.Error().Err(err).Msg("Failed to set keep alive")
 			span.RecordError(err)
@@ -112,7 +114,7 @@ func NewClient(ctx context.Context, clientConfig *config.Client, logger zerolog.
 	// Set the receive deadline (timeout).
 	client.ReceiveDeadline = clientConfig.ReceiveDeadline
 	if client.ReceiveDeadline > 0 {
-		if err := client.Conn.SetReadDeadline(time.Now().Add(client.ReceiveDeadline)); err != nil {
+		if err := client.conn.SetReadDeadline(time.Now().Add(client.ReceiveDeadline)); err != nil {
 			logger.Error().Err(err).Msg("Failed to set receive deadline")
 			span.RecordError(err)
 		} else {
@@ -124,7 +126,7 @@ func NewClient(ctx context.Context, clientConfig *config.Client, logger zerolog.
 	// Set the send deadline (timeout).
 	client.SendDeadline = clientConfig.SendDeadline
 	if client.SendDeadline > 0 {
-		if err := client.Conn.SetWriteDeadline(time.Now().Add(client.SendDeadline)); err != nil {
+		if err := client.conn.SetWriteDeadline(time.Now().Add(client.SendDeadline)); err != nil {
 			logger.Error().Err(err).Msg("Failed to set send deadline")
 			span.RecordError(err)
 		} else {
@@ -163,7 +165,7 @@ func (c *Client) Send(data []byte) (int, *gerr.GatewayDError) {
 			break
 		}
 
-		written, err := c.Conn.Write(data)
+		written, err := c.conn.Write(data)
 		if err != nil {
 			c.logger.Error().Err(err).Msg("Couldn't send data to the server")
 			span.RecordError(err)
@@ -207,7 +209,7 @@ func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 	// Read the data in chunks.
 	for ctx.Err() == nil {
 		chunk := make([]byte, c.ReceiveChunkSize)
-		read, err := c.Conn.Read(chunk)
+		read, err := c.conn.Read(chunk)
 		if err != nil {
 			c.logger.Error().Err(err).Msg("Couldn't receive data from the server")
 			span.RecordError(err)
@@ -232,7 +234,7 @@ func (c *Client) Reconnect() error {
 	address := c.Address
 	network := c.Network
 
-	if c.Conn != nil {
+	if c.conn != nil {
 		c.Close()
 	}
 	c.connected.Store(false)
@@ -248,7 +250,7 @@ func (c *Client) Reconnect() error {
 		return gerr.ErrClientConnectionFailed.Wrap(err)
 	}
 
-	c.Conn = conn
+	c.conn = conn
 	c.ID = GetID(
 		conn.LocalAddr().Network(), conn.LocalAddr().String(), config.DefaultSeed, c.logger)
 	c.connected.Store(true)
@@ -263,21 +265,29 @@ func (c *Client) Close() {
 	_, span := otel.Tracer(config.TracerName).Start(c.ctx, "Close")
 	defer span.End()
 
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	// Set the deadline to now so that the connection is closed immediately.
-	if err := c.Conn.SetDeadline(time.Now()); err != nil {
+	// This will stop all the Conn.Read() and Conn.Write() calls.
+	// Ref: https://groups.google.com/g/golang-nuts/c/VPVWFrpIEyo
+	if err := c.conn.SetDeadline(time.Now()); err != nil {
 		c.logger.Error().Err(err).Msg("Failed to set deadline")
 		span.RecordError(err)
 	}
 
+	c.connected.Store(false)
 	c.logger.Debug().Str("address", c.Address).Msg("Closing connection to server")
-	if c.Conn != nil {
-		c.Conn.Close()
+	if c.conn != nil {
+		if err := c.conn.Close(); err != nil {
+			c.logger.Error().Err(err).Msg("Failed to close connection")
+			span.RecordError(err)
+		}
 	}
 	c.ID = ""
-	c.Conn = nil
+	c.conn = nil
 	c.Address = ""
 	c.Network = ""
-	c.connected.Store(false)
 
 	metrics.ServerConnections.Dec()
 }
@@ -298,7 +308,7 @@ func (c *Client) IsConnected() bool {
 		return false
 	}
 
-	if c != nil && c.Conn == nil || c.ID == "" {
+	if c != nil && c.conn == nil || c.ID == "" {
 		c.logger.Debug().Fields(
 			map[string]interface{}{
 				"address": c.Address,
@@ -316,8 +326,11 @@ func (c *Client) RemoteAddr() string {
 		return ""
 	}
 
-	if c.Conn != nil && c.Conn.RemoteAddr() != nil {
-		return c.Conn.RemoteAddr().String()
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.conn != nil && c.conn.RemoteAddr() != nil {
+		return c.conn.RemoteAddr().String()
 	}
 
 	return ""
@@ -329,8 +342,11 @@ func (c *Client) LocalAddr() string {
 		return ""
 	}
 
-	if c.Conn != nil && c.Conn.LocalAddr() != nil {
-		return c.Conn.LocalAddr().String()
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.conn != nil && c.conn.LocalAddr() != nil {
+		return c.conn.LocalAddr().String()
 	}
 
 	return ""

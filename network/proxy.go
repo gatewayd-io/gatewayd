@@ -341,6 +341,9 @@ func (pr *Proxy) PassThroughToServer(conn net.Conn) *gerr.GatewayDError {
 	_, err = pr.sendTrafficToServer(client, request)
 	span.AddEvent("Sent traffic to server")
 
+	pluginTimeoutCtx, cancel = context.WithTimeout(context.Background(), pr.pluginTimeout)
+	defer cancel()
+
 	// Run the OnTrafficToServer hooks.
 	_, err = pr.pluginRegistry.Run(
 		pluginTimeoutCtx,
@@ -396,12 +399,14 @@ func (pr *Proxy) PassThroughToClient(conn net.Conn) *gerr.GatewayDError {
 
 	// If the response is empty, don't send anything, instead just close the ingress connection.
 	if received == 0 || err != nil {
-		pr.logger.Debug().Fields(
-			map[string]interface{}{
-				"function": "proxy.passthrough",
-				"local":    client.LocalAddr(),
-				"remote":   client.RemoteAddr(),
-			}).Msg("No data to send to client")
+		fields := map[string]interface{}{"function": "proxy.passthrough"}
+		if client.LocalAddr() != "" {
+			fields["local_addr"] = client.LocalAddr()
+		}
+		if client.RemoteAddr() != "" {
+			fields["remote_addr"] = client.RemoteAddr()
+		}
+		pr.logger.Debug().Fields(fields).Msg("No data to send to client")
 		span.AddEvent("No data to send to client")
 		span.RecordError(err)
 		return err
@@ -442,6 +447,9 @@ func (pr *Proxy) PassThroughToClient(conn net.Conn) *gerr.GatewayDError {
 	span.AddEvent("Sent traffic to client")
 
 	// Run the OnTrafficToClient hooks.
+	pluginTimeoutCtx, cancel = context.WithTimeout(context.Background(), pr.pluginTimeout)
+	defer cancel()
+
 	_, err = pr.pluginRegistry.Run(
 		pluginTimeoutCtx,
 		trafficData(
@@ -509,12 +517,6 @@ func (pr *Proxy) Shutdown() {
 	pr.availableConnections.ForEach(func(key, value interface{}) bool {
 		if client, ok := value.(*Client); ok {
 			if client.IsConnected() {
-				// This will stop all the Conn.Read() and Conn.Write() calls.
-				// Ref: https://groups.google.com/g/golang-nuts/c/VPVWFrpIEyo
-				if err := client.Conn.SetDeadline(time.Now()); err != nil {
-					pr.logger.Error().Err(err).Msg("Error setting the deadline")
-					span.RecordError(err)
-				}
 				client.Close()
 			}
 		}
@@ -537,11 +539,6 @@ func (pr *Proxy) Shutdown() {
 		}
 		if client, ok := value.(*Client); ok {
 			if client != nil {
-				// This will stop all the Conn.Read() and Conn.Write() calls.
-				if err := client.Conn.SetDeadline(time.Now()); err != nil {
-					pr.logger.Error().Err(err).Msg("Error setting the deadline")
-					span.RecordError(err)
-				}
 				client.Close()
 			}
 		}
@@ -561,7 +558,7 @@ func (pr *Proxy) AvailableConnections() []string {
 	connections := make([]string, 0)
 	pr.availableConnections.ForEach(func(_, value interface{}) bool {
 		if cl, ok := value.(*Client); ok {
-			connections = append(connections, cl.Conn.LocalAddr().String())
+			connections = append(connections, cl.LocalAddr())
 		}
 		return true
 	})
@@ -668,14 +665,19 @@ func (pr *Proxy) receiveTrafficFromServer(client *Client) (int, []byte, *gerr.Ga
 
 	// Receive the response from the server.
 	received, response, err := client.Receive()
-	pr.logger.Debug().Fields(
-		map[string]interface{}{
-			"function": "proxy.passthrough",
-			"length":   received,
-			"local":    client.LocalAddr(),
-			"remote":   client.RemoteAddr(),
-		},
-	).Msg("Received data from database")
+
+	fields := map[string]interface{}{
+		"function": "proxy.passthrough",
+		"length":   received,
+	}
+	if client.LocalAddr() != "" {
+		fields["local"] = client.LocalAddr()
+	}
+	if client.RemoteAddr() != "" {
+		fields["remote"] = client.RemoteAddr()
+	}
+
+	pr.logger.Debug().Fields(fields).Msg("Received data from database")
 
 	metrics.BytesReceivedFromServer.Observe(float64(received))
 	metrics.TotalTrafficBytes.Observe(float64(received))
