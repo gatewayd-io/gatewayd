@@ -44,8 +44,6 @@ func TestEngine(t *testing.T) {
 		assert.Zero(t, engine.connections)
 	})
 
-	t.Log(output)
-
 	// Expected output:
 	assert.Contains(t, output, "ERR Listener is not initialized")
 }

@@ -45,9 +45,16 @@ func (engine *Engine) Stop(ctx context.Context) error {
 	} else {
 		engine.logger.Error().Msg("Listener is not initialized")
 	}
-	engine.stopServer <- struct{}{}
-	close(engine.stopServer)
-	return err //nolint:wrapcheck
+
+	select {
+	case <-engine.stopServer:
+		engine.logger.Info().Msg("Server stopped")
+		return err //nolint:wrapcheck
+	default:
+		engine.stopServer <- struct{}{}
+		close(engine.stopServer)
+		return err //nolint:wrapcheck
+	}
 }
 
 // NewEngine creates a new engine.
