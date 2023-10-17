@@ -9,7 +9,6 @@ import (
 	"net"
 
 	gerr "github.com/gatewayd-io/gatewayd/errors"
-	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
 )
 
@@ -52,19 +51,19 @@ func Resolve(network, address string, logger zerolog.Logger) (string, *gerr.Gate
 
 // trafficData creates the ingress/egress map for the traffic hooks.
 func trafficData(
-	gconn gnet.Conn,
+	conn net.Conn,
 	client *Client,
 	fields []Field,
 	err interface{},
 ) map[string]interface{} {
-	if gconn == nil || client == nil {
+	if conn == nil || client == nil {
 		return nil
 	}
 
 	data := map[string]interface{}{
 		"client": map[string]interface{}{
-			"local":  LocalAddr(gconn),
-			"remote": RemoteAddr(gconn),
+			"local":  LocalAddr(conn),
+			"remote": RemoteAddr(conn),
 		},
 		"server": map[string]interface{}{
 			"local":  client.LocalAddr(),
@@ -126,17 +125,17 @@ func IsConnClosed(received int, err *gerr.GatewayDError) bool {
 }
 
 // LocalAddr returns the local address of the connection.
-func LocalAddr(gconn gnet.Conn) string {
-	if gconn != nil && gconn.LocalAddr() != nil {
-		return gconn.LocalAddr().String()
+func LocalAddr(conn net.Conn) string {
+	if conn != nil && conn.LocalAddr() != nil {
+		return conn.LocalAddr().String()
 	}
 	return ""
 }
 
 // RemoteAddr returns the remote address of the connection.
-func RemoteAddr(gconn gnet.Conn) string {
-	if gconn != nil && gconn.RemoteAddr() != nil {
-		return gconn.RemoteAddr().String()
+func RemoteAddr(conn net.Conn) string {
+	if conn != nil && conn.RemoteAddr() != nil {
+		return conn.RemoteAddr().String()
 	}
 	return ""
 }

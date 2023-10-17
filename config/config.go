@@ -129,21 +129,10 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 	}
 
 	defaultServer := Server{
-		Network:          DefaultListenNetwork,
-		Address:          DefaultListenAddress,
-		EnableTicker:     false,
-		TickInterval:     DefaultTickInterval,
-		MultiCore:        true,
-		LockOSThread:     false,
-		ReuseAddress:     true,
-		ReusePort:        true,
-		LoadBalancer:     DefaultLoadBalancer,
-		ReadBufferCap:    DefaultBufferSize,
-		WriteBufferCap:   DefaultBufferSize,
-		SocketRecvBuffer: DefaultBufferSize,
-		SocketSendBuffer: DefaultBufferSize,
-		TCPKeepAlive:     DefaultTCPKeepAliveDuration,
-		TCPNoDelay:       DefaultTCPNoDelay,
+		Network:      DefaultListenNetwork,
+		Address:      DefaultListenAddress,
+		EnableTicker: false,
+		TickInterval: DefaultTickInterval,
 	}
 
 	c.globalDefaults = GlobalConfig{

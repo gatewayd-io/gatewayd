@@ -45,10 +45,11 @@ func TestNewClient(t *testing.T) {
 	client := CreateNewClient(t)
 	defer client.Close()
 
+	assert.NotNil(t, client)
 	assert.Equal(t, "tcp", client.Network)
 	assert.Equal(t, "127.0.0.1:5432", client.Address)
 	assert.NotEmpty(t, client.ID)
-	assert.NotNil(t, client.Conn)
+	assert.NotNil(t, client.conn)
 }
 
 // TestSend tests the Send function.
@@ -95,7 +96,7 @@ func TestClose(t *testing.T) {
 	assert.Equal(t, "", client.ID)
 	assert.Equal(t, "", client.Network)
 	assert.Equal(t, "", client.Address)
-	assert.Nil(t, client.Conn)
+	assert.Nil(t, client.conn)
 }
 
 // TestIsConnected tests the IsConnected function.
@@ -105,6 +106,24 @@ func TestIsConnected(t *testing.T) {
 	assert.True(t, client.IsConnected())
 	client.Close()
 	assert.False(t, client.IsConnected())
+}
+
+func TestReconnect(t *testing.T) {
+	client := CreateNewClient(t)
+	defer client.Close()
+
+	assert.NotNil(t, client)
+	assert.NotNil(t, client.conn)
+	assert.NotEmpty(t, client.ID)
+	localAddr := client.LocalAddr()
+	assert.NotEmpty(t, localAddr)
+
+	assert.NoError(t, client.Reconnect())
+	assert.NotNil(t, client)
+	assert.NotNil(t, client.conn)
+	assert.NotEmpty(t, client.ID)
+	assert.NotEmpty(t, client.LocalAddr())
+	assert.NotEqual(t, localAddr, client.LocalAddr()) // This is a new connection.
 }
 
 func BenchmarkNewClient(b *testing.B) {

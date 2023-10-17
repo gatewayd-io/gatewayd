@@ -30,7 +30,6 @@ import (
 	usage "github.com/gatewayd-io/gatewayd/usagereport/v1"
 	"github.com/getsentry/sentry-go"
 	"github.com/go-co-op/gocron"
-	"github.com/panjf2000/gnet/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
@@ -71,7 +70,6 @@ var (
 
 func StopGracefully(
 	runCtx context.Context,
-	pluginTimeoutCtx context.Context,
 	sig os.Signal,
 	metricsMerger *metrics.Merger,
 	metricsServer *http.Server,
@@ -88,6 +86,10 @@ func StopGracefully(
 
 	logger.Info().Msg("Notifying the plugins that the server is shutting down")
 	if pluginRegistry != nil {
+		pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), conf.Plugin.Timeout)
+		defer cancel()
+
+		//nolint:contextcheck
 		_, err := pluginRegistry.Run(
 			pluginTimeoutCtx,
 			map[string]interface{}{"signal": signal},
@@ -99,11 +101,12 @@ func StopGracefully(
 		}
 	}
 
-	logger.Info().Msg("Stopping GatewayD")
-	span.AddEvent("Stopping GatewayD", trace.WithAttributes(
+	logger.Info().Msg("GatewayD is shutting down")
+	span.AddEvent("GatewayD is shutting down", trace.WithAttributes(
 		attribute.String("signal", signal),
 	))
 	if healthCheckScheduler != nil {
+		healthCheckScheduler.Stop()
 		healthCheckScheduler.Clear()
 		logger.Info().Msg("Stopped health check scheduler")
 		span.AddEvent("Stopped health check scheduler")
@@ -269,7 +272,7 @@ var runCmd = &cobra.Command{
 		startDelay := time.Now().Add(conf.Plugin.HealthCheckPeriod)
 		if _, err := healthCheckScheduler.Every(
 			conf.Plugin.HealthCheckPeriod).SingletonMode().StartAt(startDelay).Do(func() {
-			_, span = otel.Tracer(config.TracerName).Start(ctx, "Run plugin health check")
+			_, span := otel.Tracer(config.TracerName).Start(ctx, "Run plugin health check")
 			defer span.End()
 
 			var plugins []string
@@ -461,6 +464,9 @@ var runCmd = &cobra.Command{
 		}(conf.Global.Metrics[config.Default], logger)
 
 		// This is a notification hook, so we don't care about the result.
+		pluginTimeoutCtx, cancel = context.WithTimeout(context.Background(), conf.Plugin.Timeout)
+		defer cancel()
+
 		if data, ok := conf.GlobalKoanf.Get("loggers").(map[string]interface{}); ok {
 			_, err = pluginRegistry.Run(
 				pluginTimeoutCtx, data, v1.HookName_HOOK_NAME_ON_NEW_LOGGER)
@@ -527,6 +533,10 @@ var runCmd = &cobra.Command{
 
 					span.AddEvent("Create client", eventOptions)
 
+					pluginTimeoutCtx, cancel = context.WithTimeout(
+						context.Background(), conf.Plugin.Timeout)
+					defer cancel()
+
 					clientCfg := map[string]interface{}{
 						"id":                 client.ID,
 						"network":            client.Network,
@@ -571,6 +581,10 @@ var runCmd = &cobra.Command{
 				os.Exit(gerr.FailedToInitializePool)
 			}
 
+			pluginTimeoutCtx, cancel = context.WithTimeout(
+				context.Background(), conf.Plugin.Timeout)
+			defer cancel()
+
 			_, err = pluginRegistry.Run(
 				pluginTimeoutCtx,
 				map[string]interface{}{"name": name, "size": cfg.GetSize()},
@@ -610,6 +624,10 @@ var runCmd = &cobra.Command{
 				attribute.String("healthCheckPeriod", cfg.HealthCheckPeriod.String()),
 			))
 
+			pluginTimeoutCtx, cancel = context.WithTimeout(
+				context.Background(), conf.Plugin.Timeout)
+			defer cancel()
+
 			if data, ok := conf.GlobalKoanf.Get("proxies").(map[string]interface{}); ok {
 				_, err = pluginRegistry.Run(
 					pluginTimeoutCtx, data, v1.HookName_HOOK_NAME_ON_NEW_PROXY)
@@ -633,30 +651,9 @@ var runCmd = &cobra.Command{
 				cfg.Network,
 				cfg.Address,
 				cfg.GetTickInterval(),
-				[]gnet.Option{
-					// Scheduling options
-					gnet.WithMulticore(cfg.MultiCore),
-					gnet.WithLockOSThread(cfg.LockOSThread),
-					// NumEventLoop overrides Multicore option.
-					// gnet.WithNumEventLoop(1),
-
+				network.Option{
 					// Can be used to send keepalive messages to the client.
-					gnet.WithTicker(cfg.EnableTicker),
-
-					// Internal event-loop load balancing options
-					gnet.WithLoadBalancing(cfg.GetLoadBalancer()),
-
-					// Buffer options
-					gnet.WithReadBufferCap(cfg.ReadBufferCap),
-					gnet.WithWriteBufferCap(cfg.WriteBufferCap),
-					gnet.WithSocketRecvBuffer(cfg.SocketRecvBuffer),
-					gnet.WithSocketSendBuffer(cfg.SocketSendBuffer),
-
-					// TCP options
-					gnet.WithReuseAddr(cfg.ReuseAddress),
-					gnet.WithReusePort(cfg.ReusePort),
-					gnet.WithTCPKeepAlive(cfg.TCPKeepAlive),
-					gnet.WithTCPNoDelay(cfg.GetTCPNoDelay()),
+					EnableTicker: cfg.EnableTicker,
 				},
 				proxies[name],
 				logger,
@@ -669,20 +666,12 @@ var runCmd = &cobra.Command{
 				attribute.String("network", cfg.Network),
 				attribute.String("address", cfg.Address),
 				attribute.String("tickInterval", cfg.TickInterval.String()),
-				attribute.Bool("multiCore", cfg.MultiCore),
-				attribute.Bool("lockOSThread", cfg.LockOSThread),
-				attribute.Bool("enableTicker", cfg.EnableTicker),
-				attribute.String("loadBalancer", cfg.LoadBalancer),
-				attribute.Int("readBufferCap", cfg.ReadBufferCap),
-				attribute.Int("writeBufferCap", cfg.WriteBufferCap),
-				attribute.Int("socketRecvBuffer", cfg.SocketRecvBuffer),
-				attribute.Int("socketSendBuffer", cfg.SocketSendBuffer),
-				attribute.Bool("reuseAddress", cfg.ReuseAddress),
-				attribute.Bool("reusePort", cfg.ReusePort),
-				attribute.String("tcpKeepAlive", cfg.TCPKeepAlive.String()),
-				attribute.Bool("tcpNoDelay", cfg.TCPNoDelay),
 				attribute.String("pluginTimeout", conf.Plugin.Timeout.String()),
 			))
+
+			pluginTimeoutCtx, cancel = context.WithTimeout(
+				context.Background(), conf.Plugin.Timeout)
+			defer cancel()
 
 			if data, ok := conf.GlobalKoanf.Get("servers").(map[string]interface{}); ok {
 				_, err = pluginRegistry.Run(
@@ -786,13 +775,15 @@ var runCmd = &cobra.Command{
 		go func(pluginRegistry *plugin.Registry,
 			logger zerolog.Logger,
 			servers map[string]*network.Server,
+			metricsMerger *metrics.Merger,
+			metricsServer *http.Server,
+			stopChan chan struct{},
 		) {
 			for sig := range signalsCh {
 				for _, s := range signals {
 					if sig != s {
 						StopGracefully(
 							runCtx,
-							pluginTimeoutCtx,
 							sig,
 							metricsMerger,
 							metricsServer,
@@ -805,13 +796,14 @@ var runCmd = &cobra.Command{
 					}
 				}
 			}
-		}(pluginRegistry, logger, servers)
+		}(pluginRegistry, logger, servers, metricsMerger, metricsServer, stopChan)
 
 		_, span = otel.Tracer(config.TracerName).Start(runCtx, "Start servers")
 		// Start the server.
 		for name, server := range servers {
 			logger := loggers[name]
 			go func(
+				span trace.Span,
 				server *network.Server,
 				logger zerolog.Logger,
 				healthCheckScheduler *gocron.Scheduler,
@@ -831,7 +823,7 @@ var runCmd = &cobra.Command{
 					pluginRegistry.Shutdown()
 					os.Exit(gerr.FailedToStartServer)
 				}
-			}(server, logger, healthCheckScheduler, metricsMerger, pluginRegistry)
+			}(span, server, logger, healthCheckScheduler, metricsMerger, pluginRegistry)
 		}
 		span.End()
 

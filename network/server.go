@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
+	"net"
 	"os"
+	"strconv"
+	"sync"
 	"time"
 
 	v1 "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin/v1"
@@ -13,24 +15,35 @@ import (
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/metrics"
 	"github.com/gatewayd-io/gatewayd/plugin"
-	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 )
 
+type Option struct {
+	EnableTicker bool
+}
+
+type Action int
+
+const (
+	None Action = iota
+	Close
+	Shutdown
+)
+
 type Server struct {
-	gnet.BuiltinEventEngine
-	engine         gnet.Engine
+	engine         Engine
 	proxy          IProxy
 	logger         zerolog.Logger
 	pluginRegistry *plugin.Registry
 	ctx            context.Context //nolint:containedctx
 	pluginTimeout  time.Duration
+	mu             *sync.RWMutex
 
 	Network      string // tcp/udp/unix
 	Address      string
-	Options      []gnet.Option
+	Options      Option
 	Status       config.Status
 	TickInterval time.Duration
 }
@@ -38,7 +51,7 @@ type Server struct {
 // OnBoot is called when the server is booted. It calls the OnBooting and OnBooted hooks.
 // It also sets the status to running, which is used to determine if the server should be running
 // or shutdown.
-func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
+func (s *Server) OnBoot(engine Engine) Action {
 	_, span := otel.Tracer("gatewayd").Start(s.ctx, "OnBoot")
 	defer span.End()
 
@@ -60,9 +73,14 @@ func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 	s.engine = engine
 
 	// Set the server status to running.
+	s.mu.Lock()
 	s.Status = config.Running
+	s.mu.Unlock()
 
 	// Run the OnBooted hooks.
+	pluginTimeoutCtx, cancel = context.WithTimeout(context.Background(), s.pluginTimeout)
+	defer cancel()
+
 	_, err = s.pluginRegistry.Run(
 		pluginTimeoutCtx,
 		map[string]interface{}{"status": fmt.Sprint(s.Status)},
@@ -75,16 +93,16 @@ func (s *Server) OnBoot(engine gnet.Engine) gnet.Action {
 
 	s.logger.Debug().Msg("GatewayD booted")
 
-	return gnet.None
+	return None
 }
 
 // OnOpen is called when a new connection is opened. It calls the OnOpening and OnOpened hooks.
 // It also checks if the server is at the soft or hard limit and closes the connection if it is.
-func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
+func (s *Server) OnOpen(conn net.Conn) ([]byte, Action) {
 	_, span := otel.Tracer("gatewayd").Start(s.ctx, "OnOpen")
 	defer span.End()
 
-	s.logger.Debug().Str("from", RemoteAddr(gconn)).Msg(
+	s.logger.Debug().Str("from", RemoteAddr(conn)).Msg(
 		"GatewayD is opening a connection")
 
 	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.pluginTimeout)
@@ -92,8 +110,8 @@ func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 	// Run the OnOpening hooks.
 	onOpeningData := map[string]interface{}{
 		"client": map[string]interface{}{
-			"local":  LocalAddr(gconn),
-			"remote": RemoteAddr(gconn),
+			"local":  LocalAddr(conn),
+			"remote": RemoteAddr(conn),
 		},
 	}
 	_, err := s.pluginRegistry.Run(
@@ -107,24 +125,27 @@ func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 	// Use the proxy to connect to the backend. Close the connection if the pool is exhausted.
 	// This effectively get a connection from the pool and puts both the incoming and the server
 	// connections in the pool of the busy connections.
-	if err := s.proxy.Connect(gconn); err != nil {
+	if err := s.proxy.Connect(conn); err != nil {
 		if errors.Is(err, gerr.ErrPoolExhausted) {
 			span.RecordError(err)
-			return nil, gnet.Close
+			return nil, Close
 		}
 
 		// This should never happen.
 		// TODO: Send error to client or retry connection
 		s.logger.Error().Err(err).Msg("Failed to connect to proxy")
 		span.RecordError(err)
-		return nil, gnet.None
+		return nil, None
 	}
 
 	// Run the OnOpened hooks.
+	pluginTimeoutCtx, cancel = context.WithTimeout(context.Background(), s.pluginTimeout)
+	defer cancel()
+
 	onOpenedData := map[string]interface{}{
 		"client": map[string]interface{}{
-			"local":  LocalAddr(gconn),
-			"remote": RemoteAddr(gconn),
+			"local":  LocalAddr(conn),
+			"remote": RemoteAddr(conn),
 		},
 	}
 	_, err = s.pluginRegistry.Run(
@@ -137,26 +158,27 @@ func (s *Server) OnOpen(gconn gnet.Conn) ([]byte, gnet.Action) {
 
 	metrics.ClientConnections.Inc()
 
-	return nil, gnet.None
+	return nil, None
 }
 
 // OnClose is called when a connection is closed. It calls the OnClosing and OnClosed hooks.
 // It also recycles the connection back to the available connection pool, unless the pool
 // is elastic and reuse is disabled.
-func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
+func (s *Server) OnClose(conn net.Conn, err error) Action {
 	_, span := otel.Tracer("gatewayd").Start(s.ctx, "OnClose")
 	defer span.End()
 
-	s.logger.Debug().Str("from", RemoteAddr(gconn)).Msg(
+	s.logger.Debug().Str("from", RemoteAddr(conn)).Msg(
 		"GatewayD is closing a connection")
 
+	// Run the OnClosing hooks.
 	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.pluginTimeout)
 	defer cancel()
-	// Run the OnClosing hooks.
+
 	data := map[string]interface{}{
 		"client": map[string]interface{}{
-			"local":  LocalAddr(gconn),
-			"remote": RemoteAddr(gconn),
+			"local":  LocalAddr(conn),
+			"remote": RemoteAddr(conn),
 		},
 		"error": "",
 	}
@@ -172,26 +194,39 @@ func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 	span.AddEvent("Ran the OnClosing hooks")
 
 	// Shutdown the server if there are no more connections and the server is stopped.
-	// This is used to shutdown the server gracefully.
+	// This is used to shut down the server gracefully.
+	s.mu.Lock()
 	if uint64(s.engine.CountConnections()) == 0 && s.Status == config.Stopped {
 		span.AddEvent("Shutting down the server")
-		return gnet.Shutdown
+		s.mu.Unlock()
+		return Shutdown
 	}
+	s.mu.Unlock()
 
 	// Disconnect the connection from the proxy. This effectively removes the mapping between
 	// the incoming and the server connections in the pool of the busy connections and either
 	// recycles or disconnects the connections.
-	if err := s.proxy.Disconnect(gconn); err != nil {
+	if err := s.proxy.Disconnect(conn); err != nil {
 		s.logger.Error().Err(err).Msg("Failed to disconnect the server connection")
 		span.RecordError(err)
-		return gnet.Close
+		return Close
+	}
+
+	// Close the incoming connection.
+	if err := conn.Close(); err != nil {
+		s.logger.Error().Err(err).Msg("Failed to close the incoming connection")
+		span.RecordError(err)
+		return Close
 	}
 
 	// Run the OnClosed hooks.
+	pluginTimeoutCtx, cancel = context.WithTimeout(context.Background(), s.pluginTimeout)
+	defer cancel()
+
 	data = map[string]interface{}{
 		"client": map[string]interface{}{
-			"local":  LocalAddr(gconn),
-			"remote": RemoteAddr(gconn),
+			"local":  LocalAddr(conn),
+			"remote": RemoteAddr(conn),
 		},
 		"error": "",
 	}
@@ -208,22 +243,23 @@ func (s *Server) OnClose(gconn gnet.Conn, err error) gnet.Action {
 
 	metrics.ClientConnections.Dec()
 
-	return gnet.Close
+	return Close
 }
 
 // OnTraffic is called when data is received from the client. It calls the OnTraffic hooks.
 // It then passes the traffic to the proxied connection.
-func (s *Server) OnTraffic(gconn gnet.Conn) gnet.Action {
+func (s *Server) OnTraffic(conn net.Conn, stopConnection chan struct{}) Action {
 	_, span := otel.Tracer("gatewayd").Start(s.ctx, "OnTraffic")
 	defer span.End()
 
+	// Run the OnTraffic hooks.
 	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.pluginTimeout)
 	defer cancel()
-	// Run the OnTraffic hooks.
+
 	onTrafficData := map[string]interface{}{
 		"client": map[string]interface{}{
-			"local":  LocalAddr(gconn),
-			"remote": RemoteAddr(gconn),
+			"local":  LocalAddr(conn),
+			"remote": RemoteAddr(conn),
 		},
 	}
 	_, err := s.pluginRegistry.Run(
@@ -234,37 +270,48 @@ func (s *Server) OnTraffic(gconn gnet.Conn) gnet.Action {
 	}
 	span.AddEvent("Ran the OnTraffic hooks")
 
-	// Pass the traffic from the client to server and vice versa.
-	// If there is an error, log it and close the connection.
-	if err := s.proxy.PassThrough(gconn); err != nil {
-		s.logger.Trace().Err(err).Msg("Failed to pass through traffic")
-		span.RecordError(err)
-		switch {
-		case errors.Is(err, gerr.ErrPoolExhausted),
-			errors.Is(err, gerr.ErrCastFailed),
-			errors.Is(err, gerr.ErrClientNotFound),
-			errors.Is(err, gerr.ErrClientNotConnected),
-			errors.Is(err, gerr.ErrClientSendFailed),
-			errors.Is(err, gerr.ErrClientReceiveFailed),
-			errors.Is(err, gerr.ErrHookTerminatedConnection),
-			errors.Is(err.Unwrap(), io.EOF):
-			// TODO: Fix bug in handling connection close
-			// See: https://github.com/gatewayd-io/gatewayd/issues/219
-			return gnet.Close
-		}
-	}
-	// Flush the connection to make sure all data is sent
-	gconn.Flush()
+	stack := NewStack()
 
-	return gnet.None
+	// Pass the traffic from the client to server.
+	// If there is an error, log it and close the connection.
+	go func(server *Server, conn net.Conn, stopConnection chan struct{}, stack *Stack) {
+		for {
+			server.logger.Trace().Msg("Passing through traffic from client to server")
+			if err := server.proxy.PassThroughToServer(conn, stack); err != nil {
+				server.logger.Trace().Err(err).Msg("Failed to pass through traffic")
+				span.RecordError(err)
+				stopConnection <- struct{}{}
+				break
+			}
+		}
+	}(s, conn, stopConnection, stack)
+
+	// Pass the traffic from the server to client.
+	// If there is an error, log it and close the connection.
+	go func(server *Server, conn net.Conn, stopConnection chan struct{}, stack *Stack) {
+		for {
+			server.logger.Debug().Msg("Passing through traffic from server to client")
+			if err := server.proxy.PassThroughToClient(conn, stack); err != nil {
+				server.logger.Trace().Err(err).Msg("Failed to pass through traffic")
+				span.RecordError(err)
+				stopConnection <- struct{}{}
+				break
+			}
+		}
+	}(s, conn, stopConnection, stack)
+
+	<-stopConnection
+	stack.Clear()
+
+	return Close
 }
 
 // OnShutdown is called when the server is shutting down. It calls the OnShutdown hooks.
-func (s *Server) OnShutdown(gnet.Engine) {
+func (s *Server) OnShutdown() {
 	_, span := otel.Tracer("gatewayd").Start(s.ctx, "OnShutdown")
 	defer span.End()
 
-	s.logger.Debug().Msg("GatewayD is shutting down...")
+	s.logger.Debug().Msg("GatewayD is shutting down")
 
 	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.pluginTimeout)
 	defer cancel()
@@ -283,11 +330,13 @@ func (s *Server) OnShutdown(gnet.Engine) {
 	s.proxy.Shutdown()
 
 	// Set the server status to stopped. This is used to shutdown the server gracefully in OnClose.
+	s.mu.Lock()
 	s.Status = config.Stopped
+	s.mu.Unlock()
 }
 
 // OnTick is called every TickInterval. It calls the OnTick hooks.
-func (s *Server) OnTick() (time.Duration, gnet.Action) {
+func (s *Server) OnTick() (time.Duration, Action) {
 	_, span := otel.Tracer("gatewayd").Start(s.ctx, "OnTick")
 	defer span.End()
 
@@ -314,11 +363,11 @@ func (s *Server) OnTick() (time.Duration, gnet.Action) {
 
 	// TickInterval is the interval at which the OnTick hooks are called. It can be adjusted
 	// in the configuration file.
-	return s.TickInterval, gnet.None
+	return s.TickInterval, None
 }
 
 // Run starts the server and blocks until the server is stopped. It calls the OnRun hooks.
-func (s *Server) Run() error {
+func (s *Server) Run() *gerr.GatewayDError {
 	_, span := otel.Tracer("gatewayd").Start(s.ctx, "Run")
 	defer span.End()
 
@@ -334,7 +383,7 @@ func (s *Server) Run() error {
 	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.pluginTimeout)
 	defer cancel()
 	// Run the OnRun hooks.
-	// Since gnet.Run is blocking, we need to run OnRun before it.
+	// Since Run is blocking, we need to run OnRun before it.
 	onRunData := map[string]interface{}{"address": addr}
 	if err != nil && err.Unwrap() != nil {
 		onRunData["error"] = err.OriginalError.Error()
@@ -357,15 +406,120 @@ func (s *Server) Run() error {
 		}
 	}
 
-	// Start the server.
-	origErr := gnet.Run(s, s.Network+"://"+addr, s.Options...)
-	if origErr != nil {
-		s.logger.Error().Err(origErr).Msg("Failed to start server")
-		span.RecordError(origErr)
-		return gerr.ErrFailedToStartServer.Wrap(origErr)
+	if action := s.OnBoot(s.engine); action != None {
+		return nil
 	}
 
-	return nil
+	listener, origErr := net.Listen(s.Network, addr)
+	if origErr != nil {
+		s.logger.Error().Err(origErr).Msg("Server failed to start listening")
+		return gerr.ErrServerListenFailed.Wrap(origErr)
+	}
+	s.engine.listener = listener
+	defer s.engine.listener.Close()
+
+	if s.engine.listener == nil {
+		s.logger.Error().Msg("Server is not properly initialized")
+		return nil
+	}
+
+	var port string
+	s.engine.host, port, origErr = net.SplitHostPort(s.engine.listener.Addr().String())
+	if origErr != nil {
+		s.logger.Error().Err(origErr).Msg("Failed to split host and port")
+		return gerr.ErrSplitHostPortFailed.Wrap(origErr)
+	}
+
+	if s.engine.port, origErr = strconv.Atoi(port); origErr != nil {
+		s.logger.Error().Err(origErr).Msg("Failed to convert port to integer")
+		return gerr.ErrCastFailed.Wrap(origErr)
+	}
+
+	go func(server *Server) {
+		<-server.engine.stopServer
+		server.OnShutdown()
+		server.logger.Debug().Msg("Server stopped")
+	}(s)
+
+	go func(server *Server) {
+		if !server.Options.EnableTicker {
+			return
+		}
+
+		for {
+			select {
+			case <-server.engine.stopServer:
+				return
+			default:
+				interval, action := server.OnTick()
+				if action == Shutdown {
+					server.OnShutdown()
+					return
+				}
+				if interval == time.Duration(0) {
+					return
+				}
+				time.Sleep(interval)
+			}
+		}
+	}(s)
+
+	s.engine.running.Store(true)
+
+	for {
+		select {
+		case <-s.engine.stopServer:
+			s.logger.Info().Msg("Server stopped")
+			return nil
+		default:
+			conn, err := s.engine.listener.Accept()
+			if err != nil {
+				if !s.engine.running.Load() {
+					return nil
+				}
+				s.logger.Error().Err(err).Msg("Failed to accept connection")
+				return gerr.ErrAcceptFailed.Wrap(err)
+			}
+
+			if out, action := s.OnOpen(conn); action != None {
+				if _, err := conn.Write(out); err != nil {
+					s.logger.Error().Err(err).Msg("Failed to write to connection")
+				}
+				conn.Close()
+				if action == Shutdown {
+					s.OnShutdown()
+					return nil
+				}
+			}
+			s.engine.mu.Lock()
+			s.engine.connections++
+			s.engine.mu.Unlock()
+
+			// For every new connection, a new unbuffered channel is created to help
+			// stop the proxy, recycle the server connection and close stale connections.
+			stopConnection := make(chan struct{})
+			go func(server *Server, conn net.Conn, stopConnection chan struct{}) {
+				if action := server.OnTraffic(conn, stopConnection); action == Close {
+					stopConnection <- struct{}{}
+				}
+			}(s, conn, stopConnection)
+
+			go func(server *Server, conn net.Conn, stopConnection chan struct{}) {
+				for {
+					select {
+					case <-stopConnection:
+						server.engine.mu.Lock()
+						server.engine.connections--
+						server.engine.mu.Unlock()
+						server.OnClose(conn, err)
+						return
+					case <-server.engine.stopServer:
+						return
+					}
+				}
+			}(s, conn, stopConnection)
+		}
+	}
 }
 
 // Shutdown stops the server.
@@ -377,7 +531,9 @@ func (s *Server) Shutdown() {
 	s.proxy.Shutdown()
 
 	// Set the server status to stopped. This is used to shutdown the server gracefully in OnClose.
+	s.mu.Lock()
 	s.Status = config.Stopped
+	s.mu.Unlock()
 
 	// Shutdown the server.
 	if err := s.engine.Stop(context.Background()); err != nil {
@@ -392,6 +548,8 @@ func (s *Server) IsRunning() bool {
 	defer span.End()
 	span.SetAttributes(attribute.Bool("status", s.Status == config.Running))
 
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	return s.Status == config.Running
 }
 
@@ -400,7 +558,7 @@ func NewServer(
 	ctx context.Context,
 	network, address string,
 	tickInterval time.Duration,
-	options []gnet.Option,
+	options Option,
 	proxy IProxy,
 	logger zerolog.Logger,
 	pluginRegistry *plugin.Registry,
@@ -421,6 +579,8 @@ func NewServer(
 		logger:         logger,
 		pluginRegistry: pluginRegistry,
 		pluginTimeout:  pluginTimeout,
+		mu:             &sync.RWMutex{},
+		engine:         NewEngine(logger),
 	}
 
 	// Try to resolve the address and log an error if it can't be resolved.

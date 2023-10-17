@@ -10,7 +10,6 @@ import (
 
 	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/gatewayd-io/gatewayd/logging"
-	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 )
@@ -112,18 +111,18 @@ func BenchmarkResolveUnix(b *testing.B) {
 	}
 }
 
-type testGNetConnection struct {
-	gnet.Conn
+type testConnection struct {
+	net.Conn
 }
 
-func (c *testGNetConnection) LocalAddr() net.Addr {
+func (c *testConnection) LocalAddr() net.Addr {
 	return &net.TCPAddr{
 		IP:   net.ParseIP("127.0.0.1"),
 		Port: 0,
 	}
 }
 
-func (c *testGNetConnection) RemoteAddr() net.Addr {
+func (c *testConnection) RemoteAddr() net.Addr {
 	return &net.TCPAddr{
 		IP:   net.ParseIP("127.0.0.1"),
 		Port: 0,
@@ -139,7 +138,7 @@ func BenchmarkTrafficData(b *testing.B) {
 		NoColor:           true,
 	})
 
-	gconn := &testGNetConnection{}
+	conn := &testConnection{}
 	client := NewClient(context.Background(), &config.Client{
 		Network:            "tcp",
 		Address:            "localhost:5432",
@@ -159,7 +158,7 @@ func BenchmarkTrafficData(b *testing.B) {
 	}
 	err := "test error"
 	for i := 0; i < b.N; i++ {
-		trafficData(gconn, client, fields, err)
+		trafficData(conn, client, fields, err)
 	}
 }
 

@@ -9,7 +9,6 @@ const (
 	ErrCodeNetworkNotSupported
 	ErrCodeResolveFailed
 	ErrCodePoolExhausted
-	ErrCodeStartServerFailed
 	ErrCodePluginNotFound
 	ErrCodePluginNotReady
 	ErrCodeStartPluginFailed
@@ -21,7 +20,12 @@ const (
 	ErrCodeClientSendFailed
 	ErrCodeServerReceiveFailed
 	ErrCodeServerSendFailed
+	ErrCodeServerListenFailed
+	ErrCodeSplitHostPortFailed
+	ErrCodeAcceptFailed
+	ErrCodeReadFailed
 	ErrCodePutFailed
+	ErrCodeNilPointer
 	ErrCodeCastFailed
 	ErrCodeHookVerificationFailed
 	ErrCodeHookReturnedError
@@ -50,8 +54,6 @@ var (
 		ErrCodeResolveFailed, "failed to resolve address", nil)
 	ErrPoolExhausted = NewGatewayDError(
 		ErrCodePoolExhausted, "pool is exhausted", nil)
-	ErrFailedToStartServer = NewGatewayDError(
-		ErrCodeStartServerFailed, "failed to start server", nil)
 
 	ErrPluginNotFound = NewGatewayDError(
 		ErrCodePluginNotFound, "plugin not found", nil)
@@ -77,9 +79,20 @@ var (
 		ErrCodeServerSendFailed, "couldn't send data to the client", nil)
 	ErrServerReceiveFailed = NewGatewayDError(
 		ErrCodeServerReceiveFailed, "couldn't receive data from the client", nil)
+	ErrServerListenFailed = NewGatewayDError(
+		ErrCodeServerListenFailed, "couldn't listen on the server", nil)
+	ErrSplitHostPortFailed = NewGatewayDError(
+		ErrCodeSplitHostPortFailed, "failed to split host:port", nil)
+	ErrAcceptFailed = NewGatewayDError(
+		ErrCodeAcceptFailed, "failed to accept connection", nil)
+
+	ErrReadFailed = NewGatewayDError(
+		ErrCodeReadFailed, "failed to read from the client", nil)
 
 	ErrPutFailed = NewGatewayDError(
 		ErrCodePutFailed, "failed to put in pool", nil)
+	ErrNilPointer = NewGatewayDError(
+		ErrCodeNilPointer, "nil pointer", nil)
 
 	ErrCastFailed = NewGatewayDError(
 		ErrCodeCastFailed, "failed to cast", nil)

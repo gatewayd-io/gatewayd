@@ -2,10 +2,12 @@ package network
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"io"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -14,7 +16,7 @@ import (
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
-	"github.com/panjf2000/gnet/v2"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
@@ -24,14 +26,16 @@ import (
 func TestRunServer(t *testing.T) {
 	errs := make(chan error)
 
+	// Reset prometheus metrics.
+	prometheus.DefaultRegisterer = prometheus.NewRegistry()
+
 	logger := logging.NewLogger(context.Background(), logging.LoggerConfig{
 		Output: []config.LogOutput{
-			config.Console,
 			config.File,
 		},
 		TimeFormat:        zerolog.TimeFormatUnix,
 		ConsoleTimeFormat: time.RFC3339,
-		Level:             zerolog.WarnLevel,
+		Level:             zerolog.DebugLevel,
 		NoColor:           true,
 		FileName:          "server_test.log",
 	})
@@ -56,9 +60,10 @@ func TestRunServer(t *testing.T) {
 			errs <- errors.New("request is nil") //nolint:goerr113
 		}
 
-		logger.Info().Msg("Ingress traffic")
 		if req, ok := paramsMap["request"].([]byte); ok {
-			assert.Equal(t, CreatePgStartupPacket(), req)
+			if !bytes.Equal(req, CreatePgStartupPacket()) {
+				errs <- errors.New("request does not match") //nolint:goerr113
+			}
 		} else {
 			errs <- errors.New("request is not a []byte") //nolint:goerr113
 		}
@@ -80,7 +85,9 @@ func TestRunServer(t *testing.T) {
 
 		logger.Info().Msg("Ingress traffic")
 		if req, ok := paramsMap["request"].([]byte); ok {
-			assert.Equal(t, CreatePgStartupPacket(), req)
+			if !bytes.Equal(req, CreatePgStartupPacket()) {
+				errs <- errors.New("request does not match") //nolint:goerr113
+			}
 		} else {
 			errs <- errors.New("request is not a []byte") //nolint:goerr113
 		}
@@ -143,22 +150,22 @@ func TestRunServer(t *testing.T) {
 		TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 	}
 
-	// Create a connection pool.
-	pool := pool.NewPool(context.Background(), 3)
+	// Create a connection newPool.
+	newPool := pool.NewPool(context.Background(), 3)
 	client1 := NewClient(context.Background(), &clientConfig, logger)
-	err := pool.Put(client1.ID, client1)
+	err := newPool.Put(client1.ID, client1)
 	assert.Nil(t, err)
 	client2 := NewClient(context.Background(), &clientConfig, logger)
-	err = pool.Put(client2.ID, client2)
+	err = newPool.Put(client2.ID, client2)
 	assert.Nil(t, err)
 	client3 := NewClient(context.Background(), &clientConfig, logger)
-	err = pool.Put(client3.ID, client3)
+	err = newPool.Put(client3.ID, client3)
 	assert.Nil(t, err)
 
-	// Create a proxy with a fixed buffer pool.
+	// Create a proxy with a fixed buffer newPool.
 	proxy := NewProxy(
 		context.Background(),
-		pool,
+		newPool,
 		pluginRegistry,
 		false,
 		false,
@@ -173,11 +180,8 @@ func TestRunServer(t *testing.T) {
 		"tcp",
 		"127.0.0.1:15432",
 		config.DefaultTickInterval,
-		[]gnet.Option{
-			gnet.WithMulticore(false),
-			gnet.WithReuseAddr(true),
-			gnet.WithReusePort(true),
-			gnet.WithTicker(true), // Enable ticker.
+		Option{
+			EnableTicker: true,
 		},
 		proxy,
 		logger,
@@ -186,43 +190,74 @@ func TestRunServer(t *testing.T) {
 	)
 	assert.NotNil(t, server)
 
-	go func(server *Server, errs chan error) {
+	stop := make(chan struct{})
+
+	var waitGroup sync.WaitGroup
+
+	waitGroup.Add(1)
+	go func(t *testing.T, server *Server, pluginRegistry *plugin.Registry, stop chan struct{}, waitGroup *sync.WaitGroup) {
+		t.Helper()
+		for {
+			select {
+			case <-stop:
+				server.Shutdown()
+				pluginRegistry.Shutdown()
+
+				// Wait for the server to stop.
+				time.Sleep(100 * time.Millisecond)
+
+				// Read the log file and check if the log file contains the expected log messages.
+				if _, err := os.Stat("server_test.log"); err == nil {
+					logFile, err := os.Open("server_test.log")
+					assert.NoError(t, err)
+
+					reader := bufio.NewReader(logFile)
+					assert.NotNil(t, reader)
+
+					buffer, err := io.ReadAll(reader)
+					assert.NoError(t, err)
+					assert.Greater(t, len(buffer), 0) // The log file should not be empty.
+					assert.NoError(t, logFile.Close())
+
+					logLines := string(buffer)
+					assert.Contains(t, logLines, "GatewayD is running", "GatewayD should be running")
+					assert.Contains(t, logLines, "GatewayD is ticking...", "GatewayD should be ticking")
+					assert.Contains(t, logLines, "Ingress traffic", "Ingress traffic should be logged")
+					assert.Contains(t, logLines, "Egress traffic", "Egress traffic should be logged")
+					assert.Contains(t, logLines, "GatewayD is shutting down", "GatewayD should be shutting down")
+
+					assert.NoError(t, os.Remove("server_test.log"))
+				}
+				waitGroup.Done()
+				return
+			case <-errs:
+				server.Shutdown()
+				pluginRegistry.Shutdown()
+				waitGroup.Done()
+				return
+			default: //nolint:staticcheck
+			}
+		}
+	}(t, server, pluginRegistry, stop, &waitGroup)
+
+	waitGroup.Add(1)
+	go func(t *testing.T, server *Server, errs chan error, waitGroup *sync.WaitGroup) {
+		t.Helper()
 		if err := server.Run(); err != nil {
 			errs <- err
+			t.Fail()
 		}
-		close(errs)
+		waitGroup.Done()
+	}(t, server, errs, &waitGroup)
 
-		// Read the log file and check if the log file contains the expected log messages.
-		if _, err := os.Stat("server_test.log"); err == nil {
-			logFile, err := os.Open("server_test.log")
-			assert.NoError(t, err)
-			defer logFile.Close()
+	waitGroup.Add(1)
+	go func(t *testing.T, server *Server, proxy *Proxy, stop chan struct{}, waitGroup *sync.WaitGroup) {
+		t.Helper()
+		// Pause for a while to allow the server to start.
+		time.Sleep(500 * time.Millisecond)
 
-			reader := bufio.NewReader(logFile)
-			assert.NotNil(t, reader)
-
-			buffer, err := io.ReadAll(reader)
-			assert.NoError(t, err)
-			assert.Greater(t, len(buffer), 0) // The log file should not be empty.
-
-			logLines := string(buffer)
-			assert.Contains(t, logLines, "GatewayD is running", "GatewayD should be running")
-			assert.Contains(t, logLines, "GatewayD is ticking...", "GatewayD should be ticking")
-			assert.Contains(t, logLines, "Ingress traffic", "Ingress traffic should be logged")
-			assert.Contains(t, logLines, "Egress traffic", "Egress traffic should be logged")
-			assert.Contains(t, logLines, "GatewayD is shutting down...", "GatewayD should be shutting down")
-
-			assert.NoError(t, os.Remove("server_test.log"))
-		}
-	}(server, errs)
-
-	//nolint:thelper
-	go func(t *testing.T, server *Server, proxy *Proxy) {
 		for {
 			if server.IsRunning() {
-				// Pause for a while to allow the server to start.
-				time.Sleep(500 * time.Millisecond)
-
 				client := NewClient(
 					context.Background(),
 					&config.Client{
@@ -264,19 +299,15 @@ func TestRunServer(t *testing.T) {
 				// Test Prometheus metrics.
 				CollectAndComparePrometheusMetrics(t)
 
-				// Clean up.
 				client.Close()
-				// Pause for a while to allow the server to disconnect and shutdown.
-				time.Sleep(500 * time.Millisecond)
-				server.Shutdown()
 				break
 			}
+			time.Sleep(100 * time.Millisecond)
 		}
-	}(t, server, proxy)
+		stop <- struct{}{}
+		close(stop)
+		waitGroup.Done()
+	}(t, server, proxy, stop, &waitGroup)
 
-	for err := range errs {
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
+	waitGroup.Wait()
 }

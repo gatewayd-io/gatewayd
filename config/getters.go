@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/panjf2000/gnet/v2"
 	"github.com/rs/zerolog"
 )
 
@@ -27,11 +26,6 @@ var (
 	terminationPolicies = map[string]TerminationPolicy{
 		"continue": Continue,
 		"stop":     Stop,
-	}
-	loadBalancers = map[string]gnet.LoadBalancing{
-		"roundrobin":       gnet.RoundRobin,
-		"leastconnections": gnet.LeastConnections,
-		"sourceaddrhash":   gnet.SourceAddrHash,
 	}
 	logOutputs = map[string]LogOutput{
 		"console": Console,
@@ -164,23 +158,6 @@ func (s Server) GetTickInterval() time.Duration {
 		return DefaultTickInterval
 	}
 	return s.TickInterval
-}
-
-// GetLoadBalancer returns the load balancing algorithm to use.
-func (s Server) GetLoadBalancer() gnet.LoadBalancing {
-	if lb, ok := loadBalancers[s.LoadBalancer]; ok {
-		return lb
-	}
-	return gnet.RoundRobin
-}
-
-// GetTCPNoDelay returns the TCP no delay option from config file.
-func (s Server) GetTCPNoDelay() gnet.TCPSocketOpt {
-	if s.TCPNoDelay {
-		return gnet.TCPNoDelay
-	}
-
-	return gnet.TCPDelay
 }
 
 // GetSize returns the pool size from config file.
