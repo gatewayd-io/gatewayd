@@ -77,6 +77,10 @@ var pluginInstallCmd = &cobra.Command{
 		var client *github.Client
 		var account string
 
+		// Strip scheme from the plugin URL.
+		args[0] = strings.TrimPrefix(args[0], "http://")
+		args[0] = strings.TrimPrefix(args[0], "https://")
+
 		if !strings.HasPrefix(args[0], GitHubURLPrefix) {
 			// Pull the plugin from a local archive.
 			pluginFilename = filepath.Clean(args[0])
