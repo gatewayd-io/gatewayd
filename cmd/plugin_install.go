@@ -36,6 +36,7 @@ var (
 	cleanup         bool
 	update          bool
 	backupConfig    bool
+	noPrompt        bool
 )
 
 // pluginInstallCmd represents the plugin install command.
@@ -233,7 +234,7 @@ var pluginInstallCmd = &cobra.Command{
 		} else {
 			// If the config file exists, we should prompt the user to backup
 			// the plugins configuration file.
-			if !backupConfig {
+			if !backupConfig && !noPrompt {
 				cmd.Print("Do you want to backup the plugins configuration file? [Y/n] ")
 				var backupOption string
 				_, err := fmt.Scanln(&backupOption)
@@ -273,12 +274,14 @@ var pluginInstallCmd = &cobra.Command{
 				if pluginInstance["name"] == pluginName {
 					// Show a list of options to the user.
 					cmd.Println("Plugin is already installed.")
-					cmd.Print("Do you want to update the plugin? [y/N] ")
+					if !noPrompt {
+						cmd.Print("Do you want to update the plugin? [y/N] ")
 
-					var updateOption string
-					_, err := fmt.Scanln(&updateOption)
-					if err == nil && (updateOption == "y" || updateOption == "Y") {
-						break
+						var updateOption string
+						_, err := fmt.Scanln(&updateOption)
+						if err == nil && (updateOption == "y" || updateOption == "Y") {
+							break
+						}
 					}
 
 					cmd.Println("Aborting...")
@@ -443,6 +446,8 @@ func init() {
 	pluginInstallCmd.Flags().BoolVar(
 		&cleanup, "cleanup", true,
 		"Delete downloaded and extracted files after installing the plugin (except the plugin binary)")
+	pluginInstallCmd.Flags().BoolVar(
+		&noPrompt, "no-prompt", true, "Do not prompt for user input")
 	pluginInstallCmd.Flags().BoolVar(
 		&update, "update", false, "Update the plugin if it already exists")
 	pluginInstallCmd.Flags().BoolVar(
