@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"log"
-
 	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/getsentry/sentry-go"
 	"github.com/spf13/cobra"
@@ -22,7 +20,8 @@ var pluginInitCmd = &cobra.Command{
 				AttachStacktrace: config.DefaultAttachStacktrace,
 			})
 			if err != nil {
-				log.Panic("Sentry initialization failed: ", err)
+				cmd.Println("Sentry initialization failed: ", err)
+				return
 			}
 
 			// Flush buffered events before the program terminates.

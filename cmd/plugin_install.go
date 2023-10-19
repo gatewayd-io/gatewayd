@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -53,7 +52,8 @@ var pluginInstallCmd = &cobra.Command{
 				AttachStacktrace: config.DefaultAttachStacktrace,
 			})
 			if err != nil {
-				log.Panic("Sentry initialization failed: ", err)
+				cmd.Println("Sentry initialization failed: ", err)
+				return
 			}
 
 			// Flush buffered events before the program terminates.
@@ -64,8 +64,9 @@ var pluginInstallCmd = &cobra.Command{
 
 		// Validate the number of arguments.
 		if len(args) < 1 {
-			log.Panic(
+			cmd.Println(
 				"Invalid URL. Use the following format: github.com/account/repository@version")
+			return
 		}
 
 		var releaseID int64
@@ -85,15 +86,17 @@ var pluginInstallCmd = &cobra.Command{
 			// Pull the plugin from a local archive.
 			pluginFilename = filepath.Clean(args[0])
 			if _, err := os.Stat(pluginFilename); os.IsNotExist(err) {
-				log.Panic("The plugin file could not be found")
+				cmd.Println("The plugin file could not be found")
+				return
 			}
 		}
 
 		// Validate the URL.
 		validGitHubURL := regexp.MustCompile(GitHubURLRegex)
 		if !validGitHubURL.MatchString(args[0]) {
-			log.Panic(
+			cmd.Println(
 				"Invalid URL. Use the following format: github.com/account/repository@version")
+			return
 		}
 
 		// Get the plugin version.
@@ -110,14 +113,16 @@ var pluginInstallCmd = &cobra.Command{
 		// Get the plugin account and repository.
 		accountRepo := strings.Split(strings.TrimPrefix(splittedURL[0], GitHubURLPrefix), "/")
 		if len(accountRepo) != NumParts {
-			log.Panic(
+			cmd.Println(
 				"Invalid URL. Use the following format: github.com/account/repository@version")
+			return
 		}
 		account = accountRepo[0]
 		pluginName = accountRepo[1]
 		if account == "" || pluginName == "" {
-			log.Panic(
+			cmd.Println(
 				"Invalid URL. Use the following format: github.com/account/repository@version")
+			return
 		}
 
 		// Get the release artifact from GitHub.
@@ -133,12 +138,9 @@ var pluginInstallCmd = &cobra.Command{
 			release, _, err = client.Repositories.GetReleaseByTag(
 				context.Background(), account, pluginName, pluginVersion)
 		}
-		if err != nil {
-			log.Panic("The plugin could not be found")
-		}
-
-		if release == nil {
-			log.Panic("The plugin could not be found")
+		if err != nil || release == nil {
+			cmd.Println("The plugin could not be found")
+			return
 		}
 
 		// Get the archive extension.
@@ -159,7 +161,8 @@ var pluginInstallCmd = &cobra.Command{
 			toBeDeleted = append(toBeDeleted, filePath)
 			cmd.Println("Download completed successfully")
 		} else {
-			log.Panic("The plugin file could not be found in the release assets")
+			cmd.Println("The plugin file could not be found in the release assets")
+			return
 		}
 
 		// Find and download the checksums.txt from the release assets.
@@ -172,19 +175,22 @@ var pluginInstallCmd = &cobra.Command{
 			toBeDeleted = append(toBeDeleted, filePath)
 			cmd.Println("Download completed successfully")
 		} else {
-			log.Panic("The checksum file could not be found in the release assets")
+			cmd.Println("The checksum file could not be found in the release assets")
+			return
 		}
 
 		// Read the checksums text file.
 		checksums, err := os.ReadFile(checksumsFilename)
 		if err != nil {
-			log.Panic("There was an error reading the checksums file: ", err)
+			cmd.Println("There was an error reading the checksums file: ", err)
+			return
 		}
 
 		// Get the checksum for the plugin binary.
 		sum, err := checksum.SHA256sum(pluginFilename)
 		if err != nil {
-			log.Panic("There was an error calculating the checksum: ", err)
+			cmd.Println("There was an error calculating the checksum: ", err)
+			return
 		}
 
 		// Verify the checksums.
@@ -193,7 +199,8 @@ var pluginInstallCmd = &cobra.Command{
 			if strings.Contains(line, pluginFilename) {
 				checksum := strings.Split(line, " ")[0]
 				if checksum != sum {
-					log.Panic("Checksum verification failed")
+					cmd.Println("Checksum verification failed")
+					return
 				}
 
 				cmd.Println("Checksum verification passed")
@@ -205,7 +212,7 @@ var pluginInstallCmd = &cobra.Command{
 			cmd.Println("Plugin binary downloaded to", pluginFilename)
 			// Only the checksums file will be deleted if the --pull-only flag is set.
 			if err := os.Remove(checksumsFilename); err != nil {
-				log.Panic("There was an error deleting the file: ", err)
+				cmd.Println("There was an error deleting the file: ", err)
 			}
 			return
 		}
@@ -239,7 +246,8 @@ var pluginInstallCmd = &cobra.Command{
 				// TODO: Should we verify the checksum using the checksum.txt file instead?
 				pluginFileSum, err = checksum.SHA256sum(filename)
 				if err != nil {
-					log.Panic("There was an error calculating the checksum: ", err)
+					cmd.Println("There was an error calculating the checksum: ", err)
+					return
 				}
 				break
 			}
@@ -253,17 +261,20 @@ var pluginInstallCmd = &cobra.Command{
 		// Read the gatewayd_plugins.yaml file.
 		pluginsConfig, err := os.ReadFile(pluginConfigFile)
 		if err != nil {
-			log.Panic(err)
+			cmd.Println(err)
+			return
 		}
 
 		// Get the registered plugins from the plugins configuration file.
 		var localPluginsConfig map[string]interface{}
 		if err := yamlv3.Unmarshal(pluginsConfig, &localPluginsConfig); err != nil {
-			log.Panic("Failed to unmarshal the plugins configuration file: ", err)
+			cmd.Println("Failed to unmarshal the plugins configuration file: ", err)
+			return
 		}
 		pluginsList, ok := localPluginsConfig["plugins"].([]interface{}) //nolint:varnamelen
 		if !ok {
-			log.Panic("There was an error reading the plugins file from disk")
+			cmd.Println("There was an error reading the plugins file from disk")
+			return
 		}
 
 		var contents string
@@ -273,19 +284,25 @@ var pluginInstallCmd = &cobra.Command{
 			repoContents, _, _, err = client.Repositories.GetContents(
 				context.Background(), account, pluginName, DefaultPluginConfigFilename, nil)
 			if err != nil {
-				log.Panic("There was an error getting the default plugins configuration file: ", err)
+				cmd.Println(
+					"There was an error getting the default plugins configuration file: ", err)
+				return
 			}
 			// Get the contents of the file.
 			contents, err = repoContents.GetContent()
 			if err != nil {
-				log.Panic("There was an error getting the default plugins configuration file: ", err)
+				cmd.Println(
+					"There was an error getting the default plugins configuration file: ", err)
+				return
 			}
 		} else {
 			// Get the contents of the file.
 			contentsBytes, err := os.ReadFile(
 				filepath.Join(pluginOutputDir, DefaultPluginConfigFilename))
 			if err != nil {
-				log.Panic("There was an error getting the default plugins configuration file: ", err)
+				cmd.Println(
+					"There was an error getting the default plugins configuration file: ", err)
+				return
 			}
 			contents = string(contentsBytes)
 		}
@@ -293,16 +310,19 @@ var pluginInstallCmd = &cobra.Command{
 		// Get the plugin configuration from the downloaded plugins configuration file.
 		var downloadedPluginConfig map[string]interface{}
 		if err := yamlv3.Unmarshal([]byte(contents), &downloadedPluginConfig); err != nil {
-			log.Panic("Failed to unmarshal the downloaded plugins configuration file: ", err)
+			cmd.Println("Failed to unmarshal the downloaded plugins configuration file: ", err)
+			return
 		}
 		defaultPluginConfig, ok := downloadedPluginConfig["plugins"].([]interface{})
 		if !ok {
-			log.Panic("There was an error reading the plugins file from the repository")
+			cmd.Println("There was an error reading the plugins file from the repository")
+			return
 		}
 		// Get the plugin configuration.
 		pluginConfig, ok := defaultPluginConfig[0].(map[string]interface{})
 		if !ok {
-			log.Panic("There was an error reading the default plugin configuration")
+			cmd.Println("There was an error reading the default plugin configuration")
+			return
 		}
 
 		// Update the plugin's local path and checksum.
@@ -320,12 +340,14 @@ var pluginInstallCmd = &cobra.Command{
 		// Marshal the map into YAML.
 		updatedPlugins, err := yamlv3.Marshal(localPluginsConfig)
 		if err != nil {
-			log.Panic("There was an error marshalling the plugins configuration: ", err)
+			cmd.Println("There was an error marshalling the plugins configuration: ", err)
+			return
 		}
 
 		// Write the YAML to the plugins config file.
 		if err = os.WriteFile(pluginConfigFile, updatedPlugins, FilePermissions); err != nil {
-			log.Panic("There was an error writing the plugins configuration file: ", err)
+			cmd.Println("There was an error writing the plugins configuration file: ", err)
+			return
 		}
 
 		// Delete the downloaded and extracted files, except the plugin binary,
@@ -333,7 +355,8 @@ var pluginInstallCmd = &cobra.Command{
 		if cleanup {
 			for _, filename := range toBeDeleted {
 				if err := os.Remove(filename); err != nil {
-					log.Panic("There was an error deleting the file: ", err)
+					cmd.Println("There was an error deleting the file: ", err)
+					return
 				}
 			}
 		}
