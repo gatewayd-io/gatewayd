@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -32,6 +34,8 @@ var (
 	pluginOutputDir string
 	pullOnly        bool
 	cleanup         bool
+	update          bool
+	backupConfig    bool
 )
 
 // pluginInstallCmd represents the plugin install command.
@@ -217,6 +221,78 @@ var pluginInstallCmd = &cobra.Command{
 			return
 		}
 
+		// Create a new gatewayd_plugins.yaml file if it doesn't exist.
+		if _, err := os.Stat(pluginConfigFile); os.IsNotExist(err) {
+			generateConfig(cmd, Plugins, pluginConfigFile, false)
+		} else {
+			// If the config file exists, we should prompt the user to backup
+			// the plugins configuration file.
+			if !backupConfig {
+				cmd.Print("Do you want to backup the plugins configuration file? [Y/n] ")
+				var backupOption string
+				_, err := fmt.Scanln(&backupOption)
+				if err == nil && (backupOption == "y" || backupOption == "Y") {
+					backupConfig = true
+				}
+			}
+		}
+
+		// Read the gatewayd_plugins.yaml file.
+		pluginsConfig, err := os.ReadFile(pluginConfigFile)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		// Get the registered plugins from the plugins configuration file.
+		var localPluginsConfig map[string]interface{}
+		if err := yamlv3.Unmarshal(pluginsConfig, &localPluginsConfig); err != nil {
+			log.Println("Failed to unmarshal the plugins configuration file: ", err)
+			return
+		}
+		pluginsList, ok := localPluginsConfig["plugins"].([]interface{}) //nolint:varnamelen
+		if !ok {
+			log.Println("There was an error reading the plugins file from disk")
+			return
+		}
+
+		// Check if the plugin is already installed.
+		for _, plugin := range pluginsList {
+			// User already chosen to update the plugin using the --update CLI flag.
+			if update {
+				break
+			}
+
+			if pluginInstance, ok := plugin.(map[string]interface{}); ok {
+				if pluginInstance["name"] == pluginName {
+					// Show a list of options to the user.
+					cmd.Println("Plugin is already installed.")
+					cmd.Print("Do you want to update the plugin? [y/N] ")
+
+					var updateOption string
+					_, err := fmt.Scanln(&updateOption)
+					if err == nil && (updateOption == "y" || updateOption == "Y") {
+						break
+					}
+
+					cmd.Println("Aborting...")
+					if cleanup {
+						deleteFiles(toBeDeleted)
+					}
+					return
+				}
+			}
+		}
+
+		// Check if the user wants to take a backup of the plugins configuration file.
+		if backupConfig {
+			backupFilename := fmt.Sprintf("%s.bak", pluginConfigFile)
+			if err := os.WriteFile(backupFilename, pluginsConfig, FilePermissions); err != nil {
+				cmd.Println("There was an error backing up the plugins configuration file: ", err)
+			}
+			cmd.Println("Backup completed successfully")
+		}
+
 		// Extract the archive.
 		var filenames []string
 		if runtime.GOOS == "windows" {
@@ -251,30 +327,6 @@ var pluginInstallCmd = &cobra.Command{
 				}
 				break
 			}
-		}
-
-		// Create a new gatewayd_plugins.yaml file if it doesn't exist.
-		if _, err := os.Stat(pluginConfigFile); os.IsNotExist(err) {
-			generateConfig(cmd, Plugins, pluginConfigFile, false)
-		}
-
-		// Read the gatewayd_plugins.yaml file.
-		pluginsConfig, err := os.ReadFile(pluginConfigFile)
-		if err != nil {
-			cmd.Println(err)
-			return
-		}
-
-		// Get the registered plugins from the plugins configuration file.
-		var localPluginsConfig map[string]interface{}
-		if err := yamlv3.Unmarshal(pluginsConfig, &localPluginsConfig); err != nil {
-			cmd.Println("Failed to unmarshal the plugins configuration file: ", err)
-			return
-		}
-		pluginsList, ok := localPluginsConfig["plugins"].([]interface{}) //nolint:varnamelen
-		if !ok {
-			cmd.Println("There was an error reading the plugins file from disk")
-			return
 		}
 
 		var contents string
@@ -329,11 +381,21 @@ var pluginInstallCmd = &cobra.Command{
 		pluginConfig["localPath"] = localPath
 		pluginConfig["checksum"] = pluginFileSum
 
-		// TODO: Check if the plugin is already installed.
-		// https://github.com/gatewayd-io/gatewayd/issues/312
-
 		// Add the plugin config to the list of plugin configs.
-		pluginsList = append(pluginsList, pluginConfig)
+		added := false
+		for idx, plugin := range pluginsList {
+			if pluginInstance, ok := plugin.(map[string]interface{}); ok {
+				if pluginInstance["name"] == pluginName {
+					pluginsList[idx] = pluginConfig
+					added = true
+					break
+				}
+			}
+		}
+		if !added {
+			pluginsList = append(pluginsList, pluginConfig)
+		}
+
 		// Merge the result back into the config map.
 		localPluginsConfig["plugins"] = pluginsList
 
@@ -353,12 +415,7 @@ var pluginInstallCmd = &cobra.Command{
 		// Delete the downloaded and extracted files, except the plugin binary,
 		// if the --cleanup flag is set.
 		if cleanup {
-			for _, filename := range toBeDeleted {
-				if err := os.Remove(filename); err != nil {
-					cmd.Println("There was an error deleting the file: ", err)
-					return
-				}
-			}
+			deleteFiles(toBeDeleted)
 		}
 
 		// TODO: Add a rollback mechanism.
@@ -380,6 +437,10 @@ func init() {
 	pluginInstallCmd.Flags().BoolVar(
 		&cleanup, "cleanup", true,
 		"Delete downloaded and extracted files after installing the plugin (except the plugin binary)")
+	pluginInstallCmd.Flags().BoolVar(
+		&update, "update", false, "Update the plugin if it already exists")
+	pluginInstallCmd.Flags().BoolVar(
+		&backupConfig, "backup", false, "Backup the plugins configuration file before installing the plugin")
 	pluginInstallCmd.Flags().BoolVar(
 		&enableSentry, "sentry", true, "Enable Sentry") // Already exists in run.go
 }

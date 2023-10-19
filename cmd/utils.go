@@ -447,3 +447,13 @@ func downloadFile(
 
 	return filePath
 }
+
+// deleteFiles deletes the files in the toBeDeleted list.
+func deleteFiles(toBeDeleted []string) {
+	for _, filename := range toBeDeleted {
+		if err := os.Remove(filename); err != nil {
+			log.Println("There was an error deleting the file: ", err)
+			return
+		}
+	}
+}
