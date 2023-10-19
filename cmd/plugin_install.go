@@ -142,8 +142,14 @@ var pluginInstallCmd = &cobra.Command{
 			release, _, err = client.Repositories.GetReleaseByTag(
 				context.Background(), account, pluginName, pluginVersion)
 		}
-		if err != nil || release == nil {
-			cmd.Println("The plugin could not be found")
+
+		if err != nil {
+			cmd.Println("The plugin could not be found: ", err.Error())
+			return
+		}
+
+		if release == nil {
+			cmd.Println("The plugin could not be found in the release assets")
 			return
 		}
 
