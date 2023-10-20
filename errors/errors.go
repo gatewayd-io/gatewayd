@@ -37,6 +37,8 @@ const (
 	ErrCodeInvalidMetricType
 	ErrCodeValidationFailed
 	ErrCodeLintingFailed
+	ErrCodeExtractFailed
+	ErrCodeDownloadFailed
 )
 
 var (
@@ -120,6 +122,11 @@ var (
 		ErrCodeValidationFailed, "validation failed", nil)
 	ErrLintingFailed = NewGatewayDError(
 		ErrCodeLintingFailed, "linting failed", nil)
+
+	ErrExtractFailed = NewGatewayDError(
+		ErrCodeExtractFailed, "failed to extract the archive", nil)
+	ErrDownloadFailed = NewGatewayDError(
+		ErrCodeDownloadFailed, "failed to download the file", nil)
 )
 
 const (
@@ -128,4 +135,5 @@ const (
 	FailedToCreateClient     = 3
 	FailedToInitializePool   = 4
 	FailedToStartServer      = 5
+	FailedToStartTracer      = 6
 )

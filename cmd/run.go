@@ -155,7 +155,8 @@ var runCmd = &cobra.Command{
 			shutdown := tracing.OTLPTracer(true, collectorURL, config.TracerName)
 			defer func() {
 				if err := shutdown(context.Background()); err != nil {
-					log.Panic(err)
+					cmd.Println(err)
+					os.Exit(gerr.FailedToStartTracer)
 				}
 			}()
 		}

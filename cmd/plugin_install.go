@@ -166,10 +166,19 @@ var pluginInstallCmd = &cobra.Command{
 				strings.Contains(name, runtime.GOARCH) &&
 				strings.Contains(name, archiveExt)
 		})
+
+		var filePath string
 		if downloadURL != "" && releaseID != 0 {
 			cmd.Println("Downloading", downloadURL)
-			filePath := downloadFile(client, account, pluginName, releaseID, pluginFilename)
+			filePath, err = downloadFile(client, account, pluginName, releaseID, pluginFilename)
 			toBeDeleted = append(toBeDeleted, filePath)
+			if err != nil {
+				cmd.Println("Download failed: ", err)
+				if cleanup {
+					deleteFiles(toBeDeleted)
+				}
+				return
+			}
 			cmd.Println("Download completed successfully")
 		} else {
 			cmd.Println("The plugin file could not be found in the release assets")
@@ -182,8 +191,15 @@ var pluginInstallCmd = &cobra.Command{
 		})
 		if checksumsFilename != "" && downloadURL != "" && releaseID != 0 {
 			cmd.Println("Downloading", downloadURL)
-			filePath := downloadFile(client, account, pluginName, releaseID, checksumsFilename)
+			filePath, err = downloadFile(client, account, pluginName, releaseID, checksumsFilename)
 			toBeDeleted = append(toBeDeleted, filePath)
+			if err != nil {
+				cmd.Println("Download failed: ", err)
+				if cleanup {
+					deleteFiles(toBeDeleted)
+				}
+				return
+			}
 			cmd.Println("Download completed successfully")
 		} else {
 			cmd.Println("The checksum file could not be found in the release assets")
@@ -305,9 +321,17 @@ var pluginInstallCmd = &cobra.Command{
 		// Extract the archive.
 		var filenames []string
 		if runtime.GOOS == "windows" {
-			filenames = extractZip(pluginFilename, pluginOutputDir)
+			filenames, err = extractZip(pluginFilename, pluginOutputDir)
 		} else {
-			filenames = extractTarGz(pluginFilename, pluginOutputDir)
+			filenames, err = extractTarGz(pluginFilename, pluginOutputDir)
+		}
+
+		if err != nil {
+			cmd.Println("There was an error extracting the plugin archive: ", err)
+			if cleanup {
+				deleteFiles(toBeDeleted)
+			}
+			return
 		}
 
 		// Delete all the files except the extracted plugin binary,
