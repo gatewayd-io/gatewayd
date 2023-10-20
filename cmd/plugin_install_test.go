@@ -22,7 +22,7 @@ func Test_pluginInstallCmd(t *testing.T) {
 	output, err = executeCommandC(
 		rootCmd, "plugin", "install",
 		"github.com/gatewayd-io/gatewayd-plugin-cache@v0.2.4",
-		"-p", pluginTestConfigFile, "--update")
+		"-p", pluginTestConfigFile, "--update", "--backup")
 	assert.NoError(t, err, "plugin install should not return an error")
 	assert.Contains(t, output, "Downloading https://github.com/gatewayd-io/gatewayd-plugin-cache/releases/download/v0.2.4/gatewayd-plugin-cache-linux-amd64-v0.2.4.tar.gz") //nolint:lll
 	assert.Contains(t, output, "Downloading https://github.com/gatewayd-io/gatewayd-plugin-cache/releases/download/v0.2.4/checksums.txt")                                   //nolint:lll
@@ -38,6 +38,7 @@ func Test_pluginInstallCmd(t *testing.T) {
 
 	// Clean up.
 	assert.FileExists(t, "plugins/gatewayd-plugin-cache")
+	assert.FileExists(t, fmt.Sprintf("%s.bak", pluginTestConfigFile))
 	assert.NoFileExists(t, "gatewayd-plugin-cache-linux-amd64-v0.2.4.tar.gz")
 	assert.NoFileExists(t, "checksums.txt")
 	assert.NoFileExists(t, "plugins/LICENSE")
@@ -47,4 +48,5 @@ func Test_pluginInstallCmd(t *testing.T) {
 
 	assert.NoError(t, os.RemoveAll("plugins/"))
 	assert.NoError(t, os.Remove(pluginTestConfigFile))
+	assert.NoError(t, os.Remove(fmt.Sprintf("%s.bak", pluginTestConfigFile)))
 }
