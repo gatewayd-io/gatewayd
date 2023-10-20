@@ -4,12 +4,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_pluginCmd(t *testing.T) {
 	// Test pluginCmd with no arguments.
 	output, err := executeCommandC(rootCmd, "plugin")
-	assert.NoError(t, err, "pluginCmd should not return an error")
+	require.NoError(t, err, "pluginCmd should not return an error")
 	assert.Equal(t, `Manage plugins and their configuration
 
 Usage:

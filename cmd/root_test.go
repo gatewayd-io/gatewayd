@@ -4,11 +4,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_rootCmd(t *testing.T) {
 	output, err := executeCommandC(rootCmd)
-	assert.NoError(t, err, "rootCmd should not return an error")
+	require.NoError(t, err, "rootCmd should not return an error")
 	//nolint:lll
 	assert.Equal(t,
 		`GatewayD is a cloud-native database gateway and framework for building data-driven applications. It sits between your database servers and clients and proxies all their communication.

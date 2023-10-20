@@ -341,7 +341,7 @@ func (s *Server) OnTick() (time.Duration, Action) {
 	defer span.End()
 
 	s.logger.Debug().Msg("GatewayD is ticking...")
-	s.logger.Info().Str("count", fmt.Sprint(s.engine.CountConnections())).Msg(
+	s.logger.Info().Str("count", strconv.Itoa(s.engine.CountConnections())).Msg(
 		"Active client connections")
 
 	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.pluginTimeout)
@@ -371,7 +371,7 @@ func (s *Server) Run() *gerr.GatewayDError {
 	_, span := otel.Tracer("gatewayd").Start(s.ctx, "Run")
 	defer span.End()
 
-	s.logger.Info().Str("pid", fmt.Sprint(os.Getpid())).Msg("GatewayD is running")
+	s.logger.Info().Str("pid", strconv.Itoa(os.Getpid())).Msg("GatewayD is running")
 
 	// Try to resolve the address and log an error if it can't be resolved
 	addr, err := Resolve(s.Network, s.Address, s.logger)

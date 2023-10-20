@@ -56,7 +56,7 @@ func TestNewLogger_File(t *testing.T) {
 	logger.Error().Str("key", "value").Msg("This is an error")
 
 	f, err := os.ReadFile("gatewayd.log")
-	assert.NoError(t, err)
+	assert.Nil(t, err)
 	assert.NotEmpty(t, f)
 	assert.Contains(t, string(f), "This is an error")
 	os.Remove("gatewayd.log")

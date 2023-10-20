@@ -9,18 +9,19 @@ import (
 
 	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/zenizh/go-capturer"
 )
 
 func Test_runCmd(t *testing.T) {
 	// Create a test plugins config file.
 	_, err := executeCommandC(rootCmd, "plugin", "init", "--force", "-p", pluginTestConfigFile)
-	assert.NoError(t, err, "plugin init command should not have returned an error")
+	require.NoError(t, err, "plugin init command should not have returned an error")
 	assert.FileExists(t, pluginTestConfigFile, "plugin init command should have created a config file")
 
 	// Create a test config file.
 	_, err = executeCommandC(rootCmd, "config", "init", "--force", "-c", globalTestConfigFile)
-	assert.NoError(t, err, "configInitCmd should not return an error")
+	require.NoError(t, err, "configInitCmd should not return an error")
 	// Check that the config file was created.
 	assert.FileExists(t, globalTestConfigFile, "configInitCmd should create a config file")
 
@@ -48,7 +49,7 @@ func Test_runCmd(t *testing.T) {
 		// Test run command.
 		output := capturer.CaptureOutput(func() {
 			_, err := executeCommandC(rootCmd, "run", "-c", globalTestConfigFile, "-p", pluginTestConfigFile)
-			assert.NoError(t, err, "run command should not have returned an error")
+			require.NoError(t, err, "run command should not have returned an error")
 		})
 		// Print the output for debugging purposes.
 		runCmd.Print(output)
@@ -68,8 +69,8 @@ func Test_runCmd(t *testing.T) {
 	waitGroup.Wait()
 
 	// Clean up.
-	assert.NoError(t, os.Remove(pluginTestConfigFile))
-	assert.NoError(t, os.Remove(globalTestConfigFile))
+	require.NoError(t, os.Remove(pluginTestConfigFile))
+	require.NoError(t, os.Remove(globalTestConfigFile))
 }
 
 // Test_runCmdWithMultiTenancy tests the run command with multi-tenancy enabled.
@@ -77,7 +78,7 @@ func Test_runCmd(t *testing.T) {
 func Test_runCmdWithMultiTenancy(t *testing.T) {
 	// Create a test plugins config file.
 	_, err := executeCommandC(rootCmd, "plugin", "init", "--force", "-p", pluginTestConfigFile)
-	assert.NoError(t, err, "plugin init command should not have returned an error")
+	require.NoError(t, err, "plugin init command should not have returned an error")
 	assert.FileExists(t, pluginTestConfigFile, "plugin init command should have created a config file")
 
 	stopChan = make(chan struct{})
@@ -107,7 +108,7 @@ func Test_runCmdWithMultiTenancy(t *testing.T) {
 		output := capturer.CaptureOutput(func() {
 			_, err := executeCommandC(
 				rootCmd, "run", "-c", "testdata/gatewayd.yaml", "-p", pluginTestConfigFile)
-			assert.NoError(t, err, "run command should not have returned an error")
+			require.NoError(t, err, "run command should not have returned an error")
 		})
 		// Print the output for debugging purposes.
 		runCmd.Print(output)
@@ -125,7 +126,7 @@ func Test_runCmdWithMultiTenancy(t *testing.T) {
 	waitGroup.Wait()
 
 	// Clean up.
-	assert.NoError(t, os.Remove(pluginTestConfigFile))
+	require.NoError(t, os.Remove(pluginTestConfigFile))
 }
 
 func Test_runCmdWithCachePlugin(t *testing.T) {
@@ -135,12 +136,12 @@ func Test_runCmdWithCachePlugin(t *testing.T) {
 
 	// Create a test plugins config file.
 	_, err := executeCommandC(rootCmd, "plugin", "init", "--force", "-p", pluginTestConfigFile)
-	assert.NoError(t, err, "plugin init command should not have returned an error")
+	require.NoError(t, err, "plugin init command should not have returned an error")
 	assert.FileExists(t, pluginTestConfigFile, "plugin init command should have created a config file")
 
 	// Create a test config file.
 	_, err = executeCommandC(rootCmd, "config", "init", "--force", "-c", globalTestConfigFile)
-	assert.NoError(t, err, "configInitCmd should not return an error")
+	require.NoError(t, err, "configInitCmd should not return an error")
 	// Check that the config file was created.
 	assert.FileExists(t, globalTestConfigFile, "configInitCmd should create a config file")
 
@@ -149,7 +150,7 @@ func Test_runCmdWithCachePlugin(t *testing.T) {
 		rootCmd, "plugin", "install",
 		"github.com/gatewayd-io/gatewayd-plugin-cache@v0.2.4",
 		"-p", pluginTestConfigFile, "--update")
-	assert.NoError(t, err, "plugin install should not return an error")
+	require.NoError(t, err, "plugin install should not return an error")
 	assert.Contains(t, output, "Downloading https://github.com/gatewayd-io/gatewayd-plugin-cache/releases/download/v0.2.4/gatewayd-plugin-cache-linux-amd64-v0.2.4.tar.gz") //nolint:lll
 	assert.Contains(t, output, "Downloading https://github.com/gatewayd-io/gatewayd-plugin-cache/releases/download/v0.2.4/checksums.txt")                                   //nolint:lll
 	assert.Contains(t, output, "Download completed successfully")
@@ -159,7 +160,7 @@ func Test_runCmdWithCachePlugin(t *testing.T) {
 
 	// See if the plugin was actually installed.
 	output, err = executeCommandC(rootCmd, "plugin", "list", "-p", pluginTestConfigFile)
-	assert.NoError(t, err, "plugin list should not return an error")
+	require.NoError(t, err, "plugin list should not return an error")
 	assert.Contains(t, output, "Name: gatewayd-plugin-cache")
 
 	var waitGroup sync.WaitGroup
@@ -186,7 +187,7 @@ func Test_runCmdWithCachePlugin(t *testing.T) {
 		// Test run command.
 		output := capturer.CaptureOutput(func() {
 			_, err := executeCommandC(rootCmd, "run", "-c", globalTestConfigFile, "-p", pluginTestConfigFile)
-			assert.NoError(t, err, "run command should not have returned an error")
+			require.NoError(t, err, "run command should not have returned an error")
 		})
 		// Print the output for debugging purposes.
 		runCmd.Print(output)
@@ -206,7 +207,7 @@ func Test_runCmdWithCachePlugin(t *testing.T) {
 	waitGroup.Wait()
 
 	// Clean up.
-	assert.NoError(t, os.RemoveAll("plugins/"))
-	assert.NoError(t, os.Remove(pluginTestConfigFile))
-	assert.NoError(t, os.Remove(globalTestConfigFile))
+	require.NoError(t, os.RemoveAll("plugins/"))
+	require.NoError(t, os.Remove(pluginTestConfigFile))
+	require.NoError(t, os.Remove(globalTestConfigFile))
 }

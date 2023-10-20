@@ -4,12 +4,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_configCmd(t *testing.T) {
 	// Test configCmd with no arguments.
 	output, err := executeCommandC(rootCmd, "config")
-	assert.NoError(t, err, "configCmd should not return an error")
+	require.NoError(t, err, "configCmd should not return an error")
 	assert.Equal(t,
 		`Manage GatewayD global configuration
 

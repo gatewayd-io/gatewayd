@@ -6,12 +6,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_pluginInitCmd(t *testing.T) {
 	// Test plugin init command.
 	output, err := executeCommandC(rootCmd, "plugin", "init", "-p", pluginTestConfigFile)
-	assert.NoError(t, err, "plugin init command should not have returned an error")
+	require.NoError(t, err, "plugin init command should not have returned an error")
 	assert.Equal(t,
 		fmt.Sprintf("Config file '%s' was created successfully.", pluginTestConfigFile),
 		output,
@@ -20,5 +21,5 @@ func Test_pluginInitCmd(t *testing.T) {
 
 	// Clean up.
 	err = os.Remove(pluginTestConfigFile)
-	assert.NoError(t, err)
+	assert.Nil(t, err)
 }

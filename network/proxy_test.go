@@ -68,9 +68,9 @@ func TestNewProxy(t *testing.T) {
 	if c, ok := proxy.availableConnections.Pop(client.ID).(*Client); ok {
 		assert.NotEqual(t, "", c.ID)
 	}
-	assert.Equal(t, false, proxy.Elastic)
-	assert.Equal(t, false, proxy.ReuseElasticClients)
-	assert.Equal(t, false, proxy.IsExhausted())
+	assert.False(t, proxy.Elastic)
+	assert.False(t, proxy.ReuseElasticClients)
+	assert.False(t, proxy.IsExhausted())
 	c, err := proxy.IsHealthy(client)
 	assert.Nil(t, err)
 	assert.Equal(t, client, c)
@@ -121,8 +121,8 @@ func TestNewProxyElastic(t *testing.T) {
 	assert.NotNil(t, proxy)
 	assert.Equal(t, 0, proxy.busyConnections.Size())
 	assert.Equal(t, 0, proxy.availableConnections.Size())
-	assert.Equal(t, true, proxy.Elastic)
-	assert.Equal(t, false, proxy.ReuseElasticClients)
+	assert.True(t, proxy.Elastic)
+	assert.False(t, proxy.ReuseElasticClients)
 	assert.Equal(t, "tcp", proxy.ClientConfig.Network)
 	assert.Equal(t, "localhost:5432", proxy.ClientConfig.Address)
 }

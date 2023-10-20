@@ -22,13 +22,13 @@ import (
 )
 
 type IConfig interface {
-	InitConfig(context.Context)
-	LoadDefaults(context.Context)
-	LoadPluginEnvVars(context.Context)
-	LoadGlobalEnvVars(context.Context)
-	LoadGlobalConfigFile(context.Context)
-	LoadPluginConfigFile(context.Context)
-	MergeGlobalConfig(context.Context, map[string]interface{})
+	InitConfig(ctx context.Context)
+	LoadDefaults(ctx context.Context)
+	LoadPluginEnvVars(ctx context.Context)
+	LoadGlobalEnvVars(ctx context.Context)
+	LoadGlobalConfigFile(ctx context.Context)
+	LoadPluginConfigFile(ctx context.Context)
+	MergeGlobalConfig(ctx context.Context, updatedGlobalConfig map[string]interface{})
 }
 
 type Config struct {

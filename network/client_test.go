@@ -9,6 +9,7 @@ import (
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // CreateNewClient creates a new client for testing.
@@ -61,7 +62,7 @@ func TestSend(t *testing.T) {
 	packet := CreatePostgreSQLPacket('Q', []byte("select 1;"))
 	sent, err := client.Send(packet)
 	assert.Nil(t, err)
-	assert.Equal(t, len(packet), sent)
+	assert.Len(t, packet, sent)
 }
 
 // TestReceive tests the Receive function.
@@ -73,13 +74,13 @@ func TestReceive(t *testing.T) {
 	packet := CreatePgStartupPacket()
 	sent, err := client.Send(packet)
 	assert.Nil(t, err)
-	assert.Equal(t, len(packet), sent)
+	assert.Len(t, packet, sent)
 
 	size, data, err := client.Receive()
 	// AuthenticationSASL
 	msg := "\x00\x00\x00\nSCRAM-SHA-256\x00\x00"
 	assert.Equal(t, 24, size)
-	assert.Equal(t, len(data[:size]), size)
+	assert.Len(t, data[:size], size)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, data[:size])
 	assert.Equal(t, msg, string(data[5:size]))
@@ -118,7 +119,7 @@ func TestReconnect(t *testing.T) {
 	localAddr := client.LocalAddr()
 	assert.NotEmpty(t, localAddr)
 
-	assert.NoError(t, client.Reconnect())
+	require.NoError(t, client.Reconnect())
 	assert.NotNil(t, client)
 	assert.NotNil(t, client.conn)
 	assert.NotEmpty(t, client.ID)

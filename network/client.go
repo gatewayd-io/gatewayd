@@ -118,7 +118,7 @@ func NewClient(ctx context.Context, clientConfig *config.Client, logger zerolog.
 			logger.Error().Err(err).Msg("Failed to set receive deadline")
 			span.RecordError(err)
 		} else {
-			logger.Debug().Str("duration", fmt.Sprint(client.ReceiveDeadline.String())).Msg(
+			logger.Debug().Str("duration", client.ReceiveDeadline.String()).Msg(
 				"Set receive deadline")
 		}
 	}

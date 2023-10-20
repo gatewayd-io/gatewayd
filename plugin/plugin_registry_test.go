@@ -43,7 +43,7 @@ func TestPluginRegistry(t *testing.T) {
 	assert.NotNil(t, reg)
 	assert.NotNil(t, reg.plugins)
 	assert.NotNil(t, reg.hooks)
-	assert.Equal(t, 0, len(reg.List()))
+	assert.Empty(t, reg.List())
 
 	ident := sdkPlugin.Identifier{
 		Name:      "test",
@@ -54,13 +54,13 @@ func TestPluginRegistry(t *testing.T) {
 		ID: ident,
 	}
 	reg.Add(impl)
-	assert.Equal(t, 1, len(reg.List()))
+	assert.Len(t, reg.List(), 1)
 
 	instance := reg.Get(ident)
 	assert.Equal(t, instance, impl)
 
 	reg.Remove(ident)
-	assert.Equal(t, 0, len(reg.List()))
+	assert.Empty(t, reg.List())
 
 	reg.Shutdown()
 }
@@ -291,7 +291,7 @@ func Test_HookRegistry_Run_Remove(t *testing.T) {
 	result, err := reg.Run(context.Background(), map[string]interface{}{}, v1.HookName_HOOK_NAME_ON_NEW_LOGGER)
 	assert.Nil(t, err)
 	assert.Equal(t, map[string]interface{}{}, result)
-	assert.Equal(t, 1, len(reg.Hooks()[v1.HookName_HOOK_NAME_ON_NEW_LOGGER]))
+	assert.Len(t, reg.Hooks()[v1.HookName_HOOK_NAME_ON_NEW_LOGGER], 1)
 }
 
 func BenchmarkHookRun(b *testing.B) {
