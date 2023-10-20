@@ -7,7 +7,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type WriteBuffer struct {
@@ -146,6 +146,6 @@ func CollectAndComparePrometheusMetrics(t *testing.T) {
 			"gatewayd_server_ticks_fired_total",
 		}
 	)
-	assert.NoError(t,
+	require.NoError(t,
 		testutil.GatherAndCompare(prometheus.DefaultGatherer, strings.NewReader(want), metrics...))
 }

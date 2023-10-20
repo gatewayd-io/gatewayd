@@ -6,12 +6,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_configLintCmd(t *testing.T) {
 	// Test configInitCmd.
 	output, err := executeCommandC(rootCmd, "config", "init", "-c", globalTestConfigFile)
-	assert.NoError(t, err, "configInitCmd should not return an error")
+	require.NoError(t, err, "configInitCmd should not return an error")
 	assert.Equal(t,
 		fmt.Sprintf("Config file '%s' was created successfully.", globalTestConfigFile),
 		output,
@@ -21,7 +22,7 @@ func Test_configLintCmd(t *testing.T) {
 
 	// Test configLintCmd.
 	output, err = executeCommandC(rootCmd, "config", "lint", "-c", globalTestConfigFile)
-	assert.NoError(t, err, "configLintCmd should not return an error")
+	require.NoError(t, err, "configLintCmd should not return an error")
 	assert.Equal(t,
 		"global config is valid\n",
 		output,
@@ -29,5 +30,5 @@ func Test_configLintCmd(t *testing.T) {
 
 	// Clean up.
 	err = os.Remove(globalTestConfigFile)
-	assert.NoError(t, err)
+	assert.Nil(t, err)
 }

@@ -34,7 +34,7 @@ func TestEngine(t *testing.T) {
 			v := <-engine.stopServer
 			// Empty struct is expected to be received and
 			// it means that the server is stopped.
-			assert.Equal(t, v, struct{}{})
+			assert.Equal(t, struct{}{}, v)
 		}(engine)
 
 		err := engine.Stop(context.Background())

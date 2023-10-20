@@ -29,6 +29,7 @@ linters:
     - structcheck
     - varcheck
     - golint
+    - testifylint
 linters-settings:
   depguard:
     rules:

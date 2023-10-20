@@ -340,7 +340,7 @@ func (reg *Registry) Run(
 			if reg.Termination == config.Stop {
 				// If the terminate flag is set to true,
 				// abort the execution of the rest of the registered hooks.
-				if terminate, ok := result.Fields["terminate"]; ok && terminate.GetBoolValue() {
+				if terminate, ok := result.GetFields()["terminate"]; ok && terminate.GetBoolValue() {
 					break
 				}
 			}
@@ -522,7 +522,7 @@ func (reg *Registry) LoadPlugins(ctx context.Context, plugins []config.Plugin) {
 		span.AddEvent("Fetched plugin metadata")
 
 		// Retrieve plugin requirements.
-		if requires, ok := metadata.Fields["requires"]; ok && requires != nil && requires.GetListValue() != nil {
+		if requires, ok := metadata.GetFields()["requires"]; ok && requires != nil && requires.GetListValue() != nil {
 			if err := mapstructure.Decode(
 				requires.GetListValue().AsSlice(), &plugin.Requires); err != nil {
 				reg.Logger.Debug().Err(err).Msg("Failed to decode plugin requirements")
@@ -567,14 +567,14 @@ func (reg *Registry) LoadPlugins(ctx context.Context, plugins []config.Plugin) {
 
 		span.AddEvent("Verified plugin requirements")
 
-		plugin.ID.RemoteURL = metadata.Fields["id"].GetStructValue().Fields["remoteUrl"].GetStringValue()
-		plugin.ID.Version = metadata.Fields["id"].GetStructValue().Fields["version"].GetStringValue()
-		plugin.Description = metadata.Fields["description"].GetStringValue()
-		plugin.License = metadata.Fields["license"].GetStringValue()
-		plugin.ProjectURL = metadata.Fields["projectUrl"].GetStringValue()
+		plugin.ID.RemoteURL = metadata.GetFields()["id"].GetStructValue().GetFields()["remoteUrl"].GetStringValue()
+		plugin.ID.Version = metadata.GetFields()["id"].GetStructValue().GetFields()["version"].GetStringValue()
+		plugin.Description = metadata.GetFields()["description"].GetStringValue()
+		plugin.License = metadata.GetFields()["license"].GetStringValue()
+		plugin.ProjectURL = metadata.GetFields()["projectUrl"].GetStringValue()
 		// Retrieve authors.
-		if metadata.Fields["authors"] != nil && metadata.Fields["authors"].GetListValue() != nil {
-			if err := mapstructure.Decode(metadata.Fields["authors"].GetListValue().AsSlice(),
+		if metadata.GetFields()["authors"] != nil && metadata.GetFields()["authors"].GetListValue() != nil {
+			if err := mapstructure.Decode(metadata.GetFields()["authors"].GetListValue().AsSlice(),
 				&plugin.Authors); err != nil {
 				reg.Logger.Debug().Err(err).Msg("Failed to decode plugin authors")
 			}
@@ -584,8 +584,8 @@ func (reg *Registry) LoadPlugins(ctx context.Context, plugins []config.Plugin) {
 		}
 
 		// Retrieve hooks.
-		if metadata.Fields["hooks"] != nil && metadata.Fields["hooks"].GetListValue() != nil {
-			if err := mapstructure.Decode(metadata.Fields["hooks"].GetListValue().AsSlice(),
+		if metadata.GetFields()["hooks"] != nil && metadata.GetFields()["hooks"].GetListValue() != nil {
+			if err := mapstructure.Decode(metadata.GetFields()["hooks"].GetListValue().AsSlice(),
 				&plugin.Hooks); err != nil {
 				reg.Logger.Debug().Err(err).Msg("Failed to decode plugin hooks")
 			}
@@ -596,8 +596,8 @@ func (reg *Registry) LoadPlugins(ctx context.Context, plugins []config.Plugin) {
 
 		// Retrieve plugin config.
 		plugin.Config = make(map[string]string)
-		if metadata.Fields["config"] != nil && metadata.Fields["config"].GetStructValue() != nil {
-			for key, value := range metadata.Fields["config"].GetStructValue().AsMap() {
+		if metadata.GetFields()["config"] != nil && metadata.GetFields()["config"].GetStructValue() != nil {
+			for key, value := range metadata.GetFields()["config"].GetStructValue().AsMap() {
 				if val, ok := value.(string); ok {
 					plugin.Config[key] = val
 				} else {

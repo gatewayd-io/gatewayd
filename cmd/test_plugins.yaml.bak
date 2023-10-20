@@ -1,0 +1,10 @@
+acceptancePolicy: accept
+compatibilityPolicy: strict
+enableMetricsMerger: true
+healthCheckPeriod: 5s
+metricsMergerPeriod: 5s
+plugins: []
+reloadOnCrash: true
+terminationPolicy: stop
+timeout: 30s
+verificationPolicy: passdown

@@ -6,12 +6,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_pluginInstallCmd(t *testing.T) {
 	// Create a test plugin config file.
 	output, err := executeCommandC(rootCmd, "plugin", "init", "-p", pluginTestConfigFile)
-	assert.NoError(t, err, "plugin init should not return an error")
+	require.NoError(t, err, "plugin init should not return an error")
 	assert.Equal(t,
 		fmt.Sprintf("Config file '%s' was created successfully.", pluginTestConfigFile),
 		output,
@@ -23,7 +24,7 @@ func Test_pluginInstallCmd(t *testing.T) {
 		rootCmd, "plugin", "install",
 		"github.com/gatewayd-io/gatewayd-plugin-cache@v0.2.4",
 		"-p", pluginTestConfigFile, "--update", "--backup")
-	assert.NoError(t, err, "plugin install should not return an error")
+	require.NoError(t, err, "plugin install should not return an error")
 	assert.Contains(t, output, "Downloading https://github.com/gatewayd-io/gatewayd-plugin-cache/releases/download/v0.2.4/gatewayd-plugin-cache-linux-amd64-v0.2.4.tar.gz") //nolint:lll
 	assert.Contains(t, output, "Downloading https://github.com/gatewayd-io/gatewayd-plugin-cache/releases/download/v0.2.4/checksums.txt")                                   //nolint:lll
 	assert.Contains(t, output, "Download completed successfully")
@@ -33,7 +34,7 @@ func Test_pluginInstallCmd(t *testing.T) {
 
 	// See if the plugin was actually installed.
 	output, err = executeCommandC(rootCmd, "plugin", "list", "-p", pluginTestConfigFile)
-	assert.NoError(t, err, "plugin list should not return an error")
+	require.NoError(t, err, "plugin list should not return an error")
 	assert.Contains(t, output, "Name: gatewayd-plugin-cache")
 
 	// Clean up.
@@ -46,7 +47,7 @@ func Test_pluginInstallCmd(t *testing.T) {
 	assert.NoFileExists(t, "plugins/checksum.txt")
 	assert.NoFileExists(t, "plugins/gatewayd_plugin.yaml")
 
-	assert.NoError(t, os.RemoveAll("plugins/"))
-	assert.NoError(t, os.Remove(pluginTestConfigFile))
-	assert.NoError(t, os.Remove(fmt.Sprintf("%s.bak", pluginTestConfigFile)))
+	require.NoError(t, os.RemoveAll("plugins/"))
+	require.NoError(t, os.Remove(pluginTestConfigFile))
+	require.NoError(t, os.Remove(fmt.Sprintf("%s.bak", pluginTestConfigFile)))
 }

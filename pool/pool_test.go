@@ -48,13 +48,13 @@ func TestPool_Pop(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 2, pool.Size())
 	if c1, ok := pool.Pop("client1.ID").(string); !ok {
-		assert.Equal(t, c1, "client1")
+		assert.Equal(t, "client1", c1)
 	} else {
 		assert.Equal(t, "client1", c1)
 		assert.Equal(t, 1, pool.Size())
 	}
 	if c2, ok := pool.Pop("client2.ID").(string); !ok {
-		assert.Equal(t, c2, "client2")
+		assert.Equal(t, "client2", c2)
 	} else {
 		assert.Equal(t, "client2", c2)
 		assert.Equal(t, 0, pool.Size())
@@ -115,13 +115,13 @@ func TestPool_Get(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 2, pool.Size())
 	if c1, ok := pool.Get("client1.ID").(string); !ok {
-		assert.Equal(t, c1, "client1")
+		assert.Equal(t, "client1", c1)
 	} else {
 		assert.Equal(t, "client1", c1)
 		assert.Equal(t, 2, pool.Size())
 	}
 	if c2, ok := pool.Get("client2.ID").(string); !ok {
-		assert.Equal(t, c2, "client2")
+		assert.Equal(t, "client2", c2)
 	} else {
 		assert.Equal(t, "client2", c2)
 		assert.Equal(t, 2, pool.Size())
@@ -144,7 +144,7 @@ func TestPool_GetOrPut(t *testing.T) {
 	c1, loaded, err := pool.GetOrPut("client1.ID", "client1")
 	assert.True(t, loaded)
 	if c1, ok := c1.(string); !ok {
-		assert.Equal(t, c1, "client1")
+		assert.Equal(t, "client1", c1)
 	} else {
 		assert.Equal(t, "client1", c1)
 		assert.Equal(t, 2, pool.Size())
@@ -153,7 +153,7 @@ func TestPool_GetOrPut(t *testing.T) {
 	c2, loaded, err := pool.GetOrPut("client2.ID", "client2")
 	assert.True(t, loaded)
 	if c2, ok := c2.(string); !ok {
-		assert.Equal(t, c2, "client2")
+		assert.Equal(t, "client2", c2)
 	} else {
 		assert.Equal(t, "client2", c2)
 		assert.Equal(t, 2, pool.Size())
@@ -201,7 +201,7 @@ func TestPool_GetClientIDs(t *testing.T) {
 		}
 		return true
 	})
-	assert.Equal(t, 2, len(ids))
+	assert.Len(t, ids, 2)
 	assert.Contains(t, ids, "client1.ID")
 	assert.Contains(t, ids, "client2.ID")
 	pool.Clear()

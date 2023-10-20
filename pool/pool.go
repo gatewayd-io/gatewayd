@@ -12,7 +12,7 @@ import (
 type Callback func(key, value interface{}) bool
 
 type IPool interface {
-	ForEach(Callback)
+	ForEach(cb Callback)
 	Pool() *sync.Map
 	Put(key, value interface{}) *gerr.GatewayDError
 	Get(key interface{}) interface{}

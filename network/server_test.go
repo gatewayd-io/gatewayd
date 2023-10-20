@@ -19,6 +19,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 )
 
@@ -209,15 +210,15 @@ func TestRunServer(t *testing.T) {
 				// Read the log file and check if the log file contains the expected log messages.
 				if _, err := os.Stat("server_test.log"); err == nil {
 					logFile, err := os.Open("server_test.log")
-					assert.NoError(t, err)
+					assert.Nil(t, err)
 
 					reader := bufio.NewReader(logFile)
 					assert.NotNil(t, reader)
 
 					buffer, err := io.ReadAll(reader)
-					assert.NoError(t, err)
-					assert.Greater(t, len(buffer), 0) // The log file should not be empty.
-					assert.NoError(t, logFile.Close())
+					assert.Nil(t, err)
+					assert.NotEmpty(t, buffer) // The log file should not be empty.
+					require.NoError(t, logFile.Close())
 
 					logLines := string(buffer)
 					assert.Contains(t, logLines, "GatewayD is running", "GatewayD should be running")
@@ -226,7 +227,7 @@ func TestRunServer(t *testing.T) {
 					assert.Contains(t, logLines, "Egress traffic", "Egress traffic should be logged")
 					assert.Contains(t, logLines, "GatewayD is shutting down", "GatewayD should be shutting down")
 
-					assert.NoError(t, os.Remove("server_test.log"))
+					require.NoError(t, os.Remove("server_test.log"))
 				}
 				waitGroup.Done()
 				return
@@ -274,7 +275,7 @@ func TestRunServer(t *testing.T) {
 				assert.NotNil(t, client)
 				sent, err := client.Send(CreatePgStartupPacket())
 				assert.Nil(t, err)
-				assert.Equal(t, len(CreatePgStartupPacket()), sent)
+				assert.Len(t, CreatePgStartupPacket(), sent)
 
 				// The server should respond with an 'R' packet.
 				size, data, err := client.Receive()
@@ -284,7 +285,7 @@ func TestRunServer(t *testing.T) {
 				}
 				// This includes the message type, length and the message itself.
 				assert.Equal(t, 24, size)
-				assert.Equal(t, len(data[:size]), size)
+				assert.Len(t, data[:size], size)
 				assert.Nil(t, err)
 				packetSize := int(data[1])<<24 | int(data[2])<<16 | int(data[3])<<8 | int(data[4])
 				assert.Equal(t, 23, packetSize)

@@ -181,9 +181,9 @@ func (m *Merger) MergeMetrics(pluginMetrics map[string][]byte) *gerr.GatewayDErr
 		// Add plugin label to each metric.
 		metricFamilies := map[string]*promClient.MetricFamily{}
 		for _, metric := range metrics {
-			for _, sample := range metric.Metric {
+			for _, sample := range metric.GetMetric() {
 				// Add plugin label to each metric.
-				sample.Label = append(sample.Label, &promClient.LabelPair{
+				sample.Label = append(sample.GetLabel(), &promClient.LabelPair{
 					Name:  proto.String("plugin"),
 					Value: proto.String(strings.ReplaceAll(pluginName, "-", "_")),
 				})

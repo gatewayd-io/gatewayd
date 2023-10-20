@@ -571,7 +571,7 @@ var runCmd = &cobra.Command{
 			// Verify that the pool is properly populated.
 			logger.Info().Fields(map[string]interface{}{
 				"name":  name,
-				"count": fmt.Sprint(pools[name].Size()),
+				"count": strconv.Itoa(pools[name].Size()),
 			}).Msg("There are clients available in the pool")
 
 			if pools[name].Size() != cfg.GetSize() {
@@ -747,7 +747,7 @@ var runCmd = &cobra.Command{
 				}
 				pluginRegistry.ForEach(
 					func(identifier sdkPlugin.Identifier, plugin *plugin.Plugin) {
-						report.Plugins = append(report.Plugins, &usage.Plugin{
+						report.Plugins = append(report.GetPlugins(), &usage.Plugin{
 							Name:     identifier.Name,
 							Version:  identifier.Version,
 							Checksum: identifier.Checksum,
