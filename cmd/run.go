@@ -176,7 +176,8 @@ var runCmd = &cobra.Command{
 			})
 			if err != nil {
 				span.RecordError(err)
-				log.Panic("Sentry initialization failed: ", err)
+				cmd.Println("Sentry initialization failed: ", err)
+				return
 			}
 
 			// Flush buffered events before the program terminates.
