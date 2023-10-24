@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"io/fs"
 	"net/http"
 
@@ -11,6 +12,10 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
+
+type Healthz struct {
+	Status string `json:"status"`
+}
 
 // StartHTTPAPI starts the HTTP API.
 func StartHTTPAPI(options *Options) {
@@ -30,25 +35,38 @@ func StartHTTPAPI(options *Options) {
 
 	mux := http.NewServeMux()
 	mux.Handle("/", rmux)
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
+	mux.HandleFunc("/healthz", func(writer http.ResponseWriter, r *http.Request) {
+		if liveness(options.Servers) {
+			writer.Header().Set("Content-Type", "application/json")
+			writer.WriteHeader(http.StatusOK)
+			if err := json.NewEncoder(writer).Encode(Healthz{Status: "SERVING"}); err != nil {
+				options.Logger.Err(err).Msg("failed to serve healthcheck")
+				writer.WriteHeader(http.StatusInternalServerError)
+			}
+		} else {
+			writer.Header().Set("Content-Type", "application/json")
+			writer.WriteHeader(http.StatusServiceUnavailable)
+			if err := json.NewEncoder(writer).Encode(Healthz{Status: "NOT_SERVING"}); err != nil {
+				options.Logger.Err(err).Msg("failed to serve healthcheck")
+			}
+		}
 	})
 
-	mux.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		if _, err := w.Write([]byte(config.Version)); err != nil {
+	mux.HandleFunc("/version", func(writer http.ResponseWriter, r *http.Request) {
+		writer.WriteHeader(http.StatusOK)
+		if _, err := writer.Write([]byte(config.Version)); err != nil {
 			options.Logger.Err(err).Msg("failed to serve version")
-			w.WriteHeader(http.StatusInternalServerError)
+			writer.WriteHeader(http.StatusInternalServerError)
 		}
 	})
 
 	if IsSwaggerEmbedded() {
-		mux.HandleFunc("/swagger.json", func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusOK)
+		mux.HandleFunc("/swagger.json", func(writer http.ResponseWriter, r *http.Request) {
+			writer.WriteHeader(http.StatusOK)
 			data, _ := swaggerUI.ReadFile("v1/api.swagger.json")
-			if _, err := w.Write(data); err != nil {
+			if _, err := writer.Write(data); err != nil {
 				options.Logger.Err(err).Msg("failed to serve swagger.json")
-				w.WriteHeader(http.StatusInternalServerError)
+				writer.WriteHeader(http.StatusInternalServerError)
 			}
 		})
 

@@ -24,7 +24,9 @@ type Options struct {
 	GRPCNetwork string
 	GRPCAddress string
 	HTTPAddress string
+	Servers     map[string]*network.Server
 }
+
 type API struct {
 	v1.GatewayDAdminAPIServiceServer
 

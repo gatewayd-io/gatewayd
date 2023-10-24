@@ -696,16 +696,19 @@ var runCmd = &cobra.Command{
 				GRPCNetwork: conf.Global.API.GRPCNetwork,
 				GRPCAddress: conf.Global.API.GRPCAddress,
 				HTTPAddress: conf.Global.API.HTTPAddress,
+				Servers:     servers,
 			}
 
-			go api.StartGRPCAPI(&api.API{
-				Options:        &apiOptions,
-				Config:         conf,
-				PluginRegistry: pluginRegistry,
-				Pools:          pools,
-				Proxies:        proxies,
-				Servers:        servers,
-			})
+			go api.StartGRPCAPI(
+				&api.API{
+					Options:        &apiOptions,
+					Config:         conf,
+					PluginRegistry: pluginRegistry,
+					Pools:          pools,
+					Proxies:        proxies,
+					Servers:        servers,
+				},
+				&api.HealthChecker{Servers: servers})
 			logger.Info().Str("address", apiOptions.HTTPAddress).Msg("Started the HTTP API")
 
 			go api.StartHTTPAPI(&apiOptions)
