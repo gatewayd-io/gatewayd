@@ -415,7 +415,9 @@ func (s *Server) Run() *gerr.GatewayDError {
 		s.logger.Error().Err(origErr).Msg("Server failed to start listening")
 		return gerr.ErrServerListenFailed.Wrap(origErr)
 	}
+	s.mu.Lock()
 	s.engine.listener = listener
+	s.mu.Unlock()
 	defer s.engine.listener.Close()
 
 	if s.engine.listener == nil {
