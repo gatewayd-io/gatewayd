@@ -7,7 +7,7 @@ require (
 	github.com/NYTimes/gziphandler v1.1.1
 	github.com/codingsince1985/checksum v1.3.0
 	github.com/envoyproxy/protoc-gen-validate v1.0.2
-	github.com/gatewayd-io/gatewayd-plugin-sdk v0.1.2
+	github.com/gatewayd-io/gatewayd-plugin-sdk v0.1.6
 	github.com/getsentry/sentry-go v0.25.0
 	github.com/go-co-op/gocron v1.35.2
 	github.com/google/go-cmp v0.6.0
@@ -78,9 +78,9 @@ require (
 	golang.org/x/crypto v0.14.0 // indirect
 	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/oauth2 v0.13.0 // indirect
-	golang.org/x/sys v0.13.0 // indirect
-	golang.org/x/text v0.13.0 // indirect
+	golang.org/x/sys v0.14.0 // indirect
+	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto v0.0.0-20231016165738-49dd2c1f3d0b // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20231016165738-49dd2c1f3d0b // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20231030173426-d783a09b4405 // indirect
 )
