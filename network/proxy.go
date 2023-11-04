@@ -318,11 +318,12 @@ func (pr *Proxy) PassThroughToServer(conn *ConnWrapper, stack *Stack) *gerr.Gate
 		return gerr.ErrClientNotConnected.Wrap(origErr)
 	}
 
-	// Check if the client sent a SSL request.
-	if postgres.IsPostgresSSLRequest(request) {
+	// Check if the client sent a SSL request and the server supports SSL.
+	if conn.IsTLSEnabled() && postgres.IsPostgresSSLRequest(request) {
 		// Perform TLS handshake.
 		conn.UpgradeToTLS(func(c net.Conn) {
-			// Acknowledge the SSL request.
+			// Acknowledge the SSL request:
+			// https://www.postgresql.org/docs/current/protocol-flow.html#PROTOCOL-FLOW-SSL
 			if sent, err := conn.Write([]byte{'S'}); err != nil {
 				pr.logger.Error().Err(err).Msg("Failed to acknowledge the SSL request")
 				span.RecordError(err)
@@ -338,6 +339,7 @@ func (pr *Proxy) PassThroughToServer(conn *ConnWrapper, stack *Stack) *gerr.Gate
 			}
 		})
 
+		// Check if the TLS handshake was successful.
 		if conn.IsTLSEnabled() {
 			pr.logger.Debug().Fields(
 				map[string]interface{}{
@@ -346,8 +348,6 @@ func (pr *Proxy) PassThroughToServer(conn *ConnWrapper, stack *Stack) *gerr.Gate
 				},
 			).Msg("Performed the TLS handshake")
 			span.AddEvent("Performed the TLS handshake")
-
-			return nil
 		} else {
 			pr.logger.Error().Fields(
 				map[string]interface{}{
@@ -356,14 +356,31 @@ func (pr *Proxy) PassThroughToServer(conn *ConnWrapper, stack *Stack) *gerr.Gate
 				},
 			).Msg("Failed to perform the TLS handshake")
 			span.AddEvent("Failed to perform the TLS handshake")
-
-			if _, err := conn.Write([]byte{'N'}); err != nil {
-				pr.logger.Error().Err(err).Msg("Server does not support SSL, but SSL was required")
-				span.RecordError(err)
-			}
-
-			return gerr.ErrTLSDisabled
 		}
+
+		// This return causes the client to start sending
+		// StartupMessage over the TLS connection.
+		return nil
+	} else if !conn.IsTLSEnabled() && postgres.IsPostgresSSLRequest(request) {
+		// Client sent a SSL request, but the server does not support SSL.
+
+		pr.logger.Error().Fields(
+			map[string]interface{}{
+				"local":  LocalAddr(conn.Conn()),
+				"remote": RemoteAddr(conn.Conn()),
+			},
+		).Msg("Server does not support SSL, but SSL was requested")
+		span.AddEvent("Server does not support SSL, but SSL was requested")
+
+		// Server does not support SSL, and SSL was prefered,
+		// so we need to switch to a plaintext connection:
+		// https://www.postgresql.org/docs/current/protocol-flow.html#PROTOCOL-FLOW-SSL
+		if _, err := conn.Write([]byte{'N'}); err != nil {
+			pr.logger.Error().Err(err).Msg("Server does not support SSL, but SSL was required")
+			span.RecordError(err)
+		}
+
+		return nil
 	}
 
 	// Push the client's request to the stack.
