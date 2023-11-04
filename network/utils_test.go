@@ -112,7 +112,7 @@ func BenchmarkResolveUnix(b *testing.B) {
 }
 
 type testConnection struct {
-	net.Conn
+	*ConnWrapper
 }
 
 func (c *testConnection) LocalAddr() net.Addr {
@@ -158,7 +158,7 @@ func BenchmarkTrafficData(b *testing.B) {
 	}
 	err := "test error"
 	for i := 0; i < b.N; i++ {
-		trafficData(conn, client, fields, err)
+		trafficData(conn.Conn(), client, fields, err)
 	}
 }
 

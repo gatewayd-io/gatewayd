@@ -188,6 +188,9 @@ func TestRunServer(t *testing.T) {
 		logger,
 		pluginRegistry,
 		config.DefaultPluginTimeout,
+		false,
+		"",
+		"",
 	)
 	assert.NotNil(t, server)
 

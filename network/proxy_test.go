@@ -256,8 +256,8 @@ func BenchmarkProxyConnectDisconnect(b *testing.B) {
 
 	// Connect to the proxy
 	for i := 0; i < b.N; i++ {
-		proxy.Connect(conn.Conn) //nolint:errcheck
-		proxy.Disconnect(&conn)  //nolint:errcheck
+		proxy.Connect(conn.ConnWrapper)    //nolint:errcheck
+		proxy.Disconnect(conn.ConnWrapper) //nolint:errcheck
 	}
 }
 
@@ -307,15 +307,15 @@ func BenchmarkProxyPassThrough(b *testing.B) {
 	defer proxy.Shutdown()
 
 	conn := testConnection{}
-	proxy.Connect(conn.Conn)      //nolint:errcheck
-	defer proxy.Disconnect(&conn) //nolint:errcheck
+	proxy.Connect(conn.ConnWrapper)          //nolint:errcheck
+	defer proxy.Disconnect(conn.ConnWrapper) //nolint:errcheck
 
 	stack := NewStack()
 
 	// Connect to the proxy
 	for i := 0; i < b.N; i++ {
-		proxy.PassThroughToClient(&conn, stack) //nolint:errcheck
-		proxy.PassThroughToServer(&conn, stack) //nolint:errcheck
+		proxy.PassThroughToClient(conn.ConnWrapper, stack) //nolint:errcheck
+		proxy.PassThroughToServer(conn.ConnWrapper, stack) //nolint:errcheck
 	}
 }
 
@@ -366,8 +366,8 @@ func BenchmarkProxyIsHealthyAndIsExhausted(b *testing.B) {
 	defer proxy.Shutdown()
 
 	conn := testConnection{}
-	proxy.Connect(conn.Conn)      //nolint:errcheck
-	defer proxy.Disconnect(&conn) //nolint:errcheck
+	proxy.Connect(conn.ConnWrapper)          //nolint:errcheck
+	defer proxy.Disconnect(conn.ConnWrapper) //nolint:errcheck
 
 	// Connect to the proxy
 	for i := 0; i < b.N; i++ {
@@ -423,8 +423,8 @@ func BenchmarkProxyAvailableAndBusyConnections(b *testing.B) {
 	defer proxy.Shutdown()
 
 	conn := testConnection{}
-	proxy.Connect(conn.Conn)      //nolint:errcheck
-	defer proxy.Disconnect(&conn) //nolint:errcheck
+	proxy.Connect(conn.ConnWrapper)          //nolint:errcheck
+	defer proxy.Disconnect(conn.ConnWrapper) //nolint:errcheck
 
 	// Connect to the proxy
 	for i := 0; i < b.N; i++ {
