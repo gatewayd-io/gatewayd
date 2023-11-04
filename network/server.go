@@ -11,7 +11,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gatewayd-io/gatewayd-plugin-sdk/databases/postgres"
 	v1 "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin/v1"
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
@@ -287,14 +286,6 @@ func (s *Server) OnTraffic(conn *ConnWrapper, stopConnection chan struct{}) Acti
 			if err := server.proxy.PassThroughToServer(conn, stack); err != nil {
 				server.logger.Trace().Err(err).Msg("Failed to pass through traffic")
 				span.RecordError(err)
-				if errors.Is(err, gerr.ErrTLSDisabled) {
-					conn.Write(postgres.ErrorResponse(
-						"server does not support SSL, but SSL was required",
-						"",
-						"",
-						"",
-					))
-				}
 				stopConnection <- struct{}{}
 				break
 			}

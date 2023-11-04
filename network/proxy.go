@@ -357,6 +357,11 @@ func (pr *Proxy) PassThroughToServer(conn *ConnWrapper, stack *Stack) *gerr.Gate
 			).Msg("Failed to perform the TLS handshake")
 			span.AddEvent("Failed to perform the TLS handshake")
 
+			if _, err := conn.Write([]byte{'N'}); err != nil {
+				pr.logger.Error().Err(err).Msg("Server does not support SSL, but SSL was required")
+				span.RecordError(err)
+			}
+
 			return gerr.ErrTLSDisabled
 		}
 	}
