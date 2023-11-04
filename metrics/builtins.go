@@ -20,6 +20,11 @@ var (
 		Name:      "server_connections",
 		Help:      "Number of server connections",
 	})
+	TLSConnections = promauto.NewGauge(prometheus.GaugeOpts{
+		Namespace: Namespace,
+		Name:      "tls_connections",
+		Help:      "Number of TLS connections",
+	})
 	ServerTicksFired = promauto.NewCounter(prometheus.CounterOpts{
 		Namespace: Namespace,
 		Name:      "server_ticks_fired_total",

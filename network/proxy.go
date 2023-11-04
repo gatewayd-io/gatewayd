@@ -348,6 +348,7 @@ func (pr *Proxy) PassThroughToServer(conn *ConnWrapper, stack *Stack) *gerr.Gate
 				},
 			).Msg("Performed the TLS handshake")
 			span.AddEvent("Performed the TLS handshake")
+			metrics.TLSConnections.Inc()
 		} else {
 			pr.logger.Error().Fields(
 				map[string]interface{}{
@@ -372,7 +373,7 @@ func (pr *Proxy) PassThroughToServer(conn *ConnWrapper, stack *Stack) *gerr.Gate
 		).Msg("Server does not support SSL, but SSL was requested")
 		span.AddEvent("Server does not support SSL, but SSL was requested")
 
-		// Server does not support SSL, and SSL was prefered,
+		// Server does not support SSL, and SSL was preferred,
 		// so we need to switch to a plaintext connection:
 		// https://www.postgresql.org/docs/current/protocol-flow.html#PROTOCOL-FLOW-SSL
 		if _, err := conn.Write([]byte{'N'}); err != nil {

@@ -218,6 +218,10 @@ func (s *Server) OnClose(conn *ConnWrapper, err error) Action {
 		return Close
 	}
 
+	if conn.IsTLSEnabled() {
+		metrics.TLSConnections.Dec()
+	}
+
 	// Close the incoming connection.
 	if err := conn.Close(); err != nil {
 		s.logger.Error().Err(err).Msg("Failed to close the incoming connection")
