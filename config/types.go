@@ -82,6 +82,9 @@ type Server struct {
 	TickInterval time.Duration `json:"tickInterval" jsonschema:"oneof_type=string;integer"`
 	Network      string        `json:"network" jsonschema:"enum=tcp,enum=udp,enum=unix"`
 	Address      string        `json:"address"`
+	EnableTLS    bool          `json:"enableTLS"` //nolint:tagliatelle
+	CertFile     string        `json:"certFile"`
+	KeyFile      string        `json:"keyFile"`
 }
 
 type API struct {

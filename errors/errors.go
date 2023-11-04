@@ -23,6 +23,8 @@ const (
 	ErrCodeServerListenFailed
 	ErrCodeSplitHostPortFailed
 	ErrCodeAcceptFailed
+	ErrCodeGetTLSConfigFailed
+	ErrCodeTLSDisabled
 	ErrCodeReadFailed
 	ErrCodePutFailed
 	ErrCodeNilPointer
@@ -87,6 +89,10 @@ var (
 		ErrCodeSplitHostPortFailed, "failed to split host:port", nil)
 	ErrAcceptFailed = NewGatewayDError(
 		ErrCodeAcceptFailed, "failed to accept connection", nil)
+	ErrGetTLSConfigFailed = NewGatewayDError(
+		ErrCodeGetTLSConfigFailed, "failed to get TLS config", nil)
+	ErrTLSDisabled = NewGatewayDError(
+		ErrCodeTLSDisabled, "TLS is disabled or handshake failed", nil)
 
 	ErrReadFailed = NewGatewayDError(
 		ErrCodeReadFailed, "failed to read from the client", nil)

@@ -338,15 +338,27 @@ func (pr *Proxy) PassThroughToServer(conn *ConnWrapper, stack *Stack) *gerr.Gate
 			}
 		})
 
-		pr.logger.Debug().Fields(
-			map[string]interface{}{
-				"local":  LocalAddr(conn.Conn()),
-				"remote": RemoteAddr(conn.Conn()),
-			},
-		).Msg("Performed the TLS handshake")
-		span.AddEvent("Performed the TLS handshake")
+		if conn.IsTLSEnabled() {
+			pr.logger.Debug().Fields(
+				map[string]interface{}{
+					"local":  LocalAddr(conn.Conn()),
+					"remote": RemoteAddr(conn.Conn()),
+				},
+			).Msg("Performed the TLS handshake")
+			span.AddEvent("Performed the TLS handshake")
 
-		return nil
+			return nil
+		} else {
+			pr.logger.Error().Fields(
+				map[string]interface{}{
+					"local":  LocalAddr(conn.Conn()),
+					"remote": RemoteAddr(conn.Conn()),
+				},
+			).Msg("Failed to perform the TLS handshake")
+			span.AddEvent("Failed to perform the TLS handshake")
+
+			return gerr.ErrTLSDisabled
+		}
 	}
 
 	// Push the client's request to the stack.

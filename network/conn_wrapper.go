@@ -15,19 +15,20 @@ type UpgraderFunc func(net.Conn)
 
 type IConnWrapper interface {
 	Conn() net.Conn
-	LoadTLSConfig(cert, key []byte) *tls.Config
 	UpgradeToTLS(upgrader UpgraderFunc) error
 	Close() error
 	Write([]byte) (int, error)
 	Read([]byte) (int, error)
 	RemoteAddr() net.Addr
 	LocalAddr() net.Addr
+	IsTLSEnabled() bool
 }
 
 type ConnWrapper struct {
-	netConn   net.Conn
-	tlsConn   *tls.Conn
-	tlsConfig *tls.Config
+	netConn      net.Conn
+	tlsConn      *tls.Conn
+	tlsConfig    *tls.Config
+	isTLSEnabled bool
 }
 
 var _ IConnWrapper = &ConnWrapper{}
@@ -46,6 +47,10 @@ func (cw *ConnWrapper) UpgradeToTLS(upgrader UpgraderFunc) error {
 		return nil
 	}
 
+	if !cw.isTLSEnabled {
+		return nil
+	}
+
 	if upgrader != nil {
 		upgrader(cw.netConn)
 	}
@@ -55,19 +60,8 @@ func (cw *ConnWrapper) UpgradeToTLS(upgrader UpgraderFunc) error {
 		return err
 	}
 	cw.tlsConn = tlsConn
+	cw.isTLSEnabled = true
 	return nil
-}
-
-// LoadTLSConfig loads the TLS config.
-// TODO: Add support for client authentication.
-// TODO: Should it even be here?
-func (cw *ConnWrapper) LoadTLSConfig(cert, key []byte) *tls.Config {
-	certPair, err := tls.X509KeyPair(cert, key)
-	if err != nil {
-		return nil
-	}
-	cw.tlsConfig.Certificates = []tls.Certificate{certPair}
-	return cw.tlsConfig
 }
 
 // Close closes the connection.
@@ -110,26 +104,33 @@ func (cw *ConnWrapper) LocalAddr() net.Addr {
 	return cw.netConn.LocalAddr()
 }
 
+// IsTLSEnabled returns true if TLS is enabled.
+func (cw *ConnWrapper) IsTLSEnabled() bool {
+	return cw.tlsConn != nil || cw.isTLSEnabled
+}
+
 // NewConnWrapper creates a new connection wrapper. The connection
 // wrapper is used to upgrade the connection to TLS if need be.
-func NewConnWrapper(conn net.Conn, tlsConfig *tls.Config) (*ConnWrapper, error) {
-	if tlsConfig == nil {
-		// TODO: Make this configurable.
-		cert, err := tls.LoadX509KeyPair("server.crt", "server.key")
-		if err != nil {
-			return nil, err
-		}
+func NewConnWrapper(conn net.Conn, tlsConfig *tls.Config) *ConnWrapper {
+	return &ConnWrapper{
+		netConn:      conn,
+		tlsConfig:    tlsConfig,
+		isTLSEnabled: tlsConfig != nil && tlsConfig.Certificates != nil,
+	}
+}
 
-		tlsConfig = &tls.Config{
-			MinVersion:               tls.VersionTLS13,
-			Certificates:             []tls.Certificate{cert},
-			ClientAuth:               tls.VerifyClientCertIfGiven,
-			PreferServerCipherSuites: true,
-		}
+// CreateTLSConfig returns a TLS config from the given cert and key.
+// TODO: Make this more generic.
+func CreateTLSConfig(certFile, keyFile string) (*tls.Config, error) {
+	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	if err != nil {
+		return nil, err
 	}
 
-	return &ConnWrapper{
-		netConn:   conn,
-		tlsConfig: tlsConfig,
+	return &tls.Config{
+		MinVersion:               tls.VersionTLS13,
+		Certificates:             []tls.Certificate{cert},
+		ClientAuth:               tls.VerifyClientCertIfGiven,
+		PreferServerCipherSuites: true,
 	}, nil
 }

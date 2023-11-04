@@ -56,6 +56,9 @@ servers:
     address: 0.0.0.0:15432
     enableTicker: False
     tickInterval: 5s # duration
+    enableTLS: False
+    certFile: ""
+    keyFile: ""
 
 api:
   enabled: True

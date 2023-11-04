@@ -133,6 +133,9 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 		Address:      DefaultListenAddress,
 		EnableTicker: false,
 		TickInterval: DefaultTickInterval,
+		EnableTLS:    false,
+		CertFile:     "",
+		KeyFile:      "",
 	}
 
 	c.globalDefaults = GlobalConfig{

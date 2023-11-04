@@ -2,6 +2,7 @@ package network
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net"
@@ -10,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gatewayd-io/gatewayd-plugin-sdk/databases/postgres"
 	v1 "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin/v1"
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
@@ -46,6 +48,11 @@ type Server struct {
 	Options      Option
 	Status       config.Status
 	TickInterval time.Duration
+
+	// TLS config
+	EnableTLS bool
+	CertFile  string
+	KeyFile   string
 }
 
 // OnBoot is called when the server is booted. It calls the OnBooting and OnBooted hooks.
@@ -280,6 +287,14 @@ func (s *Server) OnTraffic(conn *ConnWrapper, stopConnection chan struct{}) Acti
 			if err := server.proxy.PassThroughToServer(conn, stack); err != nil {
 				server.logger.Trace().Err(err).Msg("Failed to pass through traffic")
 				span.RecordError(err)
+				if errors.Is(err, gerr.ErrTLSDisabled) {
+					conn.Write(postgres.ErrorResponse(
+						"server does not support SSL, but SSL was required",
+						"",
+						"",
+						"",
+					))
+				}
 				stopConnection <- struct{}{}
 				break
 			}
@@ -290,7 +305,7 @@ func (s *Server) OnTraffic(conn *ConnWrapper, stopConnection chan struct{}) Acti
 	// If there is an error, log it and close the connection.
 	go func(server *Server, conn *ConnWrapper, stopConnection chan struct{}, stack *Stack) {
 		for {
-			server.logger.Debug().Msg("Passing through traffic from server to client")
+			server.logger.Trace().Msg("Passing through traffic from server to client")
 			if err := server.proxy.PassThroughToClient(conn, stack); err != nil {
 				server.logger.Trace().Err(err).Msg("Failed to pass through traffic")
 				span.RecordError(err)
@@ -468,6 +483,18 @@ func (s *Server) Run() *gerr.GatewayDError {
 
 	s.engine.running.Store(true)
 
+	var tlsConfig *tls.Config
+	if s.EnableTLS {
+		tlsConfig, origErr = CreateTLSConfig(s.CertFile, s.KeyFile)
+		if origErr != nil {
+			s.logger.Error().Err(origErr).Msg("Failed to create TLS config")
+			return gerr.ErrGetTLSConfigFailed.Wrap(origErr)
+		}
+		s.logger.Info().Msg("TLS is enabled")
+	} else {
+		s.logger.Debug().Msg("TLS is disabled")
+	}
+
 	for {
 		select {
 		case <-s.engine.stopServer:
@@ -483,7 +510,7 @@ func (s *Server) Run() *gerr.GatewayDError {
 				return gerr.ErrAcceptFailed.Wrap(err)
 			}
 
-			conn, err := NewConnWrapper(netConn, nil)
+			conn := NewConnWrapper(netConn, tlsConfig)
 
 			if out, action := s.OnOpen(conn); action != None {
 				if _, err := conn.Write(out); err != nil {
@@ -567,6 +594,8 @@ func NewServer(
 	logger zerolog.Logger,
 	pluginRegistry *plugin.Registry,
 	pluginTimeout time.Duration,
+	enableTLS bool,
+	certFile, keyFile string,
 ) *Server {
 	serverCtx, span := otel.Tracer(config.TracerName).Start(ctx, "NewServer")
 	defer span.End()
@@ -579,6 +608,9 @@ func NewServer(
 		Options:        options,
 		TickInterval:   tickInterval,
 		Status:         config.Stopped,
+		EnableTLS:      enableTLS,
+		CertFile:       certFile,
+		KeyFile:        keyFile,
 		proxy:          proxy,
 		logger:         logger,
 		pluginRegistry: pluginRegistry,
