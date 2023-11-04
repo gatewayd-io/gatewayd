@@ -29,3 +29,6 @@ dist/
 
 # Tensorflow files
 libtensorflow*
+
+# Test generated files
+cmd/test_plugins.yaml.bak
