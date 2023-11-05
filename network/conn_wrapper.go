@@ -1,8 +1,11 @@
+//nolint:wrapcheck
 package network
 
 import (
 	"crypto/tls"
 	"net"
+
+	gerr "github.com/gatewayd-io/gatewayd/errors"
 )
 
 // UpgraderFunc is a function that upgrades a connection to TLS.
@@ -15,10 +18,10 @@ type UpgraderFunc func(net.Conn)
 
 type IConnWrapper interface {
 	Conn() net.Conn
-	UpgradeToTLS(upgrader UpgraderFunc) error
+	UpgradeToTLS(upgrader UpgraderFunc) *gerr.GatewayDError
 	Close() error
-	Write([]byte) (int, error)
-	Read([]byte) (int, error)
+	Write(data []byte) (int, error)
+	Read(data []byte) (int, error)
 	RemoteAddr() net.Addr
 	LocalAddr() net.Addr
 	IsTLSEnabled() bool
@@ -42,7 +45,7 @@ func (cw *ConnWrapper) Conn() net.Conn {
 }
 
 // UpgradeToTLS upgrades the connection to TLS.
-func (cw *ConnWrapper) UpgradeToTLS(upgrader UpgraderFunc) error {
+func (cw *ConnWrapper) UpgradeToTLS(upgrader UpgraderFunc) *gerr.GatewayDError {
 	if cw.tlsConn != nil {
 		return nil
 	}
@@ -57,7 +60,7 @@ func (cw *ConnWrapper) UpgradeToTLS(upgrader UpgraderFunc) error {
 
 	tlsConn := tls.Server(cw.netConn, cw.tlsConfig)
 	if err := tlsConn.Handshake(); err != nil {
-		return err
+		return gerr.ErrUpgradeToTLSFailed.Wrap(err)
 	}
 	cw.tlsConn = tlsConn
 	cw.isTLSEnabled = true

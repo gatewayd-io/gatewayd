@@ -319,9 +319,10 @@ func (pr *Proxy) PassThroughToServer(conn *ConnWrapper, stack *Stack) *gerr.Gate
 	}
 
 	// Check if the client sent a SSL request and the server supports SSL.
+	//nolint:nestif
 	if conn.IsTLSEnabled() && postgres.IsPostgresSSLRequest(request) {
 		// Perform TLS handshake.
-		conn.UpgradeToTLS(func(c net.Conn) {
+		if err := conn.UpgradeToTLS(func(c net.Conn) {
 			// Acknowledge the SSL request:
 			// https://www.postgresql.org/docs/current/protocol-flow.html#PROTOCOL-FLOW-SSL
 			if sent, err := conn.Write([]byte{'S'}); err != nil {
@@ -337,7 +338,10 @@ func (pr *Proxy) PassThroughToServer(conn *ConnWrapper, stack *Stack) *gerr.Gate
 					},
 				).Msg("Sent data to database")
 			}
-		})
+		}); err != nil {
+			pr.logger.Error().Err(err).Msg("Failed to perform the TLS handshake")
+			span.RecordError(err)
+		}
 
 		// Check if the TLS handshake was successful.
 		if conn.IsTLSEnabled() {

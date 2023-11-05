@@ -25,6 +25,7 @@ const (
 	ErrCodeAcceptFailed
 	ErrCodeGetTLSConfigFailed
 	ErrCodeTLSDisabled
+	ErrCodeUpgradeToTLSFailed
 	ErrCodeReadFailed
 	ErrCodePutFailed
 	ErrCodeNilPointer
@@ -93,6 +94,8 @@ var (
 		ErrCodeGetTLSConfigFailed, "failed to get TLS config", nil)
 	ErrTLSDisabled = NewGatewayDError(
 		ErrCodeTLSDisabled, "TLS is disabled or handshake failed", nil)
+	ErrUpgradeToTLSFailed = NewGatewayDError(
+		ErrCodeUpgradeToTLSFailed, "failed to upgrade to TLS", nil)
 
 	ErrReadFailed = NewGatewayDError(
 		ErrCodeReadFailed, "failed to read from the client", nil)
