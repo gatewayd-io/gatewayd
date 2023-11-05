@@ -65,6 +65,11 @@ func CreatePgStartupPacket() []byte {
 	return buf.Bytes
 }
 
+// CreatePgTerminatePacket creates a PostgreSQL terminate packet.
+func CreatePgTerminatePacket() []byte {
+	return []byte{'X', 0, 0, 0, 4}
+}
+
 func CollectAndComparePrometheusMetrics(t *testing.T) {
 	t.Helper()
 
@@ -105,26 +110,26 @@ func CollectAndComparePrometheusMetrics(t *testing.T) {
 
 	var (
 		want = metadata + `
-			gatewayd_bytes_received_from_client_sum 67
-			gatewayd_bytes_received_from_client_count 1
+			gatewayd_bytes_received_from_client_sum 72
+			gatewayd_bytes_received_from_client_count 3
 			gatewayd_bytes_received_from_server_sum 24
-			gatewayd_bytes_received_from_server_count 1
+			gatewayd_bytes_received_from_server_count 2
 			gatewayd_bytes_sent_to_client_sum 24
 			gatewayd_bytes_sent_to_client_count 1
-			gatewayd_bytes_sent_to_server_sum 67
-			gatewayd_bytes_sent_to_server_count 1
-			gatewayd_client_connections 1
-			gatewayd_plugin_hooks_executed_total 11
+			gatewayd_bytes_sent_to_server_sum 72
+			gatewayd_bytes_sent_to_server_count 2
+			gatewayd_client_connections 0
+			gatewayd_plugin_hooks_executed_total 17
 			gatewayd_plugin_hooks_registered_total 0
 			gatewayd_plugins_loaded_total 0
-			gatewayd_proxied_connections 1
+			gatewayd_proxied_connections 0
 			gatewayd_proxy_health_checks_total 0
 			gatewayd_proxy_passthrough_terminations_total 0
 			gatewayd_proxy_passthroughs_to_client_total 1
 			gatewayd_proxy_passthroughs_to_server_total 1
-			gatewayd_server_connections 5
-			gatewayd_traffic_bytes_sum 182
-			gatewayd_traffic_bytes_count 4
+			gatewayd_server_connections 1
+			gatewayd_traffic_bytes_sum 192
+			gatewayd_traffic_bytes_count 8
 			gatewayd_server_ticks_fired_total 1
 		`
 
