@@ -130,14 +130,27 @@ jobs:
           EOF
 
       - name: Run GatewayD with template plugin 🚀
-        run: GATEWAYD_LOGGERS_DEFAULT_LEVEL=debug ./gatewayd run &
+        run: ./gatewayd run -c testdata/gatewayd_tls.yaml &
 
-      - name: Run a test with PSQL 🧪
+      - name: Install PSQL 🧑‍💻
         run: |
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends postgresql-client
+
+      - name: Run a test with PSQL over plaintext connection 🧪
+        run: |
           psql ${PGURL} -c  "CREATE TABLE test_table (id serial PRIMARY KEY, name varchar(255));" | grep CREATE || exit 1
           psql ${PGURL} -c "INSERT INTO test_table (name) VALUES ('test');" | grep INSERT || exit 1
           psql ${PGURL} -c "SELECT * FROM test_table;" | grep test || exit 1
+          psql ${PGURL} -c "DROP TABLE test_table;" | grep DROP || exit 1
         env:
-          PGURL: postgres://postgres:postgres@localhost:15432/postgres
+          PGURL: postgres://postgres:postgres@localhost:15432/postgres?sslmode=disable
+
+      - name: Run a test with PSQL over TLS connection 🧪
+        run: |
+          psql ${PGURL_TLS} -c  "CREATE TABLE test_table (id serial PRIMARY KEY, name varchar(255));" | grep CREATE || exit 1
+          psql ${PGURL_TLS} -c "INSERT INTO test_table (name) VALUES ('test');" | grep INSERT || exit 1
+          psql ${PGURL_TLS} -c "SELECT * FROM test_table;" | grep test || exit 1
+          psql ${PGURL_TLS} -c "DROP TABLE test_table;" | grep DROP || exit 1
+        env:
+          PGURL_TLS: postgres://postgres:postgres@localhost:15432/postgres?sslmode=require
