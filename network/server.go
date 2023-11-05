@@ -49,9 +49,10 @@ type Server struct {
 	TickInterval time.Duration
 
 	// TLS config
-	EnableTLS bool
-	CertFile  string
-	KeyFile   string
+	EnableTLS        bool
+	CertFile         string
+	KeyFile          string
+	HandshakeTimeout time.Duration
 }
 
 // OnBoot is called when the server is booted. It calls the OnBooting and OnBooted hooks.
@@ -505,7 +506,7 @@ func (s *Server) Run() *gerr.GatewayDError {
 				return gerr.ErrAcceptFailed.Wrap(err)
 			}
 
-			conn := NewConnWrapper(netConn, tlsConfig)
+			conn := NewConnWrapper(netConn, tlsConfig, s.HandshakeTimeout)
 
 			if out, action := s.OnOpen(conn); action != None {
 				if _, err := conn.Write(out); err != nil {
@@ -591,27 +592,29 @@ func NewServer(
 	pluginTimeout time.Duration,
 	enableTLS bool,
 	certFile, keyFile string,
+	handshakeTimeout time.Duration,
 ) *Server {
 	serverCtx, span := otel.Tracer(config.TracerName).Start(ctx, "NewServer")
 	defer span.End()
 
 	// Create the server.
 	server := Server{
-		ctx:            serverCtx,
-		Network:        network,
-		Address:        address,
-		Options:        options,
-		TickInterval:   tickInterval,
-		Status:         config.Stopped,
-		EnableTLS:      enableTLS,
-		CertFile:       certFile,
-		KeyFile:        keyFile,
-		proxy:          proxy,
-		logger:         logger,
-		pluginRegistry: pluginRegistry,
-		pluginTimeout:  pluginTimeout,
-		mu:             &sync.RWMutex{},
-		engine:         NewEngine(logger),
+		ctx:              serverCtx,
+		Network:          network,
+		Address:          address,
+		Options:          options,
+		TickInterval:     tickInterval,
+		Status:           config.Stopped,
+		EnableTLS:        enableTLS,
+		CertFile:         certFile,
+		KeyFile:          keyFile,
+		HandshakeTimeout: handshakeTimeout,
+		proxy:            proxy,
+		logger:           logger,
+		pluginRegistry:   pluginRegistry,
+		pluginTimeout:    pluginTimeout,
+		mu:               &sync.RWMutex{},
+		engine:           NewEngine(logger),
 	}
 
 	// Try to resolve the address and log an error if it can't be resolved.

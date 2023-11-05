@@ -118,6 +118,7 @@ const (
 	DefaultLoadBalancer         = "roundrobin"
 	DefaultTCPNoDelay           = true
 	DefaultEngineStopTimeout    = 5 * time.Second
+	DefaultHandshakeTimeout     = 5 * time.Second
 
 	// Utility constants.
 	DefaultSeed        = 1000

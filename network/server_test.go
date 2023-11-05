@@ -191,6 +191,7 @@ func TestRunServer(t *testing.T) {
 		false,
 		"",
 		"",
+		config.DefaultHandshakeTimeout,
 	)
 	assert.NotNil(t, server)
 

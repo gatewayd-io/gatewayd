@@ -129,13 +129,14 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 	}
 
 	defaultServer := Server{
-		Network:      DefaultListenNetwork,
-		Address:      DefaultListenAddress,
-		EnableTicker: false,
-		TickInterval: DefaultTickInterval,
-		EnableTLS:    false,
-		CertFile:     "",
-		KeyFile:      "",
+		Network:          DefaultListenNetwork,
+		Address:          DefaultListenAddress,
+		EnableTicker:     false,
+		TickInterval:     DefaultTickInterval,
+		EnableTLS:        false,
+		CertFile:         "",
+		KeyFile:          "",
+		HandshakeTimeout: DefaultHandshakeTimeout,
 	}
 
 	c.globalDefaults = GlobalConfig{

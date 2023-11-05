@@ -59,6 +59,7 @@ servers:
     enableTLS: False
     certFile: ""
     keyFile: ""
+    handshakeTimeout: 5s # duration
 
 api:
   enabled: True

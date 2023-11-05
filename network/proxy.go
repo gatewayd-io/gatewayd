@@ -385,6 +385,8 @@ func (pr *Proxy) PassThroughToServer(conn *ConnWrapper, stack *Stack) *gerr.Gate
 			span.RecordError(err)
 		}
 
+		// This return causes the client to start sending
+		// StartupMessage over the plaintext connection.
 		return nil
 	}
 

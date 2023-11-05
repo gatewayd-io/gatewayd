@@ -2,8 +2,10 @@
 package network
 
 import (
+	"context"
 	"crypto/tls"
 	"net"
+	"time"
 
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 )
@@ -28,10 +30,11 @@ type IConnWrapper interface {
 }
 
 type ConnWrapper struct {
-	netConn      net.Conn
-	tlsConn      *tls.Conn
-	tlsConfig    *tls.Config
-	isTLSEnabled bool
+	netConn          net.Conn
+	tlsConn          *tls.Conn
+	tlsConfig        *tls.Config
+	isTLSEnabled     bool
+	handshakeTimeout time.Duration
 }
 
 var _ IConnWrapper = &ConnWrapper{}
@@ -59,7 +62,11 @@ func (cw *ConnWrapper) UpgradeToTLS(upgrader UpgraderFunc) *gerr.GatewayDError {
 	}
 
 	tlsConn := tls.Server(cw.netConn, cw.tlsConfig)
-	if err := tlsConn.Handshake(); err != nil {
+
+	ctx, cancel := context.WithTimeout(context.Background(), cw.handshakeTimeout)
+	defer cancel()
+
+	if err := tlsConn.HandshakeContext(ctx); err != nil {
 		return gerr.ErrUpgradeToTLSFailed.Wrap(err)
 	}
 	cw.tlsConn = tlsConn
@@ -114,16 +121,19 @@ func (cw *ConnWrapper) IsTLSEnabled() bool {
 
 // NewConnWrapper creates a new connection wrapper. The connection
 // wrapper is used to upgrade the connection to TLS if need be.
-func NewConnWrapper(conn net.Conn, tlsConfig *tls.Config) *ConnWrapper {
+func NewConnWrapper(
+	conn net.Conn, tlsConfig *tls.Config, handshakeTimeout time.Duration,
+) *ConnWrapper {
 	return &ConnWrapper{
-		netConn:      conn,
-		tlsConfig:    tlsConfig,
-		isTLSEnabled: tlsConfig != nil && tlsConfig.Certificates != nil,
+		netConn:          conn,
+		tlsConfig:        tlsConfig,
+		isTLSEnabled:     tlsConfig != nil && tlsConfig.Certificates != nil,
+		handshakeTimeout: handshakeTimeout,
 	}
 }
 
 // CreateTLSConfig returns a TLS config from the given cert and key.
-// TODO: Make this more generic.
+// TODO: Make this more generic and configurable.
 func CreateTLSConfig(certFile, keyFile string) (*tls.Config, error) {
 	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
