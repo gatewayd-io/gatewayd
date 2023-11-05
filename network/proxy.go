@@ -8,7 +8,6 @@ import (
 	"net"
 	"time"
 
-	"github.com/gatewayd-io/gatewayd-plugin-sdk/databases/postgres"
 	v1 "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin/v1"
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
@@ -320,7 +319,7 @@ func (pr *Proxy) PassThroughToServer(conn *ConnWrapper, stack *Stack) *gerr.Gate
 
 	// Check if the client sent a SSL request and the server supports SSL.
 	//nolint:nestif
-	if conn.IsTLSEnabled() && postgres.IsPostgresSSLRequest(request) {
+	if conn.IsTLSEnabled() && IsPostgresSSLRequest(request) {
 		// Perform TLS handshake.
 		if err := conn.UpgradeToTLS(func(c net.Conn) {
 			// Acknowledge the SSL request:
@@ -366,7 +365,7 @@ func (pr *Proxy) PassThroughToServer(conn *ConnWrapper, stack *Stack) *gerr.Gate
 		// This return causes the client to start sending
 		// StartupMessage over the TLS connection.
 		return nil
-	} else if !conn.IsTLSEnabled() && postgres.IsPostgresSSLRequest(request) {
+	} else if !conn.IsTLSEnabled() && IsPostgresSSLRequest(request) {
 		// Client sent a SSL request, but the server does not support SSL.
 
 		pr.logger.Error().Fields(
