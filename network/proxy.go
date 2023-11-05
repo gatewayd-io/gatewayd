@@ -21,10 +21,10 @@ import (
 )
 
 type IProxy interface {
-	Connect(conn net.Conn) *gerr.GatewayDError
-	Disconnect(conn net.Conn) *gerr.GatewayDError
-	PassThroughToServer(conn net.Conn, stack *Stack) *gerr.GatewayDError
-	PassThroughToClient(conn net.Conn, stack *Stack) *gerr.GatewayDError
+	Connect(conn *ConnWrapper) *gerr.GatewayDError
+	Disconnect(conn *ConnWrapper) *gerr.GatewayDError
+	PassThroughToServer(conn *ConnWrapper, stack *Stack) *gerr.GatewayDError
+	PassThroughToClient(conn *ConnWrapper, stack *Stack) *gerr.GatewayDError
 	IsHealthy(cl *Client) (*Client, *gerr.GatewayDError)
 	IsExhausted() bool
 	Shutdown()
@@ -49,7 +49,7 @@ type Proxy struct {
 	ClientConfig *config.Client
 }
 
-var _ IProxy = &Proxy{}
+var _ IProxy = (*Proxy)(nil)
 
 // NewProxy creates a new proxy.
 func NewProxy(
@@ -127,7 +127,7 @@ func NewProxy(
 // Connect maps a server connection from the available connection pool to a incoming connection.
 // It returns an error if the pool is exhausted. If the pool is elastic, it creates a new client
 // and maps it to the incoming connection.
-func (pr *Proxy) Connect(conn net.Conn) *gerr.GatewayDError {
+func (pr *Proxy) Connect(conn *ConnWrapper) *gerr.GatewayDError {
 	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "Connect")
 	defer span.End()
 
@@ -177,7 +177,7 @@ func (pr *Proxy) Connect(conn net.Conn) *gerr.GatewayDError {
 	fields := map[string]interface{}{
 		"function": "proxy.connect",
 		"client":   "unknown",
-		"server":   RemoteAddr(conn),
+		"server":   RemoteAddr(conn.Conn()),
 	}
 	if client.ID != "" {
 		fields["client"] = client.ID[:7]
@@ -202,7 +202,7 @@ func (pr *Proxy) Connect(conn net.Conn) *gerr.GatewayDError {
 
 // Disconnect removes the client from the busy connection pool and tries to recycle
 // the server connection.
-func (pr *Proxy) Disconnect(conn net.Conn) *gerr.GatewayDError {
+func (pr *Proxy) Disconnect(conn *ConnWrapper) *gerr.GatewayDError {
 	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "Disconnect")
 	defer span.End()
 
@@ -260,7 +260,7 @@ func (pr *Proxy) Disconnect(conn net.Conn) *gerr.GatewayDError {
 }
 
 // PassThroughToServer sends the data from the client to the server.
-func (pr *Proxy) PassThroughToServer(conn net.Conn, stack *Stack) *gerr.GatewayDError {
+func (pr *Proxy) PassThroughToServer(conn *ConnWrapper, stack *Stack) *gerr.GatewayDError {
 	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "PassThrough")
 	defer span.End()
 
@@ -285,7 +285,7 @@ func (pr *Proxy) PassThroughToServer(conn net.Conn, stack *Stack) *gerr.GatewayD
 	}
 
 	// Receive the request from the client.
-	request, origErr := pr.receiveTrafficFromClient(conn)
+	request, origErr := pr.receiveTrafficFromClient(conn.Conn())
 	span.AddEvent("Received traffic from client")
 
 	// Run the OnTrafficFromClient hooks.
@@ -295,7 +295,7 @@ func (pr *Proxy) PassThroughToServer(conn net.Conn, stack *Stack) *gerr.GatewayD
 	result, err := pr.pluginRegistry.Run(
 		pluginTimeoutCtx,
 		trafficData(
-			conn,
+			conn.Conn(),
 			client,
 			[]Field{
 				{
@@ -317,6 +317,78 @@ func (pr *Proxy) PassThroughToServer(conn net.Conn, stack *Stack) *gerr.GatewayD
 		return gerr.ErrClientNotConnected.Wrap(origErr)
 	}
 
+	// Check if the client sent a SSL request and the server supports SSL.
+	//nolint:nestif
+	if conn.IsTLSEnabled() && IsPostgresSSLRequest(request) {
+		// Perform TLS handshake.
+		if err := conn.UpgradeToTLS(func(c net.Conn) {
+			// Acknowledge the SSL request:
+			// https://www.postgresql.org/docs/current/protocol-flow.html#PROTOCOL-FLOW-SSL
+			if sent, err := conn.Write([]byte{'S'}); err != nil {
+				pr.logger.Error().Err(err).Msg("Failed to acknowledge the SSL request")
+				span.RecordError(err)
+			} else {
+				pr.logger.Debug().Fields(
+					map[string]interface{}{
+						"function": "upgradeToTLS",
+						"local":    LocalAddr(conn.Conn()),
+						"remote":   RemoteAddr(conn.Conn()),
+						"length":   sent,
+					},
+				).Msg("Sent data to database")
+			}
+		}); err != nil {
+			pr.logger.Error().Err(err).Msg("Failed to perform the TLS handshake")
+			span.RecordError(err)
+		}
+
+		// Check if the TLS handshake was successful.
+		if conn.IsTLSEnabled() {
+			pr.logger.Debug().Fields(
+				map[string]interface{}{
+					"local":  LocalAddr(conn.Conn()),
+					"remote": RemoteAddr(conn.Conn()),
+				},
+			).Msg("Performed the TLS handshake")
+			span.AddEvent("Performed the TLS handshake")
+			metrics.TLSConnections.Inc()
+		} else {
+			pr.logger.Error().Fields(
+				map[string]interface{}{
+					"local":  LocalAddr(conn.Conn()),
+					"remote": RemoteAddr(conn.Conn()),
+				},
+			).Msg("Failed to perform the TLS handshake")
+			span.AddEvent("Failed to perform the TLS handshake")
+		}
+
+		// This return causes the client to start sending
+		// StartupMessage over the TLS connection.
+		return nil
+	} else if !conn.IsTLSEnabled() && IsPostgresSSLRequest(request) {
+		// Client sent a SSL request, but the server does not support SSL.
+
+		pr.logger.Error().Fields(
+			map[string]interface{}{
+				"local":  LocalAddr(conn.Conn()),
+				"remote": RemoteAddr(conn.Conn()),
+			},
+		).Msg("Server does not support SSL, but SSL was requested")
+		span.AddEvent("Server does not support SSL, but SSL was requested")
+
+		// Server does not support SSL, and SSL was preferred,
+		// so we need to switch to a plaintext connection:
+		// https://www.postgresql.org/docs/current/protocol-flow.html#PROTOCOL-FLOW-SSL
+		if _, err := conn.Write([]byte{'N'}); err != nil {
+			pr.logger.Error().Err(err).Msg("Server does not support SSL, but SSL was required")
+			span.RecordError(err)
+		}
+
+		// This return causes the client to start sending
+		// StartupMessage over the plaintext connection.
+		return nil
+	}
+
 	// Push the client's request to the stack.
 	stack.Push(&Request{Data: request})
 
@@ -333,7 +405,7 @@ func (pr *Proxy) PassThroughToServer(conn net.Conn, stack *Stack) *gerr.GatewayD
 			// Remove the request from the stack if the response is modified.
 			stack.PopLastRequest()
 
-			return pr.sendTrafficToClient(conn, modResponse, modReceived)
+			return pr.sendTrafficToClient(conn.Conn(), modResponse, modReceived)
 		}
 		span.RecordError(gerr.ErrHookTerminatedConnection)
 		return gerr.ErrHookTerminatedConnection
@@ -357,7 +429,7 @@ func (pr *Proxy) PassThroughToServer(conn net.Conn, stack *Stack) *gerr.GatewayD
 	_, err = pr.pluginRegistry.Run(
 		pluginTimeoutCtx,
 		trafficData(
-			conn,
+			conn.Conn(),
 			client,
 			[]Field{
 				{
@@ -379,7 +451,7 @@ func (pr *Proxy) PassThroughToServer(conn net.Conn, stack *Stack) *gerr.GatewayD
 }
 
 // PassThroughToClient sends the data from the server to the client.
-func (pr *Proxy) PassThroughToClient(conn net.Conn, stack *Stack) *gerr.GatewayDError {
+func (pr *Proxy) PassThroughToClient(conn *ConnWrapper, stack *Stack) *gerr.GatewayDError {
 	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "PassThrough")
 	defer span.End()
 
@@ -439,7 +511,7 @@ func (pr *Proxy) PassThroughToClient(conn net.Conn, stack *Stack) *gerr.GatewayD
 	result, err := pr.pluginRegistry.Run(
 		pluginTimeoutCtx,
 		trafficData(
-			conn,
+			conn.Conn(),
 			client,
 			[]Field{
 				{
@@ -467,7 +539,7 @@ func (pr *Proxy) PassThroughToClient(conn net.Conn, stack *Stack) *gerr.GatewayD
 	}
 
 	// Send the response to the client.
-	errVerdict := pr.sendTrafficToClient(conn, response, received)
+	errVerdict := pr.sendTrafficToClient(conn.Conn(), response, received)
 	span.AddEvent("Sent traffic to client")
 
 	// Run the OnTrafficToClient hooks.
@@ -477,7 +549,7 @@ func (pr *Proxy) PassThroughToClient(conn net.Conn, stack *Stack) *gerr.GatewayD
 	_, err = pr.pluginRegistry.Run(
 		pluginTimeoutCtx,
 		trafficData(
-			conn,
+			conn.Conn(),
 			client,
 			[]Field{
 				{

@@ -64,7 +64,7 @@ type Registry struct {
 	Termination   config.TerminationPolicy
 }
 
-var _ IRegistry = &Registry{}
+var _ IRegistry = (*Registry)(nil)
 
 // NewRegistry creates a new plugin registry.
 func NewRegistry(

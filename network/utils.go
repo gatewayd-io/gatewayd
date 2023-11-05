@@ -2,6 +2,7 @@ package network
 
 import (
 	"crypto/sha256"
+	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -138,4 +139,24 @@ func RemoteAddr(conn net.Conn) string {
 		return conn.RemoteAddr().String()
 	}
 	return ""
+}
+
+// IsPostgresSSLRequest returns true if the message is a SSL request.
+// This is copied from gatewayd-plugin-sdk to avoid the dependency on CGO.
+//
+//nolint:gomnd
+func IsPostgresSSLRequest(data []byte) bool {
+	if len(data) < 8 {
+		return false
+	}
+
+	if binary.BigEndian.Uint32(data[0:4]) != 8 {
+		return false
+	}
+
+	if binary.BigEndian.Uint32(data[4:8]) != 80877103 {
+		return false
+	}
+
+	return true
 }

@@ -45,7 +45,7 @@ type Config struct {
 	Plugin PluginConfig
 }
 
-var _ IConfig = &Config{}
+var _ IConfig = (*Config)(nil)
 
 func NewConfig(ctx context.Context, globalConfigFile, pluginConfigFile string) *Config {
 	_, span := otel.Tracer(TracerName).Start(ctx, "Create new config")
@@ -129,10 +129,14 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 	}
 
 	defaultServer := Server{
-		Network:      DefaultListenNetwork,
-		Address:      DefaultListenAddress,
-		EnableTicker: false,
-		TickInterval: DefaultTickInterval,
+		Network:          DefaultListenNetwork,
+		Address:          DefaultListenAddress,
+		EnableTicker:     false,
+		TickInterval:     DefaultTickInterval,
+		EnableTLS:        false,
+		CertFile:         "",
+		KeyFile:          "",
+		HandshakeTimeout: DefaultHandshakeTimeout,
 	}
 
 	c.globalDefaults = GlobalConfig{

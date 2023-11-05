@@ -17,7 +17,7 @@ type IPlugin interface {
 	Ping() *gerr.GatewayDError
 }
 
-var _ IPlugin = &Plugin{}
+var _ IPlugin = (*Plugin)(nil)
 
 // Start starts the plugin.
 func (p *Plugin) Start() (net.Addr, error) {

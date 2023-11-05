@@ -661,6 +661,10 @@ var runCmd = &cobra.Command{
 				logger,
 				pluginRegistry,
 				conf.Plugin.Timeout,
+				cfg.EnableTLS,
+				cfg.CertFile,
+				cfg.KeyFile,
+				cfg.HandshakeTimeout,
 			)
 
 			span.AddEvent("Create server", trace.WithAttributes(
@@ -669,6 +673,10 @@ var runCmd = &cobra.Command{
 				attribute.String("address", cfg.Address),
 				attribute.String("tickInterval", cfg.TickInterval.String()),
 				attribute.String("pluginTimeout", conf.Plugin.Timeout.String()),
+				attribute.Bool("enableTLS", cfg.EnableTLS),
+				attribute.String("certFile", cfg.CertFile),
+				attribute.String("keyFile", cfg.KeyFile),
+				attribute.String("handshakeTimeout", cfg.HandshakeTimeout.String()),
 			))
 
 			pluginTimeoutCtx, cancel = context.WithTimeout(

@@ -7,8 +7,9 @@ import (
 )
 
 var (
-	globalTestConfigFile = "./test_global.yaml"
-	pluginTestConfigFile = "./test_plugins.yaml"
+	globalTestConfigFile    = "./test_global.yaml"
+	globalTLSTestConfigFile = "./testdata/gatewayd_tls.yaml"
+	pluginTestConfigFile    = "./test_plugins.yaml"
 )
 
 // executeCommandC executes a cobra command and returns the command, output, and error.

@@ -30,7 +30,7 @@ type Pool struct {
 	ctx  context.Context //nolint:containedctx
 }
 
-var _ IPool = &Pool{}
+var _ IPool = (*Pool)(nil)
 
 // ForEach iterates over the pool and calls the callback function for each key/value pair.
 func (p *Pool) ForEach(cb Callback) {

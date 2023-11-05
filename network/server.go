@@ -2,6 +2,7 @@ package network
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net"
@@ -32,6 +33,18 @@ const (
 	Shutdown
 )
 
+type IServer interface {
+	OnBoot(engine Engine) Action
+	OnOpen(conn *ConnWrapper) ([]byte, Action)
+	OnClose(conn *ConnWrapper, err error) Action
+	OnTraffic(conn *ConnWrapper, stopConnection chan struct{}) Action
+	OnShutdown()
+	OnTick() (time.Duration, Action)
+	Run() *gerr.GatewayDError
+	Shutdown()
+	IsRunning() bool
+}
+
 type Server struct {
 	engine         Engine
 	proxy          IProxy
@@ -46,7 +59,15 @@ type Server struct {
 	Options      Option
 	Status       config.Status
 	TickInterval time.Duration
+
+	// TLS config
+	EnableTLS        bool
+	CertFile         string
+	KeyFile          string
+	HandshakeTimeout time.Duration
 }
+
+var _ IServer = (*Server)(nil)
 
 // OnBoot is called when the server is booted. It calls the OnBooting and OnBooted hooks.
 // It also sets the status to running, which is used to determine if the server should be running
@@ -98,11 +119,11 @@ func (s *Server) OnBoot(engine Engine) Action {
 
 // OnOpen is called when a new connection is opened. It calls the OnOpening and OnOpened hooks.
 // It also checks if the server is at the soft or hard limit and closes the connection if it is.
-func (s *Server) OnOpen(conn net.Conn) ([]byte, Action) {
+func (s *Server) OnOpen(conn *ConnWrapper) ([]byte, Action) {
 	_, span := otel.Tracer("gatewayd").Start(s.ctx, "OnOpen")
 	defer span.End()
 
-	s.logger.Debug().Str("from", RemoteAddr(conn)).Msg(
+	s.logger.Debug().Str("from", RemoteAddr(conn.Conn())).Msg(
 		"GatewayD is opening a connection")
 
 	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.pluginTimeout)
@@ -110,8 +131,8 @@ func (s *Server) OnOpen(conn net.Conn) ([]byte, Action) {
 	// Run the OnOpening hooks.
 	onOpeningData := map[string]interface{}{
 		"client": map[string]interface{}{
-			"local":  LocalAddr(conn),
-			"remote": RemoteAddr(conn),
+			"local":  LocalAddr(conn.Conn()),
+			"remote": RemoteAddr(conn.Conn()),
 		},
 	}
 	_, err := s.pluginRegistry.Run(
@@ -144,8 +165,8 @@ func (s *Server) OnOpen(conn net.Conn) ([]byte, Action) {
 
 	onOpenedData := map[string]interface{}{
 		"client": map[string]interface{}{
-			"local":  LocalAddr(conn),
-			"remote": RemoteAddr(conn),
+			"local":  LocalAddr(conn.Conn()),
+			"remote": RemoteAddr(conn.Conn()),
 		},
 	}
 	_, err = s.pluginRegistry.Run(
@@ -164,11 +185,11 @@ func (s *Server) OnOpen(conn net.Conn) ([]byte, Action) {
 // OnClose is called when a connection is closed. It calls the OnClosing and OnClosed hooks.
 // It also recycles the connection back to the available connection pool, unless the pool
 // is elastic and reuse is disabled.
-func (s *Server) OnClose(conn net.Conn, err error) Action {
+func (s *Server) OnClose(conn *ConnWrapper, err error) Action {
 	_, span := otel.Tracer("gatewayd").Start(s.ctx, "OnClose")
 	defer span.End()
 
-	s.logger.Debug().Str("from", RemoteAddr(conn)).Msg(
+	s.logger.Debug().Str("from", RemoteAddr(conn.Conn())).Msg(
 		"GatewayD is closing a connection")
 
 	// Run the OnClosing hooks.
@@ -177,8 +198,8 @@ func (s *Server) OnClose(conn net.Conn, err error) Action {
 
 	data := map[string]interface{}{
 		"client": map[string]interface{}{
-			"local":  LocalAddr(conn),
-			"remote": RemoteAddr(conn),
+			"local":  LocalAddr(conn.Conn()),
+			"remote": RemoteAddr(conn.Conn()),
 		},
 		"error": "",
 	}
@@ -212,6 +233,10 @@ func (s *Server) OnClose(conn net.Conn, err error) Action {
 		return Close
 	}
 
+	if conn.IsTLSEnabled() {
+		metrics.TLSConnections.Dec()
+	}
+
 	// Close the incoming connection.
 	if err := conn.Close(); err != nil {
 		s.logger.Error().Err(err).Msg("Failed to close the incoming connection")
@@ -225,8 +250,8 @@ func (s *Server) OnClose(conn net.Conn, err error) Action {
 
 	data = map[string]interface{}{
 		"client": map[string]interface{}{
-			"local":  LocalAddr(conn),
-			"remote": RemoteAddr(conn),
+			"local":  LocalAddr(conn.Conn()),
+			"remote": RemoteAddr(conn.Conn()),
 		},
 		"error": "",
 	}
@@ -248,7 +273,7 @@ func (s *Server) OnClose(conn net.Conn, err error) Action {
 
 // OnTraffic is called when data is received from the client. It calls the OnTraffic hooks.
 // It then passes the traffic to the proxied connection.
-func (s *Server) OnTraffic(conn net.Conn, stopConnection chan struct{}) Action {
+func (s *Server) OnTraffic(conn *ConnWrapper, stopConnection chan struct{}) Action {
 	_, span := otel.Tracer("gatewayd").Start(s.ctx, "OnTraffic")
 	defer span.End()
 
@@ -258,8 +283,8 @@ func (s *Server) OnTraffic(conn net.Conn, stopConnection chan struct{}) Action {
 
 	onTrafficData := map[string]interface{}{
 		"client": map[string]interface{}{
-			"local":  LocalAddr(conn),
-			"remote": RemoteAddr(conn),
+			"local":  LocalAddr(conn.Conn()),
+			"remote": RemoteAddr(conn.Conn()),
 		},
 	}
 	_, err := s.pluginRegistry.Run(
@@ -274,7 +299,7 @@ func (s *Server) OnTraffic(conn net.Conn, stopConnection chan struct{}) Action {
 
 	// Pass the traffic from the client to server.
 	// If there is an error, log it and close the connection.
-	go func(server *Server, conn net.Conn, stopConnection chan struct{}, stack *Stack) {
+	go func(server *Server, conn *ConnWrapper, stopConnection chan struct{}, stack *Stack) {
 		for {
 			server.logger.Trace().Msg("Passing through traffic from client to server")
 			if err := server.proxy.PassThroughToServer(conn, stack); err != nil {
@@ -288,9 +313,9 @@ func (s *Server) OnTraffic(conn net.Conn, stopConnection chan struct{}) Action {
 
 	// Pass the traffic from the server to client.
 	// If there is an error, log it and close the connection.
-	go func(server *Server, conn net.Conn, stopConnection chan struct{}, stack *Stack) {
+	go func(server *Server, conn *ConnWrapper, stopConnection chan struct{}, stack *Stack) {
 		for {
-			server.logger.Debug().Msg("Passing through traffic from server to client")
+			server.logger.Trace().Msg("Passing through traffic from server to client")
 			if err := server.proxy.PassThroughToClient(conn, stack); err != nil {
 				server.logger.Trace().Err(err).Msg("Failed to pass through traffic")
 				span.RecordError(err)
@@ -468,13 +493,25 @@ func (s *Server) Run() *gerr.GatewayDError {
 
 	s.engine.running.Store(true)
 
+	var tlsConfig *tls.Config
+	if s.EnableTLS {
+		tlsConfig, origErr = CreateTLSConfig(s.CertFile, s.KeyFile)
+		if origErr != nil {
+			s.logger.Error().Err(origErr).Msg("Failed to create TLS config")
+			return gerr.ErrGetTLSConfigFailed.Wrap(origErr)
+		}
+		s.logger.Info().Msg("TLS is enabled")
+	} else {
+		s.logger.Debug().Msg("TLS is disabled")
+	}
+
 	for {
 		select {
 		case <-s.engine.stopServer:
 			s.logger.Info().Msg("Server stopped")
 			return nil
 		default:
-			conn, err := s.engine.listener.Accept()
+			netConn, err := s.engine.listener.Accept()
 			if err != nil {
 				if !s.engine.running.Load() {
 					return nil
@@ -482,6 +519,8 @@ func (s *Server) Run() *gerr.GatewayDError {
 				s.logger.Error().Err(err).Msg("Failed to accept connection")
 				return gerr.ErrAcceptFailed.Wrap(err)
 			}
+
+			conn := NewConnWrapper(netConn, tlsConfig, s.HandshakeTimeout)
 
 			if out, action := s.OnOpen(conn); action != None {
 				if _, err := conn.Write(out); err != nil {
@@ -500,13 +539,13 @@ func (s *Server) Run() *gerr.GatewayDError {
 			// For every new connection, a new unbuffered channel is created to help
 			// stop the proxy, recycle the server connection and close stale connections.
 			stopConnection := make(chan struct{})
-			go func(server *Server, conn net.Conn, stopConnection chan struct{}) {
+			go func(server *Server, conn *ConnWrapper, stopConnection chan struct{}) {
 				if action := server.OnTraffic(conn, stopConnection); action == Close {
 					stopConnection <- struct{}{}
 				}
 			}(s, conn, stopConnection)
 
-			go func(server *Server, conn net.Conn, stopConnection chan struct{}) {
+			go func(server *Server, conn *ConnWrapper, stopConnection chan struct{}) {
 				for {
 					select {
 					case <-stopConnection:
@@ -565,24 +604,31 @@ func NewServer(
 	logger zerolog.Logger,
 	pluginRegistry *plugin.Registry,
 	pluginTimeout time.Duration,
+	enableTLS bool,
+	certFile, keyFile string,
+	handshakeTimeout time.Duration,
 ) *Server {
 	serverCtx, span := otel.Tracer(config.TracerName).Start(ctx, "NewServer")
 	defer span.End()
 
 	// Create the server.
 	server := Server{
-		ctx:            serverCtx,
-		Network:        network,
-		Address:        address,
-		Options:        options,
-		TickInterval:   tickInterval,
-		Status:         config.Stopped,
-		proxy:          proxy,
-		logger:         logger,
-		pluginRegistry: pluginRegistry,
-		pluginTimeout:  pluginTimeout,
-		mu:             &sync.RWMutex{},
-		engine:         NewEngine(logger),
+		ctx:              serverCtx,
+		Network:          network,
+		Address:          address,
+		Options:          options,
+		TickInterval:     tickInterval,
+		Status:           config.Stopped,
+		EnableTLS:        enableTLS,
+		CertFile:         certFile,
+		KeyFile:          keyFile,
+		HandshakeTimeout: handshakeTimeout,
+		proxy:            proxy,
+		logger:           logger,
+		pluginRegistry:   pluginRegistry,
+		pluginTimeout:    pluginTimeout,
+		mu:               &sync.RWMutex{},
+		engine:           NewEngine(logger),
 	}
 
 	// Try to resolve the address and log an error if it can't be resolved.

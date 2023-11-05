@@ -26,23 +26,6 @@ func Test_runCmd(t *testing.T) {
 	assert.FileExists(t, globalTestConfigFile, "configInitCmd should create a config file")
 
 	var waitGroup sync.WaitGroup
-	waitGroup.Add(1)
-	go func(waitGroup *sync.WaitGroup) {
-		time.Sleep(100 * time.Millisecond)
-
-		StopGracefully(
-			context.Background(),
-			nil,
-			nil,
-			nil,
-			nil,
-			loggers[config.Default],
-			servers,
-			stopChan,
-		)
-
-		waitGroup.Done()
-	}(&waitGroup)
 
 	waitGroup.Add(1)
 	go func(waitGroup *sync.WaitGroup) {
@@ -54,14 +37,26 @@ func Test_runCmd(t *testing.T) {
 		// Print the output for debugging purposes.
 		runCmd.Print(output)
 		// Check if GatewayD started and stopped correctly.
-		assert.Contains(t,
-			output,
-			"GatewayD is running",
-			"run command should have returned the correct output")
-		assert.Contains(t,
-			output,
-			"Stopped all servers\n",
-			"run command should have returned the correct output")
+		assert.Contains(t, output, "GatewayD is running")
+		assert.Contains(t, output, "Stopped all servers\n")
+
+		waitGroup.Done()
+	}(&waitGroup)
+
+	waitGroup.Add(1)
+	go func(waitGroup *sync.WaitGroup) {
+		time.Sleep(100 * time.Millisecond)
+
+		StopGracefully(
+			context.Background(),
+			nil,
+			nil,
+			metricsServer,
+			nil,
+			loggers[config.Default],
+			servers,
+			stopChan,
+		)
 
 		waitGroup.Done()
 	}(&waitGroup)
@@ -71,6 +66,61 @@ func Test_runCmd(t *testing.T) {
 	// Clean up.
 	require.NoError(t, os.Remove(pluginTestConfigFile))
 	require.NoError(t, os.Remove(globalTestConfigFile))
+}
+
+// Test_runCmdWithTLS tests the run command with TLS enabled on the server.
+func Test_runCmdWithTLS(t *testing.T) {
+	// Create a test plugins config file.
+	_, err := executeCommandC(rootCmd, "plugin", "init", "--force", "-p", pluginTestConfigFile)
+	require.NoError(t, err, "plugin init command should not have returned an error")
+	assert.FileExists(t, pluginTestConfigFile, "plugin init command should have created a config file")
+
+	stopChan = make(chan struct{})
+
+	var waitGroup sync.WaitGroup
+	// TODO: Test client certificate authentication.
+
+	waitGroup.Add(1)
+	go func(waitGroup *sync.WaitGroup) {
+		// Test run command.
+		output := capturer.CaptureOutput(func() {
+			_, err := executeCommandC(rootCmd, "run", "-c", globalTLSTestConfigFile, "-p", pluginTestConfigFile)
+			require.NoError(t, err, "run command should not have returned an error")
+		})
+
+		// Print the output for debugging purposes.
+		runCmd.Print(output)
+
+		// Check if GatewayD started and stopped correctly.
+		assert.Contains(t, output, "GatewayD is running")
+		assert.Contains(t, output, "TLS is enabled")
+		assert.Contains(t, output, "Stopped all servers\n")
+
+		waitGroup.Done()
+	}(&waitGroup)
+
+	waitGroup.Add(1)
+	go func(waitGroup *sync.WaitGroup) {
+		time.Sleep(100 * time.Millisecond)
+
+		StopGracefully(
+			context.Background(),
+			nil,
+			nil,
+			metricsServer,
+			nil,
+			loggers[config.Default],
+			servers,
+			stopChan,
+		)
+
+		waitGroup.Done()
+	}(&waitGroup)
+
+	waitGroup.Wait()
+
+	// Clean up.
+	require.NoError(t, os.Remove(pluginTestConfigFile))
 }
 
 // Test_runCmdWithMultiTenancy tests the run command with multi-tenancy enabled.
@@ -84,23 +134,6 @@ func Test_runCmdWithMultiTenancy(t *testing.T) {
 	stopChan = make(chan struct{})
 
 	var waitGroup sync.WaitGroup
-	waitGroup.Add(1)
-	go func(waitGroup *sync.WaitGroup) {
-		time.Sleep(500 * time.Millisecond)
-
-		StopGracefully(
-			context.Background(),
-			nil,
-			nil,
-			nil,
-			nil,
-			loggers[config.Default],
-			servers,
-			stopChan,
-		)
-
-		waitGroup.Done()
-	}(&waitGroup)
 
 	waitGroup.Add(1)
 	go func(waitGroup *sync.WaitGroup) {
@@ -119,6 +152,24 @@ func Test_runCmdWithMultiTenancy(t *testing.T) {
 		assert.Contains(t, output, "GatewayD is listening address=0.0.0.0:15432")
 		assert.Contains(t, output, "GatewayD is listening address=0.0.0.0:15433")
 		assert.Contains(t, output, "Stopped all servers\n")
+
+		waitGroup.Done()
+	}(&waitGroup)
+
+	waitGroup.Add(1)
+	go func(waitGroup *sync.WaitGroup) {
+		time.Sleep(500 * time.Millisecond)
+
+		StopGracefully(
+			context.Background(),
+			nil,
+			nil,
+			metricsServer,
+			nil,
+			loggers[config.Default],
+			servers,
+			stopChan,
+		)
 
 		waitGroup.Done()
 	}(&waitGroup)
@@ -164,23 +215,6 @@ func Test_runCmdWithCachePlugin(t *testing.T) {
 	assert.Contains(t, output, "Name: gatewayd-plugin-cache")
 
 	var waitGroup sync.WaitGroup
-	waitGroup.Add(1)
-	go func(waitGroup *sync.WaitGroup) {
-		time.Sleep(time.Second)
-
-		StopGracefully(
-			context.Background(),
-			nil,
-			nil,
-			nil,
-			nil,
-			loggers[config.Default],
-			servers,
-			stopChan,
-		)
-
-		waitGroup.Done()
-	}(&waitGroup)
 
 	waitGroup.Add(1)
 	go func(waitGroup *sync.WaitGroup) {
@@ -192,14 +226,26 @@ func Test_runCmdWithCachePlugin(t *testing.T) {
 		// Print the output for debugging purposes.
 		runCmd.Print(output)
 		// Check if GatewayD started and stopped correctly.
-		assert.Contains(t,
-			output,
-			"GatewayD is running",
-			"run command should have returned the correct output")
-		assert.Contains(t,
-			output,
-			"Stopped all servers\n",
-			"run command should have returned the correct output")
+		assert.Contains(t, output, "GatewayD is running")
+		assert.Contains(t, output, "Stopped all servers\n")
+
+		waitGroup.Done()
+	}(&waitGroup)
+
+	waitGroup.Add(1)
+	go func(waitGroup *sync.WaitGroup) {
+		time.Sleep(time.Second)
+
+		StopGracefully(
+			context.Background(),
+			nil,
+			nil,
+			metricsServer,
+			nil,
+			loggers[config.Default],
+			servers,
+			stopChan,
+		)
 
 		waitGroup.Done()
 	}(&waitGroup)

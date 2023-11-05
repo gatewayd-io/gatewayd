@@ -44,7 +44,7 @@ type Merger struct {
 	OutputMetrics       []byte
 }
 
-var _ IMerger = &Merger{}
+var _ IMerger = (*Merger)(nil)
 
 // NewMerger creates a new metrics merger.
 func NewMerger(
