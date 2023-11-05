@@ -37,7 +37,7 @@ type ConnWrapper struct {
 	handshakeTimeout time.Duration
 }
 
-var _ IConnWrapper = &ConnWrapper{}
+var _ IConnWrapper = (*ConnWrapper)(nil)
 
 // Conn returns the underlying connection.
 func (cw *ConnWrapper) Conn() net.Conn {

@@ -45,7 +45,7 @@ type Config struct {
 	Plugin PluginConfig
 }
 
-var _ IConfig = &Config{}
+var _ IConfig = (*Config)(nil)
 
 func NewConfig(ctx context.Context, globalConfigFile, pluginConfigFile string) *Config {
 	_, span := otel.Tracer(TracerName).Start(ctx, "Create new config")

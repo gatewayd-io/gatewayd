@@ -44,7 +44,7 @@ type Client struct {
 	Address            string
 }
 
-var _ IClient = &Client{}
+var _ IClient = (*Client)(nil)
 
 // NewClient creates a new client.
 func NewClient(ctx context.Context, clientConfig *config.Client, logger zerolog.Logger) *Client {

@@ -33,6 +33,18 @@ const (
 	Shutdown
 )
 
+type IServer interface {
+	OnBoot(engine Engine) Action
+	OnOpen(conn *ConnWrapper) ([]byte, Action)
+	OnClose(conn *ConnWrapper, err error) Action
+	OnTraffic(conn *ConnWrapper, stopConnection chan struct{}) Action
+	OnShutdown()
+	OnTick() (time.Duration, Action)
+	Run() *gerr.GatewayDError
+	Shutdown()
+	IsRunning() bool
+}
+
 type Server struct {
 	engine         Engine
 	proxy          IProxy
@@ -54,6 +66,8 @@ type Server struct {
 	KeyFile          string
 	HandshakeTimeout time.Duration
 }
+
+var _ IServer = (*Server)(nil)
 
 // OnBoot is called when the server is booted. It calls the OnBooting and OnBooted hooks.
 // It also sets the status to running, which is used to determine if the server should be running

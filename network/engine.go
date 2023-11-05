@@ -11,6 +11,11 @@ import (
 	"github.com/rs/zerolog"
 )
 
+type IEngine interface {
+	CountConnections() int
+	Stop(ctx context.Context) error
+}
+
 // Engine is the network engine.
 // TODO: Move this to the Server struct.
 type Engine struct {
@@ -23,6 +28,8 @@ type Engine struct {
 	stopServer  chan struct{}
 	mu          *sync.RWMutex
 }
+
+var _ IEngine = (*Engine)(nil)
 
 // CountConnections returns the current number of connections.
 func (engine *Engine) CountConnections() int {

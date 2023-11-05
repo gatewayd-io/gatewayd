@@ -49,7 +49,7 @@ type Proxy struct {
 	ClientConfig *config.Client
 }
 
-var _ IProxy = &Proxy{}
+var _ IProxy = (*Proxy)(nil)
 
 // NewProxy creates a new proxy.
 func NewProxy(
