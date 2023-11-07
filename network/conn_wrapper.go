@@ -7,6 +7,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 )
 
@@ -16,17 +17,22 @@ import (
 // and the server responds with a 'S' message to indicate that it
 // supports TLS. The client then upgrades the connection to TLS.
 // See https://www.postgresql.org/docs/current/protocol-flow.html
-type UpgraderFunc func(net.Conn)
+type UpgraderFunc func(net.Conn) error
 
+//nolint:interfacebloat
 type IConnWrapper interface {
 	Conn() net.Conn
-	UpgradeToTLS(upgrader UpgraderFunc) *gerr.GatewayDError
+	UpgradeToTLS(connType config.ConnectionType, upgrader UpgraderFunc) *gerr.GatewayDError
 	Close() error
 	Write(data []byte) (int, error)
 	Read(data []byte) (int, error)
+	SetDeadline(t time.Time) error
+	SetReadDeadline(t time.Time) error
+	SetWriteDeadline(t time.Time) error
 	RemoteAddr() net.Addr
 	LocalAddr() net.Addr
 	IsTLSEnabled() bool
+	TLSConfig() *tls.Config
 }
 
 type ConnWrapper struct {
@@ -48,7 +54,7 @@ func (cw *ConnWrapper) Conn() net.Conn {
 }
 
 // UpgradeToTLS upgrades the connection to TLS.
-func (cw *ConnWrapper) UpgradeToTLS(upgrader UpgraderFunc) *gerr.GatewayDError {
+func (cw *ConnWrapper) UpgradeToTLS(connType config.ConnectionType, upgrader UpgraderFunc) *gerr.GatewayDError {
 	if cw.tlsConn != nil {
 		return nil
 	}
@@ -58,10 +64,17 @@ func (cw *ConnWrapper) UpgradeToTLS(upgrader UpgraderFunc) *gerr.GatewayDError {
 	}
 
 	if upgrader != nil {
-		upgrader(cw.netConn)
+		if err := upgrader(cw.netConn); err != nil {
+			return gerr.ErrUpgradeToTLSFailed.Wrap(err)
+		}
 	}
 
-	tlsConn := tls.Server(cw.netConn, cw.tlsConfig)
+	var tlsConn *tls.Conn
+	if connType == config.ConnectionTypeClient {
+		tlsConn = tls.Client(cw.netConn, cw.tlsConfig)
+	} else {
+		tlsConn = tls.Server(cw.netConn, cw.tlsConfig)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), cw.handshakeTimeout)
 	defer cancel()
@@ -98,6 +111,30 @@ func (cw *ConnWrapper) Read(data []byte) (int, error) {
 	return cw.netConn.Read(data)
 }
 
+// SetDeadline sets the deadline for the connection.
+func (cw *ConnWrapper) SetDeadline(t time.Time) error {
+	if cw.tlsConn != nil {
+		return cw.tlsConn.SetDeadline(t)
+	}
+	return cw.netConn.SetDeadline(t)
+}
+
+// SetReadDeadline sets the read deadline for the connection.
+func (cw *ConnWrapper) SetReadDeadline(t time.Time) error {
+	if cw.tlsConn != nil {
+		return cw.tlsConn.SetReadDeadline(t)
+	}
+	return cw.netConn.SetReadDeadline(t)
+}
+
+// SetWriteDeadline sets the write deadline for the connection.
+func (cw *ConnWrapper) SetWriteDeadline(t time.Time) error {
+	if cw.tlsConn != nil {
+		return cw.tlsConn.SetWriteDeadline(t)
+	}
+	return cw.netConn.SetWriteDeadline(t)
+}
+
 // RemoteAddr returns the remote address.
 func (cw *ConnWrapper) RemoteAddr() net.Addr {
 	if cw.tlsConn != nil {
@@ -117,6 +154,11 @@ func (cw *ConnWrapper) LocalAddr() net.Addr {
 // IsTLSEnabled returns true if TLS is enabled.
 func (cw *ConnWrapper) IsTLSEnabled() bool {
 	return cw.tlsConn != nil || cw.isTLSEnabled
+}
+
+// TLSConfig returns the TLS config.
+func (cw *ConnWrapper) TLSConfig() *tls.Config {
+	return cw.tlsConfig
 }
 
 // NewConnWrapper creates a new connection wrapper. The connection
@@ -145,5 +187,6 @@ func CreateTLSConfig(certFile, keyFile string) (*tls.Config, error) {
 		Certificates:             []tls.Certificate{cert},
 		ClientAuth:               tls.VerifyClientCertIfGiven,
 		PreferServerCipherSuites: true,
+		InsecureSkipVerify:       true,
 	}, nil
 }

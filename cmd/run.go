@@ -507,6 +507,7 @@ var runCmd = &cobra.Command{
 			clients[name].ReceiveTimeout = clients[name].GetReceiveTimeout()
 			clients[name].SendDeadline = clients[name].GetSendDeadline()
 			clients[name].ReceiveChunkSize = clients[name].GetReceiveChunkSize()
+			clients[name].HandshakeTimeout = clients[name].GetHandshakeTimeout()
 
 			// Add clients to the pool.
 			for i := 0; i < cfg.GetSize(); i++ {
@@ -526,6 +527,10 @@ var runCmd = &cobra.Command{
 						attribute.String("tcpKeepAlivePeriod", client.TCPKeepAlivePeriod.String()),
 						attribute.String("localAddress", client.LocalAddr()),
 						attribute.String("remoteAddress", client.RemoteAddr()),
+						attribute.Bool("enableTLS", client.EnableTLS),
+						attribute.String("certFile", client.CertFile),
+						attribute.String("keyFile", client.KeyFile),
+						attribute.String("handshakeTimeout", client.HandshakeTimeout.String()),
 					)
 					if client.ID != "" {
 						eventOptions = trace.WithAttributes(
@@ -549,6 +554,12 @@ var runCmd = &cobra.Command{
 						"sendDeadline":       client.SendDeadline.String(),
 						"tcpKeepAlive":       client.TCPKeepAlive,
 						"tcpKeepAlivePeriod": client.TCPKeepAlivePeriod.String(),
+						"localAddress":       client.LocalAddr(),
+						"remoteAddress":      client.RemoteAddr(),
+						"enableTLS":          client.EnableTLS,
+						"certFile":           client.CertFile,
+						"keyFile":            client.KeyFile,
+						"handshakeTimeout":   client.HandshakeTimeout.String(),
 					}
 					_, err := pluginRegistry.Run(
 						pluginTimeoutCtx, clientCfg, v1.HookName_HOOK_NAME_ON_NEW_CLIENT)
@@ -664,7 +675,7 @@ var runCmd = &cobra.Command{
 				cfg.EnableTLS,
 				cfg.CertFile,
 				cfg.KeyFile,
-				cfg.HandshakeTimeout,
+				cfg.GetHandshakeTimeout(),
 			)
 
 			span.AddEvent("Create server", trace.WithAttributes(

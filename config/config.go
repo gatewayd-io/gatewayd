@@ -116,6 +116,10 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 		ReceiveDeadline:    DefaultReceiveDeadline,
 		ReceiveTimeout:     DefaultReceiveTimeout,
 		SendDeadline:       DefaultSendDeadline,
+		EnableTLS:          false,
+		CertFile:           "",
+		KeyFile:            "",
+		HandshakeTimeout:   DefaultHandshakeTimeout,
 	}
 
 	defaultPool := Pool{

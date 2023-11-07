@@ -144,6 +144,14 @@ func (c Client) GetReceiveChunkSize() int {
 	return c.ReceiveChunkSize
 }
 
+// GetHandshakeTimeout returns the handshake timeout from config file or default value.
+func (c Client) GetHandshakeTimeout() time.Duration {
+	if c.HandshakeTimeout <= 0 {
+		return DefaultHandshakeTimeout
+	}
+	return c.HandshakeTimeout
+}
+
 // GetHealthCheckPeriod returns the health check period from config file or default value.
 func (pr Proxy) GetHealthCheckPeriod() time.Duration {
 	if pr.HealthCheckPeriod <= 0 {
@@ -158,6 +166,14 @@ func (s Server) GetTickInterval() time.Duration {
 		return DefaultTickInterval
 	}
 	return s.TickInterval
+}
+
+// GetHandshakeTimeout returns the handshake timeout from config file or default value.
+func (s Server) GetHandshakeTimeout() time.Duration {
+	if s.HandshakeTimeout <= 0 {
+		return DefaultHandshakeTimeout
+	}
+	return s.HandshakeTimeout
 }
 
 // GetSize returns the pool size from config file.

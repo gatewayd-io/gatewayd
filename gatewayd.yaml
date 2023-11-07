@@ -39,6 +39,10 @@ clients:
     receiveDeadline: 0s # duration, 0ms/0s means no deadline
     receiveTimeout: 0s # duration, 0ms/0s means no timeout
     sendDeadline: 0s # duration, 0ms/0s means no deadline
+    enableTLS: False
+    certFile: "./snakeoil.pem"
+    keyFile: "./snakeoil.key"
+    handshakeTimeout: 5s # duration
 
 pools:
   default:
@@ -56,9 +60,9 @@ servers:
     address: 0.0.0.0:15432
     enableTicker: False
     tickInterval: 5s # duration
-    enableTLS: False
-    certFile: ""
-    keyFile: ""
+    enableTLS: True
+    certFile: "cmd/testdata/localhost.crt"
+    keyFile: "cmd/testdata/localhost.key"
     handshakeTimeout: 5s # duration
 
 api:

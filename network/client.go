@@ -3,6 +3,7 @@ package network
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net"
 	"sync"
@@ -27,7 +28,7 @@ type IClient interface {
 }
 
 type Client struct {
-	conn      net.Conn
+	conn      *ConnWrapper
 	logger    zerolog.Logger
 	ctx       context.Context //nolint:containedctx
 	connected atomic.Bool
@@ -42,6 +43,12 @@ type Client struct {
 	ID                 string
 	Network            string // tcp/udp/unix
 	Address            string
+
+	// TLS config
+	EnableTLS        bool
+	CertFile         string
+	KeyFile          string
+	HandshakeTimeout time.Duration
 }
 
 var _ IClient = (*Client)(nil)
@@ -69,10 +76,15 @@ func NewClient(ctx context.Context, clientConfig *config.Client, logger zerolog.
 
 	// Create a resolved client.
 	client = Client{
-		ctx:     clientCtx,
-		mu:      sync.Mutex{},
-		Network: clientConfig.Network,
-		Address: addr,
+		ctx:              clientCtx,
+		mu:               sync.Mutex{},
+		logger:           logger,
+		Network:          clientConfig.Network,
+		Address:          addr,
+		EnableTLS:        clientConfig.EnableTLS,
+		CertFile:         clientConfig.CertFile,
+		KeyFile:          clientConfig.KeyFile,
+		HandshakeTimeout: clientConfig.HandshakeTimeout,
 	}
 
 	// Fall back to the original network and address if the address can't be resolved.
@@ -92,14 +104,37 @@ func NewClient(ctx context.Context, clientConfig *config.Client, logger zerolog.
 		return nil
 	}
 
-	client.conn = conn
+	// Set the TLS config if enabled.
+	var tlsConfig *tls.Config
+	if client.EnableTLS {
+		tlsConfig, origErr = CreateTLSConfig(client.CertFile, client.KeyFile)
+		if origErr != nil {
+			client.logger.Error().Err(origErr).Msg("Failed to create TLS config")
+		}
+		client.logger.Info().Msg("TLS is enabled")
+	} else {
+		client.logger.Debug().Msg("TLS is disabled")
+	}
+	client.logger.Debug().Bool("enabled", client.EnableTLS).Msg("Created a new connection")
+
+	client.conn = NewConnWrapper(conn, tlsConfig, client.HandshakeTimeout)
+
+	if client.EnableTLS {
+		if err := client.conn.UpgradeToTLS(
+			config.ConnectionTypeClient, upgraderFunction); err != nil {
+			logger.Error().Err(err).Msg("Failed to upgrade to TLS")
+			span.RecordError(err)
+			return nil
+		}
+	}
+
 	client.connected.Store(true)
 
 	// Set the TCP keep alive.
 	client.TCPKeepAlive = clientConfig.TCPKeepAlive
 	client.TCPKeepAlivePeriod = clientConfig.TCPKeepAlivePeriod
 
-	if c, ok := client.conn.(*net.TCPConn); ok {
+	if c, ok := client.conn.Conn().(*net.TCPConn); ok {
 		if err := c.SetKeepAlive(client.TCPKeepAlive); err != nil {
 			logger.Error().Err(err).Msg("Failed to set keep alive")
 			span.RecordError(err)
@@ -252,7 +287,29 @@ func (c *Client) Reconnect() error {
 		return gerr.ErrClientConnectionFailed.Wrap(err)
 	}
 
-	c.conn = conn
+	// Set the TLS config if enabled.
+	var tlsConfig *tls.Config
+	var origErr error
+	if c.EnableTLS {
+		tlsConfig, origErr = CreateTLSConfig(c.CertFile, c.KeyFile)
+		if origErr != nil {
+			c.logger.Error().Err(origErr).Msg("Failed to create TLS config")
+		}
+		c.logger.Info().Msg("TLS is enabled")
+	} else {
+		c.logger.Debug().Msg("TLS is disabled")
+	}
+
+	c.conn = NewConnWrapper(conn, tlsConfig, c.HandshakeTimeout)
+
+	if c.EnableTLS {
+		if err := c.conn.UpgradeToTLS(config.ConnectionTypeClient, upgraderFunction); err != nil {
+			c.logger.Error().Err(err).Msg("Failed to upgrade to TLS")
+			span.RecordError(err)
+			return err
+		}
+	}
+
 	c.ID = GetID(
 		conn.LocalAddr().Network(), conn.LocalAddr().String(), config.DefaultSeed, c.logger)
 	c.connected.Store(true)
@@ -354,4 +411,36 @@ func (c *Client) LocalAddr() string {
 	}
 
 	return ""
+}
+
+// upgraderFunction is the function that is used to upgrade the connection to TLS.
+// For example, in Postgres, this function can be used to send the SSLRequest message
+// and wait for the server to respond with a 'S' message to indicate that it supports
+// TLS. The client then upgrades the connection to TLS.
+func upgraderFunction(c net.Conn) error {
+	// Send the SSLRequest message.
+	// The SSLRequest message is sent by the client to request an SSL connection.
+	// The server responds with a 'S' message to indicate that it supports TLS.
+	// The client then upgrades the connection to TLS.
+	// Ref: https://www.postgresql.org/docs/current/protocol-flow.html
+	// Ref: https://www.postgresql.org/docs/current/protocol-message-formats.html
+
+	sslRequest := []byte{0x00, 0x00, 0x00, 0x08, 0x04, 0xd2, 0x16, 0x2f}
+	sent, err := c.Write(sslRequest)
+	if err != nil || sent != len(sslRequest) {
+		return err
+	}
+
+	// Read the response from the server.
+	serverResponse := make([]byte, 1)
+	if read, err := c.Read(serverResponse); err != nil || read != 1 {
+		return err
+	}
+
+	// Check if the server supports TLS.
+	if serverResponse[0] != 'S' {
+		return fmt.Errorf("server doesn't support TLS")
+	}
+
+	return nil
 }

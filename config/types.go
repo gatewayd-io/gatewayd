@@ -36,6 +36,10 @@ type Client struct {
 	ReceiveDeadline    time.Duration `json:"receiveDeadline" jsonschema:"oneof_type=string;integer"`
 	ReceiveTimeout     time.Duration `json:"receiveTimeout" jsonschema:"oneof_type=string;integer"`
 	SendDeadline       time.Duration `json:"sendDeadline" jsonschema:"oneof_type=string;integer"`
+	EnableTLS          bool          `json:"enableTLS"` //nolint:tagliatelle
+	CertFile           string        `json:"certFile"`
+	KeyFile            string        `json:"keyFile"`
+	HandshakeTimeout   time.Duration `json:"handshakeTimeout" jsonschema:"oneof_type=string;integer"`
 }
 
 type Logger struct {

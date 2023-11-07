@@ -11,6 +11,7 @@ type (
 	AcceptancePolicy    string
 	TerminationPolicy   string
 	LogOutput           uint
+	ConnectionType      string
 )
 
 // Status is the status of the server.
@@ -56,6 +57,13 @@ const (
 	File
 	Syslog
 	RSyslog
+)
+
+const (
+	// ConnectionTypeServer is the server connection type.
+	ConnectionTypeServer ConnectionType = "server"
+	// ConnectionTypeClient is the client connection type.
+	ConnectionTypeClient ConnectionType = "client"
 )
 
 const (
