@@ -37,7 +37,7 @@ type GatewayDAdminAPIServiceClient interface {
 	// Version returns the version of the GatewayD.
 	Version(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*VersionResponse, error)
 	// GetGlobalConfig returns the global configuration of the GatewayD.
-	GetGlobalConfig(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*structpb.Struct, error)
+	GetGlobalConfig(ctx context.Context, in *Group, opts ...grpc.CallOption) (*structpb.Struct, error)
 	// GetPluginConfig returns the configuration of the specified plugin.
 	GetPluginConfig(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*structpb.Struct, error)
 	// GetPlugins returns the list of plugins installed on the GatewayD.
@@ -67,7 +67,7 @@ func (c *gatewayDAdminAPIServiceClient) Version(ctx context.Context, in *emptypb
 	return out, nil
 }
 
-func (c *gatewayDAdminAPIServiceClient) GetGlobalConfig(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*structpb.Struct, error) {
+func (c *gatewayDAdminAPIServiceClient) GetGlobalConfig(ctx context.Context, in *Group, opts ...grpc.CallOption) (*structpb.Struct, error) {
 	out := new(structpb.Struct)
 	err := c.cc.Invoke(ctx, GatewayDAdminAPIService_GetGlobalConfig_FullMethodName, in, out, opts...)
 	if err != nil {
@@ -128,7 +128,7 @@ type GatewayDAdminAPIServiceServer interface {
 	// Version returns the version of the GatewayD.
 	Version(context.Context, *emptypb.Empty) (*VersionResponse, error)
 	// GetGlobalConfig returns the global configuration of the GatewayD.
-	GetGlobalConfig(context.Context, *emptypb.Empty) (*structpb.Struct, error)
+	GetGlobalConfig(context.Context, *Group) (*structpb.Struct, error)
 	// GetPluginConfig returns the configuration of the specified plugin.
 	GetPluginConfig(context.Context, *emptypb.Empty) (*structpb.Struct, error)
 	// GetPlugins returns the list of plugins installed on the GatewayD.
@@ -149,7 +149,7 @@ type UnimplementedGatewayDAdminAPIServiceServer struct {
 func (UnimplementedGatewayDAdminAPIServiceServer) Version(context.Context, *emptypb.Empty) (*VersionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Version not implemented")
 }
-func (UnimplementedGatewayDAdminAPIServiceServer) GetGlobalConfig(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
+func (UnimplementedGatewayDAdminAPIServiceServer) GetGlobalConfig(context.Context, *Group) (*structpb.Struct, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetGlobalConfig not implemented")
 }
 func (UnimplementedGatewayDAdminAPIServiceServer) GetPluginConfig(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
@@ -200,7 +200,7 @@ func _GatewayDAdminAPIService_Version_Handler(srv interface{}, ctx context.Conte
 }
 
 func _GatewayDAdminAPIService_GetGlobalConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
+	in := new(Group)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -212,7 +212,7 @@ func _GatewayDAdminAPIService_GetGlobalConfig_Handler(srv interface{}, ctx conte
 		FullMethod: GatewayDAdminAPIService_GetGlobalConfig_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GatewayDAdminAPIServiceServer).GetGlobalConfig(ctx, req.(*emptypb.Empty))
+		return srv.(GatewayDAdminAPIServiceServer).GetGlobalConfig(ctx, req.(*Group))
 	}
 	return interceptor(ctx, in, info, handler)
 }

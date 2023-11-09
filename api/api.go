@@ -48,8 +48,21 @@ func (a *API) Version(context.Context, *emptypb.Empty) (*v1.VersionResponse, err
 }
 
 // GetGlobalConfig returns the global configuration of the GatewayD.
-func (a *API) GetGlobalConfig(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
-	jsonData, err := json.Marshal(a.Config.Global)
+func (a *API) GetGlobalConfig(ctx context.Context, group *v1.Group) (*structpb.Struct, error) {
+	var (
+		jsonData []byte
+		err      error
+	)
+
+	if group.GetGroupName() == "" {
+		jsonData, err = json.Marshal(a.Config.Global)
+	} else {
+		configGroup := a.Config.Global.Filter(group.GetGroupName())
+		if configGroup == nil {
+			return nil, status.Error(codes.NotFound, "group not found")
+		}
+		jsonData, err = json.Marshal(configGroup)
+	}
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to marshal global config: %v", err)
 	}
