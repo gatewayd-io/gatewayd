@@ -22,71 +22,251 @@ option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
       url: "https://github.com/gatewayd-io/gatewayd/blob/main/LICENSE";
     };
   };
+  schemes: HTTP;
+  produces: "application/json";
 };
 
+// GatewayDAdminAPIService is the administration API of GatewayD.
 service GatewayDAdminAPIService {
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_tag) = {
+    description: "GatewayD Administration API Service"
+    external_docs: {url: "https://docs.gatewayd.io/using-gatewayd/API/"}
+  };
+
   // Version returns the version of the GatewayD.
   rpc Version(google.protobuf.Empty) returns (VersionResponse) {
     option (google.api.http) = {get: "/v1/GatewayDPluginService/Version"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      operation_id: "Version";
+      responses: {
+        key: "200";
+        value: {
+          description: "A JSON object is returned in response of the Version method.";
+          schema: {
+            json_schema: {ref: ".api.v1.VersionResponse"}
+          },
+          examples: {
+            key: "application/json"
+            value: '{"version":"0.8.5","version_info":"GatewayD v0.8.4 (2023-10-29T10:06:37+0000/a776985, go1.21.0, linux/amd64)"}',
+          }
+        };
+      };
+    };
   }
   // GetGlobalConfig returns the global configuration of the GatewayD.
   rpc GetGlobalConfig(Group) returns (google.protobuf.Struct) {
     option (google.api.http) = {get: "/v1/GatewayDPluginService/GetGlobalConfig"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      operation_id: "GetGlobalConfig";
+      responses: {
+        key: "200";
+        value: {
+          description: "A JSON object is returned in response of the GetGlobalConfig method.";
+          schema: {
+            json_schema: {ref: ".google.protobuf.Struct"}
+          },
+          examples: {
+            key: "application/json"
+            value: '{"api":{"enabled":true,"grpcAddress":"localhost:19090","grpcNetwork":"tcp","httpAddress":"localhost:18080"},"clients":{"default":{"address":"localhost:5432","network":"tcp","receiveChunkSize":8192,"receiveDeadline":0,"receiveTimeout":0,"sendDeadline":0,"tcpKeepAlive":false,"tcpKeepAlivePeriod":30000000000}},"loggers":{"default":{"compress":true,"consoleTimeFormat":"RFC3339","fileName":"gatewayd.log","level":"info","localTime":false,"maxAge":30,"maxBackups":5,"maxSize":500,"noColor":false,"output":["console"],"rsyslogAddress":"localhost:514","rsyslogNetwork":"tcp","syslogPriority":"info","timeFormat":"unix"}},"metrics":{"default":{"address":"localhost:9090","certFile":"","enabled":true,"keyFile":"","path":"/metrics","readHeaderTimeout":10000000000,"timeout":10000000000}},"pools":{"default":{"size":10}},"proxies":{"default":{"elastic":false,"healthCheckPeriod":60000000000,"reuseElasticClients":false}},"servers":{"default":{"address":"0.0.0.0:15432","certFile":"","enableTLS":false,"enableTicker":false,"handshakeTimeout":5000000000,"keyFile":"","network":"tcp","tickInterval":5000000000}}}',
+          }
+        };
+      };
+    };
   }
   // GetPluginConfig returns the configuration of the specified plugin.
   rpc GetPluginConfig(google.protobuf.Empty) returns (google.protobuf.Struct) {
     option (google.api.http) = {get: "/v1/GatewayDPluginService/GetPluginConfig"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      operation_id: "GetPluginConfig";
+      responses: {
+        key: "200";
+        value: {
+          description: "A JSON object is returned in response of the GetPluginConfig method.";
+          schema: {
+            json_schema: {ref: ".google.protobuf.Struct"}
+          },
+          examples: {
+            key: "application/json"
+            value: '{"acceptancePolicy":"accept","compatibilityPolicy":"strict","enableMetricsMerger":true,"healthCheckPeriod":"5s","metricsMergerPeriod":"5s","plugins":[{"args":["--log-level","debug"],"checksum":"...","enabled":true,"env":["MAGIC_COOKIE_KEY=...","MAGIC_COOKIE_VALUE=...","REDIS_URL=redis://localhost:6379/0","EXPIRY=1h","METRICS_ENABLED=True","METRICS_UNIX_DOMAIN_SOCKET=/tmp/gatewayd-plugin-cache.sock","METRICS_PATH=/metrics","PERIODIC_INVALIDATOR_ENABLED=True","PERIODIC_INVALIDATOR_INTERVAL=1m","PERIODIC_INVALIDATOR_START_DELAY=1m","API_ADDRESS=localhost:18080","EXIT_ON_STARTUP_ERROR=False","SENTRY_DSN=..."],"localPath":"plugins/gatewayd-plugin-cache","name":"gatewayd-plugin-cache"}],"reloadOnCrash":true,"terminationPolicy":"stop","timeout":"30s","verificationPolicy":"passdown"}'
+          }
+        };
+      };
+    };
   }
   // GetPlugins returns the list of plugins installed on the GatewayD.
   rpc GetPlugins(google.protobuf.Empty) returns (PluginConfigs) {
     option (google.api.http) = {get: "/v1/GatewayDPluginService/GetPlugins"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      operation_id: "GetPlugins";
+      responses: {
+        key: "200";
+        value: {
+          description: "A JSON object is returned in response of the GetPlugins method.";
+          schema: {
+            json_schema: {ref: ".api.v1.PluginConfigs"}
+          },
+          examples: {
+            key: "application/json"
+            value: '{"configs":[{"id":{"name":"gatewayd-plugin-cache","version":"0.0.1","remoteUrl":"github.com/gatewayd-io/gatewayd-plugin-cache","checksum":"..."},"description":"GatewayD plugin for caching query results","authors":["..."],"license":"AGPL-3.0","projectUrl":"https://github.com/gatewayd-io/gatewayd-plugin-cache","config":{"apiAddress":"localhost:18080","defaultDBName":"","exitOnStartupError":"False","expiry":"1h","metricsEnabled":"True","metricsEndpoint":"/metrics","metricsUnixDomainSocket":"/tmp/gatewayd-plugin-cache.sock","periodicInvalidatorEnabled":"True","periodicInvalidatorInterval":"1m","periodicInvalidatorStartDelay":"1m","redisURL":"redis://localhost:6379/0","scanCount":"1000"},"hooks":[14,16,18],"requires":{},"tags":[],"categories":[]}]}'
+          }
+        };
+      };
+    };
   }
   // GetPools returns the list of pools configured on the GatewayD.
   rpc GetPools(google.protobuf.Empty) returns (google.protobuf.Struct) {
     option (google.api.http) = {get: "/v1/GatewayDPluginService/GetPools"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      operation_id: "GetPools";
+      responses: {
+        key: "200";
+        value: {
+          description: "A JSON object is returned in response of the GetPools method.";
+          schema: {
+            json_schema: {ref: ".google.protobuf.Struct"}
+          },
+          examples: {
+            key: "application/json"
+            value: '{"default":{"cap":10,"size":10}}'
+          }
+        };
+      };
+    };
   }
   // GetProxies returns the list of proxies configured on the GatewayD.
   rpc GetProxies(google.protobuf.Empty) returns (google.protobuf.Struct) {
     option (google.api.http) = {get: "/v1/GatewayDPluginService/GetProxies"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      operation_id: "GetProxies";
+      responses: {
+        key: "200";
+        value: {
+          description: "A JSON object is returned in response of the GetProxies method.";
+          schema: {
+            json_schema: {ref: ".google.protobuf.Struct"}
+          },
+          examples: {
+            key: "application/json"
+            value: '{"default":{"available":["127.0.0.1:50992","127.0.0.1:50956","127.0.0.1:51006","127.0.0.1:50972","127.0.0.1:51002","127.0.0.1:50980","127.0.0.1:50930","127.0.0.1:50946","127.0.0.1:50996","127.0.0.1:51022"],"busy":[],"total":10}}'
+          }
+        };
+      };
+    };
   }
   // GetServers returns the list of servers configured on the GatewayD.
   rpc GetServers(google.protobuf.Empty) returns (google.protobuf.Struct) {
     option (google.api.http) = {get: "/v1/GatewayDPluginService/GetServers"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      operation_id: "GetServers";
+      responses: {
+        key: "200";
+        value: {
+          description: "A JSON object is returned in response of the GetServers method.";
+          schema: {
+            json_schema: {ref: ".google.protobuf.Struct"}
+          },
+          examples: {
+            key: "application/json"
+            value: '{"default":{"address":"0.0.0.0:15432","network":"tcp","status":0,"tickInterval":5000000000}}'
+          }
+        };
+      };
+    };
   }
 }
 
+// VersionResponse is the response returned by the Version RPC.
 message VersionResponse {
+  // Version is the version of the GatewayD.
   string version = 1;
+  // VersionInfo is the detailed version info of the GatewayD.
   string version_info = 2;
+
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+    json_schema: {
+      title: "VersionResponse";
+      description: "VersionResponse is the response returned by the Version method.";
+    }
+    example: '{"version":"0.8.5","version_info":"GatewayD v0.8.4 (2023-10-29T10:06:37+0000/a776985, go1.21.0, linux/amd64)"}',
+  };
 }
 
+// PluginID is the identifier that uniquely identifies the plugin.
 message PluginID {
+  // Name is the name of the plugin.
   string name = 1;
+  // Version is the version of the plugin.
   string version = 2;
+  // RemoteURL is the remote URL of the plugin.
   string remote_url = 3;
+  // Checksum is the checksum of the plugin.
   string checksum = 4;
+
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+    json_schema: {
+      title: "PluginID";
+      description: "PluginID is the identifier that uniquely identifies the plugin.";
+    }
+    example: '{"name":"gatewayd-plugin-cache","version":"0.0.1","remoteUrl":"github.com/gatewayd-io/gatewayd-plugin-cache","checksum":"..."}',
+  };
 }
 
+// PluginConfig is the configuration of the plugin.
 message PluginConfig {
+  // ID is the identifier that uniquely identifies the plugin.
   PluginID id = 1;
+  // Description is the description of the plugin.
   string description = 2;
+  // Authors is the list of authors of the plugin.
   repeated string authors = 3;
+  // License is the license of the plugin.
   string license = 4;
+  // ProjectURL is the project URL of the plugin.
   string project_url = 5;
-  // internal and external config options
+  // Config is the internal and external configuration of the plugin.
   map<string, string> config = 6;
-  // hooks it attaches to
+  // Hooks is the list of hooks the plugin attaches to.
   repeated int32 hooks = 7;
-  // required plugins
+  // Requires is the list of plugins the plugin depends on.
   map<string, string> requires = 8;
+  // Tags is the list of tags of the plugin.
   repeated string tags = 9;
+  // Categories is the list of categories of the plugin.
   repeated string categories = 10;
+
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+    json_schema: {
+      title: "PluginConfig";
+      description: "PluginConfig is the configuration of the plugin.";
+    }
+    example: '{"id":{"name":"gatewayd-plugin-cache","version":"0.0.1","remoteUrl":"github.com/gatewayd-io/gatewayd-plugin-cache","checksum":"..."},"description":"GatewayD plugin for caching query results","authors":["..."],"license":"AGPL-3.0","projectUrl":"https://github.com/gatewayd-io/gatewayd-plugin-cache","config":{"apiAddress":"localhost:18080","defaultDBName":"","exitOnStartupError":"False","expiry":"1h","metricsEnabled":"True","metricsEndpoint":"/metrics","metricsUnixDomainSocket":"/tmp/gatewayd-plugin-cache.sock","periodicInvalidatorEnabled":"True","periodicInvalidatorInterval":"1m","periodicInvalidatorStartDelay":"1m","redisURL":"redis://localhost:6379/0","scanCount":"1000"},"hooks":[14,16,18],"requires":{},"tags":[],"categories":[]}',
+  };
 }
 
+// PluginConfigs is the list of plugin configurations.
 message PluginConfigs {
+  // Configs is the list of plugin configurations.
   repeated PluginConfig configs = 1;
+
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+    json_schema: {
+      title: "PluginConfig";
+      description: "PluginConfig is the configuration of the plugin.";
+    }
+    example: '[{"id":{"name":"gatewayd-plugin-cache","version":"0.0.1","remoteUrl":"github.com/gatewayd-io/gatewayd-plugin-cache","checksum":"..."},"description":"GatewayD plugin for caching query results","authors":["..."],"license":"AGPL-3.0","projectUrl":"https://github.com/gatewayd-io/gatewayd-plugin-cache","config":{"apiAddress":"localhost:18080","defaultDBName":"","exitOnStartupError":"False","expiry":"1h","metricsEnabled":"True","metricsEndpoint":"/metrics","metricsUnixDomainSocket":"/tmp/gatewayd-plugin-cache.sock","periodicInvalidatorEnabled":"True","periodicInvalidatorInterval":"1m","periodicInvalidatorStartDelay":"1m","redisURL":"redis://localhost:6379/0","scanCount":"1000"},"hooks":[14,16,18],"requires":{},"tags":[],"categories":[]}]',
+  };
 }
 
+// Group is the object group to filter the global config by.
 message Group {
+  // GroupName is the name of the group.
   optional string group_name = 1;
+
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+    json_schema: {
+      title: "Group";
+      description: "Group is the object group to filter the global config by.";
+    }
+    example: '{"groupName":"default"}',
+  };
 }

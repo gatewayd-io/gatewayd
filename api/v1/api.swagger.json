@@ -15,8 +15,15 @@
   },
   "tags": [
     {
-      "name": "GatewayDAdminAPIService"
+      "name": "GatewayDAdminAPIService",
+      "description": "GatewayD Administration API Service",
+      "externalDocs": {
+        "url": "https://docs.gatewayd.io/using-gatewayd/API/"
+      }
     }
+  ],
+  "schemes": [
+    "http"
   ],
   "consumes": [
     "application/json"
@@ -28,12 +35,89 @@
     "/v1/GatewayDPluginService/GetGlobalConfig": {
       "get": {
         "summary": "GetGlobalConfig returns the global configuration of the GatewayD.",
-        "operationId": "GatewayDAdminAPIService_GetGlobalConfig",
+        "operationId": "GetGlobalConfig",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "A JSON object is returned in response of the GetGlobalConfig method.",
             "schema": {
-              "type": "object"
+              "$ref": "#/definitions/protobufStruct"
+            },
+            "examples": {
+              "application/json": {
+                "api": {
+                  "enabled": true,
+                  "grpcAddress": "localhost:19090",
+                  "grpcNetwork": "tcp",
+                  "httpAddress": "localhost:18080"
+                },
+                "clients": {
+                  "default": {
+                    "address": "localhost:5432",
+                    "network": "tcp",
+                    "receiveChunkSize": 8192,
+                    "receiveDeadline": 0,
+                    "receiveTimeout": 0,
+                    "sendDeadline": 0,
+                    "tcpKeepAlive": false,
+                    "tcpKeepAlivePeriod": 30000000000
+                  }
+                },
+                "loggers": {
+                  "default": {
+                    "compress": true,
+                    "consoleTimeFormat": "RFC3339",
+                    "fileName": "gatewayd.log",
+                    "level": "info",
+                    "localTime": false,
+                    "maxAge": 30,
+                    "maxBackups": 5,
+                    "maxSize": 500,
+                    "noColor": false,
+                    "output": [
+                      "console"
+                    ],
+                    "rsyslogAddress": "localhost:514",
+                    "rsyslogNetwork": "tcp",
+                    "syslogPriority": "info",
+                    "timeFormat": "unix"
+                  }
+                },
+                "metrics": {
+                  "default": {
+                    "address": "localhost:9090",
+                    "certFile": "",
+                    "enabled": true,
+                    "keyFile": "",
+                    "path": "/metrics",
+                    "readHeaderTimeout": 10000000000,
+                    "timeout": 10000000000
+                  }
+                },
+                "pools": {
+                  "default": {
+                    "size": 10
+                  }
+                },
+                "proxies": {
+                  "default": {
+                    "elastic": false,
+                    "healthCheckPeriod": 60000000000,
+                    "reuseElasticClients": false
+                  }
+                },
+                "servers": {
+                  "default": {
+                    "address": "0.0.0.0:15432",
+                    "certFile": "",
+                    "enableTLS": false,
+                    "enableTicker": false,
+                    "handshakeTimeout": 5000000000,
+                    "keyFile": "",
+                    "network": "tcp",
+                    "tickInterval": 5000000000
+                  }
+                }
+              }
             }
           },
           "default": {
@@ -46,6 +130,7 @@
         "parameters": [
           {
             "name": "groupName",
+            "description": "GroupName is the name of the group.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -59,12 +144,52 @@
     "/v1/GatewayDPluginService/GetPluginConfig": {
       "get": {
         "summary": "GetPluginConfig returns the configuration of the specified plugin.",
-        "operationId": "GatewayDAdminAPIService_GetPluginConfig",
+        "operationId": "GetPluginConfig",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "A JSON object is returned in response of the GetPluginConfig method.",
             "schema": {
-              "type": "object"
+              "$ref": "#/definitions/protobufStruct"
+            },
+            "examples": {
+              "application/json": {
+                "acceptancePolicy": "accept",
+                "compatibilityPolicy": "strict",
+                "enableMetricsMerger": true,
+                "healthCheckPeriod": "5s",
+                "metricsMergerPeriod": "5s",
+                "plugins": [
+                  {
+                    "args": [
+                      "--log-level",
+                      "debug"
+                    ],
+                    "checksum": "...",
+                    "enabled": true,
+                    "env": [
+                      "MAGIC_COOKIE_KEY=...",
+                      "MAGIC_COOKIE_VALUE=...",
+                      "REDIS_URL=redis://localhost:6379/0",
+                      "EXPIRY=1h",
+                      "METRICS_ENABLED=True",
+                      "METRICS_UNIX_DOMAIN_SOCKET=/tmp/gatewayd-plugin-cache.sock",
+                      "METRICS_PATH=/metrics",
+                      "PERIODIC_INVALIDATOR_ENABLED=True",
+                      "PERIODIC_INVALIDATOR_INTERVAL=1m",
+                      "PERIODIC_INVALIDATOR_START_DELAY=1m",
+                      "API_ADDRESS=localhost:18080",
+                      "EXIT_ON_STARTUP_ERROR=False",
+                      "SENTRY_DSN=..."
+                    ],
+                    "localPath": "plugins/gatewayd-plugin-cache",
+                    "name": "gatewayd-plugin-cache"
+                  }
+                ],
+                "reloadOnCrash": true,
+                "terminationPolicy": "stop",
+                "timeout": "30s",
+                "verificationPolicy": "passdown"
+              }
             }
           },
           "default": {
@@ -82,12 +207,54 @@
     "/v1/GatewayDPluginService/GetPlugins": {
       "get": {
         "summary": "GetPlugins returns the list of plugins installed on the GatewayD.",
-        "operationId": "GatewayDAdminAPIService_GetPlugins",
+        "operationId": "GetPlugins",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "A JSON object is returned in response of the GetPlugins method.",
             "schema": {
               "$ref": "#/definitions/v1PluginConfigs"
+            },
+            "examples": {
+              "application/json": {
+                "configs": [
+                  {
+                    "id": {
+                      "name": "gatewayd-plugin-cache",
+                      "version": "0.0.1",
+                      "remoteUrl": "github.com/gatewayd-io/gatewayd-plugin-cache",
+                      "checksum": "..."
+                    },
+                    "description": "GatewayD plugin for caching query results",
+                    "authors": [
+                      "..."
+                    ],
+                    "license": "AGPL-3.0",
+                    "projectUrl": "https://github.com/gatewayd-io/gatewayd-plugin-cache",
+                    "config": {
+                      "apiAddress": "localhost:18080",
+                      "defaultDBName": "",
+                      "exitOnStartupError": "False",
+                      "expiry": "1h",
+                      "metricsEnabled": "True",
+                      "metricsEndpoint": "/metrics",
+                      "metricsUnixDomainSocket": "/tmp/gatewayd-plugin-cache.sock",
+                      "periodicInvalidatorEnabled": "True",
+                      "periodicInvalidatorInterval": "1m",
+                      "periodicInvalidatorStartDelay": "1m",
+                      "redisURL": "redis://localhost:6379/0",
+                      "scanCount": "1000"
+                    },
+                    "hooks": [
+                      14,
+                      16,
+                      18
+                    ],
+                    "requires": {},
+                    "tags": [],
+                    "categories": []
+                  }
+                ]
+              }
             }
           },
           "default": {
@@ -105,12 +272,20 @@
     "/v1/GatewayDPluginService/GetPools": {
       "get": {
         "summary": "GetPools returns the list of pools configured on the GatewayD.",
-        "operationId": "GatewayDAdminAPIService_GetPools",
+        "operationId": "GetPools",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "A JSON object is returned in response of the GetPools method.",
             "schema": {
-              "type": "object"
+              "$ref": "#/definitions/protobufStruct"
+            },
+            "examples": {
+              "application/json": {
+                "default": {
+                  "cap": 10,
+                  "size": 10
+                }
+              }
             }
           },
           "default": {
@@ -128,12 +303,32 @@
     "/v1/GatewayDPluginService/GetProxies": {
       "get": {
         "summary": "GetProxies returns the list of proxies configured on the GatewayD.",
-        "operationId": "GatewayDAdminAPIService_GetProxies",
+        "operationId": "GetProxies",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "A JSON object is returned in response of the GetProxies method.",
             "schema": {
-              "type": "object"
+              "$ref": "#/definitions/protobufStruct"
+            },
+            "examples": {
+              "application/json": {
+                "default": {
+                  "available": [
+                    "127.0.0.1:50992",
+                    "127.0.0.1:50956",
+                    "127.0.0.1:51006",
+                    "127.0.0.1:50972",
+                    "127.0.0.1:51002",
+                    "127.0.0.1:50980",
+                    "127.0.0.1:50930",
+                    "127.0.0.1:50946",
+                    "127.0.0.1:50996",
+                    "127.0.0.1:51022"
+                  ],
+                  "busy": [],
+                  "total": 10
+                }
+              }
             }
           },
           "default": {
@@ -151,12 +346,22 @@
     "/v1/GatewayDPluginService/GetServers": {
       "get": {
         "summary": "GetServers returns the list of servers configured on the GatewayD.",
-        "operationId": "GatewayDAdminAPIService_GetServers",
+        "operationId": "GetServers",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "A JSON object is returned in response of the GetServers method.",
             "schema": {
-              "type": "object"
+              "$ref": "#/definitions/protobufStruct"
+            },
+            "examples": {
+              "application/json": {
+                "default": {
+                  "address": "0.0.0.0:15432",
+                  "network": "tcp",
+                  "status": 0,
+                  "tickInterval": 5000000000
+                }
+              }
             }
           },
           "default": {
@@ -174,12 +379,18 @@
     "/v1/GatewayDPluginService/Version": {
       "get": {
         "summary": "Version returns the version of the GatewayD.",
-        "operationId": "GatewayDAdminAPIService_Version",
+        "operationId": "Version",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "A JSON object is returned in response of the Version method.",
             "schema": {
               "$ref": "#/definitions/v1VersionResponse"
+            },
+            "examples": {
+              "application/json": {
+                "version": "0.8.5",
+                "version_info": "GatewayD v0.8.4 (2023-10-29T10:06:37+0000/a776985, go1.21.0, linux/amd64)"
+              }
             }
           },
           "default": {
@@ -213,6 +424,17 @@
       "default": "NULL_VALUE",
       "description": "`NullValue` is a singleton enumeration to represent the null value for the\n`Value` type union.\n\n The JSON representation for `NullValue` is JSON `null`.\n\n - NULL_VALUE: Null value."
     },
+    "protobufStruct": {
+      "type": "object",
+      "properties": {
+        "fields": {
+          "type": "object",
+          "additionalProperties": {},
+          "description": "Unordered map of dynamically typed values."
+        }
+      },
+      "description": "`Struct` represents a structured data value, consisting of fields\nwhich map to dynamically typed values. In some languages, `Struct`\nmight be supported by a native representation. For example, in\nscripting languages like JS a struct is represented as an\nobject. The details of that representation are described together\nwith the proto support for the language.\n\nThe JSON representation for `Struct` is JSON object."
+    },
     "rpcStatus": {
       "type": "object",
       "properties": {
@@ -234,31 +456,72 @@
     },
     "v1PluginConfig": {
       "type": "object",
+      "example": {
+        "id": {
+          "name": "gatewayd-plugin-cache",
+          "version": "0.0.1",
+          "remoteUrl": "github.com/gatewayd-io/gatewayd-plugin-cache",
+          "checksum": "..."
+        },
+        "description": "GatewayD plugin for caching query results",
+        "authors": [
+          "..."
+        ],
+        "license": "AGPL-3.0",
+        "projectUrl": "https://github.com/gatewayd-io/gatewayd-plugin-cache",
+        "config": {
+          "apiAddress": "localhost:18080",
+          "defaultDBName": "",
+          "exitOnStartupError": "False",
+          "expiry": "1h",
+          "metricsEnabled": "True",
+          "metricsEndpoint": "/metrics",
+          "metricsUnixDomainSocket": "/tmp/gatewayd-plugin-cache.sock",
+          "periodicInvalidatorEnabled": "True",
+          "periodicInvalidatorInterval": "1m",
+          "periodicInvalidatorStartDelay": "1m",
+          "redisURL": "redis://localhost:6379/0",
+          "scanCount": "1000"
+        },
+        "hooks": [
+          14,
+          16,
+          18
+        ],
+        "requires": {},
+        "tags": [],
+        "categories": []
+      },
       "properties": {
         "id": {
-          "$ref": "#/definitions/v1PluginID"
+          "$ref": "#/definitions/v1PluginID",
+          "description": "ID is the identifier that uniquely identifies the plugin."
         },
         "description": {
-          "type": "string"
+          "type": "string",
+          "description": "Description is the description of the plugin."
         },
         "authors": {
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "description": "Authors is the list of authors of the plugin."
         },
         "license": {
-          "type": "string"
+          "type": "string",
+          "description": "License is the license of the plugin."
         },
         "projectUrl": {
-          "type": "string"
+          "type": "string",
+          "description": "ProjectURL is the project URL of the plugin."
         },
         "config": {
           "type": "object",
           "additionalProperties": {
             "type": "string"
           },
-          "title": "internal and external config options"
+          "description": "Config is the internal and external configuration of the plugin."
         },
         "hooks": {
           "type": "array",
@@ -266,68 +529,133 @@
             "type": "integer",
             "format": "int32"
           },
-          "title": "hooks it attaches to"
+          "description": "Hooks is the list of hooks the plugin attaches to."
         },
         "requires": {
           "type": "object",
           "additionalProperties": {
             "type": "string"
           },
-          "title": "required plugins"
+          "description": "Requires is the list of plugins the plugin depends on."
         },
         "tags": {
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "description": "Tags is the list of tags of the plugin."
         },
         "categories": {
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "description": "Categories is the list of categories of the plugin."
         }
-      }
+      },
+      "description": "PluginConfig is the configuration of the plugin.",
+      "title": "PluginConfig"
     },
     "v1PluginConfigs": {
       "type": "object",
+      "example": [
+        {
+          "id": {
+            "name": "gatewayd-plugin-cache",
+            "version": "0.0.1",
+            "remoteUrl": "github.com/gatewayd-io/gatewayd-plugin-cache",
+            "checksum": "..."
+          },
+          "description": "GatewayD plugin for caching query results",
+          "authors": [
+            "..."
+          ],
+          "license": "AGPL-3.0",
+          "projectUrl": "https://github.com/gatewayd-io/gatewayd-plugin-cache",
+          "config": {
+            "apiAddress": "localhost:18080",
+            "defaultDBName": "",
+            "exitOnStartupError": "False",
+            "expiry": "1h",
+            "metricsEnabled": "True",
+            "metricsEndpoint": "/metrics",
+            "metricsUnixDomainSocket": "/tmp/gatewayd-plugin-cache.sock",
+            "periodicInvalidatorEnabled": "True",
+            "periodicInvalidatorInterval": "1m",
+            "periodicInvalidatorStartDelay": "1m",
+            "redisURL": "redis://localhost:6379/0",
+            "scanCount": "1000"
+          },
+          "hooks": [
+            14,
+            16,
+            18
+          ],
+          "requires": {},
+          "tags": [],
+          "categories": []
+        }
+      ],
       "properties": {
         "configs": {
           "type": "array",
           "items": {
             "type": "object",
             "$ref": "#/definitions/v1PluginConfig"
-          }
+          },
+          "description": "Configs is the list of plugin configurations."
         }
-      }
+      },
+      "description": "PluginConfig is the configuration of the plugin.",
+      "title": "PluginConfig"
     },
     "v1PluginID": {
       "type": "object",
+      "example": {
+        "name": "gatewayd-plugin-cache",
+        "version": "0.0.1",
+        "remoteUrl": "github.com/gatewayd-io/gatewayd-plugin-cache",
+        "checksum": "..."
+      },
       "properties": {
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "Name is the name of the plugin."
         },
         "version": {
-          "type": "string"
+          "type": "string",
+          "description": "Version is the version of the plugin."
         },
         "remoteUrl": {
-          "type": "string"
+          "type": "string",
+          "description": "RemoteURL is the remote URL of the plugin."
         },
         "checksum": {
-          "type": "string"
+          "type": "string",
+          "description": "Checksum is the checksum of the plugin."
         }
-      }
+      },
+      "description": "PluginID is the identifier that uniquely identifies the plugin.",
+      "title": "PluginID"
     },
     "v1VersionResponse": {
       "type": "object",
+      "example": {
+        "version": "0.8.5",
+        "version_info": "GatewayD v0.8.4 (2023-10-29T10:06:37+0000/a776985, go1.21.0, linux/amd64)"
+      },
       "properties": {
         "version": {
-          "type": "string"
+          "type": "string",
+          "description": "Version is the version of the GatewayD."
         },
         "versionInfo": {
-          "type": "string"
+          "type": "string",
+          "description": "VersionInfo is the detailed version info of the GatewayD."
         }
-      }
+      },
+      "description": "VersionResponse is the response returned by the Version method.",
+      "title": "VersionResponse"
     }
   }
 }
