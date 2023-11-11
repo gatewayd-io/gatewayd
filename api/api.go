@@ -48,7 +48,9 @@ func (a *API) Version(context.Context, *emptypb.Empty) (*v1.VersionResponse, err
 }
 
 // GetGlobalConfig returns the global configuration of the GatewayD.
-func (a *API) GetGlobalConfig(ctx context.Context, group *v1.Group) (*structpb.Struct, error) {
+//
+//nolint:wrapcheck
+func (a *API) GetGlobalConfig(_ context.Context, group *v1.Group) (*structpb.Struct, error) {
 	var (
 		jsonData []byte
 		err      error
