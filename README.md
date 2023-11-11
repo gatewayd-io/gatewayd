@@ -10,9 +10,11 @@
 </p>
 
 <p align="center">
-    <a href="https://github.com/gatewayd-io/gatewayd/releases">Download</a> ·
-    <a href="https://docs.gatewayd.io">Documentation</a> ·
-    <a href="https://coveralls.io/github/gatewayd-io/gatewayd">Coverage</a>
+    <a href="https://github.com/gatewayd-io/gatewayd/releases"><img src="https://img.shields.io/github/v/release/gatewayd-io/gatewayd" alt="Downloads" /></a>
+    <a href="https://github.com/gatewayd-io/gatewayd/actions/workflows/release.yaml"><img src="https://img.shields.io/github/actions/workflow/status/gatewayd-io/gatewayd/release.yaml" alt="Release Worflow Status" /></a>
+    <a href="https://goreportcard.com/report/github.com/gatewayd-io/gatewayd"><img src="https://goreportcard.com/badge/github.com/gatewayd-io/gatewayd" alt="Go Report Card" /></a>
+    <a href="https://docs.gatewayd.io/"><img src="https://img.shields.io/badge/read-docs-brightgreen" alt="Documentation"></a>
+    <a href="https://coveralls.io/github/gatewayd-io/gatewayd?branch=main"><img src="https://coveralls.io/repos/github/gatewayd-io/gatewayd/badge.svg?branch=main" alt="Coverage Status" /></a>
 </p>
 
 **GatewayD** is a free and open-source cloud-native database gateway and framework for building data-driven applications. It sits between your database servers and clients and proxies all their communication. It is like API gateways, for databases.
@@ -55,11 +57,11 @@ The plugins are the lifeblood of GatewayD. They are loaded on startup to add ton
 
 - **Query parsing and processing**
 - **Caching**
-- **Injections detection and prevention**
+- **Injection detection and prevention**
 - **Schema and data** management and transformation
 - Many other possibilities
 
-The plugins are *usually* written in Go and are compiled into stand-alone executables. They are loaded on startup and are ready to be used by the users. In turn, the developers can write their own plugins and use them in their applications, which is made more straightforward by using the [SDK](https://github.com/gatewayd-io/gatewayd-plugin-sdk).
+The plugins are *usually* written in Go and are compiled into stand-alone executables. They are loaded on startup and are ready to be used by the users. In turn, the developers can write their own plugins and use them in their applications, which is made straightforward by using the [SDK](https://github.com/gatewayd-io/gatewayd-plugin-sdk).
 
 ## Documentation
 
