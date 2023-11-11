@@ -58,7 +58,7 @@ jobs:
           skip-pkg-cache: true
 
       - name: Run Go tests 🔬
-        run: go test -cover -covermode atomic -coverprofile=profile.cov -v ./...
+        run: go test -p 1 -cover -covermode atomic -coverprofile=profile.cov -v ./...
 
       - name: Report coverage to coveralls 📈
         uses: shogo82148/actions-goveralls@v1
