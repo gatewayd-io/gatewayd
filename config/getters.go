@@ -260,3 +260,18 @@ func (m Metrics) GetTimeout() time.Duration {
 	}
 	return m.Timeout
 }
+
+func (gc GlobalConfig) Filter(groupName string) *GlobalConfig {
+	if _, ok := gc.Servers[groupName]; !ok {
+		return nil
+	}
+	return &GlobalConfig{
+		Loggers: map[string]*Logger{groupName: gc.Loggers[groupName]},
+		Clients: map[string]*Client{groupName: gc.Clients[groupName]},
+		Pools:   map[string]*Pool{groupName: gc.Pools[groupName]},
+		Proxies: map[string]*Proxy{groupName: gc.Proxies[groupName]},
+		Servers: map[string]*Server{groupName: gc.Servers[groupName]},
+		Metrics: map[string]*Metrics{groupName: gc.Metrics[groupName]},
+		API:     gc.API,
+	}
+}

@@ -1,15 +1,23 @@
 version: v1
 plugins:
+  # Generate Go code for the gRPC service.
   - name: go-grpc
     out: .
     opt: paths=source_relative
+  # Generate Go code for messages.
   - name: go
     out: .
     opt: paths=source_relative
+  # Generate Go code for the HTTP gateway service for the gRPC service.
   - name: grpc-gateway
     out: .
     opt:
       - paths=source_relative
       - generate_unbound_methods=true
+  # Generate OpenAPI v2 specs for the HTTP gateway service.
   - name: openapiv2
     out: .
+  # Generate the API documentation in Markdown format.
+  - plugin: buf.build/community/pseudomuto-doc
+    out: api/v1
+    opt: markdown,README.md

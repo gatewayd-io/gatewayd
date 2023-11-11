@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -120,4 +121,28 @@ func TestGetDefaultConfigFilePath(t *testing.T) {
 func TestGetReadHeaderTimeout(t *testing.T) {
 	metrics := Metrics{}
 	assert.Equal(t, DefaultReadHeaderTimeout, metrics.GetReadHeaderTimeout())
+}
+
+// TestGetTimeout tests the GetTimeout function of the metrics server.
+func TestGetTimeout(t *testing.T) {
+	metrics := Metrics{}
+	assert.Equal(t, DefaultMetricsServerTimeout, metrics.GetTimeout())
+}
+
+// TestFilter tests the Filter function.
+func TestFilter(t *testing.T) {
+	// Load config from the default config file.
+	conf := NewConfig(context.TODO(), "../gatewayd.yaml", "../gatewayd_plugins.yaml")
+	conf.InitConfig(context.TODO())
+	assert.NotEmpty(t, conf.Global)
+
+	// Filter the config.
+	defaultGroup := conf.Global.Filter(Default)
+	assert.NotEmpty(t, defaultGroup)
+	assert.Contains(t, defaultGroup.Clients, Default)
+	assert.Contains(t, defaultGroup.Servers, Default)
+	assert.Contains(t, defaultGroup.Pools, Default)
+	assert.Contains(t, defaultGroup.Proxies, Default)
+	assert.Contains(t, defaultGroup.Metrics, Default)
+	assert.Contains(t, defaultGroup.Loggers, Default)
 }
