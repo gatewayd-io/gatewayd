@@ -248,7 +248,7 @@ var runCmd = &cobra.Command{
 		)
 
 		// Load plugins and register their hooks.
-		pluginRegistry.LoadPlugins(runCtx, conf.Plugin.Plugins)
+		pluginRegistry.LoadPlugins(runCtx, conf.Plugin.Plugins, conf.Plugin.StartTimeout)
 
 		// Start the metrics merger if enabled.
 		var metricsMerger *metrics.Merger
@@ -295,7 +295,7 @@ var runCmd = &cobra.Command{
 					logger.Info().Str("name", pluginId.Name).Msg("Reloading crashed plugin")
 					pluginConfig := conf.Plugin.GetPlugins(pluginId.Name)
 					if pluginConfig != nil {
-						pluginRegistry.LoadPlugins(runCtx, pluginConfig)
+						pluginRegistry.LoadPlugins(runCtx, pluginConfig, conf.Plugin.StartTimeout)
 					}
 				} else {
 					logger.Trace().Str("name", pluginId.Name).Msg("Successfully pinged plugin")

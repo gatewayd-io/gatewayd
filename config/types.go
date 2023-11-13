@@ -24,6 +24,7 @@ type PluginConfig struct {
 	HealthCheckPeriod   time.Duration `json:"healthCheckPeriod" jsonschema:"oneof_type=string;integer"`
 	ReloadOnCrash       bool          `json:"reloadOnCrash"`
 	Timeout             time.Duration `json:"timeout" jsonschema:"oneof_type=string;integer"`
+	StartTimeout        time.Duration `json:"startTimeout" jsonschema:"oneof_type=string;integer"`
 	Plugins             []Plugin      `json:"plugins"`
 }
 

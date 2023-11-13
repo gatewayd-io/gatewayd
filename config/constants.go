@@ -92,6 +92,7 @@ const (
 	DefaultMetricsMergerPeriod     = 5 * time.Second
 	DefaultPluginHealthCheckPeriod = 5 * time.Second
 	DefaultPluginTimeout           = 30 * time.Second
+	DefaultPluginStartTimeout      = 1 * time.Minute
 
 	// Client constants.
 	DefaultNetwork            = "tcp"
