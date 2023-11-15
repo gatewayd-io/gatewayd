@@ -259,7 +259,7 @@ func (m *Merger) Start() {
 		m.scheduler.StartAsync()
 		m.Logger.Info().Fields(
 			map[string]interface{}{
-				"startDelay":          startDelay,
+				"startDelay":          startDelay.Format(time.RFC3339),
 				"metricsMergerPeriod": m.MetricsMergerPeriod.String(),
 			},
 		).Msg("Started the metrics merger scheduler")

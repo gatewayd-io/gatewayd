@@ -415,7 +415,15 @@ var runCmd = &cobra.Command{
 
 			// Check if the metrics server is already running before registering the handler.
 			if _, err = http.Get(address); err != nil { //nolint:gosec
-				mux.Handle(metricsConfig.Path, gziphandler.GzipHandler(handler))
+				// The timeout handler limits the nested handlers from running for too long.
+				mux.Handle(
+					metricsConfig.Path,
+					http.TimeoutHandler(
+						gziphandler.GzipHandler(handler),
+						metricsConfig.GetTimeout(),
+						"The request timed out while fetching the metrics",
+					),
+				)
 			} else {
 				logger.Warn().Msg("Metrics server is already running, consider changing the port")
 				span.RecordError(err)
@@ -426,9 +434,16 @@ var runCmd = &cobra.Command{
 				Addr:              metricsConfig.Address,
 				Handler:           mux,
 				ReadHeaderTimeout: metricsConfig.GetReadHeaderTimeout(),
+				ReadTimeout:       metricsConfig.GetTimeout(),
+				WriteTimeout:      metricsConfig.GetTimeout(),
+				IdleTimeout:       metricsConfig.GetTimeout(),
 			}
 
-			logger.Info().Str("address", address).Msg("Metrics are exposed")
+			logger.Info().Fields(map[string]interface{}{
+				"address":           address,
+				"timeout":           metricsConfig.GetTimeout().String(),
+				"readHeaderTimeout": metricsConfig.GetReadHeaderTimeout().String(),
+			}).Msg("Metrics are exposed")
 
 			if metricsConfig.CertFile != "" && metricsConfig.KeyFile != "" {
 				// Set up TLS.
@@ -549,6 +564,8 @@ var runCmd = &cobra.Command{
 						"sendDeadline":       client.SendDeadline.String(),
 						"tcpKeepAlive":       client.TCPKeepAlive,
 						"tcpKeepAlivePeriod": client.TCPKeepAlivePeriod.String(),
+						"localAddress":       client.LocalAddr(),
+						"remoteAddress":      client.RemoteAddr(),
 					}
 					_, err := pluginRegistry.Run(
 						pluginTimeoutCtx, clientCfg, v1.HookName_HOOK_NAME_ON_NEW_CLIENT)
