@@ -86,7 +86,15 @@ func NewClient(ctx context.Context, clientConfig *config.Client, logger zerolog.
 	}
 
 	// Create a new connection.
-	conn, origErr := net.DialTimeout(client.Network, client.Address, client.DialTimeout)
+	var (
+		conn    net.Conn
+		origErr error
+	)
+	if client.DialTimeout == 0 {
+		conn, origErr = net.Dial(client.Network, client.Address)
+	} else {
+		conn, origErr = net.DialTimeout(client.Network, client.Address, client.DialTimeout)
+	}
 	if origErr != nil {
 		err := gerr.ErrClientConnectionFailed.Wrap(origErr)
 		logger.Error().Err(err).Msg("Failed to create a new connection")
