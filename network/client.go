@@ -255,7 +255,15 @@ func (c *Client) Reconnect() error {
 	c.Address = address
 	c.Network = network
 
-	conn, err := net.Dial(c.Network, c.Address)
+	var (
+		conn net.Conn
+		err  error
+	)
+	if c.DialTimeout == 0 {
+		conn, err = net.Dial(c.Network, c.Address)
+	} else {
+		conn, err = net.DialTimeout(c.Network, c.Address, c.DialTimeout)
+	}
 	if err != nil {
 		c.logger.Error().Err(err).Msg("Failed to reconnect")
 		span.RecordError(err)
