@@ -522,6 +522,7 @@ var runCmd = &cobra.Command{
 			clients[name].ReceiveTimeout = clients[name].GetReceiveTimeout()
 			clients[name].SendDeadline = clients[name].GetSendDeadline()
 			clients[name].ReceiveChunkSize = clients[name].GetReceiveChunkSize()
+			clients[name].DialTimeout = clients[name].GetDialTimeout()
 
 			// Add clients to the pool.
 			for i := 0; i < cfg.GetSize(); i++ {
@@ -537,6 +538,7 @@ var runCmd = &cobra.Command{
 						attribute.String("receiveDeadline", client.ReceiveDeadline.String()),
 						attribute.String("receiveTimeout", client.ReceiveTimeout.String()),
 						attribute.String("sendDeadline", client.SendDeadline.String()),
+						attribute.String("dialTimeout", client.DialTimeout.String()),
 						attribute.Bool("tcpKeepAlive", client.TCPKeepAlive),
 						attribute.String("tcpKeepAlivePeriod", client.TCPKeepAlivePeriod.String()),
 						attribute.String("localAddress", client.LocalAddr()),
@@ -562,6 +564,7 @@ var runCmd = &cobra.Command{
 						"receiveDeadline":    client.ReceiveDeadline.String(),
 						"receiveTimeout":     client.ReceiveTimeout.String(),
 						"sendDeadline":       client.SendDeadline.String(),
+						"dialTimeout":        client.DialTimeout.String(),
 						"tcpKeepAlive":       client.TCPKeepAlive,
 						"tcpKeepAlivePeriod": client.TCPKeepAlivePeriod.String(),
 						"localAddress":       client.LocalAddr(),

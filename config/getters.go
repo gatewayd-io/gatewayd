@@ -144,6 +144,14 @@ func (c Client) GetReceiveChunkSize() int {
 	return c.ReceiveChunkSize
 }
 
+// GetDialTimeout returns the dial timeout from config file or default value.
+func (c Client) GetDialTimeout() time.Duration {
+	if c.DialTimeout <= 0 {
+		return DefaultDialTimeout
+	}
+	return c.DialTimeout
+}
+
 // GetHealthCheckPeriod returns the health check period from config file or default value.
 func (pr Proxy) GetHealthCheckPeriod() time.Duration {
 	if pr.HealthCheckPeriod <= 0 {
@@ -247,6 +255,7 @@ func GetDefaultConfigFilePath(filename string) string {
 	return filepath.Join("./", filename)
 }
 
+// GetReadHeaderTimeout returns the read header timeout from config file or default value.
 func (m Metrics) GetReadHeaderTimeout() time.Duration {
 	if m.ReadHeaderTimeout <= 0 {
 		return DefaultReadHeaderTimeout
@@ -254,6 +263,7 @@ func (m Metrics) GetReadHeaderTimeout() time.Duration {
 	return m.ReadHeaderTimeout
 }
 
+// GetTimeout returns the metrics server timeout from config file or default value.
 func (m Metrics) GetTimeout() time.Duration {
 	if m.Timeout <= 0 {
 		return DefaultMetricsServerTimeout
@@ -261,6 +271,7 @@ func (m Metrics) GetTimeout() time.Duration {
 	return m.Timeout
 }
 
+// Filter returns a filtered global config based on the group name.
 func (gc GlobalConfig) Filter(groupName string) *GlobalConfig {
 	if _, ok := gc.Servers[groupName]; !ok {
 		return nil

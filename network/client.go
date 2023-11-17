@@ -39,6 +39,7 @@ type Client struct {
 	ReceiveDeadline    time.Duration
 	SendDeadline       time.Duration
 	ReceiveTimeout     time.Duration
+	DialTimeout        time.Duration
 	ID                 string
 	Network            string // tcp/udp/unix
 	Address            string
@@ -69,10 +70,11 @@ func NewClient(ctx context.Context, clientConfig *config.Client, logger zerolog.
 
 	// Create a resolved client.
 	client = Client{
-		ctx:     clientCtx,
-		mu:      sync.Mutex{},
-		Network: clientConfig.Network,
-		Address: addr,
+		ctx:         clientCtx,
+		mu:          sync.Mutex{},
+		Network:     clientConfig.Network,
+		Address:     addr,
+		DialTimeout: clientConfig.DialTimeout,
 	}
 
 	// Fall back to the original network and address if the address can't be resolved.
@@ -84,7 +86,7 @@ func NewClient(ctx context.Context, clientConfig *config.Client, logger zerolog.
 	}
 
 	// Create a new connection.
-	conn, origErr := net.Dial(client.Network, client.Address)
+	conn, origErr := net.DialTimeout(client.Network, client.Address, client.DialTimeout)
 	if origErr != nil {
 		err := gerr.ErrClientConnectionFailed.Wrap(origErr)
 		logger.Error().Err(err).Msg("Failed to create a new connection")

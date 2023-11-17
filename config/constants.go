@@ -103,6 +103,7 @@ const (
 	DefaultTCPKeepAlivePeriod = 30 * time.Second
 	DefaultTCPKeepAlive       = false
 	DefaultReceiveTimeout     = 0
+	DefaultDialTimeout        = 60 * time.Second
 
 	// Pool constants.
 	EmptyPoolCapacity        = 0

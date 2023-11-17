@@ -37,6 +37,7 @@ type Client struct {
 	ReceiveDeadline    time.Duration `json:"receiveDeadline" jsonschema:"oneof_type=string;integer"`
 	ReceiveTimeout     time.Duration `json:"receiveTimeout" jsonschema:"oneof_type=string;integer"`
 	SendDeadline       time.Duration `json:"sendDeadline" jsonschema:"oneof_type=string;integer"`
+	DialTimeout        time.Duration `json:"dialTimeout" jsonschema:"oneof_type=string;integer"`
 }
 
 type Logger struct {

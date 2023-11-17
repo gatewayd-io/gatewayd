@@ -116,6 +116,7 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 		ReceiveDeadline:    DefaultReceiveDeadline,
 		ReceiveTimeout:     DefaultReceiveTimeout,
 		SendDeadline:       DefaultSendDeadline,
+		DialTimeout:        DefaultDialTimeout,
 	}
 
 	defaultPool := Pool{
