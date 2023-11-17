@@ -192,6 +192,8 @@ func (c *Client) Send(data []byte) (int, *gerr.GatewayDError) {
 		},
 	).Msg("Sent data to server")
 
+	span.AddEvent("Sent data to server")
+
 	return sent, nil
 }
 
@@ -232,6 +234,9 @@ func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 			break
 		}
 	}
+
+	span.AddEvent("Received data from server")
+
 	return received, buffer.Bytes(), nil
 }
 
@@ -276,6 +281,7 @@ func (c *Client) Reconnect() error {
 	c.connected.Store(true)
 	c.logger.Debug().Str("address", c.Address).Msg("Reconnected to server")
 	metrics.ServerConnections.Inc()
+	span.AddEvent("Reconnected to server")
 
 	return nil
 }
@@ -312,6 +318,8 @@ func (c *Client) Close() {
 	c.Network = ""
 
 	metrics.ServerConnections.Dec()
+
+	span.AddEvent("Closed connection to server")
 }
 
 // IsConnected checks if the client is still connected to the server.

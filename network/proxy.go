@@ -721,6 +721,9 @@ func (pr *Proxy) receiveTrafficFromClient(conn net.Conn) ([]byte, *gerr.GatewayD
 			"remote": RemoteAddr(conn),
 		},
 	).Msg("Received data from client")
+
+	span.AddEvent("Received data from client")
+
 	metrics.BytesReceivedFromClient.Observe(float64(length))
 	metrics.TotalTrafficBytes.Observe(float64(length))
 
@@ -752,6 +755,8 @@ func (pr *Proxy) sendTrafficToServer(client *Client, request []byte) (int, *gerr
 		},
 	).Msg("Sent data to database")
 
+	span.AddEvent("Sent data to database")
+
 	metrics.BytesSentToServer.Observe(float64(sent))
 	metrics.TotalTrafficBytes.Observe(float64(sent))
 
@@ -778,6 +783,8 @@ func (pr *Proxy) receiveTrafficFromServer(client *Client) (int, []byte, *gerr.Ga
 	}
 
 	pr.logger.Debug().Fields(fields).Msg("Received data from database")
+
+	span.AddEvent("Received data from database")
 
 	metrics.BytesReceivedFromServer.Observe(float64(received))
 	metrics.TotalTrafficBytes.Observe(float64(received))
