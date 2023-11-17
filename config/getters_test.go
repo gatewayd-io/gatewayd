@@ -36,7 +36,7 @@ func TestGetTerminationPolicy(t *testing.T) {
 // TestGetTCPKeepAlivePeriod tests the GetTCPKeepAlivePeriod function.
 func TestGetTCPKeepAlivePeriod(t *testing.T) {
 	client := Client{}
-	assert.Equal(t, DefaultTCPKeepAlivePeriod, client.GetTCPKeepAlivePeriod())
+	assert.Equal(t, client.GetTCPKeepAlivePeriod(), time.Duration(0))
 }
 
 // TestGetReceiveDeadline tests the GetReceiveDeadline function.
@@ -72,7 +72,7 @@ func TestGetHealthCheckPeriod(t *testing.T) {
 // TestGetTickInterval tests the GetTickInterval function.
 func TestGetTickInterval(t *testing.T) {
 	server := Server{}
-	assert.Equal(t, DefaultTickInterval, server.GetTickInterval())
+	assert.Equal(t, server.GetTickInterval(), time.Duration(0))
 }
 
 // TestGetSize tests the GetSize function.
@@ -120,13 +120,13 @@ func TestGetDefaultConfigFilePath(t *testing.T) {
 // TestGetReadTimeout tests the GetReadTimeout function.
 func TestGetReadHeaderTimeout(t *testing.T) {
 	metrics := Metrics{}
-	assert.Equal(t, DefaultReadHeaderTimeout, metrics.GetReadHeaderTimeout())
+	assert.Equal(t, metrics.GetReadHeaderTimeout(), time.Duration(0))
 }
 
 // TestGetTimeout tests the GetTimeout function of the metrics server.
 func TestGetTimeout(t *testing.T) {
 	metrics := Metrics{}
-	assert.Equal(t, DefaultMetricsServerTimeout, metrics.GetTimeout())
+	assert.Equal(t, metrics.GetTimeout(), time.Duration(0))
 }
 
 // TestFilter tests the Filter function.

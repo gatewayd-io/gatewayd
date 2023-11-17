@@ -134,6 +134,7 @@ func TestRunServer(t *testing.T) {
 				ReceiveChunkSize:   config.DefaultChunkSize,
 				ReceiveDeadline:    config.DefaultReceiveDeadline,
 				SendDeadline:       config.DefaultSendDeadline,
+				DialTimeout:        config.DefaultDialTimeout,
 				TCPKeepAlive:       false,
 				TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 			},
