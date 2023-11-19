@@ -2,6 +2,7 @@ package network
 
 import (
 	"context"
+	"net"
 	"testing"
 	"time"
 
@@ -24,9 +25,9 @@ func TestRetry(t *testing.T) {
 		t.Run("nil", func(t *testing.T) {
 			// Nil retry should just dial the connection once.
 			var retry *Retry
-			_, err := retry.DialTimeout("", "", 0)
+			_, err := retry.Retry(nil)
 			assert.Error(t, err)
-			assert.ErrorContains(t, err, "dial: unknown network ")
+			assert.ErrorContains(t, err, "callback is nil")
 		})
 		t.Run("retry without timeout", func(t *testing.T) {
 			retry := NewRetry(0, 0, 0, false, logger)
@@ -35,10 +36,17 @@ func TestRetry(t *testing.T) {
 			assert.Equal(t, float64(0), retry.BackoffMultiplier)
 			assert.False(t, retry.DisableBackoffCaps)
 
-			conn, err := retry.DialTimeout("tcp", "localhost:5432", 0)
+			conn, err := retry.Retry(func() (any, error) {
+				return net.Dial("tcp", "localhost:5432") //nolint: wrapcheck
+			})
 			assert.NoError(t, err)
 			assert.NotNil(t, conn)
-			conn.Close()
+			assert.IsType(t, &net.TCPConn{}, conn)
+			if tcpConn, ok := conn.(*net.TCPConn); ok {
+				tcpConn.Close()
+			} else {
+				t.Errorf("Unexpected connection type: %T", conn)
+			}
 		})
 		t.Run("retry with timeout", func(t *testing.T) {
 			retry := NewRetry(
@@ -53,10 +61,17 @@ func TestRetry(t *testing.T) {
 			assert.Equal(t, config.DefaultBackoffMultiplier, retry.BackoffMultiplier)
 			assert.False(t, retry.DisableBackoffCaps)
 
-			conn, err := retry.DialTimeout("tcp", "localhost:5432", time.Second)
+			conn, err := retry.Retry(func() (any, error) {
+				return net.DialTimeout("tcp", "localhost:5432", config.DefaultDialTimeout) //nolint: wrapcheck
+			})
 			assert.NoError(t, err)
 			assert.NotNil(t, conn)
-			conn.Close()
+			assert.IsType(t, &net.TCPConn{}, conn)
+			if tcpConn, ok := conn.(*net.TCPConn); ok {
+				tcpConn.Close()
+			} else {
+				t.Errorf("Unexpected connection type: %T", conn)
+			}
 		})
 	})
 }

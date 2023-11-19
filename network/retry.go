@@ -1,8 +1,8 @@
 package network
 
 import (
+	"errors"
 	"math"
-	"net"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -13,8 +13,10 @@ const (
 	BackoffDurationCap   = time.Minute
 )
 
+type RetryCallback func() (any, error)
+
 type IRetry interface {
-	DialTimeout(network, address string, timeout time.Duration) (net.Conn, error)
+	Retry(_ RetryCallback) (any, error)
 }
 
 type Retry struct {
@@ -27,22 +29,21 @@ type Retry struct {
 
 var _ IRetry = (*Retry)(nil)
 
-// DialTimeout dials a connection with a timeout, retrying if it fails.
+// Retry runs the callback function and retries it if it fails.
 // It'll wait for the duration of the backoff between retries.
-func (r *Retry) DialTimeout(network, address string, timeout time.Duration) (net.Conn, error) {
+func (r *Retry) Retry(callback RetryCallback) (any, error) {
 	var (
-		conn  net.Conn
-		err   error
-		retry int
+		object any
+		err    error
+		retry  int
 	)
 
-	if r == nil {
-		// Just dial the connection once.
-		if timeout == 0 {
-			return net.Dial(network, address) //nolint: wrapcheck
-		}
+	if callback == nil {
+		return nil, errors.New("callback is nil")
+	}
 
-		return net.DialTimeout(network, address, timeout) //nolint: wrapcheck
+	if r == nil && callback != nil {
+		return callback()
 	}
 
 	// The first attempt counts as a retry.
@@ -80,30 +81,23 @@ func (r *Retry) DialTimeout(network, address string, timeout time.Duration) (net
 					"retry": retry,
 					"delay": backoffDuration.String(),
 				},
-			).Msg("Trying to connect")
+			).Msg("Trying to run callback again")
 		} else {
-			r.logger.Trace().Msg("Trying to connect for the first time")
+			r.logger.Trace().Msg("First attempt to run callback")
 		}
 
-		// Dial the connection with a timeout if one is provided, otherwise dial the
-		// connection without a timeout. Dialing without a timeout will block
-		// indefinitely.
-		if timeout > 0 {
-			conn, err = net.DialTimeout(network, address, timeout)
-		} else {
-			conn, err = net.Dial(network, address)
-		}
-		// If the connection was successful, return it.
+		// Try and retry the callback.
+		object, err = callback()
 		if err == nil {
-			return conn, nil
+			return object, nil
 		}
 
 		time.Sleep(backoffDuration)
 	}
 
-	r.logger.Error().Err(err).Msgf("Failed to connect after %d retries", retry)
+	r.logger.Error().Err(err).Msgf("Failed to run callback after %d retries", retry)
 
-	return nil, err //nolint: wrapcheck
+	return nil, err
 }
 
 func NewRetry(
