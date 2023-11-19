@@ -45,7 +45,8 @@ func (r *Retry) DialTimeout(network, address string, timeout time.Duration) (net
 		return net.DialTimeout(network, address, timeout) //nolint: wrapcheck
 	}
 
-	for ; retry < r.Retries; retry++ {
+	// The first attempt counts as a retry.
+	for ; retry <= r.Retries; retry++ {
 		// Wait for the backoff duration before retrying. The backoff duration is
 		// calculated by multiplying the backoff duration by the backoff multiplier
 		// raised to the power of the number of retries. For example, if the backoff
@@ -66,7 +67,7 @@ func (r *Retry) DialTimeout(network, address string, timeout time.Duration) (net
 		// 			1 second * 2 ^ 9 = 1 minute (capped)
 		// 			1 second * 2 ^ 10 = 1 minute (capped)
 		backoffDuration := r.Backoff * time.Duration(
-			math.Pow(r.BackoffMultiplier, float64(retry+1)),
+			math.Pow(r.BackoffMultiplier, float64(retry)),
 		)
 
 		if !r.DisableBackoffCaps && backoffDuration > BackoffDurationCap {
