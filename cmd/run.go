@@ -552,6 +552,10 @@ var runCmd = &cobra.Command{
 						attribute.String("tcpKeepAlivePeriod", client.TCPKeepAlivePeriod.String()),
 						attribute.String("localAddress", client.LocalAddr()),
 						attribute.String("remoteAddress", client.RemoteAddr()),
+						attribute.Int("retries", clientConfig.Retries),
+						attribute.String("backoff", clientConfig.GetBackoff().String()),
+						attribute.Float64("backoffMultiplier", clientConfig.BackoffMultiplier),
+						attribute.Bool("disableBackoffCaps", clientConfig.DisableBackoffCaps),
 					)
 					if client.ID != "" {
 						eventOptions = trace.WithAttributes(
@@ -578,6 +582,10 @@ var runCmd = &cobra.Command{
 						"tcpKeepAlivePeriod": client.TCPKeepAlivePeriod.String(),
 						"localAddress":       client.LocalAddr(),
 						"remoteAddress":      client.RemoteAddr(),
+						"retries":            clientConfig.Retries,
+						"backoff":            clientConfig.GetBackoff().String(),
+						"backoffMultiplier":  clientConfig.BackoffMultiplier,
+						"disableBackoffCaps": clientConfig.DisableBackoffCaps,
 					}
 					_, err := pluginRegistry.Run(
 						pluginTimeoutCtx, clientCfg, v1.HookName_HOOK_NAME_ON_NEW_CLIENT)

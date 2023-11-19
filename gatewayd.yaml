@@ -44,7 +44,7 @@ clients:
     # Retry configuration
     retries: 3 # 0 means no retry
     backoff: 1s # duration
-    backoffMultiplier: 2 # 0 means no backoff
+    backoffMultiplier: 2.0 # 0 means no backoff
     disableBackoffCaps: false
 
 pools:
