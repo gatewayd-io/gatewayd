@@ -146,7 +146,7 @@ const (
 	DefaultGRPCAPINetwork = "tcp"
 	DefaultGRPCAPIAddress = "localhost:19090"
 
-	// Policies
+	// Policies.
 	DefaultCompatibilityPolicy = Strict
 	DefaultVerificationPolicy  = PassDown
 	DefaultAcceptancePolicy    = Accept

@@ -411,10 +411,12 @@ func (c *Client) LocalAddr() string {
 }
 
 // Retry returns the retry object.
+//
+//nolint:revive
 func (c *Client) Retry() *Retry {
-	if _, ok := c.retry.(*Retry); !ok {
+	if retry, ok := c.retry.(*Retry); !ok {
 		return nil
 	} else {
-		return c.retry.(*Retry)
+		return retry
 	}
 }

@@ -9,6 +9,8 @@ func If[T any](predicate bool, truthy, falsy T) T {
 }
 
 // Exists returns true if key exists in map_, false otherwise.
+//
+//nolint:revive
 func Exists[T comparable, V any](map_ map[T]V, key T) bool {
 	_, ok := map_[key]
 	return ok
