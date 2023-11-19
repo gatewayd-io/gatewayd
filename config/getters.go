@@ -9,21 +9,21 @@ import (
 )
 
 var (
-	verificationPolicies = map[string]VerificationPolicy{
+	CompatibilityPolicies = map[string]CompatibilityPolicy{
+		"strict": Strict,
+		"loose":  Loose,
+	}
+	VerificationPolicies = map[string]VerificationPolicy{
 		"passdown": PassDown,
 		"ignore":   Ignore,
 		"abort":    Abort,
 		"remove":   Remove,
 	}
-	compatibilityPolicies = map[string]CompatibilityPolicy{
-		"strict": Strict,
-		"loose":  Loose,
-	}
-	acceptancePolicies = map[string]AcceptancePolicy{
+	AcceptancePolicies = map[string]AcceptancePolicy{
 		"accept": Accept,
 		"reject": Reject,
 	}
-	terminationPolicies = map[string]TerminationPolicy{
+	TerminationPolicies = map[string]TerminationPolicy{
 		"continue": Continue,
 		"stop":     Stop,
 	}
@@ -35,14 +35,14 @@ var (
 		"syslog":  Syslog,
 		"rsyslog": RSyslog,
 	}
-	timeFormats = map[string]string{
+	TimeFormats = map[string]string{
 		"":          zerolog.TimeFormatUnix,
 		"unix":      zerolog.TimeFormatUnix,
 		"unixms":    zerolog.TimeFormatUnixMs,
 		"unixmicro": zerolog.TimeFormatUnixMicro,
 		"unixnano":  zerolog.TimeFormatUnixNano,
 	}
-	consoleTimeFormats = map[string]string{
+	ConsoleTimeFormats = map[string]string{
 		"Layout":      time.Layout,
 		"ANSIC":       time.ANSIC,
 		"UnixDate":    time.UnixDate,
@@ -60,7 +60,7 @@ var (
 		"StampMicro":  time.StampMicro,
 		"StampNano":   time.StampNano,
 	}
-	logLevels = map[string]zerolog.Level{
+	LogLevels = map[string]zerolog.Level{
 		"trace":    zerolog.TraceLevel,
 		"debug":    zerolog.DebugLevel,
 		"info":     zerolog.InfoLevel,
@@ -71,124 +71,6 @@ var (
 		"disabled": zerolog.Disabled,
 	}
 )
-
-// GetVerificationPolicy returns the hook verification policy from plugin config file.
-func (p PluginConfig) GetVerificationPolicy() VerificationPolicy {
-	if policy, ok := verificationPolicies[p.VerificationPolicy]; ok {
-		return policy
-	}
-	return PassDown
-}
-
-// GetPluginCompatibilityPolicy returns the plugin compatibility policy from plugin config file.
-func (p PluginConfig) GetPluginCompatibilityPolicy() CompatibilityPolicy {
-	if policy, ok := compatibilityPolicies[p.CompatibilityPolicy]; ok {
-		return policy
-	}
-	return Strict
-}
-
-// GetAcceptancePolicy returns the acceptance policy from plugin config file.
-func (p PluginConfig) GetAcceptancePolicy() AcceptancePolicy {
-	if policy, ok := acceptancePolicies[p.AcceptancePolicy]; ok {
-		return policy
-	}
-	return Accept
-}
-
-// GetTerminationPolicy returns the termination policy from plugin config file.
-func (p PluginConfig) GetTerminationPolicy() TerminationPolicy {
-	if policy, ok := terminationPolicies[p.TerminationPolicy]; ok {
-		return policy
-	}
-	return Stop
-}
-
-// GetTCPKeepAlivePeriod returns the TCP keep alive period from config file or default value.
-func (c Client) GetTCPKeepAlivePeriod() time.Duration {
-	if c.TCPKeepAlivePeriod < 0 {
-		return DefaultTCPKeepAlivePeriod
-	}
-	return c.TCPKeepAlivePeriod
-}
-
-// GetReceiveDeadline returns the receive deadline from config file or default value.
-func (c Client) GetReceiveDeadline() time.Duration {
-	if c.ReceiveDeadline < 0 {
-		return DefaultReceiveDeadline
-	}
-	return c.ReceiveDeadline
-}
-
-// GetReceiveTimeout returns the receive timeout from config file or default value.
-func (c Client) GetReceiveTimeout() time.Duration {
-	if c.ReceiveTimeout < 0 {
-		return DefaultReceiveTimeout
-	}
-	return c.ReceiveTimeout
-}
-
-// GetSendDeadline returns the send deadline from config file or default value.
-func (c Client) GetSendDeadline() time.Duration {
-	if c.SendDeadline < 0 {
-		return DefaultSendDeadline
-	}
-	return c.SendDeadline
-}
-
-// GetReceiveChunkSize returns the receive chunk size from config file or default value.
-func (c Client) GetReceiveChunkSize() int {
-	if c.ReceiveChunkSize <= 0 {
-		return DefaultChunkSize
-	}
-	return c.ReceiveChunkSize
-}
-
-// GetDialTimeout returns the dial timeout from config file or default value.
-func (c Client) GetDialTimeout() time.Duration {
-	if c.DialTimeout < 0 {
-		return DefaultDialTimeout
-	}
-	return c.DialTimeout
-}
-
-// GetBackoff returns the backoff from config file or default value.
-func (c Client) GetBackoff() time.Duration {
-	if c.Backoff < 0 {
-		return DefaultBackoff
-	}
-	return c.Backoff
-}
-
-// GetHealthCheckPeriod returns the health check period from config file or default value.
-func (pr Proxy) GetHealthCheckPeriod() time.Duration {
-	if pr.HealthCheckPeriod <= 0 {
-		return DefaultHealthCheckPeriod
-	}
-	return pr.HealthCheckPeriod
-}
-
-// GetTickInterval returns the tick interval from config file or default value.
-func (s Server) GetTickInterval() time.Duration {
-	if s.TickInterval < 0 {
-		return DefaultTickInterval
-	}
-	return s.TickInterval
-}
-
-// GetSize returns the pool size from config file.
-func (p Pool) GetSize() int {
-	if p.Size == 0 {
-		return DefaultPoolSize
-	}
-
-	// Minimum pool size is 2.
-	if p.Size < MinimumPoolSize {
-		p.Size = MinimumPoolSize
-	}
-
-	return p.Size
-}
 
 // GetOutput returns the logger output from config file.
 func (l Logger) GetOutput() []LogOutput {
@@ -206,30 +88,6 @@ func (l Logger) GetOutput() []LogOutput {
 	}
 
 	return outputs
-}
-
-// GetTimeFormat returns the logger time format from config file.
-func (l Logger) GetTimeFormat() string {
-	if format, ok := timeFormats[l.TimeFormat]; ok {
-		return format
-	}
-	return zerolog.TimeFormatUnix
-}
-
-// GetConsoleTimeFormat returns the console logger's time format from config file.
-func (l Logger) GetConsoleTimeFormat() string {
-	if format, ok := consoleTimeFormats[l.ConsoleTimeFormat]; ok {
-		return format
-	}
-	return time.RFC3339
-}
-
-// GetLevel returns the logger level from config file.
-func (l Logger) GetLevel() zerolog.Level {
-	if level, ok := logLevels[l.Level]; ok {
-		return level
-	}
-	return zerolog.InfoLevel
 }
 
 // GetPlugins returns the plugins from config file.
@@ -261,22 +119,6 @@ func GetDefaultConfigFilePath(filename string) string {
 
 	// The fallback is the current directory.
 	return filepath.Join("./", filename)
-}
-
-// GetReadHeaderTimeout returns the read header timeout from config file or default value.
-func (m Metrics) GetReadHeaderTimeout() time.Duration {
-	if m.ReadHeaderTimeout < 0 {
-		return DefaultReadHeaderTimeout
-	}
-	return m.ReadHeaderTimeout
-}
-
-// GetTimeout returns the metrics server timeout from config file or default value.
-func (m Metrics) GetTimeout() time.Duration {
-	if m.Timeout < 0 {
-		return DefaultMetricsServerTimeout
-	}
-	return m.Timeout
 }
 
 // Filter returns a filtered global config based on the group name.

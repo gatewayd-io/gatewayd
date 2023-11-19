@@ -93,7 +93,11 @@ func NewProxy(
 						proxyCtx, proxy.ClientConfig, proxy.logger,
 						NewRetry(
 							proxy.ClientConfig.Retries,
-							proxy.ClientConfig.GetBackoff(),
+							config.If[time.Duration](
+								proxy.ClientConfig.Backoff > 0,
+								proxy.ClientConfig.Backoff,
+								config.DefaultBackoff,
+							),
 							proxy.ClientConfig.BackoffMultiplier,
 							proxy.ClientConfig.DisableBackoffCaps,
 							proxy.logger,
@@ -159,7 +163,11 @@ func (pr *Proxy) Connect(conn *ConnWrapper) *gerr.GatewayDError {
 				pr.ctx, pr.ClientConfig, pr.logger,
 				NewRetry(
 					pr.ClientConfig.Retries,
-					pr.ClientConfig.GetBackoff(),
+					config.If[time.Duration](
+						pr.ClientConfig.Backoff > 0,
+						pr.ClientConfig.Backoff,
+						config.DefaultBackoff,
+					),
 					pr.ClientConfig.BackoffMultiplier,
 					pr.ClientConfig.DisableBackoffCaps,
 					pr.logger,

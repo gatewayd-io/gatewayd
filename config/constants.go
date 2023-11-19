@@ -145,4 +145,10 @@ const (
 	DefaultHTTPAPIAddress = "localhost:18080"
 	DefaultGRPCAPINetwork = "tcp"
 	DefaultGRPCAPIAddress = "localhost:19090"
+
+	// Policies.
+	DefaultCompatibilityPolicy = Strict
+	DefaultVerificationPolicy  = PassDown
+	DefaultAcceptancePolicy    = Accept
+	DefaultTerminationPolicy   = Stop
 )

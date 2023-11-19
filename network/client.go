@@ -24,6 +24,7 @@ type IClient interface {
 	IsConnected() bool
 	RemoteAddr() string
 	LocalAddr() string
+	Retry() *Retry
 }
 
 type Client struct {
@@ -407,4 +408,15 @@ func (c *Client) LocalAddr() string {
 	}
 
 	return ""
+}
+
+// Retry returns the retry object.
+//
+//nolint:revive
+func (c *Client) Retry() *Retry {
+	if retry, ok := c.retry.(*Retry); !ok {
+		return nil
+	} else {
+		return retry
+	}
 }
