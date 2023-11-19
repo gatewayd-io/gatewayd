@@ -92,6 +92,7 @@ const (
 	DefaultMetricsMergerPeriod     = 5 * time.Second
 	DefaultPluginHealthCheckPeriod = 5 * time.Second
 	DefaultPluginTimeout           = 30 * time.Second
+	DefaultPluginStartTimeout      = 1 * time.Minute
 
 	// Client constants.
 	DefaultNetwork            = "tcp"
@@ -102,6 +103,11 @@ const (
 	DefaultTCPKeepAlivePeriod = 30 * time.Second
 	DefaultTCPKeepAlive       = false
 	DefaultReceiveTimeout     = 0
+	DefaultDialTimeout        = 60 * time.Second
+	DefaultRetries            = 3
+	DefaultBackoff            = 1 * time.Second
+	DefaultBackoffMultiplier  = 2.0
+	DefaultDisableBackoffCaps = false
 
 	// Pool constants.
 	EmptyPoolCapacity        = 0

@@ -32,6 +32,7 @@ type Client struct {
 	ctx       context.Context //nolint:containedctx
 	connected atomic.Bool
 	mu        sync.Mutex
+	retry     IRetry
 
 	TCPKeepAlive       bool
 	TCPKeepAlivePeriod time.Duration
@@ -39,6 +40,7 @@ type Client struct {
 	ReceiveDeadline    time.Duration
 	SendDeadline       time.Duration
 	ReceiveTimeout     time.Duration
+	DialTimeout        time.Duration
 	ID                 string
 	Network            string // tcp/udp/unix
 	Address            string
@@ -47,7 +49,9 @@ type Client struct {
 var _ IClient = (*Client)(nil)
 
 // NewClient creates a new client.
-func NewClient(ctx context.Context, clientConfig *config.Client, logger zerolog.Logger) *Client {
+func NewClient(
+	ctx context.Context, clientConfig *config.Client, logger zerolog.Logger, retry *Retry,
+) *Client {
 	clientCtx, span := otel.Tracer(config.TracerName).Start(ctx, "NewClient")
 	defer span.End()
 
@@ -69,10 +73,12 @@ func NewClient(ctx context.Context, clientConfig *config.Client, logger zerolog.
 
 	// Create a resolved client.
 	client = Client{
-		ctx:     clientCtx,
-		mu:      sync.Mutex{},
-		Network: clientConfig.Network,
-		Address: addr,
+		ctx:         clientCtx,
+		mu:          sync.Mutex{},
+		retry:       retry,
+		Network:     clientConfig.Network,
+		Address:     addr,
+		DialTimeout: clientConfig.DialTimeout,
 	}
 
 	// Fall back to the original network and address if the address can't be resolved.
@@ -83,8 +89,24 @@ func NewClient(ctx context.Context, clientConfig *config.Client, logger zerolog.
 		}
 	}
 
-	// Create a new connection.
-	conn, origErr := net.Dial(client.Network, client.Address)
+	var origErr error
+	// Create a new connection and retry a few times if needed.
+	//nolint:wrapcheck
+	if conn, err := client.retry.Retry(func() (any, error) {
+		if client.DialTimeout > 0 {
+			return net.DialTimeout(client.Network, client.Address, client.DialTimeout)
+		} else {
+			return net.Dial(client.Network, client.Address)
+		}
+	}); err != nil {
+		origErr = err
+	} else {
+		if netConn, ok := conn.(net.Conn); ok {
+			client.conn = netConn
+		} else {
+			origErr = fmt.Errorf("unexpected connection type: %T", conn)
+		}
+	}
 	if origErr != nil {
 		err := gerr.ErrClientConnectionFailed.Wrap(origErr)
 		logger.Error().Err(err).Msg("Failed to create a new connection")
@@ -92,7 +114,6 @@ func NewClient(ctx context.Context, clientConfig *config.Client, logger zerolog.
 		return nil
 	}
 
-	client.conn = conn
 	client.connected.Store(true)
 
 	// Set the TCP keep alive.
@@ -141,7 +162,11 @@ func NewClient(ctx context.Context, clientConfig *config.Client, logger zerolog.
 
 	logger.Trace().Str("address", client.Address).Msg("New client created")
 	client.ID = GetID(
-		conn.LocalAddr().Network(), conn.LocalAddr().String(), config.DefaultSeed, logger)
+		client.conn.LocalAddr().Network(),
+		client.conn.LocalAddr().String(),
+		config.DefaultSeed,
+		logger,
+	)
 
 	metrics.ServerConnections.Inc()
 
@@ -181,6 +206,8 @@ func (c *Client) Send(data []byte) (int, *gerr.GatewayDError) {
 			"address": c.Address,
 		},
 	).Msg("Sent data to server")
+
+	span.AddEvent("Sent data to server")
 
 	return sent, nil
 }
@@ -222,6 +249,9 @@ func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 			break
 		}
 	}
+
+	span.AddEvent("Received data from server")
+
 	return received, buffer.Bytes(), nil
 }
 
@@ -245,19 +275,40 @@ func (c *Client) Reconnect() error {
 	c.Address = address
 	c.Network = network
 
-	conn, err := net.Dial(c.Network, c.Address)
-	if err != nil {
-		c.logger.Error().Err(err).Msg("Failed to reconnect")
-		span.RecordError(err)
-		return gerr.ErrClientConnectionFailed.Wrap(err)
+	var origErr error
+	// Create a new connection and retry a few times if needed.
+	//nolint:wrapcheck
+	if conn, err := c.retry.Retry(func() (any, error) {
+		if c.DialTimeout > 0 {
+			return net.DialTimeout(c.Network, c.Address, c.DialTimeout)
+		} else {
+			return net.Dial(c.Network, c.Address)
+		}
+	}); err != nil {
+		origErr = err
+	} else {
+		if netConn, ok := conn.(net.Conn); ok {
+			c.conn = netConn
+		} else {
+			origErr = fmt.Errorf("unexpected connection type: %T", conn)
+		}
+	}
+	if origErr != nil {
+		c.logger.Error().Err(origErr).Msg("Failed to reconnect")
+		span.RecordError(origErr)
+		return gerr.ErrClientConnectionFailed.Wrap(origErr)
 	}
 
-	c.conn = conn
 	c.ID = GetID(
-		conn.LocalAddr().Network(), conn.LocalAddr().String(), config.DefaultSeed, c.logger)
+		c.conn.LocalAddr().Network(),
+		c.conn.LocalAddr().String(),
+		config.DefaultSeed,
+		c.logger,
+	)
 	c.connected.Store(true)
 	c.logger.Debug().Str("address", c.Address).Msg("Reconnected to server")
 	metrics.ServerConnections.Inc()
+	span.AddEvent("Reconnected to server")
 
 	return nil
 }
@@ -294,6 +345,8 @@ func (c *Client) Close() {
 	c.Network = ""
 
 	metrics.ServerConnections.Dec()
+
+	span.AddEvent("Closed connection to server")
 }
 
 // IsConnected checks if the client is still connected to the server.

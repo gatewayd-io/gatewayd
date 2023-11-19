@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"sort"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	sdkPlugin "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin"
@@ -44,7 +45,7 @@ type IRegistry interface {
 	ForEach(f func(sdkPlugin.Identifier, *Plugin))
 	Remove(pluginID sdkPlugin.Identifier)
 	Shutdown()
-	LoadPlugins(ctx context.Context, plugins []config.Plugin)
+	LoadPlugins(ctx context.Context, plugins []config.Plugin, startTimeout time.Duration)
 	RegisterHooks(ctx context.Context, pluginID sdkPlugin.Identifier)
 
 	// Hook management
@@ -62,6 +63,7 @@ type Registry struct {
 	Verification  config.VerificationPolicy
 	Acceptance    config.AcceptancePolicy
 	Termination   config.TerminationPolicy
+	StartTimeout  time.Duration
 }
 
 var _ IRegistry = (*Registry)(nil)
@@ -383,7 +385,9 @@ func (reg *Registry) Run(
 }
 
 // LoadPlugins loads plugins from the config file.
-func (reg *Registry) LoadPlugins(ctx context.Context, plugins []config.Plugin) {
+func (reg *Registry) LoadPlugins(
+	ctx context.Context, plugins []config.Plugin, startTimeout time.Duration,
+) {
 	// TODO: Append built-in plugins to the list of plugins
 	// Built-in plugins are plugins that are compiled and shipped with the gatewayd binary.
 	ctx, span := otel.Tracer("").Start(ctx, "Load plugins")
@@ -484,6 +488,7 @@ func (reg *Registry) LoadPlugins(ctx context.Context, plugins []config.Plugin) {
 				MinPort:      config.DefaultMinPort,
 				MaxPort:      config.DefaultMaxPort,
 				AutoMTLS:     true,
+				StartTimeout: startTimeout,
 			},
 		)
 

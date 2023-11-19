@@ -248,7 +248,7 @@ var runCmd = &cobra.Command{
 		)
 
 		// Load plugins and register their hooks.
-		pluginRegistry.LoadPlugins(runCtx, conf.Plugin.Plugins)
+		pluginRegistry.LoadPlugins(runCtx, conf.Plugin.Plugins, conf.Plugin.StartTimeout)
 
 		// Start the metrics merger if enabled.
 		var metricsMerger *metrics.Merger
@@ -295,7 +295,7 @@ var runCmd = &cobra.Command{
 					logger.Info().Str("name", pluginId.Name).Msg("Reloading crashed plugin")
 					pluginConfig := conf.Plugin.GetPlugins(pluginId.Name)
 					if pluginConfig != nil {
-						pluginRegistry.LoadPlugins(runCtx, pluginConfig)
+						pluginRegistry.LoadPlugins(runCtx, pluginConfig, conf.Plugin.StartTimeout)
 					}
 				} else {
 					logger.Trace().Str("name", pluginId.Name).Msg("Successfully pinged plugin")
@@ -415,7 +415,15 @@ var runCmd = &cobra.Command{
 
 			// Check if the metrics server is already running before registering the handler.
 			if _, err = http.Get(address); err != nil { //nolint:gosec
-				mux.Handle(metricsConfig.Path, gziphandler.GzipHandler(handler))
+				// The timeout handler limits the nested handlers from running for too long.
+				mux.Handle(
+					metricsConfig.Path,
+					http.TimeoutHandler(
+						gziphandler.GzipHandler(handler),
+						metricsConfig.GetTimeout(),
+						"The request timed out while fetching the metrics",
+					),
+				)
 			} else {
 				logger.Warn().Msg("Metrics server is already running, consider changing the port")
 				span.RecordError(err)
@@ -426,9 +434,16 @@ var runCmd = &cobra.Command{
 				Addr:              metricsConfig.Address,
 				Handler:           mux,
 				ReadHeaderTimeout: metricsConfig.GetReadHeaderTimeout(),
+				ReadTimeout:       metricsConfig.GetTimeout(),
+				WriteTimeout:      metricsConfig.GetTimeout(),
+				IdleTimeout:       metricsConfig.GetTimeout(),
 			}
 
-			logger.Info().Str("address", address).Msg("Metrics are exposed")
+			logger.Info().Fields(map[string]interface{}{
+				"address":           address,
+				"timeout":           metricsConfig.GetTimeout().String(),
+				"readHeaderTimeout": metricsConfig.GetReadHeaderTimeout().String(),
+			}).Msg("Metrics are exposed")
 
 			if metricsConfig.CertFile != "" && metricsConfig.KeyFile != "" {
 				// Set up TLS.
@@ -507,11 +522,21 @@ var runCmd = &cobra.Command{
 			clients[name].ReceiveTimeout = clients[name].GetReceiveTimeout()
 			clients[name].SendDeadline = clients[name].GetSendDeadline()
 			clients[name].ReceiveChunkSize = clients[name].GetReceiveChunkSize()
+			clients[name].DialTimeout = clients[name].GetDialTimeout()
 
 			// Add clients to the pool.
 			for i := 0; i < cfg.GetSize(); i++ {
 				clientConfig := clients[name]
-				client := network.NewClient(runCtx, clientConfig, logger)
+				client := network.NewClient(
+					runCtx, clientConfig, logger,
+					network.NewRetry(
+						clientConfig.Retries,
+						clientConfig.GetBackoff(),
+						clientConfig.BackoffMultiplier,
+						clientConfig.DisableBackoffCaps,
+						loggers[name],
+					),
+				)
 
 				if client != nil {
 					eventOptions := trace.WithAttributes(
@@ -522,10 +547,15 @@ var runCmd = &cobra.Command{
 						attribute.String("receiveDeadline", client.ReceiveDeadline.String()),
 						attribute.String("receiveTimeout", client.ReceiveTimeout.String()),
 						attribute.String("sendDeadline", client.SendDeadline.String()),
+						attribute.String("dialTimeout", client.DialTimeout.String()),
 						attribute.Bool("tcpKeepAlive", client.TCPKeepAlive),
 						attribute.String("tcpKeepAlivePeriod", client.TCPKeepAlivePeriod.String()),
 						attribute.String("localAddress", client.LocalAddr()),
 						attribute.String("remoteAddress", client.RemoteAddr()),
+						attribute.Int("retries", clientConfig.Retries),
+						attribute.String("backoff", clientConfig.GetBackoff().String()),
+						attribute.Float64("backoffMultiplier", clientConfig.BackoffMultiplier),
+						attribute.Bool("disableBackoffCaps", clientConfig.DisableBackoffCaps),
 					)
 					if client.ID != "" {
 						eventOptions = trace.WithAttributes(
@@ -547,8 +577,15 @@ var runCmd = &cobra.Command{
 						"receiveDeadline":    client.ReceiveDeadline.String(),
 						"receiveTimeout":     client.ReceiveTimeout.String(),
 						"sendDeadline":       client.SendDeadline.String(),
+						"dialTimeout":        client.DialTimeout.String(),
 						"tcpKeepAlive":       client.TCPKeepAlive,
 						"tcpKeepAlivePeriod": client.TCPKeepAlivePeriod.String(),
+						"localAddress":       client.LocalAddr(),
+						"remoteAddress":      client.RemoteAddr(),
+						"retries":            clientConfig.Retries,
+						"backoff":            clientConfig.GetBackoff().String(),
+						"backoffMultiplier":  clientConfig.BackoffMultiplier,
+						"disableBackoffCaps": clientConfig.DisableBackoffCaps,
 					}
 					_, err := pluginRegistry.Run(
 						pluginTimeoutCtx, clientCfg, v1.HookName_HOOK_NAME_ON_NEW_CLIENT)

@@ -89,7 +89,16 @@ func NewProxy(
 					proxy.availableConnections.Remove(client.ID)
 					client.Close()
 					// Create a new client.
-					client = NewClient(proxyCtx, proxy.ClientConfig, proxy.logger)
+					client = NewClient(
+						proxyCtx, proxy.ClientConfig, proxy.logger,
+						NewRetry(
+							proxy.ClientConfig.Retries,
+							proxy.ClientConfig.GetBackoff(),
+							proxy.ClientConfig.BackoffMultiplier,
+							proxy.ClientConfig.DisableBackoffCaps,
+							proxy.logger,
+						),
+					)
 					if client != nil && client.ID != "" {
 						if err := proxy.availableConnections.Put(client.ID, client); err != nil {
 							proxy.logger.Err(err).Msg("Failed to update the client connection")
@@ -146,7 +155,16 @@ func (pr *Proxy) Connect(conn *ConnWrapper) *gerr.GatewayDError {
 		// Pool is exhausted or is elastic.
 		if pr.Elastic {
 			// Create a new client.
-			client = NewClient(pr.ctx, pr.ClientConfig, pr.logger)
+			client = NewClient(
+				pr.ctx, pr.ClientConfig, pr.logger,
+				NewRetry(
+					pr.ClientConfig.Retries,
+					pr.ClientConfig.GetBackoff(),
+					pr.ClientConfig.BackoffMultiplier,
+					pr.ClientConfig.DisableBackoffCaps,
+					pr.logger,
+				),
+			)
 			span.AddEvent("Created a new client connection")
 			pr.logger.Debug().Str("id", client.ID[:7]).Msg("Reused the client connection")
 		} else {
@@ -721,6 +739,9 @@ func (pr *Proxy) receiveTrafficFromClient(conn net.Conn) ([]byte, *gerr.GatewayD
 			"remote": RemoteAddr(conn),
 		},
 	).Msg("Received data from client")
+
+	span.AddEvent("Received data from client")
+
 	metrics.BytesReceivedFromClient.Observe(float64(length))
 	metrics.TotalTrafficBytes.Observe(float64(length))
 
@@ -752,6 +773,8 @@ func (pr *Proxy) sendTrafficToServer(client *Client, request []byte) (int, *gerr
 		},
 	).Msg("Sent data to database")
 
+	span.AddEvent("Sent data to database")
+
 	metrics.BytesSentToServer.Observe(float64(sent))
 	metrics.TotalTrafficBytes.Observe(float64(sent))
 
@@ -778,6 +801,8 @@ func (pr *Proxy) receiveTrafficFromServer(client *Client) (int, []byte, *gerr.Ga
 	}
 
 	pr.logger.Debug().Fields(fields).Msg("Received data from database")
+
+	span.AddEvent("Received data from database")
 
 	metrics.BytesReceivedFromServer.Observe(float64(received))
 	metrics.TotalTrafficBytes.Observe(float64(received))

@@ -106,7 +106,7 @@ func (p PluginConfig) GetTerminationPolicy() TerminationPolicy {
 
 // GetTCPKeepAlivePeriod returns the TCP keep alive period from config file or default value.
 func (c Client) GetTCPKeepAlivePeriod() time.Duration {
-	if c.TCPKeepAlivePeriod <= 0 {
+	if c.TCPKeepAlivePeriod < 0 {
 		return DefaultTCPKeepAlivePeriod
 	}
 	return c.TCPKeepAlivePeriod
@@ -114,7 +114,7 @@ func (c Client) GetTCPKeepAlivePeriod() time.Duration {
 
 // GetReceiveDeadline returns the receive deadline from config file or default value.
 func (c Client) GetReceiveDeadline() time.Duration {
-	if c.ReceiveDeadline <= 0 {
+	if c.ReceiveDeadline < 0 {
 		return DefaultReceiveDeadline
 	}
 	return c.ReceiveDeadline
@@ -122,7 +122,7 @@ func (c Client) GetReceiveDeadline() time.Duration {
 
 // GetReceiveTimeout returns the receive timeout from config file or default value.
 func (c Client) GetReceiveTimeout() time.Duration {
-	if c.ReceiveTimeout <= 0 {
+	if c.ReceiveTimeout < 0 {
 		return DefaultReceiveTimeout
 	}
 	return c.ReceiveTimeout
@@ -130,7 +130,7 @@ func (c Client) GetReceiveTimeout() time.Duration {
 
 // GetSendDeadline returns the send deadline from config file or default value.
 func (c Client) GetSendDeadline() time.Duration {
-	if c.SendDeadline <= 0 {
+	if c.SendDeadline < 0 {
 		return DefaultSendDeadline
 	}
 	return c.SendDeadline
@@ -144,6 +144,22 @@ func (c Client) GetReceiveChunkSize() int {
 	return c.ReceiveChunkSize
 }
 
+// GetDialTimeout returns the dial timeout from config file or default value.
+func (c Client) GetDialTimeout() time.Duration {
+	if c.DialTimeout < 0 {
+		return DefaultDialTimeout
+	}
+	return c.DialTimeout
+}
+
+// GetBackoff returns the backoff from config file or default value.
+func (c Client) GetBackoff() time.Duration {
+	if c.Backoff < 0 {
+		return DefaultBackoff
+	}
+	return c.Backoff
+}
+
 // GetHealthCheckPeriod returns the health check period from config file or default value.
 func (pr Proxy) GetHealthCheckPeriod() time.Duration {
 	if pr.HealthCheckPeriod <= 0 {
@@ -154,7 +170,7 @@ func (pr Proxy) GetHealthCheckPeriod() time.Duration {
 
 // GetTickInterval returns the tick interval from config file or default value.
 func (s Server) GetTickInterval() time.Duration {
-	if s.TickInterval <= 0 {
+	if s.TickInterval < 0 {
 		return DefaultTickInterval
 	}
 	return s.TickInterval
@@ -247,20 +263,23 @@ func GetDefaultConfigFilePath(filename string) string {
 	return filepath.Join("./", filename)
 }
 
+// GetReadHeaderTimeout returns the read header timeout from config file or default value.
 func (m Metrics) GetReadHeaderTimeout() time.Duration {
-	if m.ReadHeaderTimeout <= 0 {
+	if m.ReadHeaderTimeout < 0 {
 		return DefaultReadHeaderTimeout
 	}
 	return m.ReadHeaderTimeout
 }
 
+// GetTimeout returns the metrics server timeout from config file or default value.
 func (m Metrics) GetTimeout() time.Duration {
-	if m.Timeout <= 0 {
+	if m.Timeout < 0 {
 		return DefaultMetricsServerTimeout
 	}
 	return m.Timeout
 }
 
+// Filter returns a filtered global config based on the group name.
 func (gc GlobalConfig) Filter(groupName string) *GlobalConfig {
 	if _, ok := gc.Servers[groupName]; !ok {
 		return nil

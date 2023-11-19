@@ -33,10 +33,12 @@ func CreateNewClient(t *testing.T) *Client {
 			ReceiveDeadline:    config.DefaultReceiveDeadline,
 			ReceiveTimeout:     config.DefaultReceiveTimeout,
 			SendDeadline:       config.DefaultSendDeadline,
+			DialTimeout:        config.DefaultDialTimeout,
 			TCPKeepAlive:       false,
 			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 		},
-		logger)
+		logger,
+		nil)
 
 	return client
 }
@@ -144,9 +146,10 @@ func BenchmarkNewClient(b *testing.B) {
 			ReceiveChunkSize:   config.DefaultChunkSize,
 			ReceiveDeadline:    config.DefaultReceiveDeadline,
 			SendDeadline:       config.DefaultSendDeadline,
+			DialTimeout:        config.DefaultDialTimeout,
 			TCPKeepAlive:       false,
 			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
-		}, logger)
+		}, logger, nil)
 		client.Close()
 	}
 }
@@ -168,10 +171,11 @@ func BenchmarkSend(b *testing.B) {
 			ReceiveChunkSize:   config.DefaultChunkSize,
 			ReceiveDeadline:    config.DefaultReceiveDeadline,
 			SendDeadline:       config.DefaultSendDeadline,
+			DialTimeout:        config.DefaultDialTimeout,
 			TCPKeepAlive:       false,
 			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 		},
-		logger)
+		logger, nil)
 	defer client.Close()
 
 	packet := CreatePgStartupPacket()
@@ -198,10 +202,11 @@ func BenchmarkReceive(b *testing.B) {
 			ReceiveDeadline:    config.DefaultReceiveDeadline,
 			ReceiveTimeout:     1 * time.Millisecond,
 			SendDeadline:       config.DefaultSendDeadline,
+			DialTimeout:        config.DefaultDialTimeout,
 			TCPKeepAlive:       false,
 			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 		},
-		logger)
+		logger, nil)
 	defer client.Close()
 
 	packet := CreatePgStartupPacket()
@@ -228,10 +233,11 @@ func BenchmarkIsConnected(b *testing.B) {
 			ReceiveChunkSize:   config.DefaultChunkSize,
 			ReceiveDeadline:    config.DefaultReceiveDeadline,
 			SendDeadline:       config.DefaultSendDeadline,
+			DialTimeout:        config.DefaultDialTimeout,
 			TCPKeepAlive:       false,
 			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 		},
-		logger)
+		logger, nil)
 	defer client.Close()
 
 	for i := 0; i < b.N; i++ {

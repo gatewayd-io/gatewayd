@@ -116,6 +116,11 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 		ReceiveDeadline:    DefaultReceiveDeadline,
 		ReceiveTimeout:     DefaultReceiveTimeout,
 		SendDeadline:       DefaultSendDeadline,
+		DialTimeout:        DefaultDialTimeout,
+		Retries:            DefaultRetries,
+		Backoff:            DefaultBackoff,
+		BackoffMultiplier:  DefaultBackoffMultiplier,
+		DisableBackoffCaps: DefaultDisableBackoffCaps,
 	}
 
 	defaultPool := Pool{
@@ -210,6 +215,7 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 		HealthCheckPeriod:   DefaultPluginHealthCheckPeriod,
 		ReloadOnCrash:       true,
 		Timeout:             DefaultPluginTimeout,
+		StartTimeout:        DefaultPluginStartTimeout,
 	}
 
 	if c.GlobalKoanf != nil {

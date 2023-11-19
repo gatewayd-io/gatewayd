@@ -24,6 +24,7 @@ type PluginConfig struct {
 	HealthCheckPeriod   time.Duration `json:"healthCheckPeriod" jsonschema:"oneof_type=string;integer"`
 	ReloadOnCrash       bool          `json:"reloadOnCrash"`
 	Timeout             time.Duration `json:"timeout" jsonschema:"oneof_type=string;integer"`
+	StartTimeout        time.Duration `json:"startTimeout" jsonschema:"oneof_type=string;integer"`
 	Plugins             []Plugin      `json:"plugins"`
 }
 
@@ -36,6 +37,11 @@ type Client struct {
 	ReceiveDeadline    time.Duration `json:"receiveDeadline" jsonschema:"oneof_type=string;integer"`
 	ReceiveTimeout     time.Duration `json:"receiveTimeout" jsonschema:"oneof_type=string;integer"`
 	SendDeadline       time.Duration `json:"sendDeadline" jsonschema:"oneof_type=string;integer"`
+	DialTimeout        time.Duration `json:"dialTimeout" jsonschema:"oneof_type=string;integer"`
+	Retries            int           `json:"retries"`
+	Backoff            time.Duration `json:"backoff" jsonschema:"oneof_type=string;integer"`
+	BackoffMultiplier  float64       `json:"backoffMultiplier"`
+	DisableBackoffCaps bool          `json:"disableBackoffCaps"`
 }
 
 type Logger struct {

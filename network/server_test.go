@@ -65,13 +65,13 @@ func TestRunServer(t *testing.T) {
 
 	// Create a connection newPool.
 	newPool := pool.NewPool(context.Background(), 3)
-	client1 := NewClient(context.Background(), &clientConfig, logger)
+	client1 := NewClient(context.Background(), &clientConfig, logger, nil)
 	err := newPool.Put(client1.ID, client1)
 	assert.Nil(t, err)
-	client2 := NewClient(context.Background(), &clientConfig, logger)
+	client2 := NewClient(context.Background(), &clientConfig, logger, nil)
 	err = newPool.Put(client2.ID, client2)
 	assert.Nil(t, err)
-	client3 := NewClient(context.Background(), &clientConfig, logger)
+	client3 := NewClient(context.Background(), &clientConfig, logger, nil)
 	err = newPool.Put(client3.ID, client3)
 	assert.Nil(t, err)
 
@@ -134,10 +134,12 @@ func TestRunServer(t *testing.T) {
 				ReceiveChunkSize:   config.DefaultChunkSize,
 				ReceiveDeadline:    config.DefaultReceiveDeadline,
 				SendDeadline:       config.DefaultSendDeadline,
+				DialTimeout:        config.DefaultDialTimeout,
 				TCPKeepAlive:       false,
 				TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 			},
-			logger)
+			logger,
+			nil)
 
 		assert.NotNil(t, client)
 		sent, err := client.Send(CreatePgStartupPacket())

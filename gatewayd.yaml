@@ -7,9 +7,10 @@ loggers:
     noColor: False
     timeFormat: "unix" # unixms, unixmicro and unixnano
     consoleTimeFormat: "RFC3339" # Go time format string
-    # If output is file, the following fields are used.
+    # If the output contains "file", the following fields are used:
     fileName: "gatewayd.log"
     maxSize: 500 # MB
+    # If maxBackups and maxAge are both 0, no old log files will be deleted.
     maxBackups: 5
     maxAge: 30 # days
     compress: True
@@ -39,6 +40,12 @@ clients:
     receiveDeadline: 0s # duration, 0ms/0s means no deadline
     receiveTimeout: 0s # duration, 0ms/0s means no timeout
     sendDeadline: 0s # duration, 0ms/0s means no deadline
+    dialTimeout: 60s # duration
+    # Retry configuration
+    retries: 3 # 0 means no retry
+    backoff: 1s # duration
+    backoffMultiplier: 2.0 # 0 means no backoff
+    disableBackoffCaps: false
 
 pools:
   default:
