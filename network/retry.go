@@ -11,7 +11,6 @@ import (
 const (
 	BackoffMultiplierCap = 10
 	BackoffDurationCap   = time.Minute
-	DefaultBackoff       = 1 * time.Second
 )
 
 type IRetry interface {
@@ -40,10 +39,10 @@ func (r *Retry) DialTimeout(network, address string, timeout time.Duration) (net
 	if r == nil {
 		// Just dial the connection once.
 		if timeout == 0 {
-			return net.Dial(network, address)
-		} else {
-			return net.DialTimeout(network, address, timeout)
+			return net.Dial(network, address) //nolint: wrapcheck
 		}
+
+		return net.DialTimeout(network, address, timeout) //nolint: wrapcheck
 	}
 
 	for ; retry < r.Retries; retry++ {
@@ -103,7 +102,7 @@ func (r *Retry) DialTimeout(network, address string, timeout time.Duration) (net
 
 	r.logger.Error().Err(err).Msgf("Failed to connect after %d retries", retry)
 
-	return nil, err
+	return nil, err //nolint: wrapcheck
 }
 
 func NewRetry(
@@ -119,10 +118,6 @@ func NewRetry(
 		BackoffMultiplier:  backoffMultiplier,
 		DisableBackoffCaps: disableBackoffCaps,
 		logger:             logger,
-	}
-
-	if retry.Backoff == 0 {
-		retry.Backoff = DefaultBackoff
 	}
 
 	if retry.Retries == 0 {

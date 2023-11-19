@@ -106,7 +106,7 @@ const (
 	DefaultDialTimeout        = 60 * time.Second
 	DefaultRetries            = 3
 	DefaultBackoff            = 1 * time.Second
-	DefaultBackoffMultiplier  = 2
+	DefaultBackoffMultiplier  = 2.0
 	DefaultDisableBackoffCaps = false
 
 	// Pool constants.
