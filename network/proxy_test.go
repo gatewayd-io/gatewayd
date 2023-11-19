@@ -38,7 +38,8 @@ func TestNewProxy(t *testing.T) {
 			TCPKeepAlive:       false,
 			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 		},
-		logger)
+		logger,
+		nil)
 	err := newPool.Put(client.ID, client)
 	assert.Nil(t, err)
 
@@ -232,7 +233,7 @@ func BenchmarkProxyConnectDisconnect(b *testing.B) {
 		TCPKeepAlive:       false,
 		TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 	}
-	newPool.Put("client", NewClient(context.Background(), &clientConfig, logger)) //nolint:errcheck
+	newPool.Put("client", NewClient(context.Background(), &clientConfig, logger, nil)) //nolint:errcheck
 
 	// Create a proxy with a fixed buffer newPool
 	proxy := NewProxy(
@@ -286,7 +287,7 @@ func BenchmarkProxyPassThrough(b *testing.B) {
 		TCPKeepAlive:       false,
 		TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 	}
-	newPool.Put("client", NewClient(context.Background(), &clientConfig, logger)) //nolint:errcheck
+	newPool.Put("client", NewClient(context.Background(), &clientConfig, logger, nil)) //nolint:errcheck
 
 	// Create a proxy with a fixed buffer newPool
 	proxy := NewProxy(
@@ -344,7 +345,7 @@ func BenchmarkProxyIsHealthyAndIsExhausted(b *testing.B) {
 		TCPKeepAlive:       false,
 		TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 	}
-	client := NewClient(context.Background(), &clientConfig, logger)
+	client := NewClient(context.Background(), &clientConfig, logger, nil)
 	newPool.Put("client", client) //nolint:errcheck
 
 	// Create a proxy with a fixed buffer newPool
@@ -401,7 +402,7 @@ func BenchmarkProxyAvailableAndBusyConnections(b *testing.B) {
 		TCPKeepAlive:       false,
 		TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 	}
-	client := NewClient(context.Background(), &clientConfig, logger)
+	client := NewClient(context.Background(), &clientConfig, logger, nil)
 	newPool.Put("client", client) //nolint:errcheck
 
 	// Create a proxy with a fixed buffer newPool

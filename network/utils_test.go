@@ -165,7 +165,7 @@ func BenchmarkTrafficData(b *testing.B) {
 		TCPKeepAlive:       false,
 		TCPKeepAlivePeriod: time.Second * 10,
 		ReceiveChunkSize:   1024,
-	}, logger)
+	}, logger, nil)
 	fields := []Field{
 		{
 			Name:  "test",

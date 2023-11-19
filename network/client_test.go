@@ -37,7 +37,8 @@ func CreateNewClient(t *testing.T) *Client {
 			TCPKeepAlive:       false,
 			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 		},
-		logger)
+		logger,
+		nil)
 
 	return client
 }
@@ -148,7 +149,7 @@ func BenchmarkNewClient(b *testing.B) {
 			DialTimeout:        config.DefaultDialTimeout,
 			TCPKeepAlive:       false,
 			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
-		}, logger)
+		}, logger, nil)
 		client.Close()
 	}
 }
@@ -174,7 +175,7 @@ func BenchmarkSend(b *testing.B) {
 			TCPKeepAlive:       false,
 			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 		},
-		logger)
+		logger, nil)
 	defer client.Close()
 
 	packet := CreatePgStartupPacket()
@@ -205,7 +206,7 @@ func BenchmarkReceive(b *testing.B) {
 			TCPKeepAlive:       false,
 			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 		},
-		logger)
+		logger, nil)
 	defer client.Close()
 
 	packet := CreatePgStartupPacket()
@@ -236,7 +237,7 @@ func BenchmarkIsConnected(b *testing.B) {
 			TCPKeepAlive:       false,
 			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 		},
-		logger)
+		logger, nil)
 	defer client.Close()
 
 	for i := 0; i < b.N; i++ {

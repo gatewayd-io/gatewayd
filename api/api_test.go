@@ -180,7 +180,7 @@ func TestGetProxies(t *testing.T) {
 		Network: config.DefaultNetwork,
 		Address: config.DefaultAddress,
 	}
-	client := network.NewClient(context.TODO(), clientConfig, zerolog.Logger{})
+	client := network.NewClient(context.TODO(), clientConfig, zerolog.Logger{}, nil)
 	newPool := pool.NewPool(context.TODO(), 1)
 	assert.Nil(t, newPool.Put(client.ID, client))
 
@@ -225,7 +225,7 @@ func TestGetServers(t *testing.T) {
 		Network: config.DefaultNetwork,
 		Address: config.DefaultAddress,
 	}
-	client := network.NewClient(context.TODO(), clientConfig, zerolog.Logger{})
+	client := network.NewClient(context.TODO(), clientConfig, zerolog.Logger{}, nil)
 	newPool := pool.NewPool(context.TODO(), 1)
 	assert.Nil(t, newPool.Put(client.ID, client))
 
