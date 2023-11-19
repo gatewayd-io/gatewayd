@@ -219,13 +219,13 @@ var runCmd = &cobra.Command{
 				TimeFormat: config.If[string](
 					config.Exists[string, string](config.TimeFormats, cfg.TimeFormat),
 					config.TimeFormats[cfg.TimeFormat],
-					config.DefaultTimeFormat,
+					config.TimeFormats[config.DefaultTimeFormat],
 				),
 				ConsoleTimeFormat: config.If[string](
 					config.Exists[string, string](
 						config.ConsoleTimeFormats, cfg.ConsoleTimeFormat),
 					config.ConsoleTimeFormats[cfg.ConsoleTimeFormat],
-					config.DefaultConsoleTimeFormat,
+					config.ConsoleTimeFormats[config.DefaultConsoleTimeFormat],
 				),
 				NoColor:        cfg.NoColor,
 				FileName:       cfg.FileName,
