@@ -152,6 +152,14 @@ func (c Client) GetDialTimeout() time.Duration {
 	return c.DialTimeout
 }
 
+// GetBackoff returns the backoff from config file or default value.
+func (c Client) GetBackoff() time.Duration {
+	if c.Backoff < 0 {
+		return DefaultBackoff
+	}
+	return c.Backoff
+}
+
 // GetHealthCheckPeriod returns the health check period from config file or default value.
 func (pr Proxy) GetHealthCheckPeriod() time.Duration {
 	if pr.HealthCheckPeriod <= 0 {

@@ -32,6 +32,7 @@ type Client struct {
 	ctx       context.Context //nolint:containedctx
 	connected atomic.Bool
 	mu        sync.Mutex
+	retry     IRetry
 
 	TCPKeepAlive       bool
 	TCPKeepAlivePeriod time.Duration
@@ -48,7 +49,9 @@ type Client struct {
 var _ IClient = (*Client)(nil)
 
 // NewClient creates a new client.
-func NewClient(ctx context.Context, clientConfig *config.Client, logger zerolog.Logger) *Client {
+func NewClient(
+	ctx context.Context, clientConfig *config.Client, logger zerolog.Logger, retry *Retry,
+) *Client {
 	clientCtx, span := otel.Tracer(config.TracerName).Start(ctx, "NewClient")
 	defer span.End()
 
@@ -72,6 +75,7 @@ func NewClient(ctx context.Context, clientConfig *config.Client, logger zerolog.
 	client = Client{
 		ctx:         clientCtx,
 		mu:          sync.Mutex{},
+		retry:       retry,
 		Network:     clientConfig.Network,
 		Address:     addr,
 		DialTimeout: clientConfig.DialTimeout,
@@ -85,16 +89,12 @@ func NewClient(ctx context.Context, clientConfig *config.Client, logger zerolog.
 		}
 	}
 
-	// Create a new connection.
 	var (
 		conn    net.Conn
 		origErr error
 	)
-	if client.DialTimeout == 0 {
-		conn, origErr = net.Dial(client.Network, client.Address)
-	} else {
-		conn, origErr = net.DialTimeout(client.Network, client.Address, client.DialTimeout)
-	}
+	// Create a new connection and retry a few times if needed.
+	conn, origErr = client.retry.DialTimeout(client.Network, client.Address, client.DialTimeout)
 	if origErr != nil {
 		err := gerr.ErrClientConnectionFailed.Wrap(origErr)
 		logger.Error().Err(err).Msg("Failed to create a new connection")
@@ -264,11 +264,8 @@ func (c *Client) Reconnect() error {
 		conn net.Conn
 		err  error
 	)
-	if c.DialTimeout == 0 {
-		conn, err = net.Dial(c.Network, c.Address)
-	} else {
-		conn, err = net.DialTimeout(c.Network, c.Address, c.DialTimeout)
-	}
+	// Create a new connection and retry a few times if needed.
+	conn, err = c.retry.DialTimeout(c.Network, c.Address, c.DialTimeout)
 	if err != nil {
 		c.logger.Error().Err(err).Msg("Failed to reconnect")
 		span.RecordError(err)

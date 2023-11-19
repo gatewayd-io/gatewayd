@@ -37,6 +37,15 @@ func (r *Retry) DialTimeout(network, address string, timeout time.Duration) (net
 		retry int
 	)
 
+	if r == nil {
+		// Just dial the connection once.
+		if timeout == 0 {
+			return net.Dial(network, address)
+		} else {
+			return net.DialTimeout(network, address, timeout)
+		}
+	}
+
 	for ; retry < r.Retries; retry++ {
 		// Wait for the backoff duration before retrying. The backoff duration is
 		// calculated by multiplying the backoff duration by the backoff multiplier

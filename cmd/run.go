@@ -527,7 +527,16 @@ var runCmd = &cobra.Command{
 			// Add clients to the pool.
 			for i := 0; i < cfg.GetSize(); i++ {
 				clientConfig := clients[name]
-				client := network.NewClient(runCtx, clientConfig, logger)
+				client := network.NewClient(
+					runCtx, clientConfig, logger,
+					network.NewRetry(
+						clientConfig.Retries,
+						clientConfig.GetBackoff(),
+						clientConfig.BackoffMultiplier,
+						clientConfig.DisableBackoffCaps,
+						loggers[name],
+					),
+				)
 
 				if client != nil {
 					eventOptions := trace.WithAttributes(

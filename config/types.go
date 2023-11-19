@@ -38,6 +38,10 @@ type Client struct {
 	ReceiveTimeout     time.Duration `json:"receiveTimeout" jsonschema:"oneof_type=string;integer"`
 	SendDeadline       time.Duration `json:"sendDeadline" jsonschema:"oneof_type=string;integer"`
 	DialTimeout        time.Duration `json:"dialTimeout" jsonschema:"oneof_type=string;integer"`
+	Retries            int           `json:"retries"`
+	Backoff            time.Duration `json:"backoff" jsonschema:"oneof_type=string;integer"`
+	BackoffMultiplier  float64       `json:"backoffMultiplier"`
+	DisableBackoffCaps bool          `json:"disableBackoffCaps"`
 }
 
 type Logger struct {

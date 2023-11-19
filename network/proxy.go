@@ -89,7 +89,16 @@ func NewProxy(
 					proxy.availableConnections.Remove(client.ID)
 					client.Close()
 					// Create a new client.
-					client = NewClient(proxyCtx, proxy.ClientConfig, proxy.logger)
+					client = NewClient(
+						proxyCtx, proxy.ClientConfig, proxy.logger,
+						NewRetry(
+							proxy.ClientConfig.Retries,
+							proxy.ClientConfig.GetBackoff(),
+							proxy.ClientConfig.BackoffMultiplier,
+							proxy.ClientConfig.DisableBackoffCaps,
+							proxy.logger,
+						),
+					)
 					if client != nil && client.ID != "" {
 						if err := proxy.availableConnections.Put(client.ID, client); err != nil {
 							proxy.logger.Err(err).Msg("Failed to update the client connection")
@@ -146,7 +155,16 @@ func (pr *Proxy) Connect(conn *ConnWrapper) *gerr.GatewayDError {
 		// Pool is exhausted or is elastic.
 		if pr.Elastic {
 			// Create a new client.
-			client = NewClient(pr.ctx, pr.ClientConfig, pr.logger)
+			client = NewClient(
+				pr.ctx, pr.ClientConfig, pr.logger,
+				NewRetry(
+					pr.ClientConfig.Retries,
+					pr.ClientConfig.GetBackoff(),
+					pr.ClientConfig.BackoffMultiplier,
+					pr.ClientConfig.DisableBackoffCaps,
+					pr.logger,
+				),
+			)
 			span.AddEvent("Created a new client connection")
 			pr.logger.Debug().Str("id", client.ID[:7]).Msg("Reused the client connection")
 		} else {
