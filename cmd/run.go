@@ -296,9 +296,6 @@ var runCmd = &cobra.Command{
 		// TODO: Move this to the plugin registry.
 		ctx, span := otel.Tracer(config.TracerName).Start(runCtx, "Plugin health check")
 
-		logger.Info().Str(
-			"healthCheckPeriod", conf.Plugin.HealthCheckPeriod.String(),
-		).Msg("Starting plugin health check scheduler")
 		// Ping the plugins to check if they are alive, and remove them if they are not.
 		startDelay := time.Now().Add(conf.Plugin.HealthCheckPeriod)
 		if _, err := healthCheckScheduler.Every(
@@ -337,6 +334,9 @@ var runCmd = &cobra.Command{
 			span.RecordError(err)
 		}
 		if pluginRegistry.Size() > 0 {
+			logger.Info().Str(
+				"healthCheckPeriod", conf.Plugin.HealthCheckPeriod.String(),
+			).Msg("Starting plugin health check scheduler")
 			healthCheckScheduler.StartAsync()
 		}
 
