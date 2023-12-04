@@ -68,9 +68,9 @@ func NewLogger(ctx context.Context, cfg LoggerConfig) zerolog.Logger {
 				},
 			)
 		case config.Syslog:
-			log.Panic("Syslog is not supported on Windows")
+			log.Fatal("Syslog is not supported on Windows")
 		case config.RSyslog:
-			log.Panic("RSyslog is not supported on Windows")
+			log.Fatal("RSyslog is not supported on Windows")
 		default:
 			outputs = append(outputs, consoleWriter)
 		}
