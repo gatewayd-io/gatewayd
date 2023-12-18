@@ -16,7 +16,7 @@ jobs:
       packages: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Set up Go 1.21
@@ -30,28 +30,32 @@ jobs:
         run: make build-release
       - name: Build and release Linux packages
         run: make build-linux-packages
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
       - name: Sign in to Docker Hub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Sign in to GitHub Container Registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and push Docker image
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v5
         with:
           context: .
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             gatewaydio/gatewayd:${{ github.ref_name }}
             gatewaydio/gatewayd:latest
             ghcr.io/gatewayd-io/gatewayd:${{ github.ref_name }}
             ghcr.io/gatewayd-io/gatewayd:latest
-          platforms: linux/amd64,linux/arm64
       - name: Scan Docker image with Syft and generate SBOM
         run: |
           go install github.com/anchore/syft/cmd/syft@latest
