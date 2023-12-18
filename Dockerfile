@@ -7,14 +7,6 @@ ARG TARGETOS
 ARG TARGETARCH
 ARG TARGETPLATFORM
 
-# IF YOU SEE THIS MESSAGE, IT MEANS THAT THE PLATFORM YOU CHOSE IS NOT SUPPORTED
-RUN if [ "${TARGETPLATFORM}" = "linux/amd64" ]; then \
-    echo "Target platform ${TARGETPLATFORM} is supported"; \
-    else \
-    echo "Target platform ${TARGETPLATFORM} is not supported"; \
-    exit 1; \
-    fi
-
 WORKDIR /gatewayd
 COPY . /gatewayd
 

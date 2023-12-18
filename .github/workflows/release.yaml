@@ -51,7 +51,7 @@ jobs:
             gatewaydio/gatewayd:latest
             ghcr.io/gatewayd-io/gatewayd:${{ github.ref_name }}
             ghcr.io/gatewayd-io/gatewayd:latest
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
       - name: Scan Docker image with Syft and generate SBOM
         run: |
           go install github.com/anchore/syft/cmd/syft@latest
