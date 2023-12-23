@@ -128,7 +128,7 @@ func StopGracefully(
 	}
 	for name, server := range servers {
 		logger.Info().Str("name", name).Msg("Stopping server")
-		server.Shutdown() //nolint:contextcheck
+		server.Shutdown()
 		span.AddEvent("Stopped server")
 	}
 	logger.Info().Msg("Stopped all servers")
