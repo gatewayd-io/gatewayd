@@ -194,7 +194,7 @@ func TestRunServer(t *testing.T) {
 		// Wait for the server to stop.
 		<-time.After(100 * time.Millisecond)
 
-		//check server status and connections
+		// check server status and connections
 		assert.False(t, server.running.Load())
 		assert.Zero(t, server.connections)
 

@@ -44,9 +44,7 @@ type IServer interface {
 	Run() *gerr.GatewayDError
 	Shutdown()
 	IsRunning() bool
-
 	CountConnections() int
-	Stop() error
 }
 
 type Server struct {
@@ -581,7 +579,25 @@ func (s *Server) Shutdown() {
 	s.mu.Unlock()
 
 	// Shutdown the server.
-	if err := s.Stop(); err != nil {
+	var err error
+	s.running.Store(false)
+	if s.listener != nil {
+		if err = s.listener.Close(); err != nil {
+			s.logger.Error().Err(err).Msg("Failed to close listener")
+		}
+	} else {
+		s.logger.Error().Msg("Listener is not initialized")
+	}
+
+	select {
+	case <-s.stopServer:
+		s.logger.Info().Msg("Server stopped")
+	default:
+		s.stopServer <- struct{}{}
+		close(s.stopServer)
+	}
+
+	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to shutdown server")
 		span.RecordError(err)
 	}
@@ -662,27 +678,4 @@ func (s *Server) CountConnections() int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return int(s.connections)
-}
-
-// Stop stops the server.
-func (s *Server) Stop() error {
-	var err error
-	s.running.Store(false)
-	if s.listener != nil {
-		if err = s.listener.Close(); err != nil {
-			s.logger.Error().Err(err).Msg("Failed to close listener")
-		}
-	} else {
-		s.logger.Error().Msg("Listener is not initialized")
-	}
-
-	select {
-	case <-s.stopServer:
-		s.logger.Info().Msg("Server stopped")
-		return err //nolint:wrapcheck
-	default:
-		s.stopServer <- struct{}{}
-		close(s.stopServer)
-		return err //nolint:wrapcheck
-	}
 }
