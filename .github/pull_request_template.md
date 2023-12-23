@@ -11,9 +11,10 @@
 - [ ] I have rebased my branch on top of the latest main branch.
 - [ ] I have performed a self-review of my own code.
 - [ ] I have commented on my code, particularly in hard-to-understand areas.
-- [ ] I have added docstring(s) and type annotations to my code.
+- [ ] I have added docstring(s) to my code.
 - [ ] I have made corresponding changes to the documentation (docs).
 - [ ] I have added tests for my changes.
+- [ ] I have signed all the commits.
 
 ## Legal Checklist
 
