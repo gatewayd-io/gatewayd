@@ -106,6 +106,11 @@ func TestRunServer(t *testing.T) {
 		config.DefaultHandshakeTimeout,
 	)
 	assert.NotNil(t, server)
+	assert.Zero(t, server.connections)
+	assert.Zero(t, server.CountConnections())
+	assert.Empty(t, server.host)
+	assert.Empty(t, server.port)
+	assert.False(t, server.running.Load())
 
 	var waitGroup sync.WaitGroup
 	waitGroup.Add(2)
@@ -188,6 +193,10 @@ func TestRunServer(t *testing.T) {
 
 		// Wait for the server to stop.
 		<-time.After(100 * time.Millisecond)
+
+		// check server status and connections
+		assert.False(t, server.running.Load())
+		assert.Zero(t, server.connections)
 
 		// Read the log file and check if the log file contains the expected log messages.
 		require.FileExists(t, "server_test.log")

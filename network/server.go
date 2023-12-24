@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	v1 "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin/v1"
@@ -34,7 +35,7 @@ const (
 )
 
 type IServer interface {
-	OnBoot(engine Engine) Action
+	OnBoot() Action
 	OnOpen(conn *ConnWrapper) ([]byte, Action)
 	OnClose(conn *ConnWrapper, err error) Action
 	OnTraffic(conn *ConnWrapper, stopConnection chan struct{}) Action
@@ -43,10 +44,10 @@ type IServer interface {
 	Run() *gerr.GatewayDError
 	Shutdown()
 	IsRunning() bool
+	CountConnections() int
 }
 
 type Server struct {
-	engine         Engine
 	proxy          IProxy
 	logger         zerolog.Logger
 	pluginRegistry *plugin.Registry
@@ -65,6 +66,13 @@ type Server struct {
 	CertFile         string
 	KeyFile          string
 	HandshakeTimeout time.Duration
+
+	listener    net.Listener
+	host        string
+	port        int
+	connections uint32
+	running     *atomic.Bool
+	stopServer  chan struct{}
 }
 
 var _ IServer = (*Server)(nil)
@@ -72,7 +80,7 @@ var _ IServer = (*Server)(nil)
 // OnBoot is called when the server is booted. It calls the OnBooting and OnBooted hooks.
 // It also sets the status to running, which is used to determine if the server should be running
 // or shutdown.
-func (s *Server) OnBoot(engine Engine) Action {
+func (s *Server) OnBoot() Action {
 	_, span := otel.Tracer("gatewayd").Start(s.ctx, "OnBoot")
 	defer span.End()
 
@@ -90,8 +98,6 @@ func (s *Server) OnBoot(engine Engine) Action {
 		span.RecordError(err)
 	}
 	span.AddEvent("Ran the OnBooting hooks")
-
-	s.engine = engine
 
 	// Set the server status to running.
 	s.mu.Lock()
@@ -216,14 +222,10 @@ func (s *Server) OnClose(conn *ConnWrapper, err error) Action {
 
 	// Shutdown the server if there are no more connections and the server is stopped.
 	// This is used to shut down the server gracefully.
-	s.mu.Lock()
-	if uint64(s.engine.CountConnections()) == 0 && s.Status == config.Stopped {
+	if uint64(s.CountConnections()) == 0 && !s.IsRunning() {
 		span.AddEvent("Shutting down the server")
-		s.mu.Unlock()
 		return Shutdown
 	}
-	s.mu.Unlock()
-
 	// Disconnect the connection from the proxy. This effectively removes the mapping between
 	// the incoming and the server connections in the pool of the busy connections and either
 	// recycles or disconnects the connections.
@@ -343,7 +345,7 @@ func (s *Server) OnShutdown() {
 	// Run the OnShutdown hooks.
 	_, err := s.pluginRegistry.Run(
 		pluginTimeoutCtx,
-		map[string]interface{}{"connections": s.engine.CountConnections()},
+		map[string]interface{}{"connections": s.CountConnections()},
 		v1.HookName_HOOK_NAME_ON_SHUTDOWN)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to run OnShutdown hook")
@@ -366,7 +368,7 @@ func (s *Server) OnTick() (time.Duration, Action) {
 	defer span.End()
 
 	s.logger.Debug().Msg("GatewayD is ticking...")
-	s.logger.Info().Str("count", strconv.Itoa(s.engine.CountConnections())).Msg(
+	s.logger.Info().Str("count", strconv.Itoa(s.CountConnections())).Msg(
 		"Active client connections")
 
 	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.pluginTimeout)
@@ -374,7 +376,7 @@ func (s *Server) OnTick() (time.Duration, Action) {
 	// Run the OnTick hooks.
 	_, err := s.pluginRegistry.Run(
 		pluginTimeoutCtx,
-		map[string]interface{}{"connections": s.engine.CountConnections()},
+		map[string]interface{}{"connections": s.CountConnections()},
 		v1.HookName_HOOK_NAME_ON_TICK)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to run OnTick hook")
@@ -431,7 +433,7 @@ func (s *Server) Run() *gerr.GatewayDError {
 		}
 	}
 
-	if action := s.OnBoot(s.engine); action != None {
+	if action := s.OnBoot(); action != None {
 		return nil
 	}
 
@@ -441,29 +443,29 @@ func (s *Server) Run() *gerr.GatewayDError {
 		return gerr.ErrServerListenFailed.Wrap(origErr)
 	}
 	s.mu.Lock()
-	s.engine.listener = listener
+	s.listener = listener
 	s.mu.Unlock()
-	defer s.engine.listener.Close()
+	defer s.listener.Close()
 
-	if s.engine.listener == nil {
+	if s.listener == nil {
 		s.logger.Error().Msg("Server is not properly initialized")
 		return nil
 	}
 
 	var port string
-	s.engine.host, port, origErr = net.SplitHostPort(s.engine.listener.Addr().String())
+	s.host, port, origErr = net.SplitHostPort(s.listener.Addr().String())
 	if origErr != nil {
 		s.logger.Error().Err(origErr).Msg("Failed to split host and port")
 		return gerr.ErrSplitHostPortFailed.Wrap(origErr)
 	}
 
-	if s.engine.port, origErr = strconv.Atoi(port); origErr != nil {
+	if s.port, origErr = strconv.Atoi(port); origErr != nil {
 		s.logger.Error().Err(origErr).Msg("Failed to convert port to integer")
 		return gerr.ErrCastFailed.Wrap(origErr)
 	}
 
 	go func(server *Server) {
-		<-server.engine.stopServer
+		<-server.stopServer
 		server.OnShutdown()
 		server.logger.Debug().Msg("Server stopped")
 	}(s)
@@ -475,7 +477,7 @@ func (s *Server) Run() *gerr.GatewayDError {
 
 		for {
 			select {
-			case <-server.engine.stopServer:
+			case <-server.stopServer:
 				return
 			default:
 				interval, action := server.OnTick()
@@ -491,7 +493,7 @@ func (s *Server) Run() *gerr.GatewayDError {
 		}
 	}(s)
 
-	s.engine.running.Store(true)
+	s.running.Store(true)
 
 	var tlsConfig *tls.Config
 	if s.EnableTLS {
@@ -507,13 +509,13 @@ func (s *Server) Run() *gerr.GatewayDError {
 
 	for {
 		select {
-		case <-s.engine.stopServer:
+		case <-s.stopServer:
 			s.logger.Info().Msg("Server stopped")
 			return nil
 		default:
-			netConn, err := s.engine.listener.Accept()
+			netConn, err := s.listener.Accept()
 			if err != nil {
-				if !s.engine.running.Load() {
+				if !s.running.Load() {
 					return nil
 				}
 				s.logger.Error().Err(err).Msg("Failed to accept connection")
@@ -532,9 +534,9 @@ func (s *Server) Run() *gerr.GatewayDError {
 					return nil
 				}
 			}
-			s.engine.mu.Lock()
-			s.engine.connections++
-			s.engine.mu.Unlock()
+			s.mu.Lock()
+			s.connections++
+			s.mu.Unlock()
 
 			// For every new connection, a new unbuffered channel is created to help
 			// stop the proxy, recycle the server connection and close stale connections.
@@ -549,12 +551,12 @@ func (s *Server) Run() *gerr.GatewayDError {
 				for {
 					select {
 					case <-stopConnection:
-						server.engine.mu.Lock()
-						server.engine.connections--
-						server.engine.mu.Unlock()
+						server.mu.Lock()
+						server.connections--
+						server.mu.Unlock()
 						server.OnClose(conn, err)
 						return
-					case <-server.engine.stopServer:
+					case <-server.stopServer:
 						return
 					}
 				}
@@ -577,7 +579,25 @@ func (s *Server) Shutdown() {
 	s.mu.Unlock()
 
 	// Shutdown the server.
-	if err := s.engine.Stop(context.Background()); err != nil {
+	var err error
+	s.running.Store(false)
+	if s.listener != nil {
+		if err = s.listener.Close(); err != nil {
+			s.logger.Error().Err(err).Msg("Failed to close listener")
+		}
+	} else {
+		s.logger.Error().Msg("Listener is not initialized")
+	}
+
+	select {
+	case <-s.stopServer:
+		s.logger.Info().Msg("Server stopped")
+	default:
+		s.stopServer <- struct{}{}
+		close(s.stopServer)
+	}
+
+	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to shutdown server")
 		span.RecordError(err)
 	}
@@ -628,7 +648,9 @@ func NewServer(
 		pluginRegistry:   pluginRegistry,
 		pluginTimeout:    pluginTimeout,
 		mu:               &sync.RWMutex{},
-		engine:           NewEngine(logger),
+		connections:      0,
+		running:          &atomic.Bool{},
+		stopServer:       make(chan struct{}),
 	}
 
 	// Try to resolve the address and log an error if it can't be resolved.
@@ -649,4 +671,11 @@ func NewServer(
 	}
 
 	return &server
+}
+
+// CountConnections returns the current number of connections.
+func (s *Server) CountConnections() int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return int(s.connections)
 }
