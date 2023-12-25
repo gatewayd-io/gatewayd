@@ -9,7 +9,7 @@ require (
 	github.com/envoyproxy/protoc-gen-validate v1.0.2
 	github.com/gatewayd-io/gatewayd-plugin-sdk v0.1.8
 	github.com/getsentry/sentry-go v0.25.0
-	github.com/go-co-op/gocron v1.36.0
+	github.com/go-co-op/gocron v1.37.0
 	github.com/google/go-cmp v0.6.0
 	github.com/google/go-github/v53 v53.2.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.1
