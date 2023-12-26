@@ -99,7 +99,7 @@ func NewLogger(ctx context.Context, cfg LoggerConfig) zerolog.Logger {
 	multiWriter := zerolog.MultiLevelWriter(outputs...)
 	logger := zerolog.New(multiWriter)
 	logger = logger.With().Timestamp().Logger()
-	logger = logger.With().Any("group", cfg.Name).Logger()
+	logger = logger.With().Str("group", cfg.Name).Logger()
 
 	span.End()
 

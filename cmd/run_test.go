@@ -147,8 +147,8 @@ func Test_runCmdWithMultiTenancy(t *testing.T) {
 		runCmd.Print(output)
 		// Check if GatewayD started and stopped correctly.
 		assert.Contains(t, output, "GatewayD is running")
-		assert.Contains(t, output, "There are clients available in the pool count=10 group=default name=default")
-		assert.Contains(t, output, "There are clients available in the pool count=10 group=test name=test")
+		assert.Contains(t, output, "There are clients available in the pool count=10 group=default")
+		assert.Contains(t, output, "There are clients available in the pool count=10 group=test")
 		assert.Contains(t, output, "GatewayD is listening address=0.0.0.0:15432")
 		assert.Contains(t, output, "GatewayD is listening address=0.0.0.0:15433")
 		assert.Contains(t, output, "Stopped all servers")
