@@ -237,6 +237,7 @@ var runCmd = &cobra.Command{
 				SyslogPriority: cfg.GetSyslogPriority(),
 				RSyslogNetwork: cfg.RSyslogNetwork,
 				RSyslogAddress: cfg.RSyslogAddress,
+				Name:           name,
 			})
 		}
 
