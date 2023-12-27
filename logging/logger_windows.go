@@ -34,6 +34,9 @@ type LoggerConfig struct {
 	MaxAge     int
 	Compress   bool
 	LocalTime  bool
+
+	// group name
+	Name string
 }
 
 // NewLogger creates a new logger with the given configuration.
@@ -82,6 +85,7 @@ func NewLogger(ctx context.Context, cfg LoggerConfig) zerolog.Logger {
 	multiWriter := zerolog.MultiLevelWriter(outputs...)
 	logger := zerolog.New(multiWriter)
 	logger = logger.With().Timestamp().Logger()
+	logger = logger.With().Str("group", cfg.Name).Logger()
 
 	span.End()
 
