@@ -406,7 +406,7 @@ func (pr *Proxy) PassThroughToServer(conn *ConnWrapper, stack *Stack) *gerr.Gate
 		// so we need to switch to a plaintext connection:
 		// https://www.postgresql.org/docs/current/protocol-flow.html#PROTOCOL-FLOW-SSL
 		if _, err := conn.Write([]byte{'N'}); err != nil {
-			pr.logger.Error().Err(err).Msg("Server does not support SSL, but SSL was required by the client")
+			pr.logger.Warn().Err(err).Msg("Server does not support SSL, but SSL was required by the client")
 			span.RecordError(err)
 		}
 
