@@ -30,9 +30,7 @@ pools:
 
 proxies:
   default:
-    elastic: False
   test:
-    elastic: False
 
 servers:
   default:

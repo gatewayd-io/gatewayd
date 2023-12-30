@@ -20,7 +20,6 @@ pools:
 
 proxies:
   default:
-    elastic: False
 
 servers:
   default:

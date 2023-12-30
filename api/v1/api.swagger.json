@@ -100,9 +100,7 @@
                 },
                 "proxies": {
                   "default": {
-                    "elastic": false,
-                    "healthCheckPeriod": 60000000000,
-                    "reuseElasticClients": false
+                    "healthCheckPeriod": 60000000000
                   }
                 },
                 "servers": {

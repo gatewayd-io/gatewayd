@@ -732,8 +732,6 @@ var runCmd = &cobra.Command{
 				runCtx,
 				pools[name],
 				pluginRegistry,
-				cfg.Elastic,
-				cfg.ReuseElasticClients,
 				cfg.HealthCheckPeriod,
 				clientConfig,
 				logger,
@@ -742,8 +740,6 @@ var runCmd = &cobra.Command{
 
 			span.AddEvent("Create proxy", trace.WithAttributes(
 				attribute.String("name", name),
-				attribute.Bool("elastic", cfg.Elastic),
-				attribute.Bool("reuseElasticClients", cfg.ReuseElasticClients),
 				attribute.String("healthCheckPeriod", cfg.HealthCheckPeriod.String()),
 			))
 

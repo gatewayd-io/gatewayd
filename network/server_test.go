@@ -80,8 +80,6 @@ func TestRunServer(t *testing.T) {
 		context.Background(),
 		newPool,
 		pluginRegistry,
-		false,
-		false,
 		config.DefaultHealthCheckPeriod,
 		&clientConfig,
 		logger,
