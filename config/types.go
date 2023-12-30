@@ -78,9 +78,7 @@ type Pool struct {
 }
 
 type Proxy struct {
-	Elastic             bool          `json:"elastic"`
-	ReuseElasticClients bool          `json:"reuseElasticClients"`
-	HealthCheckPeriod   time.Duration `json:"healthCheckPeriod" jsonschema:"oneof_type=string;integer"`
+	HealthCheckPeriod time.Duration `json:"healthCheckPeriod" jsonschema:"oneof_type=string;integer"`
 }
 
 type Server struct {

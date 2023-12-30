@@ -40,12 +40,9 @@ type Proxy struct {
 	scheduler            *gocron.Scheduler
 	ctx                  context.Context //nolint:containedctx
 	pluginTimeout        time.Duration
+	HealthCheckPeriod    time.Duration
 
-	Elastic             bool
-	ReuseElasticClients bool
-	HealthCheckPeriod   time.Duration
-
-	// ClientConfig is used for elastic proxy and reconnection
+	// ClientConfig is used for reconnection
 	ClientConfig *config.Client
 }
 
@@ -55,7 +52,6 @@ var _ IProxy = (*Proxy)(nil)
 func NewProxy(
 	ctx context.Context,
 	connPool pool.IPool, pluginRegistry *plugin.Registry,
-	elastic, reuseElasticClients bool,
 	healthCheckPeriod time.Duration,
 	clientConfig *config.Client, logger zerolog.Logger,
 	pluginTimeout time.Duration,
@@ -71,8 +67,6 @@ func NewProxy(
 		scheduler:            gocron.NewScheduler(time.UTC),
 		ctx:                  proxyCtx,
 		pluginTimeout:        pluginTimeout,
-		Elastic:              elastic,
-		ReuseElasticClients:  reuseElasticClients,
 		ClientConfig:         clientConfig,
 		HealthCheckPeriod:    healthCheckPeriod,
 	}
@@ -138,8 +132,7 @@ func NewProxy(
 }
 
 // Connect maps a server connection from the available connection pool to a incoming connection.
-// It returns an error if the pool is exhausted. If the pool is elastic, it creates a new client
-// and maps it to the incoming connection.
+// It returns an error if the pool is exhausted.
 func (pr *Proxy) Connect(conn *ConnWrapper) *gerr.GatewayDError {
 	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "Connect")
 	defer span.End()
@@ -156,34 +149,13 @@ func (pr *Proxy) Connect(conn *ConnWrapper) *gerr.GatewayDError {
 
 	var client *Client
 	if pr.IsExhausted() {
-		// Pool is exhausted or is elastic.
-		if pr.Elastic {
-			// Create a new client.
-			client = NewClient(
-				pr.ctx, pr.ClientConfig, pr.logger,
-				NewRetry(
-					pr.ClientConfig.Retries,
-					config.If[time.Duration](
-						pr.ClientConfig.Backoff > 0,
-						pr.ClientConfig.Backoff,
-						config.DefaultBackoff,
-					),
-					pr.ClientConfig.BackoffMultiplier,
-					pr.ClientConfig.DisableBackoffCaps,
-					pr.logger,
-				),
-			)
-			span.AddEvent("Created a new client connection")
-			pr.logger.Debug().Str("id", client.ID[:7]).Msg("Reused the client connection")
-		} else {
-			span.AddEvent(gerr.ErrPoolExhausted.Error())
-			return gerr.ErrPoolExhausted
-		}
-	} else {
-		// Get the client from the pool with the given clientID.
-		if cl, ok := pr.availableConnections.Pop(clientID).(*Client); ok {
-			client = cl
-		}
+		// Pool is exhausted
+		span.AddEvent(gerr.ErrPoolExhausted.Error())
+		return gerr.ErrPoolExhausted
+	}
+	// Get the client from the pool with the given clientID.
+	if cl, ok := pr.availableConnections.Pop(clientID).(*Client); ok {
+		client = cl
 	}
 
 	client, err := pr.IsHealthy(client)
@@ -241,23 +213,17 @@ func (pr *Proxy) Disconnect(conn *ConnWrapper) *gerr.GatewayDError {
 		return gerr.ErrClientNotFound
 	}
 
-	//nolint:nestif
 	if client, ok := client.(*Client); ok {
-		if (pr.Elastic && pr.ReuseElasticClients) || !pr.Elastic {
-			// Recycle the server connection by reconnecting.
-			if err := client.Reconnect(); err != nil {
-				pr.logger.Error().Err(err).Msg("Failed to reconnect to the client")
-				span.RecordError(err)
-			}
+		// Recycle the server connection by reconnecting.
+		if err := client.Reconnect(); err != nil {
+			pr.logger.Error().Err(err).Msg("Failed to reconnect to the client")
+			span.RecordError(err)
+		}
 
-			// If the client is not in the pool, put it back.
-			if err := pr.availableConnections.Put(client.ID, client); err != nil {
-				pr.logger.Error().Err(err).Msg("Failed to put the client back in the pool")
-				span.RecordError(err)
-			}
-		} else {
-			span.RecordError(gerr.ErrClientNotConnected)
-			return gerr.ErrClientNotConnected
+		// If the client is not in the pool, put it back.
+		if err := pr.availableConnections.Put(client.ID, client); err != nil {
+			pr.logger.Error().Err(err).Msg("Failed to put the client back in the pool")
+			span.RecordError(err)
 		}
 	} else {
 		// This should never happen, but if it does,
@@ -627,11 +593,6 @@ func (pr *Proxy) IsHealthy(client *Client) (*Client, *gerr.GatewayDError) {
 func (pr *Proxy) IsExhausted() bool {
 	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "IsExhausted")
 	defer span.End()
-
-	if pr.Elastic {
-		return false
-	}
-
 	return pr.availableConnections.Size() == 0 && pr.availableConnections.Cap() > 0
 }
 

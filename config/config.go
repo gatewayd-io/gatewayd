@@ -128,9 +128,7 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 	}
 
 	defaultProxy := Proxy{
-		Elastic:             false,
-		ReuseElasticClients: false,
-		HealthCheckPeriod:   DefaultHealthCheckPeriod,
+		HealthCheckPeriod: DefaultHealthCheckPeriod,
 	}
 
 	defaultServer := Server{

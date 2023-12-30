@@ -189,8 +189,7 @@ func (s *Server) OnOpen(conn *ConnWrapper) ([]byte, Action) {
 }
 
 // OnClose is called when a connection is closed. It calls the OnClosing and OnClosed hooks.
-// It also recycles the connection back to the available connection pool, unless the pool
-// is elastic and reuse is disabled.
+// It also recycles the connection back to the available connection pool.
 func (s *Server) OnClose(conn *ConnWrapper, err error) Action {
 	_, span := otel.Tracer("gatewayd").Start(s.ctx, "OnClose")
 	defer span.End()
