@@ -56,8 +56,6 @@ func TestNewProxy(t *testing.T) {
 			logger,
 			false,
 		),
-		false,
-		false,
 		config.DefaultHealthCheckPeriod,
 		nil,
 		logger,
@@ -70,64 +68,10 @@ func TestNewProxy(t *testing.T) {
 	if c, ok := proxy.availableConnections.Pop(client.ID).(*Client); ok {
 		assert.NotEqual(t, "", c.ID)
 	}
-	assert.False(t, proxy.Elastic)
-	assert.False(t, proxy.ReuseElasticClients)
 	assert.False(t, proxy.IsExhausted())
 	c, err := proxy.IsHealthy(client)
 	assert.Nil(t, err)
 	assert.Equal(t, client, c)
-}
-
-// TestNewProxyElastic tests the creation of a new proxy with an elastic connection pool.
-func TestNewProxyElastic(t *testing.T) {
-	logger := logging.NewLogger(context.Background(), logging.LoggerConfig{
-		Output:            []config.LogOutput{config.Console},
-		TimeFormat:        zerolog.TimeFormatUnix,
-		ConsoleTimeFormat: time.RFC3339,
-		Level:             zerolog.WarnLevel,
-		NoColor:           true,
-	})
-
-	// Create a connection newPool
-	newPool := pool.NewPool(context.Background(), config.EmptyPoolCapacity)
-
-	// Create a proxy with an elastic buffer newPool
-	proxy := NewProxy(
-		context.Background(),
-		newPool,
-		plugin.NewRegistry(
-			context.Background(),
-			config.Loose,
-			config.PassDown,
-			config.Accept,
-			config.Stop,
-			logger,
-			false,
-		),
-		true,
-		false,
-		config.DefaultHealthCheckPeriod,
-		&config.Client{
-			Network:            "tcp",
-			Address:            "localhost:5432",
-			ReceiveChunkSize:   config.DefaultChunkSize,
-			ReceiveDeadline:    config.DefaultReceiveDeadline,
-			SendDeadline:       config.DefaultSendDeadline,
-			DialTimeout:        config.DefaultDialTimeout,
-			TCPKeepAlive:       false,
-			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
-		},
-		logger,
-		config.DefaultPluginTimeout)
-	defer proxy.Shutdown()
-
-	assert.NotNil(t, proxy)
-	assert.Equal(t, 0, proxy.busyConnections.Size())
-	assert.Equal(t, 0, proxy.availableConnections.Size())
-	assert.True(t, proxy.Elastic)
-	assert.False(t, proxy.ReuseElasticClients)
-	assert.Equal(t, "tcp", proxy.ClientConfig.Network)
-	assert.Equal(t, "localhost:5432", proxy.ClientConfig.Address)
 }
 
 func BenchmarkNewProxy(b *testing.B) {
@@ -156,55 +100,8 @@ func BenchmarkNewProxy(b *testing.B) {
 				logger,
 				false,
 			),
-			false,
-			false,
 			config.DefaultHealthCheckPeriod,
 			nil,
-			logger,
-			config.DefaultPluginTimeout)
-		proxy.Shutdown()
-	}
-}
-
-func BenchmarkNewProxyElastic(b *testing.B) {
-	logger := logging.NewLogger(context.Background(), logging.LoggerConfig{
-		Output:            []config.LogOutput{config.Console},
-		TimeFormat:        zerolog.TimeFormatUnix,
-		ConsoleTimeFormat: time.RFC3339,
-		Level:             zerolog.WarnLevel,
-		NoColor:           true,
-	})
-
-	// Create a connection newPool
-	newPool := pool.NewPool(context.Background(), config.EmptyPoolCapacity)
-
-	// Create a proxy with an elastic buffer newPool
-	for i := 0; i < b.N; i++ {
-		proxy := NewProxy(
-			context.Background(),
-			newPool,
-			plugin.NewRegistry(
-				context.Background(),
-				config.Loose,
-				config.PassDown,
-				config.Accept,
-				config.Stop,
-				logger,
-				false,
-			),
-			true,
-			false,
-			config.DefaultHealthCheckPeriod,
-			&config.Client{
-				Network:            "tcp",
-				Address:            "localhost:5432",
-				ReceiveChunkSize:   config.DefaultChunkSize,
-				ReceiveDeadline:    config.DefaultReceiveDeadline,
-				SendDeadline:       config.DefaultSendDeadline,
-				DialTimeout:        config.DefaultDialTimeout,
-				TCPKeepAlive:       false,
-				TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
-			},
 			logger,
 			config.DefaultPluginTimeout)
 		proxy.Shutdown()
@@ -248,8 +145,6 @@ func BenchmarkProxyConnectDisconnect(b *testing.B) {
 			logger,
 			false,
 		),
-		false,
-		false,
 		config.DefaultHealthCheckPeriod,
 		&clientConfig,
 		logger,
@@ -302,8 +197,6 @@ func BenchmarkProxyPassThrough(b *testing.B) {
 			logger,
 			false,
 		),
-		false,
-		false,
 		config.DefaultHealthCheckPeriod,
 		&clientConfig,
 		logger,
@@ -361,8 +254,6 @@ func BenchmarkProxyIsHealthyAndIsExhausted(b *testing.B) {
 			logger,
 			false,
 		),
-		false,
-		false,
 		config.DefaultHealthCheckPeriod,
 		&clientConfig,
 		logger,
@@ -418,8 +309,6 @@ func BenchmarkProxyAvailableAndBusyConnections(b *testing.B) {
 			logger,
 			false,
 		),
-		false,
-		false,
 		config.DefaultHealthCheckPeriod,
 		&clientConfig,
 		logger,

@@ -20,7 +20,7 @@ pools:
 
 proxies:
   default:
-    elastic: False
+    healthCheckPeriod: 60s # duration
 
 servers:
   default:

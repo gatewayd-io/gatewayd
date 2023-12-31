@@ -188,8 +188,6 @@ func TestGetProxies(t *testing.T) {
 		context.TODO(),
 		newPool,
 		nil,
-		false,
-		false,
 		config.DefaultHealthCheckPeriod,
 		&config.Client{
 			Network: config.DefaultNetwork,
@@ -233,8 +231,6 @@ func TestGetServers(t *testing.T) {
 		context.TODO(),
 		newPool,
 		nil,
-		true,
-		false,
 		config.DefaultHealthCheckPeriod,
 		&config.Client{
 			Network: config.DefaultNetwork,
