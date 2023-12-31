@@ -75,6 +75,7 @@ The docs cover all aspects of using GatewayD. Some highlights include:
 - [Using Plugins](https://docs.gatewayd.io/using-plugins/plugins): learn how to use plugins.
 - [Developing Plugins](https://docs.gatewayd.io/developing-plugins/plugin-developers-guide): learn how to develop your own plugins.
 - [gatewayd-plugin-cache](https://docs.gatewayd.io/plugins/gatewayd-plugin-cache): learn how to use the `gatewayd-plugin-cache` plugin for caching queries and their results.
+- [gatewayd-plugin-js](https://docs.gatewayd.io/plugins/gatewayd-plugin-js): learn how to use the experimental `gatewayd-plugin-js` plugin for executing JavaScript code in GatewayD.
 
 ## Contributing
 

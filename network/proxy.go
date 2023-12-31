@@ -394,19 +394,19 @@ func (pr *Proxy) PassThroughToServer(conn *ConnWrapper, stack *Stack) *gerr.Gate
 	} else if !conn.IsTLSEnabled() && IsPostgresSSLRequest(request) {
 		// Client sent a SSL request, but the server does not support SSL.
 
-		pr.logger.Error().Fields(
+		pr.logger.Warn().Fields(
 			map[string]interface{}{
 				"local":  LocalAddr(conn.Conn()),
 				"remote": RemoteAddr(conn.Conn()),
 			},
-		).Msg("Server does not support SSL, but SSL was requested")
-		span.AddEvent("Server does not support SSL, but SSL was requested")
+		).Msg("Server does not support SSL, but SSL was requested by the client")
+		span.AddEvent("Server does not support SSL, but SSL was requested by the client")
 
-		// Server does not support SSL, and SSL was preferred,
+		// Server does not support SSL, and SSL was preferred by the client,
 		// so we need to switch to a plaintext connection:
 		// https://www.postgresql.org/docs/current/protocol-flow.html#PROTOCOL-FLOW-SSL
 		if _, err := conn.Write([]byte{'N'}); err != nil {
-			pr.logger.Error().Err(err).Msg("Server does not support SSL, but SSL was required")
+			pr.logger.Warn().Err(err).Msg("Server does not support SSL, but SSL was required by the client")
 			span.RecordError(err)
 		}
 
