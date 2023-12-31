@@ -41,6 +41,9 @@ type API struct {
 
 // Version returns the version information of the GatewayD.
 func (a *API) Version(context.Context, *emptypb.Empty) (*v1.VersionResponse, error) {
+
+	RecordRequestMetrics("Version", "/api/version")
+
 	return &v1.VersionResponse{
 		Version:     config.Version,
 		VersionInfo: config.VersionInfo(),
@@ -51,6 +54,10 @@ func (a *API) Version(context.Context, *emptypb.Empty) (*v1.VersionResponse, err
 //
 //nolint:wrapcheck
 func (a *API) GetGlobalConfig(_ context.Context, group *v1.Group) (*structpb.Struct, error) {
+
+	// Record metrics for this endpoint
+	RecordRequestMetrics("GetGlobalConfig", "/api/getglobalconfig")
+
 	var (
 		jsonData []byte
 		err      error
@@ -83,6 +90,10 @@ func (a *API) GetGlobalConfig(_ context.Context, group *v1.Group) (*structpb.Str
 
 // GetPluginConfig returns the plugin configuration of the GatewayD.
 func (a *API) GetPluginConfig(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
+
+	// Record metrics for this endpoint
+	RecordRequestMetrics("GetPluginConfig", "/api/getpluginconfig")
+
 	pluginConfig, err := structpb.NewStruct(a.Config.PluginKoanf.All())
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to marshal plugin config: %v", err)
@@ -92,6 +103,9 @@ func (a *API) GetPluginConfig(context.Context, *emptypb.Empty) (*structpb.Struct
 
 // GetPlugins returns the active plugin configuration of the GatewayD.
 func (a *API) GetPlugins(context.Context, *emptypb.Empty) (*v1.PluginConfigs, error) {
+	// Record metrics for this endpoint
+	RecordRequestMetrics("GetPlugins", "/api/getplugins")
+
 	plugins := make([]*v1.PluginConfig, 0)
 	a.PluginRegistry.ForEach(
 		func(pluginID sdkPlugin.Identifier, plugIn *plugin.Plugin) {
@@ -133,6 +147,9 @@ func (a *API) GetPlugins(context.Context, *emptypb.Empty) (*v1.PluginConfigs, er
 
 // GetPools returns the pool configuration of the GatewayD.
 func (a *API) GetPools(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
+	// Record metrics for this endpoint
+	RecordRequestMetrics("GetPools", "/api/getpools")
+
 	pools := make(map[string]interface{}, 0)
 	for name, p := range a.Pools {
 		pools[name] = map[string]interface{}{
@@ -149,6 +166,9 @@ func (a *API) GetPools(context.Context, *emptypb.Empty) (*structpb.Struct, error
 
 // GetProxies returns the proxy configuration of the GatewayD.
 func (a *API) GetProxies(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
+	// Record metrics for this endpoint
+	RecordRequestMetrics("GetProxies", "/api/getproxies")
+
 	proxies := make(map[string]interface{}, 0)
 	for name, proxy := range a.Proxies {
 		available := make([]interface{}, 0)
@@ -176,6 +196,9 @@ func (a *API) GetProxies(context.Context, *emptypb.Empty) (*structpb.Struct, err
 
 // GetServers returns the server configuration of the GatewayD.
 func (a *API) GetServers(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
+	// Record metrics for this endpoint
+	RecordRequestMetrics("GetServers", "/api/getservers")
+
 	servers := make(map[string]interface{}, 0)
 	for name, server := range a.Servers {
 		servers[name] = map[string]interface{}{

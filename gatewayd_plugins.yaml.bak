@@ -1,0 +1,99 @@
+# GatewayD Plugin Configuration
+
+# The verification policy controls how the output of the plugin's hook, that is, its result,
+# should be handled and whether to verify the output or not.
+# - "passdown" (default): the output of the plugin is passed down to the next plugin,
+#   regardless of the result. The result is not verified.
+# - "ignore": the output of the current plugin is ignored if the verification fails, and
+#   the next plugin is called with the same input.
+# - "abort": the output of the current plugin is ignored if the verification fails, and
+#   the next plugin is not called.
+# - "remove": the output of the current plugin is ignored if the verification fails, and
+#   the next plugin is called with the same input. The current registered hook from the
+#   current plugin is removed from the list of registered hooks and it will not be called
+#   again.
+verificationPolicy: "passdown"
+
+# The compatibility policy controls how GatewayD treats plugins' requirements. If a plugin
+# requires a specific version of another plugin, the compatibility policy controls whether to
+# allow or reject the plugin.
+# - "strict" (default): the plugin is rejected if it requires a specific version of another
+#   plugin and that version is not the one currently loaded.
+# - "loose": the plugin is allowed to run even if it requires a specific version of another
+#   plugin and that version is not the one currently loaded.
+compatibilityPolicy: "strict"
+
+# The acceptance policy controls how new dynamic hooks are handled. If a plugin registers a
+# new hook, the acceptance policy controls whether to accept or reject the new hook.
+# - "accept" (default): the new hook is accepted and registered.
+# - "reject": the new hook is rejected and not registered.
+acceptancePolicy: "accept"
+
+# The termination policy controls how to handle the termination of requests. If a plugin
+# terminates a request, the termination policy controls whether to stop executing the
+# remaining plugins or not. If the termination policy is set to "stop", the remaining plugins
+# are not executed. If the termination policy is set to "continue", the remaining plugins are
+# executed. Warning: if the termination policy is set to "continue", the output of the
+# remaining plugins might be passed down to the next plugin, and the result depends on the
+# what the remaining plugins do.
+# - "stop" (default): the remaining plugins are not executed.
+# - "continue": the remaining plugins are executed.
+terminationPolicy: "stop"
+
+# The metrics policy controls whether to collect and merge metrics from plugins or not.
+# The Prometheus metrics are collected from the plugins via a Unix domain socket. The metrics
+# are merged and exposed via the GatewayD metrics endpoint via HTTP.
+enableMetricsMerger: True
+
+# The metrics merger period controls how often the metrics merger should collect and merge
+# metrics from plugins.
+metricsMergerPeriod: 5s
+
+# The health check period controls how often the health check should be performed. The health
+# check is performed by pinging each plugin. Unhealthy plugins are removed.
+healthCheckPeriod: 5s
+
+# If the plugin crashes, should GatewayD restart it? The crash is detected by the health check.
+reloadOnCrash: True
+
+# The timeout controls how long to wait for a plugin to respond to a request before timing out.
+timeout: 30s
+
+# The start timeout controls how long to wait for a plugin to start before timing out.
+startTimeout: 1m
+
+# The plugin configuration is a list of plugins to load. Each plugin is defined by a name,
+# a path to the plugin's executable, and a list of arguments to pass to the plugin. The
+# plugin's executable is expected to be a Go plugin that implements the GatewayD plugin
+# interface via the GatewayD plugin SDK using gRPC. The args field is optional and is passed
+# as command line arguments to the plugin's executable. The env field is used to pass extra
+# environment variables to the running instance of the plugin. The MAGIC_COOKIE_KEY and
+# MAGIC_COOKIE_VALUE environment variables are used to verify the identity of the plugin and
+# are required. The env field is optional if the MAGIC_COOKIE_KEY and MAGIC_COOKIE_VALUE are
+# hardcoded in the plugin's executable. The checksum field is mandatoryy and is used to verify
+# the integrity of the plugin's executable. The checksum is a SHA256 hash of the plugin's
+# executable. Checksum verification will change in the future for better security and automation.
+# The DEFAULT_DB_NAME environment variable is used to specify the default database name to
+# use when connecting to the database. The DEFAULT_DB_NAME environment variable is optional
+# and should only be used if one only has a single database in their PostgreSQL instance.
+plugins:
+  - name: gatewayd-plugin-cache
+    enabled: True
+    localPath: ../gatewayd-plugin-cache/gatewayd-plugin-cache
+    args: ["--log-level", "debug"]
+    env:
+      - MAGIC_COOKIE_KEY=GATEWAYD_PLUGIN
+      - MAGIC_COOKIE_VALUE=5712b87aa5d7e9f9e9ab643e6603181c5b796015cb1c09d6f5ada882bf2a1872
+      - REDIS_URL=redis://localhost:6379/0
+      - EXPIRY=1h
+      # - DEFAULT_DB_NAME=postgres
+      - METRICS_ENABLED=True
+      - METRICS_UNIX_DOMAIN_SOCKET=/tmp/gatewayd-plugin-cache.sock
+      - METRICS_PATH=/metrics
+      - PERIODIC_INVALIDATOR_ENABLED=True
+      - PERIODIC_INVALIDATOR_INTERVAL=1m
+      - PERIODIC_INVALIDATOR_START_DELAY=1m
+      - API_ADDRESS=localhost:18080
+      - EXIT_ON_STARTUP_ERROR=False
+      - SENTRY_DSN=https://70eb1abcd32e41acbdfc17bc3407a543@o4504550475038720.ingest.sentry.io/4505342961123328
+    checksum: 054e7dba9c1e3e3910f4928a000d35c8a6199719fad505c66527f3e9b1993833
