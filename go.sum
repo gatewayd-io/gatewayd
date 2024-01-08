@@ -79,8 +79,8 @@ github.com/fatih/structs v1.1.0/go.mod h1:9NiDSp5zOcgEDl+j00MP/WkGVPOlPRLejGD8Ga
 github.com/fsnotify/fsnotify v1.4.9/go.mod h1:znqG4EE+3YCdAaPaxE2ZRY/06pZUdp0tY4IgpuI1SZQ=
 github.com/fsnotify/fsnotify v1.7.0 h1:8JEhPFa5W2WU7YfeZzPNqzMP6Lwt7L2715Ggo0nosvA=
 github.com/fsnotify/fsnotify v1.7.0/go.mod h1:40Bi/Hjc2AVfZrqy+aj+yEI+/bRxZnMJyTJwOpGvigM=
-github.com/gatewayd-io/gatewayd-plugin-sdk v0.1.9 h1:EKywniczKaNZIaLq7jQfuVfwA6eZy3d+GREhbMJ2+Ws=
-github.com/gatewayd-io/gatewayd-plugin-sdk v0.1.9/go.mod h1:AS9WVWdp0av0D2sZkRM9ZOZMMp3DpNnwDsnmwNGCCrM=
+github.com/gatewayd-io/gatewayd-plugin-sdk v0.1.10 h1:jtHzHtekVEK13d6hqleFZ41D8SWABF4R2JHhOHFQOmc=
+github.com/gatewayd-io/gatewayd-plugin-sdk v0.1.10/go.mod h1:AS9WVWdp0av0D2sZkRM9ZOZMMp3DpNnwDsnmwNGCCrM=
 github.com/getsentry/sentry-go v0.25.0 h1:q6Eo+hS+yoJlTO3uu/azhQadsD8V+jQn2D8VvX1eOyI=
 github.com/getsentry/sentry-go v0.25.0/go.mod h1:lc76E2QywIyW8WuBnwl8Lc4bkmQH4+w1gwTf25trprY=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
