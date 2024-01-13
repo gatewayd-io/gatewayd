@@ -108,7 +108,7 @@ func NewClient(
 			origErr = fmt.Errorf("unexpected connection type: %T", conn)
 		}
 	}
-	if origErr != nil {
+	if origErr != nil || client.conn == nil {
 		err := gerr.ErrClientConnectionFailed.Wrap(origErr)
 		logger.Error().Err(err).Msg("Failed to create a new connection")
 		span.RecordError(err)
