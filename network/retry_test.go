@@ -31,7 +31,7 @@ func TestRetry(t *testing.T) {
 		})
 		t.Run("retry without timeout", func(t *testing.T) {
 			retry := NewRetry(0, 0, 0, false, logger)
-			assert.Equal(t, 1, retry.Retries)
+			assert.Equal(t, 0, retry.Retries)
 			assert.Equal(t, time.Duration(0), retry.Backoff)
 			assert.Equal(t, float64(0), retry.BackoffMultiplier)
 			assert.False(t, retry.DisableBackoffCaps)
