@@ -1,12 +1,13 @@
 module github.com/gatewayd-io/gatewayd
 
 go 1.21
+toolchain go1.21.6
 
 require (
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/NYTimes/gziphandler v1.1.1
 	github.com/codingsince1985/checksum v1.3.0
-	github.com/envoyproxy/protoc-gen-validate v1.0.2
+	github.com/envoyproxy/protoc-gen-validate v1.0.3
 	github.com/gatewayd-io/gatewayd-plugin-sdk v0.1.9
 	github.com/getsentry/sentry-go v0.25.0
 	github.com/go-co-op/gocron v1.37.0
