@@ -95,4 +95,14 @@ var (
 		Name:      "proxy_passthrough_terminations_total",
 		Help:      "Number of proxy passthrough terminations by plugins",
 	})
+	APIRequests = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: Namespace,
+		Name:      "api_requests_total",
+		Help:      "Number of API requests",
+	}, []string{"method", "endpoint"})
+	APIRequestsErrors = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: Namespace,
+		Name:      "api_requests_errors_total",
+		Help:      "Number of API request errors",
+	}, []string{"method", "endpoint", "error"})
 )
