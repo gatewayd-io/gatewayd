@@ -9,6 +9,7 @@ import (
 	sdkPlugin "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin"
 	v1 "github.com/gatewayd-io/gatewayd/api/v1"
 	"github.com/gatewayd-io/gatewayd/config"
+	"github.com/gatewayd-io/gatewayd/metrics"
 	"github.com/gatewayd-io/gatewayd/network"
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
@@ -41,6 +42,7 @@ type API struct {
 
 // Version returns the version information of the GatewayD.
 func (a *API) Version(context.Context, *emptypb.Empty) (*v1.VersionResponse, error) {
+	metrics.APIRequests.WithLabelValues("GET", "/v1/GatewayDPluginService/Version").Inc()
 	return &v1.VersionResponse{
 		Version:     config.Version,
 		VersionInfo: config.VersionInfo(),
@@ -53,6 +55,7 @@ func (a *API) Version(context.Context, *emptypb.Empty) (*v1.VersionResponse, err
 func (a *API) GetGlobalConfig(_ context.Context, group *v1.Group) (*structpb.Struct, error) {
 	var (
 		jsonData []byte
+		global   map[string]interface{}
 		err      error
 	)
 
@@ -61,23 +64,37 @@ func (a *API) GetGlobalConfig(_ context.Context, group *v1.Group) (*structpb.Str
 	} else {
 		configGroup := a.Config.Global.Filter(group.GetGroupName())
 		if configGroup == nil {
+			metrics.APIRequestsErrors.WithLabelValues(
+				"GET", "/v1/GatewayDPluginService/GetGlobalConfig", codes.NotFound.String(),
+			).Inc()
 			return nil, status.Error(codes.NotFound, "group not found")
 		}
 		jsonData, err = json.Marshal(configGroup)
 	}
 	if err != nil {
+		metrics.APIRequestsErrors.WithLabelValues(
+			"GET", "/v1/GatewayDPluginService/GetGlobalConfig", codes.Internal.String(),
+		).Inc()
 		return nil, status.Errorf(codes.Internal, "failed to marshal global config: %v", err)
 	}
-	var global map[string]interface{}
+
 	err = json.Unmarshal(jsonData, &global)
 	if err != nil {
+		metrics.APIRequestsErrors.WithLabelValues(
+			"GET", "/v1/GatewayDPluginService/GetGlobalConfig", codes.Internal.String(),
+		).Inc()
 		return nil, status.Errorf(codes.Internal, "failed to marshal global config: %v", err)
 	}
 
 	globalConfig, err := structpb.NewStruct(global)
 	if err != nil {
+		metrics.APIRequestsErrors.WithLabelValues(
+			"GET", "/v1/GatewayDPluginService/GetGlobalConfig", codes.Internal.String(),
+		).Inc()
 		return nil, status.Errorf(codes.Internal, "failed to marshal global config: %v", err)
 	}
+
+	metrics.APIRequests.WithLabelValues("GET", "/v1/GatewayDPluginService/GetGlobalConfig").Inc()
 	return globalConfig, nil
 }
 
@@ -85,8 +102,13 @@ func (a *API) GetGlobalConfig(_ context.Context, group *v1.Group) (*structpb.Str
 func (a *API) GetPluginConfig(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
 	pluginConfig, err := structpb.NewStruct(a.Config.PluginKoanf.All())
 	if err != nil {
+		metrics.APIRequestsErrors.WithLabelValues(
+			"GET", "/v1/GatewayDPluginService/GetPluginConfig", codes.Internal.String(),
+		).Inc()
 		return nil, status.Errorf(codes.Internal, "failed to marshal plugin config: %v", err)
 	}
+
+	metrics.APIRequests.WithLabelValues("GET", "/v1/GatewayDPluginService/GetPluginConfig").Inc()
 	return pluginConfig, nil
 }
 
@@ -126,6 +148,8 @@ func (a *API) GetPlugins(context.Context, *emptypb.Empty) (*v1.PluginConfigs, er
 			})
 		},
 	)
+
+	metrics.APIRequests.WithLabelValues("GET", "/v1/GatewayDPluginService/GetPlugins").Inc()
 	return &v1.PluginConfigs{
 		Configs: plugins,
 	}, nil
@@ -140,10 +164,16 @@ func (a *API) GetPools(context.Context, *emptypb.Empty) (*structpb.Struct, error
 			"size": p.Size(),
 		}
 	}
+
 	poolsConfig, err := structpb.NewStruct(pools)
 	if err != nil {
+		metrics.APIRequestsErrors.WithLabelValues(
+			"GET", "/v1/GatewayDPluginService/GetPools", codes.Internal.String(),
+		).Inc()
 		return nil, status.Errorf(codes.Internal, "failed to marshal pools config: %v", err)
 	}
+
+	metrics.APIRequests.WithLabelValues("GET", "/v1/GatewayDPluginService/GetPools").Inc()
 	return poolsConfig, nil
 }
 
@@ -167,10 +197,16 @@ func (a *API) GetProxies(context.Context, *emptypb.Empty) (*structpb.Struct, err
 			"total":     len(available) + len(busy),
 		}
 	}
+
 	proxiesConfig, err := structpb.NewStruct(proxies)
 	if err != nil {
+		metrics.APIRequestsErrors.WithLabelValues(
+			"GET", "/v1/GatewayDPluginService/GetProxies", codes.Internal.String(),
+		).Inc()
 		return nil, status.Errorf(codes.Internal, "failed to marshal proxies config: %v", err)
 	}
+
+	metrics.APIRequests.WithLabelValues("GET", "/v1/GatewayDPluginService/GetProxies").Inc()
 	return proxiesConfig, nil
 }
 
@@ -185,9 +221,15 @@ func (a *API) GetServers(context.Context, *emptypb.Empty) (*structpb.Struct, err
 			"tickInterval": server.TickInterval.Nanoseconds(),
 		}
 	}
+
 	serversConfig, err := structpb.NewStruct(servers)
 	if err != nil {
+		metrics.APIRequestsErrors.WithLabelValues(
+			"GET", "/v1/GatewayDPluginService/GetServers", codes.Internal.String(),
+		).Inc()
 		return nil, status.Errorf(codes.Internal, "failed to marshal servers config: %v", err)
 	}
+
+	metrics.APIRequests.WithLabelValues("GET", "/v1/GatewayDPluginService/GetServers").Inc()
 	return serversConfig, nil
 }
