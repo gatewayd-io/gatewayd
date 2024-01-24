@@ -442,7 +442,7 @@ func downloadFile(
 func deleteFiles(toBeDeleted []string) {
 	for _, filename := range toBeDeleted {
 		if err := os.Remove(filename); err != nil {
-			fmt.Println("There was an error deleting the file: ", err)
+			fmt.Println("There was an error deleting the file: ", err) //nolint:forbidigo
 			return
 		}
 	}
@@ -484,13 +484,13 @@ func getFileExtension() Extension {
 func installPlugin(cmd *cobra.Command, pluginURL string) {
 	var (
 		// This is a list of files that will be deleted after the plugin is installed.
-		toBeDeleted []string = []string{}
+		toBeDeleted = []string{}
 
 		// Source of the plugin: file or GitHub.
-		source Source = detectSource(pluginURL)
+		source = detectSource(pluginURL)
 
 		// The extension of the archive based on the OS: .zip or .tar.gz.
-		archiveExt Extension = getFileExtension()
+		archiveExt = getFileExtension()
 
 		releaseID         int64
 		downloadURL       string
@@ -666,6 +666,7 @@ func installPlugin(cmd *cobra.Command, pluginURL string) {
 			}
 			return
 		}
+	case SourceUnknown:
 	default:
 		cmd.Println("Invalid URL or file path")
 	}
@@ -676,16 +677,14 @@ func installPlugin(cmd *cobra.Command, pluginURL string) {
 	// Create a new "gatewayd_plugins.yaml" file if it doesn't exist.
 	if _, err := os.Stat(pluginConfigFile); os.IsNotExist(err) {
 		generateConfig(cmd, Plugins, pluginConfigFile, false)
-	} else {
+	} else if !backupConfig && !noPrompt {
 		// If the config file exists, we should prompt the user to backup
 		// the plugins configuration file.
-		if !backupConfig && !noPrompt {
-			cmd.Print("Do you want to backup the plugins configuration file? [Y/n] ")
-			var backupOption string
-			_, err := fmt.Scanln(&backupOption)
-			if err == nil && (backupOption == "y" || backupOption == "Y") {
-				backupConfig = true
-			}
+		cmd.Print("Do you want to backup the plugins configuration file? [Y/n] ")
+		var backupOption string
+		_, err := fmt.Scanln(&backupOption)
+		if err == nil && (backupOption == "y" || backupOption == "Y") {
+			backupConfig = true
 		}
 	}
 
