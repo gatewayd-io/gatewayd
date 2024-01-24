@@ -28,6 +28,7 @@ import (
 	koanfJson "github.com/knadh/koanf/parsers/json"
 	"github.com/knadh/koanf/parsers/yaml"
 	jsonSchemaV5 "github.com/santhosh-tekuri/jsonschema/v5"
+	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
 	yamlv3 "gopkg.in/yaml.v3"
 )
@@ -701,11 +702,7 @@ func installPlugin(cmd *cobra.Command, pluginURL string) {
 		cmd.Println("Failed to unmarshal the plugins configuration file: ", err)
 		return
 	}
-	pluginsList, ok := localPluginsConfig["plugins"].([]interface{}) //nolint:varnamelen
-	if !ok {
-		cmd.Println("There was an error reading the plugins file from disk")
-		return
-	}
+	pluginsList := cast.ToSlice(localPluginsConfig["plugins"])
 
 	// Check if the plugin is already installed.
 	for _, plugin := range pluginsList {
@@ -714,27 +711,25 @@ func installPlugin(cmd *cobra.Command, pluginURL string) {
 			break
 		}
 
-		//nolint:nestif
-		if pluginInstance, ok := plugin.(map[string]interface{}); ok {
-			if pluginInstance["name"] == pluginName {
-				// Show a list of options to the user.
-				cmd.Println("Plugin is already installed.")
-				if !noPrompt {
-					cmd.Print("Do you want to update the plugin? [y/N] ")
+		pluginInstance := cast.ToStringMap(plugin)
+		if pluginInstance["name"] == pluginName {
+			// Show a list of options to the user.
+			cmd.Println("Plugin is already installed.")
+			if !noPrompt {
+				cmd.Print("Do you want to update the plugin? [y/N] ")
 
-					var updateOption string
-					_, err := fmt.Scanln(&updateOption)
-					if err == nil && (updateOption == "y" || updateOption == "Y") {
-						break
-					}
+				var updateOption string
+				_, err := fmt.Scanln(&updateOption)
+				if err == nil && (updateOption == "y" || updateOption == "Y") {
+					break
 				}
-
-				cmd.Println("Aborting...")
-				if cleanup {
-					deleteFiles(toBeDeleted)
-				}
-				return
 			}
+
+			cmd.Println("Aborting...")
+			if cleanup {
+				deleteFiles(toBeDeleted)
+			}
+			return
 		}
 	}
 
@@ -831,17 +826,10 @@ func installPlugin(cmd *cobra.Command, pluginURL string) {
 		cmd.Println("Failed to unmarshal the downloaded plugins configuration file: ", err)
 		return
 	}
-	defaultPluginConfig, ok := downloadedPluginConfig["plugins"].([]interface{})
-	if !ok {
-		cmd.Println("There was an error reading the plugins file from the repository")
-		return
-	}
+	defaultPluginConfig := cast.ToSlice(downloadedPluginConfig["plugins"])
+
 	// Get the plugin configuration.
-	pluginConfig, ok := defaultPluginConfig[0].(map[string]interface{})
-	if !ok {
-		cmd.Println("There was an error reading the default plugin configuration")
-		return
-	}
+	pluginConfig := cast.ToStringMap(defaultPluginConfig[0])
 
 	// Update the plugin's local path and checksum.
 	pluginConfig["localPath"] = localPath
@@ -850,12 +838,11 @@ func installPlugin(cmd *cobra.Command, pluginURL string) {
 	// Add the plugin config to the list of plugin configs.
 	added := false
 	for idx, plugin := range pluginsList {
-		if pluginInstance, ok := plugin.(map[string]interface{}); ok {
-			if pluginInstance["name"] == pluginName {
-				pluginsList[idx] = pluginConfig
-				added = true
-				break
-			}
+		pluginInstance := cast.ToStringMap(plugin)
+		if pluginInstance["name"] == pluginName {
+			pluginsList[idx] = pluginConfig
+			added = true
+			break
 		}
 	}
 	if !added {
