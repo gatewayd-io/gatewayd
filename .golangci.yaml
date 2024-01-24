@@ -46,6 +46,7 @@ linters-settings:
           - "github.com/knadh/koanf"
           - "github.com/panjf2000/gnet/v2"
           - "github.com/spf13/cobra"
+          - "github.com/spf13/cast"
           - "github.com/invopop/jsonschema"
           - "github.com/santhosh-tekuri/jsonschema/v5"
           - "github.com/NYTimes/gziphandler"

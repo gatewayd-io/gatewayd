@@ -442,198 +442,238 @@ func downloadFile(
 func deleteFiles(toBeDeleted []string) {
 	for _, filename := range toBeDeleted {
 		if err := os.Remove(filename); err != nil {
-			log.Println("There was an error deleting the file: ", err)
+			fmt.Println("There was an error deleting the file: ", err)
 			return
 		}
 	}
 }
 
+// detectInstallLocation detects the install location based on the number of arguments.
+func detectInstallLocation(args []string) Location {
+	if len(args) == 0 {
+		return LocationConfig
+	}
+
+	return LocationArgs
+}
+
+// detectSource detects the source of the path.
+func detectSource(path string) Source {
+	if _, err := os.Stat(path); err == nil {
+		return SourceFile
+	}
+
+	// Check if the path is a URL.
+	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") || strings.HasPrefix(path, GitHubURLPrefix) { //nolint:lll
+		return SourceGitHub
+	}
+
+	return SourceUnknown
+}
+
+// getFileExtension returns the extension of the archive based on the OS.
+func getFileExtension() Extension {
+	if runtime.GOOS == "windows" {
+		return ExtensionZip
+	}
+
+	return ExtensionTarGz
+}
+
 // installPlugin installs a plugin from a given URL.
 func installPlugin(cmd *cobra.Command, pluginURL string) {
-	// This is a list of files that will be deleted after the plugin is installed.
-	toBeDeleted := []string{}
-
 	var (
+		// This is a list of files that will be deleted after the plugin is installed.
+		toBeDeleted []string = []string{}
+
+		// Source of the plugin: file or GitHub.
+		source Source = detectSource(pluginURL)
+
+		// The extension of the archive based on the OS: .zip or .tar.gz.
+		archiveExt Extension = getFileExtension()
+
 		releaseID         int64
 		downloadURL       string
 		pluginFilename    string
-		pluginName        string
-		err               error
 		checksumsFilename string
-		client            *github.Client
 		account           string
+		err               error
+		client            *github.Client
 	)
 
-	// Strip scheme from the plugin URL.
-	pluginURL = strings.TrimPrefix(pluginURL, "http://")
-	pluginURL = strings.TrimPrefix(pluginURL, "https://")
-
-	if !strings.HasPrefix(pluginURL, GitHubURLPrefix) {
+	switch source {
+	case SourceFile:
 		// Pull the plugin from a local archive.
 		pluginFilename = filepath.Clean(pluginURL)
 		if _, err := os.Stat(pluginFilename); os.IsNotExist(err) {
 			cmd.Println("The plugin file could not be found")
 			return
 		}
-	}
 
-	// Validate the URL.
-	splittedURL := strings.Split(pluginURL, "@")
-	if len(splittedURL) < NumParts {
-		if pluginFilename == "" {
-			// If the version is not specified, use the latest version.
-			pluginURL = fmt.Sprintf("%s@%s", pluginURL, LatestVersion)
-		}
-	}
-
-	validGitHubURL := regexp.MustCompile(GitHubURLRegex)
-	if !validGitHubURL.MatchString(pluginURL) {
-		cmd.Println(
-			"Invalid URL. Use the following format: github.com/account/repository@version")
-		return
-	}
-
-	// Get the plugin version.
-	pluginVersion := LatestVersion
-	splittedURL = strings.Split(pluginURL, "@")
-	// If the version is not specified, use the latest version.
-	if len(splittedURL) < NumParts {
-		cmd.Println("Version not specified. Using latest version")
-	}
-	if len(splittedURL) >= NumParts {
-		pluginVersion = splittedURL[1]
-	}
-
-	// Get the plugin account and repository.
-	accountRepo := strings.Split(strings.TrimPrefix(splittedURL[0], GitHubURLPrefix), "/")
-	if len(accountRepo) != NumParts {
-		cmd.Println(
-			"Invalid URL. Use the following format: github.com/account/repository@version")
-		return
-	}
-	account = accountRepo[0]
-	pluginName = accountRepo[1]
-	if account == "" || pluginName == "" {
-		cmd.Println(
-			"Invalid URL. Use the following format: github.com/account/repository@version")
-		return
-	}
-
-	// Get the release artifact from GitHub.
-	client = github.NewClient(nil)
-	var release *github.RepositoryRelease
-
-	if pluginVersion == LatestVersion || pluginVersion == "" {
-		// Get the latest release.
-		release, _, err = client.Repositories.GetLatestRelease(
-			context.Background(), account, pluginName)
-	} else if strings.HasPrefix(pluginVersion, "v") {
-		// Get an specific release.
-		release, _, err = client.Repositories.GetReleaseByTag(
-			context.Background(), account, pluginName, pluginVersion)
-	}
-
-	if err != nil {
-		cmd.Println("The plugin could not be found: ", err.Error())
-		return
-	}
-
-	if release == nil {
-		cmd.Println("The plugin could not be found in the release assets")
-		return
-	}
-
-	// Get the archive extension.
-	archiveExt := ExtOthers
-	if runtime.GOOS == "windows" {
-		archiveExt = ExtWindows
-	}
-
-	// Find and download the plugin binary from the release assets.
-	pluginFilename, downloadURL, releaseID = findAsset(release, func(name string) bool {
-		return strings.Contains(name, runtime.GOOS) &&
-			strings.Contains(name, runtime.GOARCH) &&
-			strings.Contains(name, archiveExt)
-	})
-
-	var filePath string
-	if downloadURL != "" && releaseID != 0 {
-		cmd.Println("Downloading", downloadURL)
-		filePath, err = downloadFile(client, account, pluginName, releaseID, pluginFilename)
-		toBeDeleted = append(toBeDeleted, filePath)
-		if err != nil {
-			cmd.Println("Download failed: ", err)
-			if cleanup {
-				deleteFiles(toBeDeleted)
-			}
+		if pluginName == "" {
+			cmd.Println("Plugin name not specified")
 			return
 		}
-		cmd.Println("Download completed successfully")
-	} else {
-		cmd.Println("The plugin file could not be found in the release assets")
-		return
-	}
+	case SourceGitHub:
+		// Strip scheme from the plugin URL.
+		pluginURL = strings.TrimPrefix(strings.TrimPrefix(pluginURL, "http://"), "https://")
 
-	// Find and download the checksums.txt from the release assets.
-	checksumsFilename, downloadURL, releaseID = findAsset(release, func(name string) bool {
-		return strings.Contains(name, "checksums.txt")
-	})
-	if checksumsFilename != "" && downloadURL != "" && releaseID != 0 {
-		cmd.Println("Downloading", downloadURL)
-		filePath, err = downloadFile(client, account, pluginName, releaseID, checksumsFilename)
-		toBeDeleted = append(toBeDeleted, filePath)
-		if err != nil {
-			cmd.Println("Download failed: ", err)
-			if cleanup {
-				deleteFiles(toBeDeleted)
+		// Validate the URL.
+		splittedURL := strings.Split(pluginURL, "@")
+		if len(splittedURL) < NumParts {
+			if pluginFilename == "" {
+				// If the version is not specified, use the latest version.
+				pluginURL = fmt.Sprintf("%s@%s", pluginURL, LatestVersion)
 			}
+		}
+
+		validGitHubURL := regexp.MustCompile(GitHubURLRegex)
+		if !validGitHubURL.MatchString(pluginURL) {
+			cmd.Println(
+				"Invalid URL. Use the following format: github.com/account/repository@version")
 			return
 		}
-		cmd.Println("Download completed successfully")
-	} else {
-		cmd.Println("The checksum file could not be found in the release assets")
-		return
-	}
 
-	// Read the checksums text file.
-	checksums, err := os.ReadFile(checksumsFilename)
-	if err != nil {
-		cmd.Println("There was an error reading the checksums file: ", err)
-		return
-	}
+		// Get the plugin version.
+		pluginVersion := LatestVersion
+		splittedURL = strings.Split(pluginURL, "@")
+		// If the version is not specified, use the latest version.
+		if len(splittedURL) < NumParts {
+			cmd.Println("Version not specified. Using latest version")
+		}
+		if len(splittedURL) >= NumParts {
+			pluginVersion = splittedURL[1]
+		}
 
-	// Get the checksum for the plugin binary.
-	sum, err := checksum.SHA256sum(pluginFilename)
-	if err != nil {
-		cmd.Println("There was an error calculating the checksum: ", err)
-		return
-	}
+		// Get the plugin account and repository.
+		accountRepo := strings.Split(strings.TrimPrefix(splittedURL[0], GitHubURLPrefix), "/")
+		if len(accountRepo) != NumParts {
+			cmd.Println(
+				"Invalid URL. Use the following format: github.com/account/repository@version")
+			return
+		}
+		account = accountRepo[0]
+		pluginName = accountRepo[1]
+		if account == "" || pluginName == "" {
+			cmd.Println(
+				"Invalid URL. Use the following format: github.com/account/repository@version")
+			return
+		}
 
-	// Verify the checksums.
-	checksumLines := strings.Split(string(checksums), "\n")
-	for _, line := range checksumLines {
-		if strings.Contains(line, pluginFilename) {
-			checksum := strings.Split(line, " ")[0]
-			if checksum != sum {
-				cmd.Println("Checksum verification failed")
+		// Get the release artifact from GitHub.
+		client = github.NewClient(nil)
+		var release *github.RepositoryRelease
+
+		if pluginVersion == LatestVersion || pluginVersion == "" {
+			// Get the latest release.
+			release, _, err = client.Repositories.GetLatestRelease(
+				context.Background(), account, pluginName)
+		} else if strings.HasPrefix(pluginVersion, "v") {
+			// Get an specific release.
+			release, _, err = client.Repositories.GetReleaseByTag(
+				context.Background(), account, pluginName, pluginVersion)
+		}
+
+		if err != nil {
+			cmd.Println("The plugin could not be found: ", err.Error())
+			return
+		}
+
+		if release == nil {
+			cmd.Println("The plugin could not be found in the release assets")
+			return
+		}
+
+		// Find and download the plugin binary from the release assets.
+		pluginFilename, downloadURL, releaseID = findAsset(release, func(name string) bool {
+			return strings.Contains(name, runtime.GOOS) &&
+				strings.Contains(name, runtime.GOARCH) &&
+				strings.Contains(name, string(archiveExt))
+		})
+		var filePath string
+		if downloadURL != "" && releaseID != 0 {
+			cmd.Println("Downloading", downloadURL)
+			filePath, err = downloadFile(client, account, pluginName, releaseID, pluginFilename)
+			toBeDeleted = append(toBeDeleted, filePath)
+			if err != nil {
+				cmd.Println("Download failed: ", err)
+				if cleanup {
+					deleteFiles(toBeDeleted)
+				}
 				return
 			}
-
-			cmd.Println("Checksum verification passed")
-			break
+			cmd.Println("Download completed successfully")
+		} else {
+			cmd.Println("The plugin file could not be found in the release assets")
+			return
 		}
+
+		// Find and download the checksums.txt from the release assets.
+		checksumsFilename, downloadURL, releaseID = findAsset(release, func(name string) bool {
+			return strings.Contains(name, "checksums.txt")
+		})
+		if checksumsFilename != "" && downloadURL != "" && releaseID != 0 {
+			cmd.Println("Downloading", downloadURL)
+			filePath, err = downloadFile(client, account, pluginName, releaseID, checksumsFilename)
+			toBeDeleted = append(toBeDeleted, filePath)
+			if err != nil {
+				cmd.Println("Download failed: ", err)
+				if cleanup {
+					deleteFiles(toBeDeleted)
+				}
+				return
+			}
+			cmd.Println("Download completed successfully")
+		} else {
+			cmd.Println("The checksum file could not be found in the release assets")
+			return
+		}
+
+		// Read the checksums text file.
+		checksums, err := os.ReadFile(checksumsFilename)
+		if err != nil {
+			cmd.Println("There was an error reading the checksums file: ", err)
+			return
+		}
+
+		// Get the checksum for the plugin binary.
+		sum, err := checksum.SHA256sum(pluginFilename)
+		if err != nil {
+			cmd.Println("There was an error calculating the checksum: ", err)
+			return
+		}
+
+		// Verify the checksums.
+		checksumLines := strings.Split(string(checksums), "\n")
+		for _, line := range checksumLines {
+			if strings.Contains(line, pluginFilename) {
+				checksum := strings.Split(line, " ")[0]
+				if checksum != sum {
+					cmd.Println("Checksum verification failed")
+					return
+				}
+
+				cmd.Println("Checksum verification passed")
+				break
+			}
+		}
+
+		if pullOnly {
+			cmd.Println("Plugin binary downloaded to", pluginFilename)
+			// Only the checksums file will be deleted if the --pull-only flag is set.
+			if err := os.Remove(checksumsFilename); err != nil {
+				cmd.Println("There was an error deleting the file: ", err)
+			}
+			return
+		}
+	default:
+		cmd.Println("Invalid URL or file path")
 	}
 
-	if pullOnly {
-		cmd.Println("Plugin binary downloaded to", pluginFilename)
-		// Only the checksums file will be deleted if the --pull-only flag is set.
-		if err := os.Remove(checksumsFilename); err != nil {
-			cmd.Println("There was an error deleting the file: ", err)
-		}
-		return
-	}
+	// NOTE: The rest of the code is executed regardless of the source,
+	// since the plugin binary is already available (or downloaded) at this point.
 
-	// Create a new gatewayd_plugins.yaml file if it doesn't exist.
+	// Create a new "gatewayd_plugins.yaml" file if it doesn't exist.
 	if _, err := os.Stat(pluginConfigFile); os.IsNotExist(err) {
 		generateConfig(cmd, Plugins, pluginConfigFile, false)
 	} else {
@@ -649,22 +689,22 @@ func installPlugin(cmd *cobra.Command, pluginURL string) {
 		}
 	}
 
-	// Read the gatewayd_plugins.yaml file.
+	// Read the "gatewayd_plugins.yaml" file.
 	pluginsConfig, err := os.ReadFile(pluginConfigFile)
 	if err != nil {
-		log.Println(err)
+		cmd.Println(err)
 		return
 	}
 
 	// Get the registered plugins from the plugins configuration file.
 	var localPluginsConfig map[string]interface{}
 	if err := yamlv3.Unmarshal(pluginsConfig, &localPluginsConfig); err != nil {
-		log.Println("Failed to unmarshal the plugins configuration file: ", err)
+		cmd.Println("Failed to unmarshal the plugins configuration file: ", err)
 		return
 	}
 	pluginsList, ok := localPluginsConfig["plugins"].([]interface{}) //nolint:varnamelen
 	if !ok {
-		log.Println("There was an error reading the plugins file from disk")
+		cmd.Println("There was an error reading the plugins file from disk")
 		return
 	}
 
@@ -710,10 +750,14 @@ func installPlugin(cmd *cobra.Command, pluginURL string) {
 
 	// Extract the archive.
 	var filenames []string
-	if runtime.GOOS == "windows" {
+	switch archiveExt {
+	case ExtensionZip:
 		filenames, err = extractZip(pluginFilename, pluginOutputDir)
-	} else {
+	case ExtensionTarGz:
 		filenames, err = extractTarGz(pluginFilename, pluginOutputDir)
+	default:
+		cmd.Println("Invalid archive extension")
+		return
 	}
 
 	if err != nil {
@@ -753,7 +797,7 @@ func installPlugin(cmd *cobra.Command, pluginURL string) {
 	}
 
 	var contents string
-	if strings.HasPrefix(pluginURL, GitHubURLPrefix) {
+	if source == SourceGitHub {
 		// Get the list of files in the repository.
 		var repoContents *github.RepositoryContent
 		repoContents, _, _, err = client.Repositories.GetContents(
