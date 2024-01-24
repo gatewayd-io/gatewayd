@@ -199,11 +199,13 @@ func Test_runCmdWithCachePlugin(t *testing.T) {
 	// Test plugin install command.
 	output, err := executeCommandC(
 		rootCmd, "plugin", "install",
-		"github.com/gatewayd-io/gatewayd-plugin-cache@v0.2.4",
+		"github.com/gatewayd-io/gatewayd-plugin-cache@latest",
 		"-p", pluginTestConfigFile, "--update")
 	require.NoError(t, err, "plugin install should not return an error")
-	assert.Contains(t, output, "Downloading https://github.com/gatewayd-io/gatewayd-plugin-cache/releases/download/v0.2.4/gatewayd-plugin-cache-linux-amd64-v0.2.4.tar.gz") //nolint:lll
-	assert.Contains(t, output, "Downloading https://github.com/gatewayd-io/gatewayd-plugin-cache/releases/download/v0.2.4/checksums.txt")                                   //nolint:lll
+	assert.Contains(t, output, "Installing plugin from CLI argument")
+	assert.Contains(t, output, "Downloading ")
+	assert.Contains(t, output, "gatewayd-plugin-cache-linux-amd64-")
+	assert.Contains(t, output, "/checksums.txt")
 	assert.Contains(t, output, "Download completed successfully")
 	assert.Contains(t, output, "Checksum verification passed")
 	assert.Contains(t, output, "Plugin binary extracted to plugins/gatewayd-plugin-cache")
