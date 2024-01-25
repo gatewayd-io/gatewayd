@@ -1,12 +1,15 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
+	"strings"
 
 	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/getsentry/sentry-go"
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
+	"golang.org/x/exp/maps"
 	yamlv3 "gopkg.in/yaml.v3"
 )
 
@@ -89,7 +92,8 @@ var pluginInstallCmd = &cobra.Command{
 			pluginsList := cast.ToSlice(localPluginsConfig["plugins"])
 
 			// Get the list of plugin download URLs.
-			var pluginURLs []string
+			pluginURLs := map[string]string{}
+			existingPluginURLs := map[string]string{}
 			for _, plugin := range pluginsList {
 				// Get the plugin instance.
 				pluginInstance := cast.ToStringMapString(plugin)
@@ -97,18 +101,71 @@ var pluginInstallCmd = &cobra.Command{
 				// Append the plugin URL to the list of plugin URLs.
 				name := cast.ToString(pluginInstance["name"])
 				url := cast.ToString(pluginInstance["url"])
-				if url != "" {
-					pluginURLs = append(pluginURLs, url)
-				} else {
+				if url == "" {
 					cmd.Println("Plugin URL or file path not found in the plugins configuration file for", name)
 					return
+				}
+
+				// Check if duplicate plugin names exist in the plugins configuration file.
+				if _, ok := pluginURLs[name]; ok {
+					cmd.Println("Duplicate plugin name found in the plugins configuration file:", name)
+					return
+				}
+
+				// Update list of plugin URLs based on
+				// whether the plugin is already installed or not.
+				localPath := cast.ToString(pluginInstance["localPath"])
+				if _, err := os.Stat(localPath); err == nil {
+					existingPluginURLs[name] = url
+				} else {
+					pluginURLs[name] = url
+				}
+			}
+
+			// Check if the plugin is already installed and prompt the user to confirm the update.
+			if len(existingPluginURLs) > 0 {
+				pluginNames := strings.Join(maps.Keys[map[string]string](existingPluginURLs), ", ")
+				cmd.Printf("The following plugins are already installed: %s\n", pluginNames)
+
+				if noPrompt {
+					if !update {
+						cmd.Println("Use the --update flag to update the plugins")
+						cmd.Println("Aborting...")
+						return
+					} else {
+						// Merge the existing plugin URLs with the plugin URLs.
+						for name, url := range existingPluginURLs {
+							pluginURLs[name] = url
+						}
+					}
+				} else {
+					cmd.Print("Do you want to update the existing plugins? [y/N] ")
+					var response string
+					_, err := fmt.Scanln(&response)
+					if err == nil && strings.ToLower(response) == "y" {
+						// Set the update flag to true, so that the installPlugin function
+						// can update the existing plugins and doesn't ask for user input again.
+						update = true
+
+						// Merge the existing plugin URLs with the plugin URLs.
+						for name, url := range existingPluginURLs {
+							pluginURLs[name] = url
+						}
+					} else {
+						cmd.Println("Existing plugins will not be updated")
+					}
 				}
 			}
 
 			// Validate the plugin URLs.
 			if len(args) == 0 && len(pluginURLs) == 0 {
-				cmd.Println(
-					"No plugin URLs or file path found in the plugins configuration file or CLI argument")
+				if len(existingPluginURLs) > 0 && !update {
+					cmd.Println("Use the --update flag to update the plugins")
+				} else {
+					cmd.Println(
+						"No plugin URLs or file path found in the plugins configuration file or CLI argument")
+					cmd.Println("Aborting...")
+				}
 				return
 			}
 

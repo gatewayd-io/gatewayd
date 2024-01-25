@@ -61,6 +61,7 @@ linters-settings:
           - "github.com/google/go-cmp"
           - "github.com/google/go-github/v53/github"
           - "github.com/codingsince1985/checksum"
+          - "golang.org/x/exp/maps"
       test:
         files:
           - $test

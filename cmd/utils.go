@@ -684,7 +684,9 @@ func installPlugin(cmd *cobra.Command, pluginURL string) {
 		cmd.Print("Do you want to backup the plugins configuration file? [Y/n] ")
 		var backupOption string
 		_, err := fmt.Scanln(&backupOption)
-		if err == nil && (backupOption == "y" || backupOption == "Y") {
+		if err == nil && strings.ToLower(backupOption) == "n" {
+			backupConfig = false
+		} else {
 			backupConfig = true
 		}
 	}
@@ -720,7 +722,7 @@ func installPlugin(cmd *cobra.Command, pluginURL string) {
 
 				var updateOption string
 				_, err := fmt.Scanln(&updateOption)
-				if err == nil && (updateOption == "y" || updateOption == "Y") {
+				if err != nil && strings.ToLower(updateOption) == "y" {
 					break
 				}
 			}
