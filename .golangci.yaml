@@ -43,6 +43,8 @@ linters-settings:
           - "github.com/getsentry/sentry-go"
           - "github.com/rs/zerolog"
           - "github.com/grpc-ecosystem/grpc-gateway"
+          - "google.golang.org/grpc"
+          - "google.golang.org/protobuf"
           - "github.com/knadh/koanf"
           - "github.com/panjf2000/gnet/v2"
           - "github.com/spf13/cobra"
@@ -62,6 +64,10 @@ linters-settings:
           - "github.com/google/go-github/v53/github"
           - "github.com/codingsince1985/checksum"
           - "golang.org/x/exp/maps"
+          - "golang.org/x/exp/slices"
+          - "gopkg.in/yaml.v3"
+          - "github.com/zenizh/go-capturer"
+          - "gopkg.in/natefinch/lumberjack.v2"
       test:
         files:
           - $test

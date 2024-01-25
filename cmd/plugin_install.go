@@ -132,11 +132,11 @@ var pluginInstallCmd = &cobra.Command{
 						cmd.Println("Use the --update flag to update the plugins")
 						cmd.Println("Aborting...")
 						return
-					} else {
-						// Merge the existing plugin URLs with the plugin URLs.
-						for name, url := range existingPluginURLs {
-							pluginURLs[name] = url
-						}
+					}
+
+					// Merge the existing plugin URLs with the plugin URLs.
+					for name, url := range existingPluginURLs {
+						pluginURLs[name] = url
 					}
 				} else {
 					cmd.Print("Do you want to update the existing plugins? [y/N] ")
