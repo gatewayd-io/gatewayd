@@ -43,6 +43,7 @@ var (
 	backupConfig    bool
 	noPrompt        bool
 	pluginName      string
+	overwriteConfig bool
 )
 
 // pluginInstallCmd represents the plugin install command.
@@ -202,6 +203,8 @@ func init() {
 		&backupConfig, "backup", false, "Backup the plugins configuration file before installing the plugin")
 	pluginInstallCmd.Flags().StringVarP(
 		&pluginName, "name", "n", "", "Name of the plugin")
+	pluginInstallCmd.Flags().BoolVar(
+		&overwriteConfig, "overwrite-config", true, "Overwrite the existing plugins configuration file")
 	pluginInstallCmd.Flags().BoolVar(
 		&enableSentry, "sentry", true, "Enable Sentry") // Already exists in run.go
 }

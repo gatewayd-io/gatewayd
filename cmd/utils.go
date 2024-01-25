@@ -861,10 +861,12 @@ func installPlugin(cmd *cobra.Command, pluginURL string) {
 		return
 	}
 
-	// Write the YAML to the plugins config file.
-	if err = os.WriteFile(pluginConfigFile, updatedPlugins, FilePermissions); err != nil {
-		cmd.Println("There was an error writing the plugins configuration file: ", err)
-		return
+	// Write the YAML to the plugins config file if the --overwrite-config flag is set.
+	if overwriteConfig {
+		if err = os.WriteFile(pluginConfigFile, updatedPlugins, FilePermissions); err != nil {
+			cmd.Println("There was an error writing the plugins configuration file: ", err)
+			return
+		}
 	}
 
 	// Delete the downloaded and extracted files, except the plugin binary,
