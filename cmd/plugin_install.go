@@ -50,7 +50,7 @@ var (
 var pluginInstallCmd = &cobra.Command{
 	Use:     "install",
 	Short:   "Install a plugin from a local archive or a GitHub repository",
-	Example: "  gatewayd plugin install github.com/gatewayd-io/gatewayd-plugin-cache@latest",
+	Example: "  gatewayd plugin install <github.com/gatewayd-io/gatewayd-plugin-cache@latest|/path/to/plugin[.zip|.tar.gz]>", //nolint:lll
 	Run: func(cmd *cobra.Command, args []string) {
 		// Enable Sentry.
 		if enableSentry {
