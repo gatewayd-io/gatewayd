@@ -51,3 +51,35 @@ func Test_pluginInstallCmd(t *testing.T) {
 	require.NoError(t, os.Remove(pluginTestConfigFile))
 	require.NoError(t, os.Remove(fmt.Sprintf("%s.bak", pluginTestConfigFile)))
 }
+
+func Test_pluginInstallCmdAutomatedNoOverwrite(t *testing.T) {
+	pluginTestConfig := "testdata/gatewayd_plugins.yaml"
+
+	// Test plugin install command.
+	output, err := executeCommandC(
+		rootCmd, "plugin", "install",
+		"-p", pluginTestConfig, "--update", "--backup", "--overwrite-config=false")
+	require.NoError(t, err, "plugin install should not return an error")
+	assert.Contains(t, output, "/gatewayd-plugin-cache-linux-amd64-")
+	assert.Contains(t, output, "/checksums.txt")
+	assert.Contains(t, output, "Download completed successfully")
+	assert.Contains(t, output, "Checksum verification passed")
+	assert.Contains(t, output, "Plugin binary extracted to plugins/gatewayd-plugin-cache")
+	assert.Contains(t, output, "Plugin installed successfully")
+
+	// See if the plugin was actually installed.
+	output, err = executeCommandC(rootCmd, "plugin", "list", "-p", pluginTestConfig)
+	require.NoError(t, err, "plugin list should not return an error")
+	assert.Contains(t, output, "Name: gatewayd-plugin-cache")
+
+	// Clean up.
+	assert.FileExists(t, "plugins/gatewayd-plugin-cache")
+	assert.FileExists(t, fmt.Sprintf("%s.bak", pluginTestConfig))
+	assert.NoFileExists(t, "plugins/LICENSE")
+	assert.NoFileExists(t, "plugins/README.md")
+	assert.NoFileExists(t, "plugins/checksum.txt")
+	assert.NoFileExists(t, "plugins/gatewayd_plugin.yaml")
+
+	require.NoError(t, os.RemoveAll("plugins/"))
+	require.NoError(t, os.Remove(fmt.Sprintf("%s.bak", pluginTestConfig)))
+}
