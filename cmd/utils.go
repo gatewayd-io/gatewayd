@@ -218,22 +218,21 @@ func extractZip(filename, dest string) ([]string, error) {
 
 	// Extract the files.
 	filenames := []string{}
-	for _, file := range zipRc.File {
-		switch fileInfo := file.FileInfo(); {
+	for _, fileOrDir := range zipRc.File {
+		switch fileInfo := fileOrDir.FileInfo(); {
 		case fileInfo.IsDir():
 			// Sanitize the path.
-			filename := filepath.Clean(file.Name)
-			if !path.IsAbs(filename) {
-				destPath := path.Join(dest, filename)
+			dirName := filepath.Clean(fileOrDir.Name)
+			if !path.IsAbs(dirName) {
 				// Create the directory.
-
+				destPath := path.Join(dest, dirName)
 				if err := os.MkdirAll(destPath, FolderPermissions); err != nil {
 					return nil, gerr.ErrExtractFailed.Wrap(err)
 				}
 			}
 		case fileInfo.Mode().IsRegular():
 			// Sanitize the path.
-			outFilename := filepath.Join(filepath.Clean(dest), filepath.Clean(file.Name))
+			outFilename := filepath.Join(filepath.Clean(dest), filepath.Clean(fileOrDir.Name))
 
 			// Check for ZipSlip.
 			if strings.HasPrefix(outFilename, string(os.PathSeparator)) {
@@ -249,7 +248,7 @@ func extractZip(filename, dest string) ([]string, error) {
 			defer outFile.Close()
 
 			// Open the file in the zip archive.
-			fileRc, err := file.Open()
+			fileRc, err := fileOrDir.Open()
 			if err != nil {
 				os.Remove(outFilename)
 				return nil, gerr.ErrExtractFailed.Wrap(err)
@@ -261,7 +260,7 @@ func extractZip(filename, dest string) ([]string, error) {
 				return nil, gerr.ErrExtractFailed.Wrap(err)
 			}
 
-			fileMode := file.FileInfo().Mode()
+			fileMode := fileOrDir.FileInfo().Mode()
 			// Set the file permissions.
 			if fileMode.IsRegular() && fileMode&ExecFileMask != 0 {
 				if err := os.Chmod(outFilename, ExecFilePermissions); err != nil {
@@ -276,7 +275,7 @@ func extractZip(filename, dest string) ([]string, error) {
 			filenames = append(filenames, outFile.Name())
 		default:
 			return nil, gerr.ErrExtractFailed.Wrap(
-				fmt.Errorf("unknown file type: %s", file.Name))
+				fmt.Errorf("unknown file type: %s", fileOrDir.Name))
 		}
 	}
 
