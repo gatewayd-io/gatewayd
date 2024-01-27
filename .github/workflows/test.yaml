@@ -59,6 +59,8 @@ jobs:
 
       - name: Run Go tests 🔬
         run: go test -p 1 -cover -covermode atomic -coverprofile=profile.cov -v ./...
+        env:
+          GITHUB_AUTH_TOKEN: ${{ secrets.INTEGRATION }}
 
       - name: Report coverage to coveralls 📈
         uses: shogo82148/actions-goveralls@v1
