@@ -13,7 +13,11 @@ import (
 	"github.com/zenizh/go-capturer"
 )
 
+var waitBeforeStop = time.Second
+
 func Test_runCmd(t *testing.T) {
+	globalTestConfigFile := "./test_global_runCmd.yaml"
+	pluginTestConfigFile := "./test_plugins_runCmd.yaml"
 	// Create a test plugins config file.
 	_, err := executeCommandC(rootCmd, "plugin", "init", "--force", "-p", pluginTestConfigFile)
 	require.NoError(t, err, "plugin init command should not have returned an error")
@@ -45,7 +49,7 @@ func Test_runCmd(t *testing.T) {
 
 	waitGroup.Add(1)
 	go func(waitGroup *sync.WaitGroup) {
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(waitBeforeStop)
 
 		StopGracefully(
 			context.Background(),
@@ -70,6 +74,8 @@ func Test_runCmd(t *testing.T) {
 
 // Test_runCmdWithTLS tests the run command with TLS enabled on the server.
 func Test_runCmdWithTLS(t *testing.T) {
+	globalTLSTestConfigFile := "./testdata/gatewayd_tls.yaml"
+	pluginTestConfigFile := "./test_plugins_runCmdWithTLS.yaml"
 	// Create a test plugins config file.
 	_, err := executeCommandC(rootCmd, "plugin", "init", "--force", "-p", pluginTestConfigFile)
 	require.NoError(t, err, "plugin init command should not have returned an error")
@@ -101,7 +107,7 @@ func Test_runCmdWithTLS(t *testing.T) {
 
 	waitGroup.Add(1)
 	go func(waitGroup *sync.WaitGroup) {
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(waitBeforeStop)
 
 		StopGracefully(
 			context.Background(),
@@ -126,6 +132,8 @@ func Test_runCmdWithTLS(t *testing.T) {
 // Test_runCmdWithMultiTenancy tests the run command with multi-tenancy enabled.
 // Note: This test needs two instances of PostgreSQL running on ports 5432 and 5433.
 func Test_runCmdWithMultiTenancy(t *testing.T) {
+	globalTestConfigFile := "testdata/gatewayd.yaml"
+	pluginTestConfigFile := "./test_plugins_runCmdWithMultiTenancy.yaml"
 	// Create a test plugins config file.
 	_, err := executeCommandC(rootCmd, "plugin", "init", "--force", "-p", pluginTestConfigFile)
 	require.NoError(t, err, "plugin init command should not have returned an error")
@@ -140,7 +148,7 @@ func Test_runCmdWithMultiTenancy(t *testing.T) {
 		// Test run command.
 		output := capturer.CaptureOutput(func() {
 			_, err := executeCommandC(
-				rootCmd, "run", "-c", "testdata/gatewayd.yaml", "-p", pluginTestConfigFile)
+				rootCmd, "run", "-c", globalTestConfigFile, "-p", pluginTestConfigFile)
 			require.NoError(t, err, "run command should not have returned an error")
 		})
 		// Print the output for debugging purposes.
@@ -158,7 +166,7 @@ func Test_runCmdWithMultiTenancy(t *testing.T) {
 
 	waitGroup.Add(1)
 	go func(waitGroup *sync.WaitGroup) {
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(waitBeforeStop)
 
 		StopGracefully(
 			context.Background(),
@@ -181,6 +189,8 @@ func Test_runCmdWithMultiTenancy(t *testing.T) {
 }
 
 func Test_runCmdWithCachePlugin(t *testing.T) {
+	globalTestConfigFile := "./test_global_runCmdWithCachePlugin.yaml"
+	pluginTestConfigFile := "./test_plugins_runCmdWithCachePlugin.yaml"
 	// TODO: Remove this once these global variables are removed from cmd/run.go.
 	// https://github.com/gatewayd-io/gatewayd/issues/324
 	stopChan = make(chan struct{})
@@ -236,7 +246,7 @@ func Test_runCmdWithCachePlugin(t *testing.T) {
 
 	waitGroup.Add(1)
 	go func(waitGroup *sync.WaitGroup) {
-		time.Sleep(time.Second)
+		time.Sleep(waitBeforeStop)
 
 		StopGracefully(
 			context.Background(),
