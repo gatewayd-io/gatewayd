@@ -198,8 +198,8 @@ func Test_runCmdWithCachePlugin(t *testing.T) {
 	// Test plugin install command.
 	output, err := executeCommandC(
 		rootCmd, "plugin", "install",
-		"github.com/gatewayd-io/gatewayd-plugin-cache@latest",
-		"-p", pluginTestConfigFile, "--update")
+		"-p", pluginTestConfigFile, "--update",
+		"github.com/gatewayd-io/gatewayd-plugin-cache@latest")
 	require.NoError(t, err, "plugin install should not return an error")
 	assert.Contains(t, output, "Installing plugin from CLI argument")
 	assert.Contains(t, output, "Downloading ")
@@ -235,7 +235,7 @@ func Test_runCmdWithCachePlugin(t *testing.T) {
 
 	waitGroup.Add(1)
 	go func(waitGroup *sync.WaitGroup) {
-		time.Sleep(waitBeforeStop)
+		time.Sleep(waitBeforeStop * 2)
 
 		StopGracefully(
 			context.Background(),
