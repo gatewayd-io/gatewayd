@@ -178,8 +178,8 @@ func Test_runCmdWithMultiTenancy(t *testing.T) {
 }
 
 func Test_runCmdWithCachePlugin(t *testing.T) {
-	globalTestConfigFile := "./test_global_runCmdWithCachePlugin.yaml"
-	pluginTestConfigFile := "./test_plugins_runCmdWithCachePlugin.yaml"
+	globalTestConfigFile := "test_global_runCmdWithCachePlugin.yaml"
+	pluginTestConfigFile := "test_plugins_runCmdWithCachePlugin.yaml"
 	// TODO: Remove this once these global variables are removed from cmd/run.go.
 	// https://github.com/gatewayd-io/gatewayd/issues/324
 	stopChan = make(chan struct{})
@@ -209,6 +209,8 @@ func Test_runCmdWithCachePlugin(t *testing.T) {
 	assert.Contains(t, output, "Checksum verification passed")
 	assert.Contains(t, output, "Plugin binary extracted to plugins/gatewayd-plugin-cache")
 	assert.Contains(t, output, "Plugin installed successfully")
+
+	require.FileExists(t, pluginTestConfigFile, "plugin install command should have created a config file")
 
 	// See if the plugin was actually installed.
 	output, err = executeCommandC(rootCmd, "plugin", "list", "-p", pluginTestConfigFile)
