@@ -33,5 +33,5 @@ func mustPullPlugin() (string, error) {
 		}
 	}
 
-	return filepath.Abs(fileName)
+	return filepath.Abs(fileName) //nolint:wrapcheck
 }
