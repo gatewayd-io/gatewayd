@@ -21,18 +21,17 @@ func Test_pluginInstallCmd(t *testing.T) {
 		"plugin init command should have returned the correct output")
 	assert.FileExists(t, pluginTestConfigFile, "plugin init command should have created a config file")
 
+	// Pull the plugin archive and install it.
+	pluginArchivePath, err = mustPullPlugin()
+	require.NoError(t, err, "mustPullPlugin should not return an error")
+	assert.FileExists(t, pluginArchivePath, "mustPullPlugin should have downloaded the plugin archive")
+
 	// Test plugin install command.
 	output, err = executeCommandC(
-		rootCmd, "plugin", "install",
-		"github.com/gatewayd-io/gatewayd-plugin-cache@v0.2.4",
-		"-p", pluginTestConfigFile, "--update", "--backup")
+		rootCmd, "plugin", "install", "-p", pluginTestConfigFile,
+		"--update", "--backup", "--name", "gatewayd-plugin-cache", pluginArchivePath)
 	require.NoError(t, err, "plugin install should not return an error")
-	assert.Contains(t, output, "Downloading https://github.com/gatewayd-io/gatewayd-plugin-cache/releases/download/v0.2.4/gatewayd-plugin-cache-linux-amd64-v0.2.4.tar.gz") //nolint:lll
-	assert.Contains(t, output, "Downloading https://github.com/gatewayd-io/gatewayd-plugin-cache/releases/download/v0.2.4/checksums.txt")                                   //nolint:lll
-	assert.Contains(t, output, "Download completed successfully")
-	assert.Contains(t, output, "Checksum verification passed")
-	assert.Contains(t, output, "Plugin binary extracted to plugins/gatewayd-plugin-cache")
-	assert.Contains(t, output, "Plugin installed successfully")
+	assert.Equal(t, output, "Installing plugin from CLI argument\nBackup completed successfully\nPlugin binary extracted to plugins/gatewayd-plugin-cache\nPlugin installed successfully\n") //nolint:lll
 
 	// See if the plugin was actually installed.
 	output, err = executeCommandC(rootCmd, "plugin", "list", "-p", pluginTestConfigFile)

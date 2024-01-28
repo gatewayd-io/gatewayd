@@ -12,7 +12,10 @@ import (
 	"github.com/zenizh/go-capturer"
 )
 
-var waitBeforeStop = time.Second
+var (
+	waitBeforeStop    = time.Second
+	pluginArchivePath = ""
+)
 
 func Test_runCmd(t *testing.T) {
 	globalTestConfigFile := "./test_global_runCmd.yaml"
@@ -27,6 +30,8 @@ func Test_runCmd(t *testing.T) {
 	require.NoError(t, err, "configInitCmd should not return an error")
 	// Check that the config file was created.
 	assert.FileExists(t, globalTestConfigFile, "configInitCmd should create a config file")
+
+	stopChan = make(chan struct{})
 
 	var waitGroup sync.WaitGroup
 
@@ -178,8 +183,8 @@ func Test_runCmdWithMultiTenancy(t *testing.T) {
 }
 
 func Test_runCmdWithCachePlugin(t *testing.T) {
-	globalTestConfigFile := "test_global_runCmdWithCachePlugin.yaml"
-	pluginTestConfigFile := "test_plugins_runCmdWithCachePlugin.yaml"
+	globalTestConfigFile := "./test_global_runCmdWithCachePlugin.yaml"
+	pluginTestConfigFile := "./test_plugins_runCmdWithCachePlugin.yaml"
 	// TODO: Remove this once these global variables are removed from cmd/run.go.
 	// https://github.com/gatewayd-io/gatewayd/issues/324
 	stopChan = make(chan struct{})
@@ -195,27 +200,24 @@ func Test_runCmdWithCachePlugin(t *testing.T) {
 	// Check that the config file was created.
 	assert.FileExists(t, globalTestConfigFile, "configInitCmd should create a config file")
 
+	// Pull the plugin archive and install it.
+	pluginArchivePath, err = mustPullPlugin()
+	require.NoError(t, err, "mustPullPlugin should not return an error")
+	assert.FileExists(t, pluginArchivePath, "mustPullPlugin should have downloaded the plugin archive")
+
 	// Test plugin install command.
 	output, err := executeCommandC(
-		rootCmd, "plugin", "install",
-		"-p", pluginTestConfigFile, "--update",
-		"github.com/gatewayd-io/gatewayd-plugin-cache@latest")
+		rootCmd, "plugin", "install", "-p", pluginTestConfigFile, "--update", "--backup",
+		"--name", "gatewayd-plugin-cache", pluginArchivePath)
 	require.NoError(t, err, "plugin install should not return an error")
-	assert.Contains(t, output, "Installing plugin from CLI argument")
-	assert.Contains(t, output, "Downloading ")
-	assert.Contains(t, output, "gatewayd-plugin-cache-linux-amd64-")
-	assert.Contains(t, output, "/checksums.txt")
-	assert.Contains(t, output, "Download completed successfully")
-	assert.Contains(t, output, "Checksum verification passed")
-	assert.Contains(t, output, "Plugin binary extracted to plugins/gatewayd-plugin-cache")
-	assert.Contains(t, output, "Plugin installed successfully")
-
-	require.FileExists(t, pluginTestConfigFile, "plugin install command should have created a config file")
+	assert.Equal(t, output, "Installing plugin from CLI argument\nBackup completed successfully\nPlugin binary extracted to plugins/gatewayd-plugin-cache\nPlugin installed successfully\n") //nolint:lll
 
 	// See if the plugin was actually installed.
 	output, err = executeCommandC(rootCmd, "plugin", "list", "-p", pluginTestConfigFile)
 	require.NoError(t, err, "plugin list should not return an error")
 	assert.Contains(t, output, "Name: gatewayd-plugin-cache")
+
+	stopChan = make(chan struct{})
 
 	var waitGroup sync.WaitGroup
 
