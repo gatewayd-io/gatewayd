@@ -208,7 +208,7 @@ func Test_runCmdWithCachePlugin(t *testing.T) {
 	// Test plugin install command.
 	output, err := executeCommandC(
 		rootCmd, "plugin", "install", "-p", pluginTestConfigFile, "--update", "--backup",
-		"--name", "gatewayd-plugin-cache", pluginArchivePath)
+		"--overwrite-config=true", "--name", "gatewayd-plugin-cache", pluginArchivePath)
 	require.NoError(t, err, "plugin install should not return an error")
 	assert.Equal(t, output, "Installing plugin from CLI argument\nBackup completed successfully\nPlugin binary extracted to plugins/gatewayd-plugin-cache\nPlugin installed successfully\n") //nolint:lll
 
