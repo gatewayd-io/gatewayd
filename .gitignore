@@ -31,4 +31,5 @@ dist/
 libtensorflow*
 
 # Test generated files
-cmd/test_plugins.yaml.bak
+cmd/test_*.yaml.bak
+cmd/test_*.yaml

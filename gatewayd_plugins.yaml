@@ -79,6 +79,7 @@ startTimeout: 1m
 plugins:
   - name: gatewayd-plugin-cache
     enabled: True
+    url: github.com/gatewayd-io/gatewayd-plugin-cache@latest
     localPath: ../gatewayd-plugin-cache/gatewayd-plugin-cache
     args: ["--log-level", "debug"]
     env:

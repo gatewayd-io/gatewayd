@@ -12,6 +12,7 @@ type Plugin struct {
 	Args      []string `json:"args"`
 	Env       []string `json:"env" jsonschema:"required"`
 	Checksum  string   `json:"checksum" jsonschema:"required"`
+	URL       string   `json:"url"`
 }
 
 type PluginConfig struct {

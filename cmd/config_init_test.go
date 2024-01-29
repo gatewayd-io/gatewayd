@@ -10,6 +10,7 @@ import (
 )
 
 func Test_configInitCmd(t *testing.T) {
+	globalTestConfigFile := "./test_global_configInitCmd.yaml"
 	// Test configInitCmd.
 	output, err := executeCommandC(rootCmd, "config", "init", "-c", globalTestConfigFile)
 	require.NoError(t, err, "configInitCmd should not return an error")
@@ -21,7 +22,7 @@ func Test_configInitCmd(t *testing.T) {
 	assert.FileExists(t, globalTestConfigFile, "configInitCmd should create a config file")
 
 	// Test configInitCmd with the --force flag to overwrite the config file.
-	output, err = executeCommandC(rootCmd, "config", "init", "--force")
+	output, err = executeCommandC(rootCmd, "config", "init", "--force", "-c", globalTestConfigFile)
 	require.NoError(t, err, "configInitCmd should not return an error")
 	assert.Equal(t,
 		fmt.Sprintf("Config file '%s' was overwritten successfully.", globalTestConfigFile),

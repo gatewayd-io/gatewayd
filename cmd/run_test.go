@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"sync"
 	"testing"
@@ -13,7 +14,14 @@ import (
 	"github.com/zenizh/go-capturer"
 )
 
+var (
+	waitBeforeStop    = time.Second
+	pluginArchivePath = ""
+)
+
 func Test_runCmd(t *testing.T) {
+	globalTestConfigFile := "./test_global_runCmd.yaml"
+	pluginTestConfigFile := "./test_plugins_runCmd.yaml"
 	// Create a test plugins config file.
 	_, err := executeCommandC(rootCmd, "plugin", "init", "--force", "-p", pluginTestConfigFile)
 	require.NoError(t, err, "plugin init command should not have returned an error")
@@ -24,6 +32,8 @@ func Test_runCmd(t *testing.T) {
 	require.NoError(t, err, "configInitCmd should not return an error")
 	// Check that the config file was created.
 	assert.FileExists(t, globalTestConfigFile, "configInitCmd should create a config file")
+
+	stopChan = make(chan struct{})
 
 	var waitGroup sync.WaitGroup
 
@@ -45,7 +55,7 @@ func Test_runCmd(t *testing.T) {
 
 	waitGroup.Add(1)
 	go func(waitGroup *sync.WaitGroup) {
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(waitBeforeStop)
 
 		StopGracefully(
 			context.Background(),
@@ -63,13 +73,14 @@ func Test_runCmd(t *testing.T) {
 
 	waitGroup.Wait()
 
-	// Clean up.
-	require.NoError(t, os.Remove(pluginTestConfigFile))
 	require.NoError(t, os.Remove(globalTestConfigFile))
+	require.NoError(t, os.Remove(pluginTestConfigFile))
 }
 
 // Test_runCmdWithTLS tests the run command with TLS enabled on the server.
 func Test_runCmdWithTLS(t *testing.T) {
+	globalTLSTestConfigFile := "./testdata/gatewayd_tls.yaml"
+	pluginTestConfigFile := "./test_plugins_runCmdWithTLS.yaml"
 	// Create a test plugins config file.
 	_, err := executeCommandC(rootCmd, "plugin", "init", "--force", "-p", pluginTestConfigFile)
 	require.NoError(t, err, "plugin init command should not have returned an error")
@@ -101,7 +112,7 @@ func Test_runCmdWithTLS(t *testing.T) {
 
 	waitGroup.Add(1)
 	go func(waitGroup *sync.WaitGroup) {
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(waitBeforeStop)
 
 		StopGracefully(
 			context.Background(),
@@ -119,13 +130,14 @@ func Test_runCmdWithTLS(t *testing.T) {
 
 	waitGroup.Wait()
 
-	// Clean up.
 	require.NoError(t, os.Remove(pluginTestConfigFile))
 }
 
 // Test_runCmdWithMultiTenancy tests the run command with multi-tenancy enabled.
 // Note: This test needs two instances of PostgreSQL running on ports 5432 and 5433.
 func Test_runCmdWithMultiTenancy(t *testing.T) {
+	globalTestConfigFile := "./testdata/gatewayd.yaml"
+	pluginTestConfigFile := "./test_plugins_runCmdWithMultiTenancy.yaml"
 	// Create a test plugins config file.
 	_, err := executeCommandC(rootCmd, "plugin", "init", "--force", "-p", pluginTestConfigFile)
 	require.NoError(t, err, "plugin init command should not have returned an error")
@@ -140,7 +152,7 @@ func Test_runCmdWithMultiTenancy(t *testing.T) {
 		// Test run command.
 		output := capturer.CaptureOutput(func() {
 			_, err := executeCommandC(
-				rootCmd, "run", "-c", "testdata/gatewayd.yaml", "-p", pluginTestConfigFile)
+				rootCmd, "run", "-c", globalTestConfigFile, "-p", pluginTestConfigFile)
 			require.NoError(t, err, "run command should not have returned an error")
 		})
 		// Print the output for debugging purposes.
@@ -158,7 +170,7 @@ func Test_runCmdWithMultiTenancy(t *testing.T) {
 
 	waitGroup.Add(1)
 	go func(waitGroup *sync.WaitGroup) {
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(waitBeforeStop)
 
 		StopGracefully(
 			context.Background(),
@@ -176,11 +188,12 @@ func Test_runCmdWithMultiTenancy(t *testing.T) {
 
 	waitGroup.Wait()
 
-	// Clean up.
 	require.NoError(t, os.Remove(pluginTestConfigFile))
 }
 
 func Test_runCmdWithCachePlugin(t *testing.T) {
+	globalTestConfigFile := "./test_global_runCmdWithCachePlugin.yaml"
+	pluginTestConfigFile := "./test_plugins_runCmdWithCachePlugin.yaml"
 	// TODO: Remove this once these global variables are removed from cmd/run.go.
 	// https://github.com/gatewayd-io/gatewayd/issues/324
 	stopChan = make(chan struct{})
@@ -196,23 +209,24 @@ func Test_runCmdWithCachePlugin(t *testing.T) {
 	// Check that the config file was created.
 	assert.FileExists(t, globalTestConfigFile, "configInitCmd should create a config file")
 
+	// Pull the plugin archive and install it.
+	pluginArchivePath, err = mustPullPlugin()
+	require.NoError(t, err, "mustPullPlugin should not return an error")
+	assert.FileExists(t, pluginArchivePath, "mustPullPlugin should have downloaded the plugin archive")
+
 	// Test plugin install command.
 	output, err := executeCommandC(
-		rootCmd, "plugin", "install",
-		"github.com/gatewayd-io/gatewayd-plugin-cache@v0.2.4",
-		"-p", pluginTestConfigFile, "--update")
+		rootCmd, "plugin", "install", "-p", pluginTestConfigFile, "--update", "--backup",
+		"--overwrite-config=true", "--name", "gatewayd-plugin-cache", pluginArchivePath)
 	require.NoError(t, err, "plugin install should not return an error")
-	assert.Contains(t, output, "Downloading https://github.com/gatewayd-io/gatewayd-plugin-cache/releases/download/v0.2.4/gatewayd-plugin-cache-linux-amd64-v0.2.4.tar.gz") //nolint:lll
-	assert.Contains(t, output, "Downloading https://github.com/gatewayd-io/gatewayd-plugin-cache/releases/download/v0.2.4/checksums.txt")                                   //nolint:lll
-	assert.Contains(t, output, "Download completed successfully")
-	assert.Contains(t, output, "Checksum verification passed")
-	assert.Contains(t, output, "Plugin binary extracted to plugins/gatewayd-plugin-cache")
-	assert.Contains(t, output, "Plugin installed successfully")
+	assert.Equal(t, output, "Installing plugin from CLI argument\nBackup completed successfully\nPlugin binary extracted to plugins/gatewayd-plugin-cache\nPlugin installed successfully\n") //nolint:lll
 
 	// See if the plugin was actually installed.
 	output, err = executeCommandC(rootCmd, "plugin", "list", "-p", pluginTestConfigFile)
 	require.NoError(t, err, "plugin list should not return an error")
 	assert.Contains(t, output, "Name: gatewayd-plugin-cache")
+
+	stopChan = make(chan struct{})
 
 	var waitGroup sync.WaitGroup
 
@@ -234,7 +248,7 @@ func Test_runCmdWithCachePlugin(t *testing.T) {
 
 	waitGroup.Add(1)
 	go func(waitGroup *sync.WaitGroup) {
-		time.Sleep(time.Second)
+		time.Sleep(waitBeforeStop * 2)
 
 		StopGracefully(
 			context.Background(),
@@ -252,8 +266,8 @@ func Test_runCmdWithCachePlugin(t *testing.T) {
 
 	waitGroup.Wait()
 
-	// Clean up.
 	require.NoError(t, os.RemoveAll("plugins/"))
-	require.NoError(t, os.Remove(pluginTestConfigFile))
 	require.NoError(t, os.Remove(globalTestConfigFile))
+	require.NoError(t, os.Remove(pluginTestConfigFile))
+	require.NoError(t, os.Remove(fmt.Sprintf("%s.bak", pluginTestConfigFile)))
 }

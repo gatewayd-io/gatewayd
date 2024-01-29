@@ -10,6 +10,7 @@ import (
 )
 
 func Test_configLintCmd(t *testing.T) {
+	globalTestConfigFile := "./test_global_configLintCmd.yaml"
 	// Test configInitCmd.
 	output, err := executeCommandC(rootCmd, "config", "init", "-c", globalTestConfigFile)
 	require.NoError(t, err, "configInitCmd should not return an error")

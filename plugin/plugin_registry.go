@@ -398,6 +398,7 @@ func (reg *Registry) LoadPlugins(
 		pluginCtx, span := otel.Tracer("").Start(ctx, "Load plugin")
 		span.SetAttributes(attribute.Int("priority", priority))
 		span.SetAttributes(attribute.String("name", pCfg.Name))
+		span.SetAttributes(attribute.String("url", pCfg.URL))
 		span.SetAttributes(attribute.Bool("enabled", pCfg.Enabled))
 		span.SetAttributes(attribute.String("checksum", pCfg.Checksum))
 		span.SetAttributes(attribute.String("local_path", pCfg.LocalPath))

@@ -1,0 +1,21 @@
+plugins:
+  - name: gatewayd-plugin-cache
+    enabled: True
+    url: github.com/gatewayd-io/gatewayd-plugin-cache@v0.2.10
+    localPath: plugins/gatewayd-plugin-cache
+    args: ["--log-level", "debug"]
+    env:
+      - MAGIC_COOKIE_KEY=GATEWAYD_PLUGIN
+      - MAGIC_COOKIE_VALUE=5712b87aa5d7e9f9e9ab643e6603181c5b796015cb1c09d6f5ada882bf2a1872
+      - REDIS_URL=redis://localhost:6379/0
+      - EXPIRY=1h
+      - METRICS_ENABLED=True
+      - METRICS_UNIX_DOMAIN_SOCKET=/tmp/gatewayd-plugin-cache.sock
+      - METRICS_PATH=/metrics
+      - PERIODIC_INVALIDATOR_ENABLED=True
+      - PERIODIC_INVALIDATOR_INTERVAL=1m
+      - PERIODIC_INVALIDATOR_START_DELAY=1m
+      - API_ADDRESS=localhost:18080
+      - EXIT_ON_STARTUP_ERROR=False
+      - SENTRY_DSN=https://70eb1abcd32e41acbdfc17bc3407a543@o4504550475038720.ingest.sentry.io/4505342961123328
+    checksum: 867e09326da10b6e321d8dbcfcf2d20835bde79a82edc2b440dd81d151041672

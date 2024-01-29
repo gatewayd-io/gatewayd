@@ -10,6 +10,7 @@ import (
 )
 
 func Test_pluginListCmd(t *testing.T) {
+	pluginTestConfigFile := "./test_plugins_pluginListCmd.yaml"
 	// Test plugin list command.
 	output, err := executeCommandC(rootCmd, "plugin", "init", "-p", pluginTestConfigFile)
 	require.NoError(t, err, "plugin init command should not have returned an error")
