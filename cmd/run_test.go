@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -70,6 +72,9 @@ func Test_runCmd(t *testing.T) {
 	}(&waitGroup)
 
 	waitGroup.Wait()
+
+	require.NoError(t, os.Remove(globalTestConfigFile))
+	require.NoError(t, os.Remove(pluginTestConfigFile))
 }
 
 // Test_runCmdWithTLS tests the run command with TLS enabled on the server.
@@ -124,6 +129,8 @@ func Test_runCmdWithTLS(t *testing.T) {
 	}(&waitGroup)
 
 	waitGroup.Wait()
+
+	require.NoError(t, os.Remove(pluginTestConfigFile))
 }
 
 // Test_runCmdWithMultiTenancy tests the run command with multi-tenancy enabled.
@@ -180,6 +187,8 @@ func Test_runCmdWithMultiTenancy(t *testing.T) {
 	}(&waitGroup)
 
 	waitGroup.Wait()
+
+	require.NoError(t, os.Remove(pluginTestConfigFile))
 }
 
 func Test_runCmdWithCachePlugin(t *testing.T) {
@@ -256,4 +265,9 @@ func Test_runCmdWithCachePlugin(t *testing.T) {
 	}(&waitGroup)
 
 	waitGroup.Wait()
+
+	require.NoError(t, os.RemoveAll("plugins/"))
+	require.NoError(t, os.Remove(globalTestConfigFile))
+	require.NoError(t, os.Remove(pluginTestConfigFile))
+	require.NoError(t, os.Remove(fmt.Sprintf("%s.bak", pluginTestConfigFile)))
 }
