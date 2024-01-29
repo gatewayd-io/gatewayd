@@ -129,7 +129,7 @@ func Test_runCmdWithTLS(t *testing.T) {
 // Test_runCmdWithMultiTenancy tests the run command with multi-tenancy enabled.
 // Note: This test needs two instances of PostgreSQL running on ports 5432 and 5433.
 func Test_runCmdWithMultiTenancy(t *testing.T) {
-	globalTestConfigFile := "testdata/gatewayd.yaml"
+	globalTestConfigFile := "./testdata/gatewayd.yaml"
 	pluginTestConfigFile := "./test_plugins_runCmdWithMultiTenancy.yaml"
 	// Create a test plugins config file.
 	_, err := executeCommandC(rootCmd, "plugin", "init", "--force", "-p", pluginTestConfigFile)

@@ -294,6 +294,7 @@ func extractTarGz(filename, dest string) ([]string, error) {
 	if err != nil {
 		return nil, gerr.ErrExtractFailed.Wrap(err)
 	}
+	defer uncompressedStream.Close()
 
 	// Create the output directory if it doesn't exist.
 	if err := os.MkdirAll(dest, FolderPermissions); err != nil {
