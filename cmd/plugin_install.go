@@ -202,9 +202,9 @@ func init() {
 	pluginInstallCmd.Flags().BoolVar(
 		&backupConfig, "backup", false, "Backup the plugins configuration file before installing the plugin")
 	pluginInstallCmd.Flags().StringVarP(
-		&pluginName, "name", "n", "", "Name of the plugin")
+		&pluginName, "name", "n", "", "Name of the plugin (only for installing from archive files)")
 	pluginInstallCmd.Flags().BoolVar(
-		&overwriteConfig, "overwrite-config", true, "Overwrite the existing plugins configuration file")
+		&overwriteConfig, "overwrite-config", true, "Overwrite the existing plugins configuration file (overrides --update, only used for installing from the plugins configuration file)") //nolint:lll
 	pluginInstallCmd.Flags().BoolVar(
 		&enableSentry, "sentry", true, "Enable Sentry") // Already exists in run.go
 }
