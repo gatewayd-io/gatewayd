@@ -56,6 +56,9 @@ func Test_pluginInstallCmd(t *testing.T) {
 func Test_pluginInstallCmdAutomatedNoOverwrite(t *testing.T) {
 	pluginTestConfigFile := "./testdata/gatewayd_plugins.yaml"
 
+	// Reset the global variable.
+	pullOnly = false
+
 	// Test plugin install command.
 	output, err := executeCommandC(
 		rootCmd, "plugin", "install",
