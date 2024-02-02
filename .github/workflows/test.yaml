@@ -66,6 +66,7 @@ jobs:
         uses: shogo82148/actions-goveralls@v1
         with:
           path-to-profile: profile.cov
+          ignore: "api/v1/*,usagereport/*"
 
   test-plugin:
     name: Test GatewayD Plugins
