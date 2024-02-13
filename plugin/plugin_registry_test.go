@@ -68,9 +68,9 @@ func TestPluginRegistry(t *testing.T) {
 // Test_HookRegistry_Add tests the Add function.
 func Test_PluginRegistry_AddHook(t *testing.T) {
 	testFunc := func(
-		ctx context.Context,
+		_ context.Context,
 		args *v1.Struct,
-		opts ...grpc.CallOption,
+		_ ...grpc.CallOption,
 	) (*v1.Struct, error) {
 		return args, nil
 	}
@@ -85,16 +85,16 @@ func Test_PluginRegistry_AddHook(t *testing.T) {
 func Test_PluginRegistry_AddHook_Multiple(t *testing.T) {
 	reg := NewPluginRegistry(t)
 	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 0, func(
-		ctx context.Context,
+		_ context.Context,
 		args *v1.Struct,
-		opts ...grpc.CallOption,
+		_ ...grpc.CallOption,
 	) (*v1.Struct, error) {
 		return args, nil
 	})
 	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 1, func(
-		ctx context.Context,
+		_ context.Context,
 		args *v1.Struct,
-		opts ...grpc.CallOption,
+		_ ...grpc.CallOption,
 	) (*v1.Struct, error) {
 		return args, nil
 	})
@@ -107,9 +107,9 @@ func Test_PluginRegistry_Run(t *testing.T) {
 	reg := NewPluginRegistry(t)
 	reg.Verification = config.Ignore
 	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 0, func(
-		ctx context.Context,
+		_ context.Context,
 		args *v1.Struct,
-		opts ...grpc.CallOption,
+		_ ...grpc.CallOption,
 	) (*v1.Struct, error) {
 		return args, nil
 	})
@@ -124,17 +124,17 @@ func Test_PluginRegistry_Run_PassDown(t *testing.T) {
 	reg.Verification = config.PassDown
 	// The result of the hook will be nil and will be passed down to the next
 	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 0, func(
-		ctx context.Context,
+		_ context.Context,
 		args *v1.Struct,
-		opts ...grpc.CallOption,
+		_ ...grpc.CallOption,
 	) (*v1.Struct, error) {
 		return args, nil
 	})
 	// The consolidated result should be {"test": "test"}.
 	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 1, func(
-		ctx context.Context,
-		args *v1.Struct,
-		opts ...grpc.CallOption,
+		context.Context,
+		*v1.Struct,
+		...grpc.CallOption,
 	) (*v1.Struct, error) {
 		output, err := v1.NewStruct(map[string]interface{}{
 			"test": "test",
@@ -160,9 +160,9 @@ func Test_HookRegistry_Run_PassDown_2(t *testing.T) {
 	reg.Verification = config.PassDown
 	// The result of the hook will be nil and will be passed down to the next
 	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 0, func(
-		ctx context.Context,
+		_ context.Context,
 		args *v1.Struct,
-		opts ...grpc.CallOption,
+		_ ...grpc.CallOption,
 	) (*v1.Struct, error) {
 		args.Fields["test1"] = &v1.Value{
 			Kind: &v1.Value_StringValue{
@@ -173,9 +173,9 @@ func Test_HookRegistry_Run_PassDown_2(t *testing.T) {
 	})
 	// The consolidated result should be {"test1": "test1", "test2": "test2"}.
 	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 1, func(
-		ctx context.Context,
+		_ context.Context,
 		args *v1.Struct,
-		opts ...grpc.CallOption,
+		_ ...grpc.CallOption,
 	) (*v1.Struct, error) {
 		args.Fields["test2"] = &v1.Value{
 			Kind: &v1.Value_StringValue{
@@ -201,17 +201,17 @@ func Test_HookRegistry_Run_Ignore(t *testing.T) {
 	reg.Verification = config.Ignore
 	// This should not run, because the return value is not the same as the params
 	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 0, func(
-		ctx context.Context,
+		_ context.Context,
 		args *v1.Struct,
-		opts ...grpc.CallOption,
+		_ ...grpc.CallOption,
 	) (*v1.Struct, error) {
 		return args, nil
 	})
 	// This should run, because the return value is the same as the params
 	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 1, func(
-		ctx context.Context,
+		_ context.Context,
 		args *v1.Struct,
-		opts ...grpc.CallOption,
+		_ ...grpc.CallOption,
 	) (*v1.Struct, error) {
 		args.Fields["test"] = &v1.Value{
 			Kind: &v1.Value_StringValue{
@@ -237,17 +237,17 @@ func Test_HookRegistry_Run_Abort(t *testing.T) {
 	reg.Verification = config.Abort
 	// This should not run, because the return value is not the same as the params
 	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 0, func(
-		ctx context.Context,
+		_ context.Context,
 		args *v1.Struct,
-		opts ...grpc.CallOption,
+		_ ...grpc.CallOption,
 	) (*v1.Struct, error) {
 		return args, nil
 	})
 	// This should not run, because the first hook returns nil, and its result is ignored.
 	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 1, func(
-		ctx context.Context,
-		args *v1.Struct,
-		opts ...grpc.CallOption,
+		context.Context,
+		*v1.Struct,
+		...grpc.CallOption,
 	) (*v1.Struct, error) {
 		output, err := v1.NewStruct(map[string]interface{}{
 			"test": "test",
@@ -267,17 +267,17 @@ func Test_HookRegistry_Run_Remove(t *testing.T) {
 	reg.Verification = config.Remove
 	// This should not run, because the return value is not the same as the params
 	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 0, func(
-		ctx context.Context,
+		_ context.Context,
 		args *v1.Struct,
-		opts ...grpc.CallOption,
+		_ ...grpc.CallOption,
 	) (*v1.Struct, error) {
 		return args, nil
 	})
 	// This should not run, because the first hook returns nil, and its result is ignored.
 	reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER, 1, func(
-		ctx context.Context,
-		args *v1.Struct,
-		opts ...grpc.CallOption,
+		context.Context,
+		*v1.Struct,
+		...grpc.CallOption,
 	) (*v1.Struct, error) {
 		output, err := v1.NewStruct(map[string]interface{}{
 			"test": "test",
@@ -314,7 +314,7 @@ func BenchmarkHookRun(b *testing.B) {
 	)
 	reg.Verification = config.PassDown
 	hookFunction := func(
-		ctx context.Context, args *v1.Struct, opts ...grpc.CallOption,
+		_ context.Context, args *v1.Struct, _ ...grpc.CallOption,
 	) (*v1.Struct, error) {
 		args.Fields["test"] = v1.NewStringValue("test1")
 		return args, nil

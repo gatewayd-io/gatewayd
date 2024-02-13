@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"sync"
 	"testing"
@@ -269,5 +268,5 @@ func Test_runCmdWithCachePlugin(t *testing.T) {
 	require.NoError(t, os.RemoveAll("plugins/"))
 	require.NoError(t, os.Remove(globalTestConfigFile))
 	require.NoError(t, os.Remove(pluginTestConfigFile))
-	require.NoError(t, os.Remove(fmt.Sprintf("%s.bak", pluginTestConfigFile)))
+	require.NoError(t, os.Remove(pluginTestConfigFile+BackupFileExt))
 }

@@ -13,7 +13,7 @@ import (
 var pluginLintCmd = &cobra.Command{
 	Use:   "lint",
 	Short: "Lint the GatewayD plugins config",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		// Enable Sentry.
 		if enableSentry {
 			// Initialize Sentry.

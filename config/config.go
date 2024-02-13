@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	goerrors "errors"
 	"fmt"
 	"log"
 	"os"
@@ -462,7 +463,7 @@ func (c *Config) ValidateGlobalConfig(ctx context.Context) {
 		for _, err := range errors {
 			log.Println(err)
 		}
-		span.RecordError(fmt.Errorf("failed to validate global configuration"))
+		span.RecordError(goerrors.New("failed to validate global configuration"))
 		span.End()
 		log.Fatal("failed to validate global configuration")
 	}

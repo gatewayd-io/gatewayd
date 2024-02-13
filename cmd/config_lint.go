@@ -13,7 +13,7 @@ import (
 var configLintCmd = &cobra.Command{
 	Use:   "lint",
 	Short: "Lint the GatewayD global config",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		// Enable Sentry.
 		if enableSentry {
 			// Initialize Sentry.

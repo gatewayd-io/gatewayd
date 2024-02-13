@@ -12,7 +12,7 @@ var onlyEnabled bool
 var pluginListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List the GatewayD plugins",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		// Enable Sentry.
 		if enableSentry {
 			// Initialize Sentry.

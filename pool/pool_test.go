@@ -91,7 +91,7 @@ func TestPool_ForEach(t *testing.T) {
 	err = pool.Put("client2.ID", "client2")
 	assert.Nil(t, err)
 	assert.Equal(t, 2, pool.Size())
-	pool.ForEach(func(key, value interface{}) bool {
+	pool.ForEach(func(_, value interface{}) bool {
 		if c, ok := value.(string); ok {
 			assert.NotEmpty(t, c)
 		}
@@ -195,7 +195,7 @@ func TestPool_GetClientIDs(t *testing.T) {
 	assert.Equal(t, 2, pool.Size())
 
 	var ids []string
-	pool.ForEach(func(key, value interface{}) bool {
+	pool.ForEach(func(key, _ interface{}) bool {
 		if id, ok := key.(string); ok {
 			ids = append(ids, id)
 		}
@@ -253,7 +253,7 @@ func BenchmarkPool_ForEach(b *testing.B) {
 	pool.Put("client1.ID", "client1") //nolint:errcheck
 	pool.Put("client2.ID", "client2") //nolint:errcheck
 	for i := 0; i < b.N; i++ {
-		pool.ForEach(func(key, value interface{}) bool {
+		pool.ForEach(func(_, _ interface{}) bool {
 			return true
 		})
 	}

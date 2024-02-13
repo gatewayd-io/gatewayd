@@ -40,7 +40,7 @@ func Test_pluginInstallCmd(t *testing.T) {
 
 	// Clean up.
 	assert.FileExists(t, "plugins/gatewayd-plugin-cache")
-	assert.FileExists(t, fmt.Sprintf("%s.bak", pluginTestConfigFile))
+	assert.FileExists(t, pluginTestConfigFile+BackupFileExt)
 	assert.NoFileExists(t, "gatewayd-plugin-cache-linux-amd64-v0.2.4.tar.gz")
 	assert.NoFileExists(t, "checksums.txt")
 	assert.NoFileExists(t, "plugins/LICENSE")
@@ -50,7 +50,7 @@ func Test_pluginInstallCmd(t *testing.T) {
 
 	require.NoError(t, os.RemoveAll("plugins/"))
 	require.NoError(t, os.Remove(pluginTestConfigFile))
-	require.NoError(t, os.Remove(fmt.Sprintf("%s.bak", pluginTestConfigFile)))
+	require.NoError(t, os.Remove(pluginTestConfigFile+BackupFileExt))
 }
 
 func Test_pluginInstallCmdAutomatedNoOverwrite(t *testing.T) {
@@ -78,12 +78,12 @@ func Test_pluginInstallCmdAutomatedNoOverwrite(t *testing.T) {
 
 	// Clean up.
 	assert.FileExists(t, "plugins/gatewayd-plugin-cache")
-	assert.FileExists(t, fmt.Sprintf("%s.bak", pluginTestConfigFile))
+	assert.FileExists(t, pluginTestConfigFile+BackupFileExt)
 	assert.NoFileExists(t, "plugins/LICENSE")
 	assert.NoFileExists(t, "plugins/README.md")
 	assert.NoFileExists(t, "plugins/checksum.txt")
 	assert.NoFileExists(t, "plugins/gatewayd_plugin.yaml")
 
 	require.NoError(t, os.RemoveAll("plugins/"))
-	require.NoError(t, os.Remove(fmt.Sprintf("%s.bak", pluginTestConfigFile)))
+	require.NoError(t, os.Remove(pluginTestConfigFile+BackupFileExt))
 }

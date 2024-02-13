@@ -313,7 +313,7 @@ func (pr *Proxy) PassThroughToServer(conn *ConnWrapper, stack *Stack) *gerr.Gate
 	//nolint:nestif
 	if conn.IsTLSEnabled() && IsPostgresSSLRequest(request) {
 		// Perform TLS handshake.
-		if err := conn.UpgradeToTLS(func(c net.Conn) {
+		if err := conn.UpgradeToTLS(func(net.Conn) {
 			// Acknowledge the SSL request:
 			// https://www.postgresql.org/docs/current/protocol-flow.html#PROTOCOL-FLOW-SSL
 			if sent, err := conn.Write([]byte{'S'}); err != nil {
@@ -601,7 +601,7 @@ func (pr *Proxy) Shutdown() {
 	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "Shutdown")
 	defer span.End()
 
-	pr.availableConnections.ForEach(func(key, value interface{}) bool {
+	pr.availableConnections.ForEach(func(_, value interface{}) bool {
 		if client, ok := value.(*Client); ok {
 			if client.IsConnected() {
 				client.Close()
