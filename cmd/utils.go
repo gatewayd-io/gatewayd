@@ -42,6 +42,7 @@ const (
 	ExecFilePermissions os.FileMode = 0o755
 	ExecFileMask        os.FileMode = 0o111
 	MaxFileSize         int64       = 1024 * 1024 * 100 // 10MB
+	BackupFileExt       string      = ".bak"
 )
 
 var (
@@ -737,7 +738,7 @@ func installPlugin(cmd *cobra.Command, pluginURL string) {
 
 	// Check if the user wants to take a backup of the plugins configuration file.
 	if backupConfig {
-		backupFilename := fmt.Sprintf("%s.bak", pluginConfigFile)
+		backupFilename := pluginConfigFile + BackupFileExt
 		if err := os.WriteFile(backupFilename, pluginsConfig, FilePermissions); err != nil {
 			cmd.Println("There was an error backing up the plugins configuration file: ", err)
 		}

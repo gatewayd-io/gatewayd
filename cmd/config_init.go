@@ -12,7 +12,7 @@ var force bool
 var configInitCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Create or overwrite the GatewayD global config",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		// Enable Sentry.
 		if enableSentry {
 			// Initialize Sentry.

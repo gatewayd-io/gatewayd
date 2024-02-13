@@ -148,7 +148,7 @@ func StopGracefully(
 var runCmd = &cobra.Command{
 	Use:   "run",
 	Short: "Run a GatewayD instance",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		// Enable tracing with OpenTelemetry.
 		if enableTracing {
 			// TODO: Make this configurable.
@@ -427,7 +427,7 @@ var runCmd = &cobra.Command{
 			}()
 
 			mux := http.NewServeMux()
-			mux.HandleFunc("/", func(responseWriter http.ResponseWriter, request *http.Request) {
+			mux.HandleFunc("/", func(responseWriter http.ResponseWriter, _ *http.Request) {
 				// Serve a static page with a link to the metrics endpoint.
 				if _, err := responseWriter.Write([]byte(fmt.Sprintf(
 					`<html><head><title>GatewayD Prometheus Metrics Server</title></head><body><a href="%s">Metrics</a></body></html>`,
@@ -878,7 +878,7 @@ var runCmd = &cobra.Command{
 					Plugins:        []*usage.Plugin{},
 				}
 				pluginRegistry.ForEach(
-					func(identifier sdkPlugin.Identifier, plugin *plugin.Plugin) {
+					func(identifier sdkPlugin.Identifier, _ *plugin.Plugin) {
 						report.Plugins = append(report.GetPlugins(), &usage.Plugin{
 							Name:     identifier.Name,
 							Version:  identifier.Version,

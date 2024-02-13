@@ -35,7 +35,7 @@ func StartHTTPAPI(options *Options) {
 
 	mux := http.NewServeMux()
 	mux.Handle("/", rmux)
-	mux.HandleFunc("/healthz", func(writer http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/healthz", func(writer http.ResponseWriter, _ *http.Request) {
 		if liveness(options.Servers) {
 			writer.Header().Set("Content-Type", "application/json")
 			writer.WriteHeader(http.StatusOK)
@@ -52,7 +52,7 @@ func StartHTTPAPI(options *Options) {
 		}
 	})
 
-	mux.HandleFunc("/version", func(writer http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/version", func(writer http.ResponseWriter, _ *http.Request) {
 		writer.WriteHeader(http.StatusOK)
 		if _, err := writer.Write([]byte(config.Version)); err != nil {
 			options.Logger.Err(err).Msg("failed to serve version")
@@ -61,7 +61,7 @@ func StartHTTPAPI(options *Options) {
 	})
 
 	if IsSwaggerEmbedded() {
-		mux.HandleFunc("/swagger.json", func(writer http.ResponseWriter, r *http.Request) {
+		mux.HandleFunc("/swagger.json", func(writer http.ResponseWriter, _ *http.Request) {
 			writer.WriteHeader(http.StatusOK)
 			data, _ := swaggerUI.ReadFile("v1/api.swagger.json")
 			if _, err := writer.Write(data); err != nil {

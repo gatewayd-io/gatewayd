@@ -10,7 +10,7 @@ import (
 var pluginInitCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Create or overwrite the GatewayD plugins config",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		// Enable Sentry.
 		if enableSentry {
 			// Initialize Sentry.
