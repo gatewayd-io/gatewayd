@@ -57,13 +57,16 @@ jobs:
             ghcr.io/gatewayd-io/gatewayd:${{ github.ref_name }}
             ghcr.io/gatewayd-io/gatewayd:latest
       - name: Scan Docker image with Syft and generate SBOM
-        run: |
-          go install github.com/anchore/syft/cmd/syft@latest
-          syft packages docker:gatewaydio/gatewayd:${{ github.ref_name }} --file gatewayd-image-${{ github.ref_name }}.cyclonedx.json --output cyclonedx-json
+        uses: anchore/sbom-action@v0
+        with:
+          image: docker:gatewaydio/gatewayd:${{ github.ref_name }}
+          format: cyclonedx-json
+          output-file: gatewayd-image-${{ github.ref_name }}.cyclonedx.json
       - name: Scan source code and generate SBOM
-        run: |
-          go install github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@latest
-          cyclonedx-gomod mod -json -licenses -output gatewayd-source-${{ github.ref_name }}.cyclonedx.json
+        uses: CycloneDX/gh-gomod-generate-sbom@v2
+        with:
+          version: v1
+          args: mod -json -licenses -output gatewayd-source-${{ github.ref_name }}.cyclonedx.json
       - name: Create release and add artifacts
         uses: softprops/action-gh-release@v1
         with:
