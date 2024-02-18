@@ -660,7 +660,7 @@ func (reg *Registry) RegisterHooks(ctx context.Context, pluginID sdkPlugin.Ident
 			hookMethod = pluginV1.OnShutdown
 		case v1.HookName_HOOK_NAME_ON_TICK:
 			hookMethod = pluginV1.OnTick
-		case v1.HookName_HOOK_NAME_ON_HOOK: // fallthrough
+		case v1.HookName_HOOK_NAME_ON_HOOK:
 			hookMethod = pluginV1.OnHook
 		default:
 			continue
