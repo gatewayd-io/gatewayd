@@ -13,10 +13,6 @@ var (
 		"strict": Strict,
 		"loose":  Loose,
 	}
-	AcceptancePolicies = map[string]AcceptancePolicy{
-		"accept": Accept,
-		"reject": Reject,
-	}
 	TerminationPolicies = map[string]TerminationPolicy{
 		"continue": Continue,
 		"stop":     Stop,

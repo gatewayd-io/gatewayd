@@ -87,7 +87,7 @@ service GatewayDAdminAPIService {
           },
           examples: {
             key: "application/json"
-            value: '{"acceptancePolicy":"accept","compatibilityPolicy":"strict","enableMetricsMerger":true,"healthCheckPeriod":"5s","metricsMergerPeriod":"5s","plugins":[{"args":["--log-level","debug"],"checksum":"...","enabled":true,"env":["MAGIC_COOKIE_KEY=...","MAGIC_COOKIE_VALUE=...","REDIS_URL=redis://localhost:6379/0","EXPIRY=1h","METRICS_ENABLED=True","METRICS_UNIX_DOMAIN_SOCKET=/tmp/gatewayd-plugin-cache.sock","METRICS_PATH=/metrics","PERIODIC_INVALIDATOR_ENABLED=True","PERIODIC_INVALIDATOR_INTERVAL=1m","PERIODIC_INVALIDATOR_START_DELAY=1m","API_ADDRESS=localhost:18080","EXIT_ON_STARTUP_ERROR=False","SENTRY_DSN=..."],"localPath":"plugins/gatewayd-plugin-cache","name":"gatewayd-plugin-cache"}],"reloadOnCrash":true,"terminationPolicy":"stop","timeout":"30s"}'
+            value: '{"compatibilityPolicy":"strict","enableMetricsMerger":true,"healthCheckPeriod":"5s","metricsMergerPeriod":"5s","plugins":[{"args":["--log-level","debug"],"checksum":"...","enabled":true,"env":["MAGIC_COOKIE_KEY=...","MAGIC_COOKIE_VALUE=...","REDIS_URL=redis://localhost:6379/0","EXPIRY=1h","METRICS_ENABLED=True","METRICS_UNIX_DOMAIN_SOCKET=/tmp/gatewayd-plugin-cache.sock","METRICS_PATH=/metrics","PERIODIC_INVALIDATOR_ENABLED=True","PERIODIC_INVALIDATOR_INTERVAL=1m","PERIODIC_INVALIDATOR_START_DELAY=1m","API_ADDRESS=localhost:18080","EXIT_ON_STARTUP_ERROR=False","SENTRY_DSN=..."],"localPath":"plugins/gatewayd-plugin-cache","name":"gatewayd-plugin-cache"}],"reloadOnCrash":true,"terminationPolicy":"stop","timeout":"30s"}'
           }
         };
       };
