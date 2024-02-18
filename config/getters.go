@@ -13,12 +13,6 @@ var (
 		"strict": Strict,
 		"loose":  Loose,
 	}
-	VerificationPolicies = map[string]VerificationPolicy{
-		"passdown": PassDown,
-		"ignore":   Ignore,
-		"abort":    Abort,
-		"remove":   Remove,
-	}
 	AcceptancePolicies = map[string]AcceptancePolicy{
 		"accept": Accept,
 		"reject": Reject,

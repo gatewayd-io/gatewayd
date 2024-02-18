@@ -30,7 +30,6 @@ const (
 	ErrCodePutFailed
 	ErrCodeNilPointer
 	ErrCodeCastFailed
-	ErrCodeHookVerificationFailed
 	ErrCodeHookReturnedError
 	ErrCodeHookTerminatedConnection
 	ErrCodeFileNotFound
@@ -108,8 +107,6 @@ var (
 	ErrCastFailed = NewGatewayDError(
 		ErrCodeCastFailed, "failed to cast", nil)
 
-	ErrHookVerificationFailed = NewGatewayDError(
-		ErrCodeHookVerificationFailed, "failed to verify hook", nil)
 	ErrHookReturnedError = NewGatewayDError(
 		ErrCodeHookReturnedError, "hook returned error", nil)
 	ErrHookTerminatedConnection = NewGatewayDError(

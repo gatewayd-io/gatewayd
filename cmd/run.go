@@ -258,11 +258,6 @@ var runCmd = &cobra.Command{
 					config.CompatibilityPolicies, conf.Plugin.CompatibilityPolicy),
 				config.CompatibilityPolicies[conf.Plugin.CompatibilityPolicy],
 				config.DefaultCompatibilityPolicy),
-			config.If[config.VerificationPolicy](
-				config.Exists[string, config.VerificationPolicy](
-					config.VerificationPolicies, conf.Plugin.VerificationPolicy),
-				config.VerificationPolicies[conf.Plugin.VerificationPolicy],
-				config.DefaultVerificationPolicy),
 			config.If[config.AcceptancePolicy](
 				config.Exists[string, config.AcceptancePolicy](
 					config.AcceptancePolicies, conf.Plugin.AcceptancePolicy),

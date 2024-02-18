@@ -112,7 +112,6 @@ jobs:
           cd plugin-template-go && make build && cp plugin-template-go ../ptg && cd ..
           export SHA256SUM=$(sha256sum ptg | awk '{print $1}')
           cat <<EOF > gatewayd_plugins.yaml
-          verificationPolicy: "passdown"
           compatibilityPolicy: "strict"
           acceptancePolicy: "accept"
           terminationPolicy: "stop"

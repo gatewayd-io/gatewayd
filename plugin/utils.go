@@ -3,21 +3,7 @@ package plugin
 import (
 	"os/exec"
 	"time"
-
-	v1 "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin/v1"
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 )
-
-// Verify compares two structs and returns true if they are equal.
-func Verify(params, returnVal *v1.Struct) bool {
-	return cmp.Equal(params.AsMap(), returnVal.AsMap(), cmp.Options{
-		cmpopts.SortMaps(func(a, b string) bool {
-			return a < b
-		}),
-		cmpopts.EquateEmpty(),
-	})
-}
 
 // NewCommand returns a command with the given arguments and environment variables.
 func NewCommand(cmd string, args []string, env []string) *exec.Cmd {
