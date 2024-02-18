@@ -108,7 +108,6 @@ func TestGetPlugins(t *testing.T) {
 	pluginRegistry := plugin.NewRegistry(
 		context.TODO(),
 		config.Loose,
-		config.Accept,
 		config.Stop,
 		zerolog.Logger{},
 		true,
@@ -135,7 +134,6 @@ func TestGetPluginsWithEmptyPluginRegistry(t *testing.T) {
 	pluginRegistry := plugin.NewRegistry(
 		context.TODO(),
 		config.Loose,
-		config.Accept,
 		config.Stop,
 		zerolog.Logger{},
 		true,
@@ -241,7 +239,6 @@ func TestGetServers(t *testing.T) {
 	pluginRegistry := plugin.NewRegistry(
 		context.TODO(),
 		config.Loose,
-		config.Accept,
 		config.Stop,
 		zerolog.Logger{},
 		true,

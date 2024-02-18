@@ -17,7 +17,6 @@ type Plugin struct {
 
 type PluginConfig struct {
 	CompatibilityPolicy string        `json:"compatibilityPolicy" jsonschema:"enum=strict,enum=loose"`
-	AcceptancePolicy    string        `json:"acceptancePolicy" jsonschema:"enum=accept,enum=reject"`
 	TerminationPolicy   string        `json:"terminationPolicy" jsonschema:"enum=continue,enum=stop"`
 	EnableMetricsMerger bool          `json:"enableMetricsMerger"`
 	MetricsMergerPeriod time.Duration `json:"metricsMergerPeriod" jsonschema:"oneof_type=string;integer"`

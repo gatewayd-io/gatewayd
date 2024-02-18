@@ -7,7 +7,6 @@ import (
 type (
 	Status              uint
 	CompatibilityPolicy string
-	AcceptancePolicy    string
 	TerminationPolicy   string
 	LogOutput           uint
 )
@@ -22,12 +21,6 @@ const (
 const (
 	Strict CompatibilityPolicy = "strict" // Expect all required plugins to be loaded and present
 	Loose  CompatibilityPolicy = "loose"  // Load the plugin, even if the requirements are not met
-)
-
-// AcceptancePolicy is the acceptance policy for custom hooks.
-const (
-	Accept AcceptancePolicy = "accept" // Accept all custom hooks
-	Reject AcceptancePolicy = "reject" // Reject all custom hooks
 )
 
 // TerminationPolicy is the termination policy for
@@ -136,6 +129,5 @@ const (
 
 	// Policies.
 	DefaultCompatibilityPolicy = Strict
-	DefaultAcceptancePolicy    = Accept
 	DefaultTerminationPolicy   = Stop
 )

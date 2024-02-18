@@ -60,7 +60,6 @@ type Registry struct {
 
 	Logger        zerolog.Logger
 	Compatibility config.CompatibilityPolicy
-	Acceptance    config.AcceptancePolicy
 	Termination   config.TerminationPolicy
 	StartTimeout  time.Duration
 }
@@ -71,7 +70,6 @@ var _ IRegistry = (*Registry)(nil)
 func NewRegistry(
 	ctx context.Context,
 	compatibility config.CompatibilityPolicy,
-	acceptance config.AcceptancePolicy,
 	termination config.TerminationPolicy,
 	logger zerolog.Logger,
 	devMode bool,
@@ -86,7 +84,6 @@ func NewRegistry(
 		devMode:       devMode,
 		Logger:        logger,
 		Compatibility: compatibility,
-		Acceptance:    acceptance,
 		Termination:   termination,
 	}
 }
@@ -664,25 +661,8 @@ func (reg *Registry) RegisterHooks(ctx context.Context, pluginID sdkPlugin.Ident
 		case v1.HookName_HOOK_NAME_ON_TICK:
 			hookMethod = pluginV1.OnTick
 		case v1.HookName_HOOK_NAME_ON_HOOK: // fallthrough
+			hookMethod = pluginV1.OnHook
 		default:
-			switch reg.Acceptance {
-			case config.Reject:
-				reg.Logger.Warn().Fields(map[string]interface{}{
-					"hook":     hookName.String(),
-					"priority": pluginImpl.Priority,
-					"name":     pluginImpl.ID.Name,
-				}).Msg("Unknown hook, skipping")
-			case config.Accept: // fallthrough
-			default:
-				// Default is to accept custom hooks.
-				reg.Logger.Debug().Fields(map[string]interface{}{
-					"hook":     hookName.String(),
-					"priority": pluginImpl.Priority,
-					"name":     pluginImpl.ID.Name,
-				}).Msg("Registering a custom hook")
-				metrics.PluginHooksRegistered.Inc()
-				reg.AddHook(hookName, pluginImpl.Priority, pluginV1.OnHook)
-			}
 			continue
 		}
 

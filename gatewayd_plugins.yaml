@@ -9,12 +9,6 @@
 #   plugin and that version is not the one currently loaded.
 compatibilityPolicy: "strict"
 
-# The acceptance policy controls how new dynamic hooks are handled. If a plugin registers a
-# new hook, the acceptance policy controls whether to accept or reject the new hook.
-# - "accept" (default): the new hook is accepted and registered.
-# - "reject": the new hook is rejected and not registered.
-acceptancePolicy: "accept"
-
 # The termination policy controls how to handle the termination of requests. If a plugin
 # terminates a request, the termination policy controls whether to stop executing the
 # remaining plugins or not. If the termination policy is set to "stop", the remaining plugins

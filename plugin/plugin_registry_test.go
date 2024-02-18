@@ -28,7 +28,6 @@ func NewPluginRegistry(t *testing.T) *Registry {
 	reg := NewRegistry(
 		context.Background(),
 		config.Loose,
-		config.Accept,
 		config.Stop,
 		logger,
 		false,
@@ -128,7 +127,6 @@ func BenchmarkHookRun(b *testing.B) {
 	reg := NewRegistry(
 		context.Background(),
 		config.Loose,
-		config.Accept,
 		config.Stop,
 		logger,
 		false,
