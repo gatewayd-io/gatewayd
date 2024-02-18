@@ -6,7 +6,6 @@ import (
 
 type (
 	Status              uint
-	VerificationPolicy  string
 	CompatibilityPolicy string
 	AcceptancePolicy    string
 	TerminationPolicy   string
@@ -17,16 +16,6 @@ type (
 const (
 	Running Status = iota
 	Stopped
-)
-
-// VerificationPolicy is the policy for hook verification.
-const (
-	// Non-strict (permissive) mode.
-	PassDown VerificationPolicy = "passdown" // Pass down the extra keys/values in result to the next plugins
-	// Strict mode.
-	Ignore VerificationPolicy = "ignore" // Ignore errors and continue
-	Abort  VerificationPolicy = "abort"  // Abort on first error and return results
-	Remove VerificationPolicy = "remove" // Remove the hook from the list on error and continue
 )
 
 // CompatibilityPolicy is the compatibility policy for plugins.
@@ -147,7 +136,6 @@ const (
 
 	// Policies.
 	DefaultCompatibilityPolicy = Strict
-	DefaultVerificationPolicy  = PassDown
 	DefaultAcceptancePolicy    = Accept
 	DefaultTerminationPolicy   = Stop
 )

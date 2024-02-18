@@ -50,7 +50,6 @@ func TestNewProxy(t *testing.T) {
 		plugin.NewRegistry(
 			context.Background(),
 			config.Loose,
-			config.PassDown,
 			config.Accept,
 			config.Stop,
 			logger,
@@ -94,7 +93,6 @@ func BenchmarkNewProxy(b *testing.B) {
 			plugin.NewRegistry(
 				context.Background(),
 				config.Loose,
-				config.PassDown,
 				config.Accept,
 				config.Stop,
 				logger,
@@ -139,7 +137,6 @@ func BenchmarkProxyConnectDisconnect(b *testing.B) {
 		plugin.NewRegistry(
 			context.Background(),
 			config.Loose,
-			config.PassDown,
 			config.Accept,
 			config.Stop,
 			logger,
@@ -191,7 +188,6 @@ func BenchmarkProxyPassThrough(b *testing.B) {
 		plugin.NewRegistry(
 			context.Background(),
 			config.Loose,
-			config.PassDown,
 			config.Accept,
 			config.Stop,
 			logger,
@@ -248,7 +244,6 @@ func BenchmarkProxyIsHealthyAndIsExhausted(b *testing.B) {
 		plugin.NewRegistry(
 			context.Background(),
 			config.Loose,
-			config.PassDown,
 			config.Accept,
 			config.Stop,
 			logger,
@@ -303,7 +298,6 @@ func BenchmarkProxyAvailableAndBusyConnections(b *testing.B) {
 		plugin.NewRegistry(
 			context.Background(),
 			config.Loose,
-			config.PassDown,
 			config.Accept,
 			config.Stop,
 			logger,

@@ -1,19 +1,5 @@
 # GatewayD Plugin Configuration
 
-# The verification policy controls how the output of the plugin's hook, that is, its result,
-# should be handled and whether to verify the output or not.
-# - "passdown" (default): the output of the plugin is passed down to the next plugin,
-#   regardless of the result. The result is not verified.
-# - "ignore": the output of the current plugin is ignored if the verification fails, and
-#   the next plugin is called with the same input.
-# - "abort": the output of the current plugin is ignored if the verification fails, and
-#   the next plugin is not called.
-# - "remove": the output of the current plugin is ignored if the verification fails, and
-#   the next plugin is called with the same input. The current registered hook from the
-#   current plugin is removed from the list of registered hooks and it will not be called
-#   again.
-verificationPolicy: "passdown"
-
 # The compatibility policy controls how GatewayD treats plugins' requirements. If a plugin
 # requires a specific version of another plugin, the compatibility policy controls whether to
 # allow or reject the plugin.

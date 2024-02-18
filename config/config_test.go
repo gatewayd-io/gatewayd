@@ -42,7 +42,6 @@ func TestInitConfig(t *testing.T) {
 	assert.Equal(t, DefaultLogLevel, config.GlobalKoanf.String("loggers.default.level"))
 	assert.NotNil(t, config.PluginKoanf)
 	assert.NotEqual(t, config.PluginKoanf, koanf.New("."))
-	assert.Equal(t, string(PassDown), config.PluginKoanf.String("verificationPolicy"))
 	assert.NotNil(t, config.globalDefaults)
 	assert.NotEqual(t, GlobalConfig{}, config.globalDefaults)
 	assert.Contains(t, config.globalDefaults.Servers, Default)

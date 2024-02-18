@@ -41,7 +41,6 @@ func TestRunServer(t *testing.T) {
 	pluginRegistry := plugin.NewRegistry(
 		context.Background(),
 		config.Loose,
-		config.PassDown,
 		config.Accept,
 		config.Stop,
 		logger,

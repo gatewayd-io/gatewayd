@@ -16,7 +16,6 @@ type Plugin struct {
 }
 
 type PluginConfig struct {
-	VerificationPolicy  string        `json:"verificationPolicy" jsonschema:"enum=passdown,enum=ignore,enum=abort,enum=remove"`
 	CompatibilityPolicy string        `json:"compatibilityPolicy" jsonschema:"enum=strict,enum=loose"`
 	AcceptancePolicy    string        `json:"acceptancePolicy" jsonschema:"enum=accept,enum=reject"`
 	TerminationPolicy   string        `json:"terminationPolicy" jsonschema:"enum=continue,enum=stop"`

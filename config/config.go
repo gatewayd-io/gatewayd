@@ -205,7 +205,6 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 	}
 
 	c.pluginDefaults = PluginConfig{
-		VerificationPolicy:  string(PassDown),
 		CompatibilityPolicy: string(Strict),
 		AcceptancePolicy:    string(Accept),
 		TerminationPolicy:   string(Stop),

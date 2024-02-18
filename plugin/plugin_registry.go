@@ -60,7 +60,6 @@ type Registry struct {
 
 	Logger        zerolog.Logger
 	Compatibility config.CompatibilityPolicy
-	Verification  config.VerificationPolicy
 	Acceptance    config.AcceptancePolicy
 	Termination   config.TerminationPolicy
 	StartTimeout  time.Duration
@@ -72,7 +71,6 @@ var _ IRegistry = (*Registry)(nil)
 func NewRegistry(
 	ctx context.Context,
 	compatibility config.CompatibilityPolicy,
-	verification config.VerificationPolicy,
 	acceptance config.AcceptancePolicy,
 	termination config.TerminationPolicy,
 	logger zerolog.Logger,
@@ -88,7 +86,6 @@ func NewRegistry(
 		devMode:       devMode,
 		Logger:        logger,
 		Compatibility: compatibility,
-		Verification:  verification,
 		Acceptance:    acceptance,
 		Termination:   termination,
 	}
@@ -256,13 +253,7 @@ func (reg *Registry) AddHook(hookName v1.HookName, priority sdkPlugin.Priority, 
 // to the next hook as the argument, aka. chained. The context is passed to the
 // hooks as well to allow them to cancel the execution. The args are passed to the
 // first hook as the argument. The result of the first hook is passed to the second
-// hook, and so on. The result of the last hook is eventually returned. The verification
-// mode is used to determine how to handle errors. If the verification mode is set to
-// Abort, the execution is aborted on the first error. If the verification mode is set
-// to Remove, the hook is removed from the list of hooks on the first error. If the
-// verification mode is set to Ignore, the error is ignored and the execution continues.
-// If the verification mode is set to PassDown, the extra keys/values in the result
-// are passed down to the next  The verification mode is set to PassDown by default.
+// hook, and so on. The result of the last hook is eventually returned.
 // The opts are passed to the hooks as well to allow them to use the grpc.CallOption.
 func (reg *Registry) Run(
 	ctx context.Context,
@@ -308,7 +299,6 @@ func (reg *Registry) Run(
 
 	// Run hooks, passing the result of the previous hook to the next one.
 	returnVal := &v1.Struct{}
-	var removeList []sdkPlugin.Priority
 	// The signature of parameters and args MUST be the same for this to work.
 	for idx, priority := range priorities {
 		var result *v1.Struct
@@ -329,56 +319,18 @@ func (reg *Registry) Run(
 			span.RecordError(err)
 		}
 
-		// This is done to ensure that the return value of the hook is always valid,
-		// and that the hook does not return any unexpected values.
-		// If the verification mode is non-strict (permissive), let the plugin pass
-		// extra keys/values to the next plugin in chain.
-		if Verify(params, result) || reg.Verification == config.PassDown {
-			// Update the last return value with the current result
-			returnVal = result
+		// Update the last return value with the current result
+		returnVal = result
 
-			// If the termination policy is set to Stop, check if the terminate flag
-			// is set to true. If it is, abort the execution of the rest of the registered hooks.
-			if reg.Termination == config.Stop {
-				// If the terminate flag is set to true,
-				// abort the execution of the rest of the registered hooks.
-				if terminate, ok := result.GetFields()["terminate"]; ok && terminate.GetBoolValue() {
-					break
-				}
+		// If the termination policy is set to Stop, check if the terminate flag
+		// is set to true. If it is, abort the execution of the rest of the registered hooks.
+		if reg.Termination == config.Stop {
+			// If the terminate flag is set to true,
+			// abort the execution of the rest of the registered hooks.
+			if terminate, ok := result.GetFields()["terminate"]; ok && terminate.GetBoolValue() {
+				break
 			}
-
-			continue
 		}
-
-		// At this point, the hook returned an invalid value, so we need to handle it.
-		// The result of the current hook will be ignored, regardless of the policy.
-		switch reg.Verification {
-		// Ignore the result of this plugin, log an error and execute the next
-		case config.Ignore:
-			if idx == 0 {
-				returnVal = params
-			}
-		// Abort execution of the plugins, log the error and return the result of the last
-		case config.Abort:
-			if idx == 0 {
-				return args, nil
-			}
-			return returnVal.AsMap(), nil
-		// Remove the hook from the registry, log the error and execute the next
-		case config.Remove:
-			removeList = append(removeList, priority)
-			if idx == 0 {
-				returnVal = params
-			}
-		case config.PassDown: // fallthrough
-		default:
-			returnVal = result
-		}
-	}
-
-	// Remove hooks that failed verification.
-	for _, priority := range removeList {
-		delete(reg.hooks[hookName], priority)
 	}
 
 	return returnVal.AsMap(), nil
