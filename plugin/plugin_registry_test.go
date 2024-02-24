@@ -7,6 +7,7 @@ import (
 
 	sdkPlugin "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin"
 	v1 "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin/v1"
+	"github.com/gatewayd-io/gatewayd/act"
 	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/rs/zerolog"
@@ -25,8 +26,10 @@ func NewPluginRegistry(t *testing.T) *Registry {
 		NoColor:           true,
 	}
 	logger := logging.NewLogger(context.Background(), cfg)
+	actRegistry := act.NewRegistry(config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
 	reg := NewRegistry(
 		context.Background(),
+		actRegistry,
 		config.Loose,
 		config.Stop,
 		logger,
@@ -124,8 +127,10 @@ func BenchmarkHookRun(b *testing.B) {
 		NoColor:           true,
 	}
 	logger := logging.NewLogger(context.Background(), cfg)
+	actRegistry := act.NewRegistry(config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
 	reg := NewRegistry(
 		context.Background(),
+		actRegistry,
 		config.Loose,
 		config.Stop,
 		logger,

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	v1 "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin/v1"
+	"github.com/gatewayd-io/gatewayd/act"
 	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/gatewayd-io/gatewayd/plugin"
@@ -38,8 +39,10 @@ func TestRunServer(t *testing.T) {
 		FileName:          "server_test.log",
 	})
 
+	actRegistry := act.NewRegistry(config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
 	pluginRegistry := plugin.NewRegistry(
 		context.Background(),
+		actRegistry,
 		config.Loose,
 		config.Stop,
 		logger,
