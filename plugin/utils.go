@@ -3,6 +3,11 @@ package plugin
 import (
 	"os/exec"
 	"time"
+
+	sdkAct "github.com/gatewayd-io/gatewayd-plugin-sdk/act"
+	"github.com/gatewayd-io/gatewayd/act"
+	"github.com/rs/zerolog"
+	"github.com/spf13/cast"
 )
 
 // NewCommand returns a command with the given arguments and environment variables.
@@ -44,4 +49,59 @@ func CastToPrimitiveTypes(args map[string]interface{}) map[string]interface{} {
 		}
 	}
 	return args
+}
+
+// GetSignals decodes the signals from the result map and returns them as a list of Signal objects.
+func GetSignals(result map[string]any, logger zerolog.Logger, reg act.IRegistry) []sdkAct.Signal {
+	decodedSignals := []sdkAct.Signal{}
+
+	if signals, ok := result[sdkAct.Signals]; ok {
+		signals := cast.ToSlice(signals)
+		for _, signal := range signals {
+			signalMap := cast.ToStringMap(signal)
+			name := cast.ToString(signalMap[sdkAct.Name])
+			metadata := cast.ToStringMap(signalMap[sdkAct.Metadata])
+
+			if name != "" {
+				// Add the signal to the list of signals.
+				decodedSignals = append(decodedSignals, sdkAct.Signal{
+					Name:     name,
+					Metadata: metadata,
+				})
+			}
+		}
+	}
+
+	return decodedSignals
+}
+
+// ApplyPolicies applies the policies to the signals and returns the outputs.
+func ApplyPolicies(
+	hookName string, signals []sdkAct.Signal, logger zerolog.Logger, reg act.IRegistry,
+) []*sdkAct.Output {
+	if len(signals) == 0 {
+		return nil
+	}
+
+	signalNames := []string{}
+	for _, signal := range signals {
+		signalNames = append(signalNames, signal.Name)
+	}
+
+	logger.Debug().Fields(
+		map[string]interface{}{
+			"hook":    hookName,
+			"signals": signalNames,
+		},
+	).Msg("Detected signals from the plugin hook")
+
+	outputs := reg.Apply(signals)
+	logger.Debug().Fields(
+		map[string]interface{}{
+			"hook":    hookName,
+			"outputs": outputs,
+		},
+	).Msg("Applied policies to signals")
+
+	return outputs
 }
