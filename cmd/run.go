@@ -16,8 +16,10 @@ import (
 	"time"
 
 	"github.com/NYTimes/gziphandler"
+	sdkAct "github.com/gatewayd-io/gatewayd-plugin-sdk/act"
 	sdkPlugin "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin"
 	v1 "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin/v1"
+	"github.com/gatewayd-io/gatewayd/act"
 	"github.com/gatewayd-io/gatewayd/api"
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
@@ -37,6 +39,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
+	"golang.org/x/exp/maps"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
@@ -54,6 +57,7 @@ var (
 	globalConfigFile  string
 	conf              *config.Config
 	pluginRegistry    *plugin.Registry
+	policiesRegistry  *act.Registry
 	metricsServer     *http.Server
 
 	UsageReportURL = "localhost:59091"
@@ -249,10 +253,30 @@ var runCmd = &cobra.Command{
 				"Running GatewayD in development mode (not recommended for production)")
 		}
 
+		// Create a new policy registry.
+		policiesRegistry = act.NewRegistry(
+			conf.Plugin.DefaultPolicy, conf.Plugin.PolicyTimeout, logger)
+
+		// Load policies from the configuration file and add them to the registry.
+		for _, plc := range conf.Plugin.Policies {
+			if policy, err := sdkAct.NewPolicy(
+				plc.Name, plc.Policy, plc.Metadata,
+			); err != nil || policy == nil {
+				logger.Error().Err(err).Str("name", plc.Name).Msg("Failed to create policy")
+			} else {
+				policiesRegistry.Add(policy)
+			}
+		}
+
+		logger.Info().Fields(map[string]interface{}{
+			"policies": maps.Keys(policiesRegistry.Policies),
+		}).Msg("Policies are loaded")
+
 		// Create a new plugin registry.
 		// The plugins are loaded and hooks registered before the configuration is loaded.
 		pluginRegistry = plugin.NewRegistry(
 			runCtx,
+			policiesRegistry,
 			config.If[config.CompatibilityPolicy](
 				config.Exists[string, config.CompatibilityPolicy](
 					config.CompatibilityPolicies, conf.Plugin.CompatibilityPolicy),
