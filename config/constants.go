@@ -130,4 +130,8 @@ const (
 	// Policies.
 	DefaultCompatibilityPolicy = Strict
 	DefaultTerminationPolicy   = Stop
+
+	// Act.
+	DefaultPolicy        = "passthrough"
+	DefaultPolicyTimeout = 30 * time.Second
 )

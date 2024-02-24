@@ -213,6 +213,9 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 		ReloadOnCrash:       true,
 		Timeout:             DefaultPluginTimeout,
 		StartTimeout:        DefaultPluginStartTimeout,
+		DefaultPolicy:       DefaultPolicy,
+		PolicyTimeout:       DefaultPolicyTimeout,
+		Policies:            []Policy{},
 	}
 
 	if c.GlobalKoanf != nil {
