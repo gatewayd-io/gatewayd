@@ -6,8 +6,10 @@ import (
 	"errors"
 	"io"
 	"net"
+	"slices"
 	"time"
 
+	"github.com/gatewayd-io/gatewayd-plugin-sdk/act"
 	v1 "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin/v1"
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
@@ -18,6 +20,7 @@ import (
 	"github.com/go-co-op/gocron"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/otel"
+	"golang.org/x/exp/maps"
 )
 
 type IProxy interface {
@@ -385,6 +388,7 @@ func (pr *Proxy) PassThroughToServer(conn *ConnWrapper, stack *Stack) *gerr.Gate
 	stack.Push(&Request{Data: request})
 
 	// If the hook wants to terminate the connection, do it.
+	// TODO: Should the output be reconstructed here? Or should it be done in the plugin registry?
 	if pr.shouldTerminate(result) {
 		if modResponse, modReceived := pr.getPluginModifiedResponse(result); modResponse != nil {
 			metrics.ProxyPassThroughsToClient.Inc()
@@ -821,15 +825,50 @@ func (pr *Proxy) sendTrafficToClient(
 }
 
 // shouldTerminate is a function that retrieves the terminate field from the hook result.
-// Only the OnTrafficFromClient hook will terminate the connection.
+// Only the OnTrafficFromClient hook will terminate the request.
 func (pr *Proxy) shouldTerminate(result map[string]interface{}) bool {
 	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "shouldTerminate")
 	defer span.End()
 
-	// If the hook wants to terminate the connection, do it.
-	if result != nil {
-		if terminate, ok := result["terminate"].(bool); ok && terminate {
-			pr.logger.Debug().Str("function", "proxy.passthrough").Msg("Terminating connection")
+	if result == nil {
+		return false
+	}
+
+	keys := maps.Keys(result)
+	// This is a shortcut to avoid running the actions' functions.
+	// The terminate field is only present if the action wants to terminate the request,
+	// that is the `Terminate` field is set in one of the outputs.
+	if slices.Contains(keys, act.Terminal) {
+		go func(outputs []*act.Output) {
+			for _, output := range outputs {
+				_, err := pr.pluginRegistry.PolicyRegistry().Run(output)
+				if err != nil {
+					pr.logger.Error().Err(err).Msg("Error running policy")
+				}
+			}
+		}(result[act.Outputs].([]*act.Output))
+		pr.logger.Debug().Fields(
+			map[string]interface{}{
+				"function": "proxy.passthrough",
+				"reason":   "terminate",
+			},
+		).Msg("Terminating request")
+		return result[act.Terminal].(bool)
+	}
+
+	// If the hook wants to terminate the request, do it.
+	outputs := result[act.Outputs].([]*act.Output)
+	for _, output := range outputs {
+		if output.MatchedPolicy == "terminate" && output.Verdict {
+			pr.logger.Debug().Fields(
+				map[string]interface{}{
+					"function": "proxy.passthrough",
+					"policy":   output.MatchedPolicy,
+					"verdict":  output.Verdict,
+					"metadata": output.Metadata,
+					"sync":     output.Sync,
+				},
+			).Msg("Terminating request")
 			return true
 		}
 	}
