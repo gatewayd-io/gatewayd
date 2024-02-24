@@ -68,6 +68,7 @@ linters-settings:
           - "gopkg.in/yaml.v3"
           - "github.com/zenizh/go-capturer"
           - "gopkg.in/natefinch/lumberjack.v2"
+          - "github.com/expr-lang/expr"
       test:
         files:
           - $test
