@@ -55,7 +55,9 @@ jobs:
       - name: Lint code issues 🚨
         uses: golangci/golangci-lint-action@v4
         with:
+          version: "v1.56"
           skip-pkg-cache: true
+          install-mode: "goinstall"
 
       - name: Run Go tests 🔬
         run: go test -p 1 -cover -covermode atomic -coverprofile=profile.cov -v ./...
