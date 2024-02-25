@@ -22,11 +22,6 @@ var (
 			`Signal.log == true && Policy.log == "enabled"`,
 			map[string]any{"log": "enabled"},
 		),
-		sdkAct.MustNewPolicy(
-			"cache",
-			`Signal.cache == true && Policy.cache == "enabled"`,
-			map[string]any{"cache": "enabled"},
-		),
 	}
 
 	builtinActions = []*sdkAct.Action{
@@ -78,43 +73,3 @@ var (
 		}
 	}
 )
-
-func Terminate() *sdkAct.Signal {
-	return &sdkAct.Signal{
-		Name: "terminate",
-		Metadata: map[string]any{
-			"terminate": true,
-		},
-	}
-}
-
-func Log(level, message string, fields map[string]any) *sdkAct.Signal {
-	metadata := map[string]any{
-		"log":     true,
-		"level":   level,
-		"message": message,
-	}
-
-	if fields != nil {
-		for k, v := range fields {
-			if k == "level" || k == "message" {
-				continue
-			}
-			metadata[k] = v
-		}
-	}
-
-	return &sdkAct.Signal{
-		Name:     "log",
-		Metadata: metadata,
-	}
-}
-
-func Cache() *sdkAct.Signal {
-	return &sdkAct.Signal{
-		Name: "cache",
-		Metadata: map[string]any{
-			"cache": true,
-		},
-	}
-}
