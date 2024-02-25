@@ -30,21 +30,23 @@ var (
 			Metadata: nil,
 			Sync:     true,
 			Terminal: false,
-			Run:      func(_ zerolog.Logger, data map[string]any) (any, error) { return true, nil },
+			Run: func(data map[string]any, params ...sdkAct.Parameter) (any, error) {
+				return true, nil
+			},
 		},
 		{
 			Name:     "terminate",
 			Metadata: nil,
 			Sync:     true,
 			Terminal: true,
-			Run:      func(_ zerolog.Logger, data map[string]any) (any, error) { return true, nil },
+			Run:      func(data map[string]any, params ...sdkAct.Parameter) (any, error) { return true, nil },
 		},
 		{
 			Name:     "log",
 			Metadata: nil,
 			Sync:     false,
 			Terminal: false,
-			Run: func(logger zerolog.Logger, data map[string]any) (any, error) {
+			Run: func(data map[string]any, params ...sdkAct.Parameter) (any, error) {
 				fields := map[string]any{}
 				// Only log the fields that are not level, message, or log.
 				if len(data) > LOG_DEFAULT_FIELD_COUNT {
@@ -55,9 +57,22 @@ var (
 						fields[k] = v
 					}
 				}
+
+				if len(params) == 0 || params[0].Key != "logger" {
+					// No logger parameter or the first parameter is not a logger.
+					return false, nil
+				}
+
+				logger, ok := params[0].Value.(zerolog.Logger)
+				if !ok {
+					// The first parameter is not a logger.
+					return false, nil
+				}
+
 				logger.WithLevel(
 					logging.GetZeroLogLevel(cast.ToString(data["level"])),
 				).Fields(fields).Msg(cast.ToString(data["message"]))
+
 				return true, nil
 			},
 		},

@@ -155,13 +155,20 @@ func (r *Registry) Run(output *sdkAct.Output) (any, error) {
 			"execution_mode": "sync",
 			"action":         action.Name,
 		}).Msgf("Running action")
-		return action.Run(r.logger, output.Metadata)
+		return action.Run(output.Metadata, WithLogger(r.logger))
 	} else {
 		r.logger.Debug().Fields(map[string]interface{}{
 			"execution_mode": "async",
 			"action":         action.Name,
 		}).Msgf("Running action")
-		go action.Run(r.logger, output.Metadata)
+		go action.Run(output.Metadata, WithLogger(r.logger))
 		return nil, nil
+	}
+}
+
+func WithLogger(logger zerolog.Logger) sdkAct.Parameter {
+	return sdkAct.Parameter{
+		Key:   "logger",
+		Value: logger,
 	}
 }
