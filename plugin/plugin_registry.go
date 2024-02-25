@@ -51,7 +51,7 @@ type IRegistry interface {
 	LoadPlugins(ctx context.Context, plugins []config.Plugin, startTimeout time.Duration)
 	RegisterHooks(ctx context.Context, pluginID sdkPlugin.Identifier)
 	Apply(hookName, priority string, result *v1.Struct) ([]*sdkAct.Output, bool)
-	PolicyRegistry() act.IRegistry
+	PolicyRegistry() *act.Registry
 
 	// Hook management
 	IHook
@@ -59,7 +59,7 @@ type IRegistry interface {
 
 type Registry struct {
 	plugins          pool.IPool
-	policiesRegistry act.IRegistry
+	policiesRegistry *act.Registry
 	hooks            map[v1.HookName]map[sdkPlugin.Priority]sdkPlugin.Method
 	ctx              context.Context //nolint:containedctx
 	devMode          bool
@@ -75,7 +75,7 @@ var _ IRegistry = (*Registry)(nil)
 // NewRegistry creates a new plugin registry.
 func NewRegistry(
 	ctx context.Context,
-	policiesRegistry act.IRegistry,
+	policiesRegistry *act.Registry,
 	compatibility config.CompatibilityPolicy,
 	termination config.TerminationPolicy,
 	logger zerolog.Logger,
@@ -740,7 +740,7 @@ func (reg *Registry) RegisterHooks(ctx context.Context, pluginID sdkPlugin.Ident
 }
 
 // PolicyRegistry returns the policy registry.
-func (reg *Registry) PolicyRegistry() act.IRegistry {
+func (reg *Registry) PolicyRegistry() *act.Registry {
 	_, span := otel.Tracer(config.TracerName).Start(reg.ctx, "PolicyRegistry")
 	defer span.End()
 	return reg.policiesRegistry

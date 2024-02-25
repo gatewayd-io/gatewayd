@@ -25,6 +25,8 @@ type Registry struct {
 	DefaultPolicy *sdkAct.Policy
 }
 
+var _ IRegistry = (*Registry)(nil)
+
 // NewRegistry creates a new registry with the specified default policy and timeout.
 func NewRegistry(defaultPolicy string, timeout time.Duration, logger zerolog.Logger) *Registry {
 	policies := make(map[string]*sdkAct.Policy)
