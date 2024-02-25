@@ -100,7 +100,25 @@ func (a *API) GetGlobalConfig(_ context.Context, group *v1.Group) (*structpb.Str
 
 // GetPluginConfig returns the plugin configuration of the GatewayD.
 func (a *API) GetPluginConfig(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
-	pluginConfig, err := structpb.NewStruct(a.Config.PluginKoanf.All())
+	jsonData, err := json.Marshal(a.Config.PluginKoanf.All())
+	if err != nil {
+		metrics.APIRequestsErrors.WithLabelValues(
+			"GET", "/v1/GatewayDPluginService/GetPluginConfig", codes.Internal.String(),
+		).Inc()
+		return nil, status.Errorf(codes.Internal, "failed to marshal plugin config: %v", err)
+	}
+
+	var pluginConfigMap map[string]any
+
+	err = json.Unmarshal(jsonData, &pluginConfigMap)
+	if err != nil {
+		metrics.APIRequestsErrors.WithLabelValues(
+			"GET", "/v1/GatewayDPluginService/GetPluginConfig", codes.Internal.String(),
+		).Inc()
+		return nil, status.Errorf(codes.Internal, "failed to unmarshal plugin config: %v", err)
+	}
+
+	pluginConfig, err := structpb.NewStruct(pluginConfigMap)
 	if err != nil {
 		metrics.APIRequestsErrors.WithLabelValues(
 			"GET", "/v1/GatewayDPluginService/GetPluginConfig", codes.Internal.String(),
