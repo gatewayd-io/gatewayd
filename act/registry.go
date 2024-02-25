@@ -2,17 +2,17 @@ package act
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	sdkAct "github.com/gatewayd-io/gatewayd-plugin-sdk/act"
+	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/rs/zerolog"
 )
 
 type IRegistry interface {
 	Add(policy *sdkAct.Policy)
 	Apply(signals []sdkAct.Signal) []*sdkAct.Output
-	Run(output *sdkAct.Output) (any, error)
+	Run(output *sdkAct.Output) (any, *gerr.GatewayDError)
 }
 
 // Registry keeps track of all policies and actions.
@@ -102,15 +102,15 @@ func (r *Registry) Apply(signals []sdkAct.Signal) []*sdkAct.Output {
 }
 
 // apply applies the signal to the registry and returns the output.
-func (r *Registry) apply(signal sdkAct.Signal) (*sdkAct.Output, error) {
-	action, ok := r.Actions[signal.Name]
-	if !ok {
-		return nil, errors.New("No matching action")
+func (r *Registry) apply(signal sdkAct.Signal) (*sdkAct.Output, *gerr.GatewayDError) {
+	action, exists := r.Actions[signal.Name]
+	if !exists {
+		return nil, gerr.ErrActionNotMatched
 	}
 
-	policy, ok := r.Policies[action.Name]
-	if !ok {
-		return nil, errors.New("No matching policy")
+	policy, exists := r.Policies[action.Name]
+	if !exists {
+		return nil, gerr.ErrPolicyNotMatched
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
@@ -126,7 +126,7 @@ func (r *Registry) apply(signal sdkAct.Signal) (*sdkAct.Output, error) {
 		},
 	)
 	if err != nil {
-		return nil, err
+		return nil, gerr.ErrEvalError.Wrap(err)
 	}
 
 	return &sdkAct.Output{
@@ -139,17 +139,18 @@ func (r *Registry) apply(signal sdkAct.Signal) (*sdkAct.Output, error) {
 }
 
 // Run runs the output and returns the result.
-func (r *Registry) Run(output *sdkAct.Output) (any, error) {
+func (r *Registry) Run(output *sdkAct.Output) (any, *gerr.GatewayDError) {
 	if output == nil {
-		r.logger.Warn().Msg("Output is nil, not running")
-		return nil, errors.New("Output is nil")
+		r.logger.Warn().Msg("Output is nil, run aborted")
+		// TODO: Run the default action of the default policy.
+		return nil, gerr.ErrNilPointer
 	}
 
 	action, ok := r.Actions[output.MatchedPolicy]
 	if !ok {
 		r.logger.Warn().Str("matched_policy", output.MatchedPolicy).Msg(
-			"Action does not exist, not running")
-		return nil, errors.New("Action does not exist")
+			"Action does not exist, run aborted")
+		return nil, gerr.ErrActionNotExist
 	}
 
 	if action.Sync {
@@ -157,15 +158,26 @@ func (r *Registry) Run(output *sdkAct.Output) (any, error) {
 			"execution_mode": "sync",
 			"action":         action.Name,
 		}).Msgf("Running action")
-		return action.Run(output.Metadata, WithLogger(r.logger))
-	} else {
-		r.logger.Debug().Fields(map[string]interface{}{
-			"execution_mode": "async",
-			"action":         action.Name,
-		}).Msgf("Running action")
-		go action.Run(output.Metadata, WithLogger(r.logger))
-		return nil, nil
+		output, err := action.Run(output.Metadata, WithLogger(r.logger))
+		if err != nil {
+			r.logger.Error().Err(err).Str("action", action.Name).Msg("Error running action")
+		}
+		return output, gerr.ErrRunningAction.Wrap(err)
 	}
+
+	r.logger.Debug().Fields(map[string]interface{}{
+		"execution_mode": "async",
+		"action":         action.Name,
+	}).Msgf("Running action")
+
+	go func(action *sdkAct.Action, output *sdkAct.Output, logger zerolog.Logger) {
+		_, err := action.Run(output.Metadata, WithLogger(logger))
+		if err != nil {
+			logger.Error().Err(err).Str("action", action.Name).Msg("Error running action")
+		}
+	}(action, output, r.logger)
+
+	return nil, gerr.ErrAsyncAction
 }
 
 func WithLogger(logger zerolog.Logger) sdkAct.Parameter {

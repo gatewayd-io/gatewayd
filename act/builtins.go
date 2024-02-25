@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cast"
 )
 
-const LOG_DEFAULT_FIELD_COUNT = 3
+const LogDefaultFieldCount = 3
 
 var (
 	builtinsPolicies = []*sdkAct.Policy{
@@ -30,16 +30,14 @@ var (
 			Metadata: nil,
 			Sync:     true,
 			Terminal: false,
-			Run: func(data map[string]any, params ...sdkAct.Parameter) (any, error) {
-				return true, nil
-			},
+			Run:      func(map[string]any, ...sdkAct.Parameter) (any, error) { return true, nil },
 		},
 		{
 			Name:     "terminate",
 			Metadata: nil,
 			Sync:     true,
 			Terminal: true,
-			Run:      func(data map[string]any, params ...sdkAct.Parameter) (any, error) { return true, nil },
+			Run:      func(map[string]any, ...sdkAct.Parameter) (any, error) { return true, nil },
 		},
 		{
 			Name:     "log",
@@ -49,7 +47,7 @@ var (
 			Run: func(data map[string]any, params ...sdkAct.Parameter) (any, error) {
 				fields := map[string]any{}
 				// Only log the fields that are not level, message, or log.
-				if len(data) > LOG_DEFAULT_FIELD_COUNT {
+				if len(data) > LogDefaultFieldCount {
 					for k, v := range data {
 						if k == "level" || k == "message" || k == "log" {
 							continue

@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"sort"
 	"time"
 
@@ -50,7 +49,7 @@ type IRegistry interface {
 	Shutdown()
 	LoadPlugins(ctx context.Context, plugins []config.Plugin, startTimeout time.Duration)
 	RegisterHooks(ctx context.Context, pluginID sdkPlugin.Identifier)
-	Apply(hookName, priority string, result *v1.Struct) ([]*sdkAct.Output, bool)
+	Apply(hookName string, result *v1.Struct) ([]*sdkAct.Output, bool)
 	PolicyRegistry() *act.Registry
 
 	// Hook management
@@ -337,7 +336,7 @@ func (reg *Registry) Run(
 			continue
 		}
 
-		out, terminal := reg.Apply(hookName.String(), fmt.Sprint(priority), result)
+		out, terminal := reg.Apply(hookName.String(), result)
 		outputs = append(outputs, out...)
 
 		if terminal {
@@ -360,14 +359,12 @@ func (reg *Registry) Run(
 }
 
 // Apply applies policies to the result.
-func (reg *Registry) Apply(
-	hookName, priority string, result *v1.Struct,
-) ([]*sdkAct.Output, bool) {
+func (reg *Registry) Apply(hookName string, result *v1.Struct) ([]*sdkAct.Output, bool) {
 	_, span := otel.Tracer(config.TracerName).Start(reg.ctx, "Apply")
 	defer span.End()
 
 	// Get signals from the result.
-	signals := GetSignals(result.AsMap(), reg.Logger, reg.PolicyRegistry())
+	signals := GetSignals(result.AsMap())
 	// Apply policies to the signals.
 	// The outputs contains the verdicts of the policies and their metadata.
 	// And using this list, the caller can take further actions.
@@ -382,11 +379,6 @@ func (reg *Registry) Apply(
 	// Check if any of the policies have a terminal action.
 	var terminal bool
 	for _, output := range outputs {
-		// if output.Verdict && output.MatchedPolicy == "log" {
-		// 	reg.Logger.Debug().Msgf("Log: %+v", output.Metadata)
-		// 	reg.PolicyRegistry().Run(output)
-		// }
-
 		if output.Verdict && output.Terminal {
 			terminal = true
 			break

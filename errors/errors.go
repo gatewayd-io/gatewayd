@@ -41,6 +41,10 @@ const (
 	ErrCodeLintingFailed
 	ErrCodeExtractFailed
 	ErrCodeDownloadFailed
+	ErrCodeKeyNotFound
+	ErrCodeRunError
+	ErrCodeAsyncAction
+	ErrCodeEvalError
 )
 
 var (
@@ -133,6 +137,19 @@ var (
 		ErrCodeExtractFailed, "failed to extract the archive", nil)
 	ErrDownloadFailed = NewGatewayDError(
 		ErrCodeDownloadFailed, "failed to download the file", nil)
+
+	ErrActionNotExist = NewGatewayDError(
+		ErrCodeKeyNotFound, "action does not exist", nil)
+	ErrRunningAction = NewGatewayDError(
+		ErrCodeRunError, "error running action", nil)
+	ErrAsyncAction = NewGatewayDError(
+		ErrCodeAsyncAction, "async action", nil)
+	ErrActionNotMatched = NewGatewayDError(
+		ErrCodeKeyNotFound, "no matching action", nil)
+	ErrPolicyNotMatched = NewGatewayDError(
+		ErrCodeKeyNotFound, "no matching policy", nil)
+	ErrEvalError = NewGatewayDError(
+		ErrCodeEvalError, "error evaluating expression", nil)
 )
 
 const (

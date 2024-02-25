@@ -19,6 +19,7 @@ import (
 	"github.com/getsentry/sentry-go"
 	"github.com/go-co-op/gocron"
 	"github.com/rs/zerolog"
+	"github.com/spf13/cast"
 	"go.opentelemetry.io/otel"
 	"golang.org/x/exp/maps"
 )
@@ -834,6 +835,12 @@ func (pr *Proxy) shouldTerminate(result map[string]interface{}) bool {
 		return false
 	}
 
+	outputs, ok := result[act.Outputs].([]*act.Output)
+	if !ok {
+		pr.logger.Error().Msg("Failed to cast the outputs to the []*act.Output type")
+		return false
+	}
+
 	keys := maps.Keys(result)
 	// This is a shortcut to avoid running the actions' functions.
 	// The terminate field is only present if the action wants to terminate the request,
@@ -846,18 +853,17 @@ func (pr *Proxy) shouldTerminate(result map[string]interface{}) bool {
 					pr.logger.Error().Err(err).Msg("Error running policy")
 				}
 			}
-		}(result[act.Outputs].([]*act.Output))
+		}(outputs)
 		pr.logger.Debug().Fields(
 			map[string]interface{}{
 				"function": "proxy.passthrough",
 				"reason":   "terminate",
 			},
 		).Msg("Terminating request")
-		return result[act.Terminal].(bool)
+		return cast.ToBool(result[act.Terminal])
 	}
 
 	// If the hook wants to terminate the request, do it.
-	outputs := result[act.Outputs].([]*act.Output)
 	for _, output := range outputs {
 		if output.MatchedPolicy == "terminate" && output.Verdict {
 			pr.logger.Debug().Fields(

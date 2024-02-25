@@ -52,7 +52,7 @@ func CastToPrimitiveTypes(args map[string]interface{}) map[string]interface{} {
 }
 
 // GetSignals decodes the signals from the result map and returns them as a list of Signal objects.
-func GetSignals(result map[string]any, logger zerolog.Logger, reg act.IRegistry) []sdkAct.Signal {
+func GetSignals(result map[string]any) []sdkAct.Signal {
 	decodedSignals := []sdkAct.Signal{}
 
 	if signals, ok := result[sdkAct.Signals]; ok {
