@@ -83,8 +83,8 @@ github.com/frankban/quicktest v1.14.6/go.mod h1:4ptaffx2x8+WTWXmUCuVU6aPUX1/Mz7z
 github.com/fsnotify/fsnotify v1.4.9/go.mod h1:znqG4EE+3YCdAaPaxE2ZRY/06pZUdp0tY4IgpuI1SZQ=
 github.com/fsnotify/fsnotify v1.7.0 h1:8JEhPFa5W2WU7YfeZzPNqzMP6Lwt7L2715Ggo0nosvA=
 github.com/fsnotify/fsnotify v1.7.0/go.mod h1:40Bi/Hjc2AVfZrqy+aj+yEI+/bRxZnMJyTJwOpGvigM=
-github.com/gatewayd-io/gatewayd-plugin-sdk v0.2.0 h1:JG5FaGn+gj32qvvoou2PNraPB+MfO1Qe01tw4VVUqrY=
-github.com/gatewayd-io/gatewayd-plugin-sdk v0.2.0/go.mod h1:1XS2ufw+8VRTHAbDf18Y7rSPlOczeQ/baUWPqJrDkeE=
+github.com/gatewayd-io/gatewayd-plugin-sdk v0.2.1 h1:Cwi6A7tb0cI4/puznvHPemffo947IZr4Z2JvIvLYLZk=
+github.com/gatewayd-io/gatewayd-plugin-sdk v0.2.1/go.mod h1:1XS2ufw+8VRTHAbDf18Y7rSPlOczeQ/baUWPqJrDkeE=
 github.com/getsentry/sentry-go v0.27.0 h1:Pv98CIbtB3LkMWmXi4Joa5OOcwbmnX88sF5qbK3r3Ps=
 github.com/getsentry/sentry-go v0.27.0/go.mod h1:lc76E2QywIyW8WuBnwl8Lc4bkmQH4+w1gwTf25trprY=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
