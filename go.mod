@@ -17,7 +17,7 @@ require (
 	github.com/invopop/jsonschema v0.12.0
 	github.com/knadh/koanf v1.5.0
 	github.com/mitchellh/mapstructure v1.5.0
-	github.com/prometheus/client_golang v1.18.0
+	github.com/prometheus/client_golang v1.18.1-0.20240223185837-14259fa70cfb
 	github.com/prometheus/client_model v0.6.0
 	github.com/prometheus/common v0.48.0
 	github.com/rs/zerolog v1.32.0
