@@ -9,8 +9,9 @@ import (
 	"slices"
 	"time"
 
-	"github.com/gatewayd-io/gatewayd-plugin-sdk/act"
+	sdkAct "github.com/gatewayd-io/gatewayd-plugin-sdk/act"
 	v1 "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin/v1"
+	"github.com/gatewayd-io/gatewayd/act"
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/metrics"
@@ -835,7 +836,7 @@ func (pr *Proxy) shouldTerminate(result map[string]interface{}) bool {
 		return false
 	}
 
-	outputs, ok := result[act.Outputs].([]*act.Output)
+	outputs, ok := result[sdkAct.Outputs].([]*sdkAct.Output)
 	if !ok {
 		pr.logger.Error().Msg("Failed to cast the outputs to the []*act.Output type")
 		return false
@@ -845,10 +846,10 @@ func (pr *Proxy) shouldTerminate(result map[string]interface{}) bool {
 	// This is a shortcut to avoid running the actions' functions.
 	// The terminate field is only present if the action wants to terminate the request,
 	// that is the `Terminate` field is set in one of the outputs.
-	if slices.Contains(keys, act.Terminal) {
-		go func(outputs []*act.Output) {
+	if slices.Contains(keys, sdkAct.Terminal) {
+		go func(outputs []*sdkAct.Output) {
 			for _, output := range outputs {
-				_, err := pr.pluginRegistry.PolicyRegistry().Run(output)
+				_, err := pr.pluginRegistry.PolicyRegistry().Run(output, act.WithResult(result))
 				// If the action is async and we received a sentinel error,
 				// don't log the error.
 				if err != nil && !errors.Is(err, gerr.ErrAsyncAction) {
@@ -862,7 +863,7 @@ func (pr *Proxy) shouldTerminate(result map[string]interface{}) bool {
 				"reason":   "terminate",
 			},
 		).Msg("Terminating request")
-		return cast.ToBool(result[act.Terminal])
+		return cast.ToBool(result[sdkAct.Terminal])
 	}
 
 	// If the hook wants to terminate the request, do it.

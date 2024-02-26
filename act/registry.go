@@ -12,7 +12,7 @@ import (
 type IRegistry interface {
 	Add(policy *sdkAct.Policy)
 	Apply(signals []sdkAct.Signal) []*sdkAct.Output
-	Run(output *sdkAct.Output) (any, *gerr.GatewayDError)
+	Run(output *sdkAct.Output, params ...sdkAct.Parameter) (any, *gerr.GatewayDError)
 }
 
 // Registry keeps track of all policies and actions.
@@ -148,7 +148,9 @@ func (r *Registry) apply(signal sdkAct.Signal) (*sdkAct.Output, *gerr.GatewayDEr
 }
 
 // Run runs the output and returns the result.
-func (r *Registry) Run(output *sdkAct.Output) (any, *gerr.GatewayDError) {
+func (r *Registry) Run(
+	output *sdkAct.Output, params ...sdkAct.Parameter,
+) (any, *gerr.GatewayDError) {
 	if output == nil {
 		r.logger.Warn().Msg("Output is nil, run aborted")
 		// TODO: Run the default action of the default policy.
@@ -162,12 +164,15 @@ func (r *Registry) Run(output *sdkAct.Output) (any, *gerr.GatewayDError) {
 		return nil, gerr.ErrActionNotExist
 	}
 
+	// Prepend the logger to the parameters.
+	params = append([]sdkAct.Parameter{WithLogger(r.logger)}, params...)
+
 	if action.Sync {
 		r.logger.Debug().Fields(map[string]interface{}{
 			"execution_mode": "sync",
 			"action":         action.Name,
 		}).Msgf("Running action")
-		output, err := action.Run(output.Metadata, WithLogger(r.logger))
+		output, err := action.Run(output.Metadata, params...)
 		if err != nil {
 			r.logger.Error().Err(err).Str("action", action.Name).Msg("Error running action")
 			return output, gerr.ErrRunningAction.Wrap(err)
@@ -180,12 +185,17 @@ func (r *Registry) Run(output *sdkAct.Output) (any, *gerr.GatewayDError) {
 		"action":         action.Name,
 	}).Msgf("Running action")
 
-	go func(action *sdkAct.Action, output *sdkAct.Output, logger zerolog.Logger) {
-		_, err := action.Run(output.Metadata, WithLogger(logger))
+	go func(
+		action *sdkAct.Action,
+		output *sdkAct.Output,
+		params []sdkAct.Parameter,
+		logger zerolog.Logger,
+	) {
+		_, err := action.Run(output.Metadata, params...)
 		if err != nil {
 			logger.Error().Err(err).Str("action", action.Name).Msg("Error running action")
 		}
-	}(action, output, r.logger)
+	}(action, output, params, r.logger)
 
 	return nil, gerr.ErrAsyncAction
 }
@@ -194,5 +204,12 @@ func WithLogger(logger zerolog.Logger) sdkAct.Parameter {
 	return sdkAct.Parameter{
 		Key:   "logger",
 		Value: logger,
+	}
+}
+
+func WithResult(result map[string]any) sdkAct.Parameter {
+	return sdkAct.Parameter{
+		Key:   "result",
+		Value: result,
 	}
 }
