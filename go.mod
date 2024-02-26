@@ -7,7 +7,7 @@ require (
 	github.com/NYTimes/gziphandler v1.1.1
 	github.com/codingsince1985/checksum v1.3.0
 	github.com/envoyproxy/protoc-gen-validate v1.0.4
-	github.com/gatewayd-io/gatewayd-plugin-sdk v0.1.10
+	github.com/gatewayd-io/gatewayd-plugin-sdk v0.2.3
 	github.com/getsentry/sentry-go v0.27.0
 	github.com/go-co-op/gocron v1.37.0
 	github.com/google/go-github/v53 v53.2.0
@@ -19,7 +19,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/prometheus/client_golang v1.18.0
 	github.com/prometheus/client_model v0.6.0
-	github.com/prometheus/common v0.47.0
+	github.com/prometheus/common v0.48.0
 	github.com/rs/zerolog v1.32.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/spf13/cast v1.6.0
