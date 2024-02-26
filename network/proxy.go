@@ -849,7 +849,9 @@ func (pr *Proxy) shouldTerminate(result map[string]interface{}) bool {
 		go func(outputs []*act.Output) {
 			for _, output := range outputs {
 				_, err := pr.pluginRegistry.PolicyRegistry().Run(output)
-				if err != nil {
+				// If the action is async and we received a sentinel error,
+				// don't log the error.
+				if err != nil && !errors.Is(err, gerr.ErrAsyncAction) {
 					pr.logger.Error().Err(err).Msg("Error running policy")
 				}
 			}
