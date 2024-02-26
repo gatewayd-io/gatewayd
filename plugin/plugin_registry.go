@@ -371,6 +371,7 @@ func (reg *Registry) Apply(hookName string, result *v1.Struct) ([]*sdkAct.Output
 	outputs := ApplyPolicies(hookName, signals, reg.Logger, reg.PolicyRegistry())
 
 	// If no policies are found, return a default output.
+	// Note: this should never happen, as the default policy is always loaded.
 	if len(outputs) == 0 {
 		reg.Logger.Debug().Msg("No policies found for the given signals")
 		return nil, false

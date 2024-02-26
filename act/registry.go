@@ -20,15 +20,23 @@ type Registry struct {
 	logger  zerolog.Logger
 	timeout time.Duration // Timeout for policy evaluation
 
+	Signals       map[string]*sdkAct.Signal
 	Policies      map[string]*sdkAct.Policy
 	Actions       map[string]*sdkAct.Action
 	DefaultPolicy *sdkAct.Policy
+	DefaultSignal *sdkAct.Signal
 }
 
 var _ IRegistry = (*Registry)(nil)
 
 // NewRegistry creates a new registry with the specified default policy and timeout.
 func NewRegistry(defaultPolicy string, timeout time.Duration, logger zerolog.Logger) *Registry {
+	signals := make(map[string]*sdkAct.Signal)
+	for _, signal := range builtinSignals {
+		signals[signal.Name] = signal
+		logger.Debug().Str("name", signal.Name).Msg("Registered builtin signal")
+	}
+
 	policies := make(map[string]*sdkAct.Policy)
 	for _, policy := range builtinsPolicies {
 		policies[policy.Name] = policy
@@ -48,12 +56,16 @@ func NewRegistry(defaultPolicy string, timeout time.Duration, logger zerolog.Log
 		defaultPolicy = "passthrough"
 	}
 
+	logger.Debug().Str("name", defaultPolicy).Msg("Using default policy")
+
 	return &Registry{
 		logger:        logger,
 		timeout:       timeout,
+		Signals:       signals,
 		Actions:       actions,
 		Policies:      policies,
 		DefaultPolicy: policies[defaultPolicy],
+		DefaultSignal: signals[defaultPolicy],
 	}
 }
 
@@ -74,12 +86,9 @@ func (r *Registry) Add(policy *sdkAct.Policy) {
 
 // Apply applies the signals to the registry and returns the outputs.
 func (r *Registry) Apply(signals []sdkAct.Signal) []*sdkAct.Output {
-	DefaultOutputs := []*sdkAct.Output{
-		DefaultOutput(),
-	}
-
+	// If there are no signals, apply the default policy.
 	if len(signals) == 0 {
-		return DefaultOutputs
+		return r.Apply([]sdkAct.Signal{*r.DefaultSignal})
 	}
 
 	// TODO: Check for non-contradictory actions (forward vs. drop)
@@ -95,7 +104,7 @@ func (r *Registry) Apply(signals []sdkAct.Signal) []*sdkAct.Output {
 	}
 
 	if len(outputs) == 0 {
-		return DefaultOutputs
+		return r.Apply([]sdkAct.Signal{*r.DefaultSignal})
 	}
 
 	return outputs
@@ -161,8 +170,9 @@ func (r *Registry) Run(output *sdkAct.Output) (any, *gerr.GatewayDError) {
 		output, err := action.Run(output.Metadata, WithLogger(r.logger))
 		if err != nil {
 			r.logger.Error().Err(err).Str("action", action.Name).Msg("Error running action")
+			return output, gerr.ErrRunningAction.Wrap(err)
 		}
-		return output, gerr.ErrRunningAction.Wrap(err)
+		return output, nil
 	}
 
 	r.logger.Debug().Fields(map[string]interface{}{

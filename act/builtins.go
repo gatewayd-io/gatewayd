@@ -10,6 +10,11 @@ import (
 const LogDefaultFieldCount = 3
 
 var (
+	builtinSignals = []*sdkAct.Signal{
+		sdkAct.Passthrough(),
+		sdkAct.Terminate(),
+	}
+
 	builtinsPolicies = []*sdkAct.Policy{
 		sdkAct.MustNewPolicy("passthrough", "true", nil),
 		sdkAct.MustNewPolicy(
@@ -74,15 +79,5 @@ var (
 				return true, nil
 			},
 		},
-	}
-
-	// TODO: figure out if the default output should match the default policy.
-	DefaultOutput = func() *sdkAct.Output {
-		return &sdkAct.Output{
-			MatchedPolicy: "passthrough",
-			Verdict:       true,
-			Terminal:      false,
-			Sync:          true,
-		}
 	}
 )
