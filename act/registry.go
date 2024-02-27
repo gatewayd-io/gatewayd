@@ -152,8 +152,9 @@ func (r *Registry) Run(
 	output *sdkAct.Output, params ...sdkAct.Parameter,
 ) (any, *gerr.GatewayDError) {
 	if output == nil {
-		r.logger.Warn().Msg("Output is nil, run aborted")
-		// TODO: Run the default action of the default policy.
+		// This should never happen, since the output is always set by the registry
+		// to be the default policy if no signals are provided.
+		r.logger.Debug().Msg("Output is nil, run aborted")
 		return nil, gerr.ErrNilPointer
 	}
 
