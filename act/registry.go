@@ -92,10 +92,21 @@ func (r *Registry) Apply(signals []sdkAct.Signal) []*sdkAct.Output {
 		return r.Apply([]sdkAct.Signal{*r.DefaultSignal})
 	}
 
-	// TODO: Check for non-contradictory actions (forward vs. drop)
-
+	terminal := false
 	outputs := []*sdkAct.Output{}
 	for _, signal := range signals {
+		// Ignore contradictory actions (forward vs. terminate) if the signal is terminal.
+		// If the signal is terminal, all subsequent non-terminal signals are ignored.
+		// This is to prevent the user from shooting themselves in the foot. Also, it only
+		// makes sense to have a terminal signal if the action is synchronous and terminal.
+		if action, exists := r.Actions[signal.Name]; exists && action.Sync && action.Terminal {
+			terminal = true
+		} else if exists && terminal && action.Sync && !action.Terminal {
+			r.logger.Warn().Str("name", signal.Name).Msg(
+				"Contradictory action, ignoring signal")
+			continue
+		}
+
 		output, err := r.apply(signal)
 		if err != nil {
 			r.logger.Error().Err(err).Str("name", signal.Name).Msg("Error applying signal")
