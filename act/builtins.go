@@ -65,11 +65,11 @@ func BuiltinActions() map[string]*sdkAct.Action {
 	}
 }
 
-func Passthrough(data map[string]any, params ...sdkAct.Parameter) (any, error) {
+func Passthrough(map[string]any, ...sdkAct.Parameter) (any, error) {
 	return true, nil
 }
 
-func Terminate(data map[string]any, params ...sdkAct.Parameter) (any, error) {
+func Terminate(_ map[string]any, params ...sdkAct.Parameter) (any, error) {
 	if len(params) == 0 || params[0].Key != "logger" {
 		return nil, gerr.ErrLoggerRequired
 	}

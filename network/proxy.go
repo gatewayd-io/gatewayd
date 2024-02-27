@@ -869,8 +869,7 @@ func (pr *Proxy) shouldTerminate(result map[string]interface{}) (bool, map[strin
 				pr.logger.Error().Err(err).Msg("Error running policy")
 			}
 			// The terminate action should return a map.
-			switch v := actRes.(type) {
-			case map[string]interface{}:
+			if v, ok := actRes.(map[string]interface{}); ok {
 				actionResult = v
 			}
 		}
