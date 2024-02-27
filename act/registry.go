@@ -176,7 +176,7 @@ func (r *Registry) Run(
 		output, err := action.Run(output.Metadata, params...)
 		if err != nil {
 			r.logger.Error().Err(err).Str("action", action.Name).Msg("Error running action")
-			return output, gerr.ErrRunningAction.Wrap(err)
+			return nil, gerr.ErrRunningAction.Wrap(err)
 		}
 		return output, nil
 	}

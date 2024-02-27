@@ -1,5 +1,7 @@
 package errors
 
+import "errors"
+
 const (
 	ErrCodeUnknown ErrCode = iota
 	ErrCodeNilContext
@@ -150,6 +152,9 @@ var (
 		ErrCodeKeyNotFound, "no matching policy", nil)
 	ErrEvalError = NewGatewayDError(
 		ErrCodeEvalError, "error evaluating expression", nil)
+
+	// Unwrapped errors.
+	ErrLoggerRequired = errors.New("terminate action requires a logger parameter")
 )
 
 const (
