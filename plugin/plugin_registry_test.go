@@ -22,11 +22,13 @@ func NewPluginRegistry(t *testing.T) *Registry {
 		Output:            []config.LogOutput{config.Console},
 		TimeFormat:        zerolog.TimeFormatUnix,
 		ConsoleTimeFormat: time.RFC3339,
-		Level:             zerolog.DebugLevel,
+		Level:             zerolog.InfoLevel,
 		NoColor:           true,
 	}
 	logger := logging.NewLogger(context.Background(), cfg)
-	actRegistry := act.NewRegistry(config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
+	actRegistry := act.NewRegistry(
+		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
+		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
 	reg := NewRegistry(
 		context.Background(),
 		actRegistry,
@@ -127,7 +129,9 @@ func BenchmarkHookRun(b *testing.B) {
 		NoColor:           true,
 	}
 	logger := logging.NewLogger(context.Background(), cfg)
-	actRegistry := act.NewRegistry(config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
+	actRegistry := act.NewRegistry(
+		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
+		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
 	reg := NewRegistry(
 		context.Background(),
 		actRegistry,

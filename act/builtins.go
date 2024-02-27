@@ -15,57 +15,61 @@ const (
 	TerminateDefaultFieldCount = 2
 )
 
-// TODO: Should we get rid of global variables?
-var (
-	builtinSignals = []*sdkAct.Signal{
-		sdkAct.Passthrough(),
-		sdkAct.Terminate(),
+func BuiltinSignals() map[string]*sdkAct.Signal {
+	return map[string]*sdkAct.Signal{
+		"passthrough": sdkAct.Passthrough(),
+		"terminate":   sdkAct.Terminate(),
+		"log":         {Name: "log"},
 	}
+}
 
-	builtinsPolicies = []*sdkAct.Policy{
-		sdkAct.MustNewPolicy("passthrough", "true", nil),
-		sdkAct.MustNewPolicy(
+func BuiltinPolicies() map[string]*sdkAct.Policy {
+	return map[string]*sdkAct.Policy{
+		"passthrough": sdkAct.MustNewPolicy("passthrough", "true", nil),
+		"terminate": sdkAct.MustNewPolicy(
 			"terminate",
 			`Signal.terminate == true && Policy.terminate == "stop"`,
 			map[string]any{"terminate": "stop"},
 		),
-		sdkAct.MustNewPolicy(
+		"log": sdkAct.MustNewPolicy(
 			"log",
 			`Signal.log == true && Policy.log == "enabled"`,
 			map[string]any{"log": "enabled"},
 		),
 	}
+}
 
-	builtinActions = []*sdkAct.Action{
-		{
+func BuiltinActions() map[string]*sdkAct.Action {
+	return map[string]*sdkAct.Action{
+		"passthrough": {
 			Name:     "passthrough",
 			Metadata: nil,
 			Sync:     true,
 			Terminal: false,
-			Run:      passthrough,
+			Run:      Passthrough,
 		},
-		{
+		"terminate": {
 			Name:     "terminate",
 			Metadata: nil,
 			Sync:     true,
 			Terminal: true,
-			Run:      terminate,
+			Run:      Terminate,
 		},
-		{
+		"log": {
 			Name:     "log",
 			Metadata: nil,
 			Sync:     false,
 			Terminal: false,
-			Run:      log,
+			Run:      Log,
 		},
 	}
-)
+}
 
-func passthrough(data map[string]any, params ...sdkAct.Parameter) (any, error) {
+func Passthrough(data map[string]any, params ...sdkAct.Parameter) (any, error) {
 	return true, nil
 }
 
-func terminate(data map[string]any, params ...sdkAct.Parameter) (any, error) {
+func Terminate(data map[string]any, params ...sdkAct.Parameter) (any, error) {
 	if len(params) == 0 || params[0].Key != "logger" {
 		return nil, gerr.ErrLoggerRequired
 	}
@@ -110,7 +114,7 @@ func terminate(data map[string]any, params ...sdkAct.Parameter) (any, error) {
 	return true, nil
 }
 
-func log(data map[string]any, params ...sdkAct.Parameter) (any, error) {
+func Log(data map[string]any, params ...sdkAct.Parameter) (any, error) {
 	fields := map[string]any{}
 	// Only log the fields that are not level, message, or log.
 	if len(data) > LogDefaultFieldCount {

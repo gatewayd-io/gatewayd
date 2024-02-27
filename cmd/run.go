@@ -253,9 +253,11 @@ var runCmd = &cobra.Command{
 				"Running GatewayD in development mode (not recommended for production)")
 		}
 
-		// Create a new policy registry.
+		// Create a new policy registry given the built-in signals, policies, and actions.
 		policiesRegistry = act.NewRegistry(
-			conf.Plugin.DefaultPolicy, conf.Plugin.PolicyTimeout, logger)
+			act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
+			conf.Plugin.DefaultPolicy, conf.Plugin.PolicyTimeout, logger,
+		)
 
 		// Load policies from the configuration file and add them to the registry.
 		for _, plc := range conf.Plugin.Policies {

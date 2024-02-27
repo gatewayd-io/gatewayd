@@ -39,7 +39,9 @@ func TestRunServer(t *testing.T) {
 		FileName:          "server_test.log",
 	})
 
-	actRegistry := act.NewRegistry(config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
+	actRegistry := act.NewRegistry(
+		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
+		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
 	pluginRegistry := plugin.NewRegistry(
 		context.Background(),
 		actRegistry,

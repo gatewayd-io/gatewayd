@@ -30,27 +30,28 @@ type Registry struct {
 var _ IRegistry = (*Registry)(nil)
 
 // NewRegistry creates a new registry with the specified default policy and timeout.
-func NewRegistry(defaultPolicy string, timeout time.Duration, logger zerolog.Logger) *Registry {
-	signals := make(map[string]*sdkAct.Signal)
+func NewRegistry(
+	builtinSignals map[string]*sdkAct.Signal,
+	builtinsPolicies map[string]*sdkAct.Policy,
+	builtinActions map[string]*sdkAct.Action,
+	defaultPolicy string,
+	timeout time.Duration,
+	logger zerolog.Logger,
+) *Registry {
 	for _, signal := range builtinSignals {
-		signals[signal.Name] = signal
 		logger.Debug().Str("name", signal.Name).Msg("Registered builtin signal")
 	}
 
-	policies := make(map[string]*sdkAct.Policy)
 	for _, policy := range builtinsPolicies {
-		policies[policy.Name] = policy
 		logger.Debug().Str("name", policy.Name).Msg("Registered builtin policy")
 	}
 
-	actions := make(map[string]*sdkAct.Action)
 	for _, action := range builtinActions {
-		actions[action.Name] = action
 		logger.Debug().Str("name", action.Name).Msg("Registered builtin action")
 	}
 
 	// The default policy must exist, otherwise use passthrough.
-	if _, exists := policies[defaultPolicy]; !exists || defaultPolicy == "" {
+	if _, exists := builtinsPolicies[defaultPolicy]; !exists || defaultPolicy == "" {
 		logger.Warn().Str("name", defaultPolicy).Msg(
 			"The specified default policy does not exist, using passthrough")
 		defaultPolicy = "passthrough"
@@ -61,11 +62,11 @@ func NewRegistry(defaultPolicy string, timeout time.Duration, logger zerolog.Log
 	return &Registry{
 		logger:        logger,
 		timeout:       timeout,
-		Signals:       signals,
-		Actions:       actions,
-		Policies:      policies,
-		DefaultPolicy: policies[defaultPolicy],
-		DefaultSignal: signals[defaultPolicy],
+		Signals:       builtinSignals,
+		Policies:      builtinsPolicies,
+		Actions:       builtinActions,
+		DefaultPolicy: builtinsPolicies[defaultPolicy],
+		DefaultSignal: builtinSignals[defaultPolicy],
 	}
 }
 
