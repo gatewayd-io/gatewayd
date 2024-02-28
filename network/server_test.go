@@ -56,6 +56,16 @@ func TestRunServer(t *testing.T) {
 	pluginRegistry.AddHook(v1.HookName_HOOK_NAME_ON_TRAFFIC_FROM_SERVER, 1, onOutgoingTraffic)
 	pluginRegistry.AddHook(v1.HookName_HOOK_NAME_ON_TRAFFIC_TO_CLIENT, 1, onOutgoingTraffic)
 
+	assert.NotNil(t, pluginRegistry.PolicyRegistry())
+	assert.NotNil(t, pluginRegistry.PolicyRegistry().Signals)
+	assert.NotNil(t, pluginRegistry.PolicyRegistry().Policies)
+	assert.NotNil(t, pluginRegistry.PolicyRegistry().Actions)
+	assert.Equal(t, pluginRegistry.PolicyRegistry().Signals, act.BuiltinSignals())
+	assert.Equal(t, pluginRegistry.PolicyRegistry().Policies, act.BuiltinPolicies())
+	assert.Equal(t, pluginRegistry.PolicyRegistry().Actions, act.BuiltinActions())
+	assert.Equal(t, config.DefaultPolicy, pluginRegistry.PolicyRegistry().DefaultPolicy.Name)
+	assert.Equal(t, config.DefaultPolicy, pluginRegistry.PolicyRegistry().DefaultSignal.Name)
+
 	clientConfig := config.Client{
 		Network:            "tcp",
 		Address:            "localhost:5432",
