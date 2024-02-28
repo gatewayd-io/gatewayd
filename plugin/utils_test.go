@@ -4,6 +4,11 @@ import (
 	"testing"
 	"time"
 
+	sdkAct "github.com/gatewayd-io/gatewayd-plugin-sdk/act"
+	"github.com/gatewayd-io/gatewayd/act"
+	"github.com/gatewayd-io/gatewayd/config"
+	"github.com/rs/zerolog"
+	"github.com/spf13/cast"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -16,8 +21,8 @@ func Test_NewCommand(t *testing.T) {
 	assert.Equal(t, []string{"test=123"}, cmd.Env)
 }
 
-// Test_CastToPrimitiveTypes tests the CastToPrimitiveTypes function.
-func Test_CastToPrimitiveTypes(t *testing.T) {
+// Test_castToPrimitiveTypes tests the CastToPrimitiveTypes function.
+func Test_castToPrimitiveTypes(t *testing.T) {
 	actual := map[string]interface{}{
 		"string":   "test",
 		"int":      123,
@@ -51,6 +56,55 @@ func Test_CastToPrimitiveTypes(t *testing.T) {
 		},
 	}
 
-	casted := CastToPrimitiveTypes(actual)
+	casted := castToPrimitiveTypes(actual)
 	assert.Equal(t, expected, casted)
+}
+
+// Test_getSignals tests the getSignals function.
+func Test_getSignals(t *testing.T) {
+	result := map[string]interface{}{
+		sdkAct.Signals: []any{
+			(&sdkAct.Signal{
+				Name:     "test",
+				Metadata: map[string]any{"test": "test"},
+			}).ToMap(),
+			sdkAct.Passthrough().ToMap(),
+		},
+	}
+	signals := getSignals(result)
+	assert.Len(t, signals, 2)
+	assert.Equal(t, "test", signals[0].Name)
+	assert.Equal(t, "test", signals[0].Metadata["test"])
+	assert.Equal(t, "passthrough", signals[1].Name)
+	assert.Nil(t, signals[1].Metadata)
+}
+
+// Test_getSignals_empty tests the getSignals function with an empty result.
+func Test_getSignals_empty(t *testing.T) {
+	result := map[string]interface{}{}
+	signals := getSignals(result)
+	assert.Len(t, signals, 0)
+}
+
+// Test_applyPolicies tests the applyPolicies function with a passthrough policy.
+// It also tests the Run function of the registered passthrough (built-in) action.
+func Test_applyPolicies(t *testing.T) {
+	logger := zerolog.Logger{}
+	actRegistry := act.NewRegistry(
+		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
+		config.DefaultPolicy, config.DefaultPolicyTimeout, logger,
+	)
+
+	output := applyPolicies(
+		"onTrafficFromClient", []sdkAct.Signal{*sdkAct.Passthrough()}, logger, actRegistry)
+	assert.Len(t, output, 1)
+	assert.Equal(t, "passthrough", output[0].MatchedPolicy)
+	assert.Nil(t, output[0].Metadata)
+	assert.True(t, output[0].Sync)
+	assert.False(t, output[0].Terminal)
+	assert.True(t, output[0].Verdict)
+
+	result, gerr := actRegistry.Run(output[0], act.WithLogger(logger))
+	assert.Nil(t, gerr)
+	assert.True(t, cast.ToBool(result))
 }
