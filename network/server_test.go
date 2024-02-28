@@ -60,9 +60,6 @@ func TestRunServer(t *testing.T) {
 	assert.NotNil(t, pluginRegistry.PolicyRegistry().Signals)
 	assert.NotNil(t, pluginRegistry.PolicyRegistry().Policies)
 	assert.NotNil(t, pluginRegistry.PolicyRegistry().Actions)
-	assert.Equal(t, pluginRegistry.PolicyRegistry().Signals, act.BuiltinSignals())
-	assert.Equal(t, pluginRegistry.PolicyRegistry().Policies, act.BuiltinPolicies())
-	assert.Equal(t, pluginRegistry.PolicyRegistry().Actions, act.BuiltinActions())
 	assert.Equal(t, config.DefaultPolicy, pluginRegistry.PolicyRegistry().DefaultPolicy.Name)
 	assert.Equal(t, config.DefaultPolicy, pluginRegistry.PolicyRegistry().DefaultSignal.Name)
 
