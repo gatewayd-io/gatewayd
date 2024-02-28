@@ -198,6 +198,8 @@ func (r *Registry) Run(
 		"action":         action.Name,
 	}).Msgf("Running action")
 
+	// Run the action asynchronously.
+	// TODO: Add a way to cancel the action.
 	go func(
 		action *sdkAct.Action,
 		output *sdkAct.Output,
@@ -214,6 +216,7 @@ func (r *Registry) Run(
 }
 
 // WithLogger returns a parameter with the logger to be used by the action.
+// This is automatically prepended to the parameters when running an action.
 func WithLogger(logger zerolog.Logger) sdkAct.Parameter {
 	return sdkAct.Parameter{
 		Key:   "logger",
