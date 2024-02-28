@@ -390,7 +390,6 @@ func (pr *Proxy) PassThroughToServer(conn *ConnWrapper, stack *Stack) *gerr.Gate
 	stack.Push(&Request{Data: request})
 
 	// If the hook wants to terminate the connection, do it.
-	// TODO: Should the output be reconstructed here? Or should it be done in the plugin registry?
 	if terminate, resp := pr.shouldTerminate(result); terminate {
 		if resp != nil {
 			pr.logger.Trace().Fields(
@@ -880,22 +879,6 @@ func (pr *Proxy) shouldTerminate(result map[string]interface{}) (bool, map[strin
 			},
 		).Msg("Terminating request")
 		return cast.ToBool(result[sdkAct.Terminal]), actionResult
-	}
-
-	// If the hook wants to terminate the request, do it.
-	for _, output := range outputs {
-		if output.MatchedPolicy == "terminate" && output.Verdict {
-			pr.logger.Debug().Fields(
-				map[string]interface{}{
-					"function": "proxy.passthrough",
-					"policy":   output.MatchedPolicy,
-					"verdict":  output.Verdict,
-					"metadata": output.Metadata,
-					"sync":     output.Sync,
-				},
-			).Msg("Terminating request")
-			return true, result
-		}
 	}
 
 	return false, result

@@ -213,6 +213,7 @@ func (r *Registry) Run(
 	return nil, gerr.ErrAsyncAction
 }
 
+// WithLogger returns a parameter with the logger to be used by the action.
 func WithLogger(logger zerolog.Logger) sdkAct.Parameter {
 	return sdkAct.Parameter{
 		Key:   "logger",
@@ -220,6 +221,8 @@ func WithLogger(logger zerolog.Logger) sdkAct.Parameter {
 	}
 }
 
+// WithResult returns a parameter with the result of the plugin hook
+// to be used by the action.
 func WithResult(result map[string]any) sdkAct.Parameter {
 	return sdkAct.Parameter{
 		Key:   "result",

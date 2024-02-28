@@ -279,7 +279,7 @@ func (reg *Registry) Run(
 	defer cancel()
 
 	// Cast custom fields to their primitive types, like time.Duration to float64.
-	args = CastToPrimitiveTypes(args)
+	args = castToPrimitiveTypes(args)
 
 	// Create v1.Struct from args.
 	var params *v1.Struct
@@ -364,11 +364,11 @@ func (reg *Registry) Apply(hookName string, result *v1.Struct) ([]*sdkAct.Output
 	defer span.End()
 
 	// Get signals from the result.
-	signals := GetSignals(result.AsMap())
+	signals := getSignals(result.AsMap())
 	// Apply policies to the signals.
 	// The outputs contains the verdicts of the policies and their metadata.
 	// And using this list, the caller can take further actions.
-	outputs := ApplyPolicies(hookName, signals, reg.Logger, reg.PolicyRegistry())
+	outputs := applyPolicies(hookName, signals, reg.Logger, reg.PolicyRegistry())
 
 	// If no policies are found, return a default output.
 	// Note: this should never happen, as the default policy is always loaded.

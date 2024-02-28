@@ -19,9 +19,9 @@ func NewCommand(cmd string, args []string, env []string) *exec.Cmd {
 	return command
 }
 
-// CastToPrimitiveTypes casts the values of a map to its primitive type
+// castToPrimitiveTypes casts the values of a map to its primitive type
 // (e.g. time.Duration to float64) to prevent structpb invalid type(s) errors.
-func CastToPrimitiveTypes(args map[string]interface{}) map[string]interface{} {
+func castToPrimitiveTypes(args map[string]interface{}) map[string]interface{} {
 	for key, value := range args {
 		switch value := value.(type) {
 		case time.Duration:
@@ -29,7 +29,7 @@ func CastToPrimitiveTypes(args map[string]interface{}) map[string]interface{} {
 			args[key] = value.String()
 		case map[string]interface{}:
 			// Recursively cast nested maps.
-			args[key] = CastToPrimitiveTypes(value)
+			args[key] = castToPrimitiveTypes(value)
 		case []interface{}:
 			// Recursively cast nested arrays.
 			array := make([]interface{}, len(value))
@@ -51,8 +51,8 @@ func CastToPrimitiveTypes(args map[string]interface{}) map[string]interface{} {
 	return args
 }
 
-// GetSignals decodes the signals from the result map and returns them as a list of Signal objects.
-func GetSignals(result map[string]any) []sdkAct.Signal {
+// getSignals decodes the signals from the result map and returns them as a list of Signal objects.
+func getSignals(result map[string]any) []sdkAct.Signal {
 	decodedSignals := []sdkAct.Signal{}
 
 	if signals, ok := result[sdkAct.Signals]; ok {
@@ -75,8 +75,8 @@ func GetSignals(result map[string]any) []sdkAct.Signal {
 	return decodedSignals
 }
 
-// ApplyPolicies applies the policies to the signals and returns the outputs.
-func ApplyPolicies(
+// applyPolicies applies the policies to the signals and returns the outputs.
+func applyPolicies(
 	hookName string, signals []sdkAct.Signal, logger zerolog.Logger, reg act.IRegistry,
 ) []*sdkAct.Output {
 	signalNames := []string{}
