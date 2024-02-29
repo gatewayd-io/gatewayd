@@ -42,6 +42,12 @@ timeout: 30s
 # The start timeout controls how long to wait for a plugin to start before timing out.
 startTimeout: 1m
 
+# The policy timeout controls how long to wait for the evluation of the policy before timing out.
+policyTimeout: 30s
+
+# The policy is a list of policies to apply to the signals received from the plugins.
+policies: []
+
 # The plugin configuration is a list of plugins to load. Each plugin is defined by a name,
 # a path to the plugin's executable, and a list of arguments to pass to the plugin. The
 # plugin's executable is expected to be a Go plugin that implements the GatewayD plugin
