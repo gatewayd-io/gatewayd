@@ -17,8 +17,9 @@ type IRegistry interface {
 
 // Registry keeps track of all policies and actions.
 type Registry struct {
-	logger  zerolog.Logger
-	timeout time.Duration // Timeout for policy evaluation
+	logger zerolog.Logger
+	// Timeout for policy evaluation.
+	policyTimeout time.Duration
 
 	Signals       map[string]*sdkAct.Signal
 	Policies      map[string]*sdkAct.Policy
@@ -35,7 +36,7 @@ func NewRegistry(
 	builtinsPolicies map[string]*sdkAct.Policy,
 	builtinActions map[string]*sdkAct.Action,
 	defaultPolicy string,
-	timeout time.Duration,
+	policyTimeout time.Duration,
 	logger zerolog.Logger,
 ) *Registry {
 	for _, signal := range builtinSignals {
@@ -61,7 +62,7 @@ func NewRegistry(
 
 	return &Registry{
 		logger:        logger,
-		timeout:       timeout,
+		policyTimeout: policyTimeout,
 		Signals:       builtinSignals,
 		Policies:      builtinsPolicies,
 		Actions:       builtinActions,
@@ -134,7 +135,7 @@ func (r *Registry) apply(signal sdkAct.Signal) (*sdkAct.Output, *gerr.GatewayDEr
 		return nil, gerr.ErrPolicyNotMatched
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), r.policyTimeout)
 	defer cancel()
 
 	// Action dictates the sync mode, not the signal.
