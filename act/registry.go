@@ -2,6 +2,7 @@ package act
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	sdkAct "github.com/gatewayd-io/gatewayd-plugin-sdk/act"
@@ -90,21 +91,29 @@ func (r *Registry) Add(policy *sdkAct.Policy) {
 func (r *Registry) Apply(signals []sdkAct.Signal) []*sdkAct.Output {
 	// If there are no signals, apply the default policy.
 	if len(signals) == 0 {
+		r.logger.Debug().Msg("No signals provided, applying default signal")
 		return r.Apply([]sdkAct.Signal{*r.DefaultSignal})
 	}
 
-	terminal := false
+	terminal := []string{}
+	nonTerminal := []string{}
+	for _, signal := range signals {
+		action, exists := r.Actions[signal.Name]
+		if exists && action.Sync && action.Terminal {
+			terminal = append(terminal, signal.Name)
+		} else if exists && action.Sync && !action.Terminal {
+			nonTerminal = append(nonTerminal, signal.Name)
+		}
+	}
+
 	outputs := []*sdkAct.Output{}
 	for _, signal := range signals {
-		// Ignore contradictory actions (forward vs. terminate) if the signal is terminal.
-		// If the signal is terminal, all subsequent non-terminal signals are ignored.
-		// This is to prevent the user from shooting themselves in the foot. Also, it only
+		// Ignore contradictory actions (forward vs. terminate) if one of the signals is terminal.
+		// If the signal is terminal, all non-terminal signals are ignored. Also, it only
 		// makes sense to have a terminal signal if the action is synchronous and terminal.
-		if action, exists := r.Actions[signal.Name]; exists && action.Sync && action.Terminal {
-			terminal = true
-		} else if exists && terminal && action.Sync && !action.Terminal {
+		if len(terminal) > 0 && slices.Contains(nonTerminal, signal.Name) {
 			r.logger.Warn().Str("name", signal.Name).Msg(
-				"Contradictory action, ignoring signal")
+				"Terminal signal takes precedence, ignoring non-terminal signals")
 			continue
 		}
 
