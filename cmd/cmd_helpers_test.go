@@ -2,8 +2,10 @@ package cmd
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/spf13/cobra"
 )
@@ -24,7 +26,14 @@ func executeCommandC(root *cobra.Command, args ...string) (string, error) {
 // mustPullPlugin pulls the gatewayd-plugin-cache plugin and returns the path to the archive.
 func mustPullPlugin() (string, error) {
 	pluginURL := "github.com/gatewayd-io/gatewayd-plugin-cache@v0.2.10"
-	fileName := "./gatewayd-plugin-cache-linux-amd64-v0.2.10.tar.gz"
+
+	fileName := fmt.Sprintf(
+		"./gatewayd-plugin-cache-%s-%s-%s%s",
+		runtime.GOOS,
+		runtime.GOARCH,
+		"v0.2.10",
+		getFileExtension(),
+	)
 
 	if _, err := os.Stat(fileName); os.IsNotExist(err) {
 		_, err := executeCommandC(rootCmd, "plugin", "install", "--pull-only", pluginURL)
