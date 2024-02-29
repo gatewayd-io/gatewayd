@@ -102,7 +102,7 @@ func Test_applyPolicies(t *testing.T) {
 	assert.Nil(t, output[0].Metadata)
 	assert.True(t, output[0].Sync)
 	assert.False(t, output[0].Terminal)
-	assert.True(t, output[0].Verdict)
+	assert.True(t, cast.ToBool(output[0].Verdict))
 
 	result, gerr := actRegistry.Run(output[0], act.WithLogger(logger))
 	assert.Nil(t, gerr)
