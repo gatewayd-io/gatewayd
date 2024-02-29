@@ -284,11 +284,6 @@ var runCmd = &cobra.Command{
 					config.CompatibilityPolicies, conf.Plugin.CompatibilityPolicy),
 				config.CompatibilityPolicies[conf.Plugin.CompatibilityPolicy],
 				config.DefaultCompatibilityPolicy),
-			config.If[config.TerminationPolicy](
-				config.Exists[string, config.TerminationPolicy](
-					config.TerminationPolicies, conf.Plugin.TerminationPolicy),
-				config.TerminationPolicies[conf.Plugin.TerminationPolicy],
-				config.DefaultTerminationPolicy),
 			logger,
 			devMode,
 		)

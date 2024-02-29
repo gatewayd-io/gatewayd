@@ -113,7 +113,6 @@ func TestGetPlugins(t *testing.T) {
 		context.TODO(),
 		actRegistry,
 		config.Loose,
-		config.Stop,
 		zerolog.Logger{},
 		true,
 	)
@@ -143,7 +142,6 @@ func TestGetPluginsWithEmptyPluginRegistry(t *testing.T) {
 		context.TODO(),
 		actRegistry,
 		config.Loose,
-		config.Stop,
 		zerolog.Logger{},
 		true,
 	)
@@ -253,7 +251,6 @@ func TestGetServers(t *testing.T) {
 		context.TODO(),
 		actRegistry,
 		config.Loose,
-		config.Stop,
 		zerolog.Logger{},
 		true,
 	)

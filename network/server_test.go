@@ -46,7 +46,6 @@ func TestRunServer(t *testing.T) {
 		context.Background(),
 		actRegistry,
 		config.Loose,
-		config.Stop,
 		logger,
 		false,
 	)

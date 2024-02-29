@@ -65,7 +65,6 @@ type Registry struct {
 
 	Logger        zerolog.Logger
 	Compatibility config.CompatibilityPolicy
-	Termination   config.TerminationPolicy
 	StartTimeout  time.Duration
 }
 
@@ -76,7 +75,6 @@ func NewRegistry(
 	ctx context.Context,
 	policiesRegistry *act.Registry,
 	compatibility config.CompatibilityPolicy,
-	termination config.TerminationPolicy,
 	logger zerolog.Logger,
 	devMode bool,
 ) *Registry {
@@ -91,7 +89,6 @@ func NewRegistry(
 		devMode:          devMode,
 		Logger:           logger,
 		Compatibility:    compatibility,
-		Termination:      termination,
 	}
 }
 
