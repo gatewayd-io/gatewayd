@@ -17,7 +17,7 @@ import (
 func Test_NewRegistry(t *testing.T) {
 	logger := zerolog.Logger{}
 
-	actRegistry := NewRegistry(
+	actRegistry := NewActRegistry(
 		BuiltinSignals(), BuiltinPolicies(), BuiltinActions(),
 		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
 	assert.NotNil(t, actRegistry)
@@ -28,9 +28,9 @@ func Test_NewRegistry(t *testing.T) {
 	assert.Equal(t, config.DefaultPolicy, actRegistry.DefaultSignal.Name)
 }
 
-// Test_Add tests the Add function of the policy registry.
+// Test_Add tests the Add function of the act registry.
 func Test_Add(t *testing.T) {
-	actRegistry := NewRegistry(
+	actRegistry := NewActRegistry(
 		BuiltinSignals(), BuiltinPolicies(), BuiltinActions(),
 		config.DefaultPolicy, config.DefaultPolicyTimeout, zerolog.Logger{})
 	assert.NotNil(t, actRegistry)
@@ -44,11 +44,11 @@ func Test_Add(t *testing.T) {
 	assert.Len(t, actRegistry.Policies, len(BuiltinPolicies())+1)
 }
 
-// Test_Add_NilPolicy tests the Add function of the policy registry with a nil policy.
+// Test_Add_NilPolicy tests the Add function of the act registry with a nil policy.
 func Test_Add_NilPolicy(t *testing.T) {
 	buf := bytes.Buffer{}
 	logger := zerolog.New(&buf)
-	actRegistry := NewRegistry(
+	actRegistry := NewActRegistry(
 		BuiltinSignals(), map[string]*sdkAct.Policy{}, BuiltinActions(),
 		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
 	assert.NotNil(t, actRegistry)
@@ -59,11 +59,11 @@ func Test_Add_NilPolicy(t *testing.T) {
 	assert.Contains(t, buf.String(), "Policy is nil, not adding")
 }
 
-// Test_Add_ExistentPolicy tests the Add function of the policy registry with an existent policy.
+// Test_Add_ExistentPolicy tests the Add function of the act registry with an existent policy.
 func Test_Add_ExistentPolicy(t *testing.T) {
 	buf := bytes.Buffer{}
 	logger := zerolog.New(&buf)
-	actRegistry := NewRegistry(
+	actRegistry := NewActRegistry(
 		BuiltinSignals(), BuiltinPolicies(), BuiltinActions(),
 		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
 	assert.NotNil(t, actRegistry)
@@ -74,9 +74,9 @@ func Test_Add_ExistentPolicy(t *testing.T) {
 	assert.Contains(t, buf.String(), "Policy already exists, overwriting")
 }
 
-// Test_Apply tests the Apply function of the policy registry.
+// Test_Apply tests the Apply function of the act registry.
 func Test_Apply(t *testing.T) {
-	actRegistry := NewRegistry(
+	actRegistry := NewActRegistry(
 		BuiltinSignals(), BuiltinPolicies(), BuiltinActions(),
 		config.DefaultPolicy, config.DefaultPolicyTimeout, zerolog.Logger{})
 	assert.NotNil(t, actRegistry)
@@ -93,12 +93,12 @@ func Test_Apply(t *testing.T) {
 	assert.False(t, outputs[0].Terminal)
 }
 
-// Test_Apply_NoSignals tests the Apply function of the policy registry with no signals.
+// Test_Apply_NoSignals tests the Apply function of the act registry with no signals.
 // It should apply the default policy.
 func Test_Apply_NoSignals(t *testing.T) {
 	buf := bytes.Buffer{}
 	logger := zerolog.New(&buf)
-	actRegistry := NewRegistry(
+	actRegistry := NewActRegistry(
 		BuiltinSignals(), BuiltinPolicies(), BuiltinActions(),
 		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
 	assert.NotNil(t, actRegistry)
@@ -114,7 +114,7 @@ func Test_Apply_NoSignals(t *testing.T) {
 	assert.Contains(t, buf.String(), "No signals provided, applying default signal")
 }
 
-// Test_Apply_ContradictorySignals tests the Apply function of the policy registry
+// Test_Apply_ContradictorySignals tests the Apply function of the act registry
 // with contradictory signals. The terminate signal should take precedence over
 // the passthrough signal because it is a terminal action. The passthrough
 // signal should be ignored.
@@ -137,7 +137,7 @@ func Test_Apply_ContradictorySignals(t *testing.T) {
 
 	buf := bytes.Buffer{}
 	logger := zerolog.New(&buf)
-	actRegistry := NewRegistry(
+	actRegistry := NewActRegistry(
 		BuiltinSignals(), BuiltinPolicies(), BuiltinActions(),
 		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
 	assert.NotNil(t, actRegistry)
@@ -169,13 +169,13 @@ func Test_Apply_ContradictorySignals(t *testing.T) {
 	}
 }
 
-// Test_Apply_ActionNotMatched tests the Apply function of the policy registry
+// Test_Apply_ActionNotMatched tests the Apply function of the act registry
 // with a signal that does not match any action. The signal should be ignored.
 // The default policy should be applied instead.
 func Test_Apply_ActionNotMatched(t *testing.T) {
 	buf := bytes.Buffer{}
 	logger := zerolog.New(&buf)
-	actRegistry := NewRegistry(
+	actRegistry := NewActRegistry(
 		BuiltinSignals(), BuiltinPolicies(), BuiltinActions(),
 		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
 	assert.NotNil(t, actRegistry)
@@ -193,13 +193,13 @@ func Test_Apply_ActionNotMatched(t *testing.T) {
 	assert.Contains(t, buf.String(), "{\"level\":\"error\",\"error\":\"no matching action\",\"name\":\"non-existent\",\"message\":\"Error applying signal\"}") //nolint:lll
 }
 
-// Test_Apply_PolicyNotMatched tests the Apply function of the policy registry
+// Test_Apply_PolicyNotMatched tests the Apply function of the act registry
 // with a signal that does not match any policy. The signal should be ignored.
 // The default policy should be applied instead.
 func Test_Apply_PolicyNotMatched(t *testing.T) {
 	buf := bytes.Buffer{}
 	logger := zerolog.New(&buf)
-	actRegistry := NewRegistry(
+	actRegistry := NewActRegistry(
 		BuiltinSignals(),
 		map[string]*sdkAct.Policy{
 			"passthrough": BuiltinPolicies()["passthrough"],
@@ -221,7 +221,7 @@ func Test_Apply_PolicyNotMatched(t *testing.T) {
 	assert.Contains(t, buf.String(), "{\"level\":\"error\",\"error\":\"no matching policy\",\"name\":\"terminate\",\"message\":\"Error applying signal\"}") //nolint:lll
 }
 
-// Test_Apply_NonBoolPolicy tests the Apply function of the policy registry
+// Test_Apply_NonBoolPolicy tests the Apply function of the act registry
 // with a non-bool policy.
 func Test_Apply_NonBoolPolicy(t *testing.T) {
 	badPolicies := []map[string]*sdkAct.Policy{
@@ -244,7 +244,7 @@ func Test_Apply_NonBoolPolicy(t *testing.T) {
 	for _, policies := range badPolicies {
 		buf := bytes.Buffer{}
 		logger := zerolog.New(&buf)
-		actRegistry := NewRegistry(
+		actRegistry := NewActRegistry(
 			BuiltinSignals(),
 			policies,
 			BuiltinActions(),
@@ -264,10 +264,42 @@ func Test_Apply_NonBoolPolicy(t *testing.T) {
 	}
 }
 
-// Test_Run tests the Run function of the policy registry with a non-terminal action.
+// Test_Apply_BadPolicy tests the NewRegistry function with a bad policy,
+// which should return a nil registry.
+func Test_Apply_BadPolicy(t *testing.T) {
+	badPolicies := []map[string]*sdkAct.Policy{
+		{
+			"passthrough": sdkAct.MustNewPolicy(
+				"passthrough",
+				"2/0 + 'test'",
+				nil,
+			),
+		},
+		{
+			"passthrough": sdkAct.MustNewPolicy(
+				"passthrough",
+				"2+2+true",
+				nil,
+			),
+		},
+	}
+
+	for _, policies := range badPolicies {
+		buf := bytes.Buffer{}
+		logger := zerolog.New(&buf)
+		actRegistry := NewActRegistry(
+			BuiltinSignals(),
+			policies,
+			BuiltinActions(),
+			config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
+		assert.Nil(t, actRegistry)
+	}
+}
+
+// Test_Run tests the Run function of the act registry with a non-terminal action.
 func Test_Run(t *testing.T) {
 	logger := zerolog.Logger{}
-	actRegistry := NewRegistry(
+	actRegistry := NewActRegistry(
 		BuiltinSignals(), BuiltinPolicies(), BuiltinActions(),
 		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
 	assert.NotNil(t, actRegistry)
@@ -282,10 +314,10 @@ func Test_Run(t *testing.T) {
 	assert.True(t, cast.ToBool(result))
 }
 
-// Test_Run_Terminate tests the Run function of the policy registry with a terminal action.
+// Test_Run_Terminate tests the Run function of the act registry with a terminal action.
 func Test_Run_Terminate(t *testing.T) {
 	logger := zerolog.Logger{}
-	actRegistry := NewRegistry(
+	actRegistry := NewActRegistry(
 		BuiltinSignals(), BuiltinPolicies(), BuiltinActions(),
 		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
 	assert.NotNil(t, actRegistry)
@@ -307,11 +339,11 @@ func Test_Run_Terminate(t *testing.T) {
 	assert.NotEmpty(t, resultMap["response"])
 }
 
-// Test_Run_Async tests the Run function of the policy registry with an asynchronous action.
+// Test_Run_Async tests the Run function of the act registry with an asynchronous action.
 func Test_Run_Async(t *testing.T) {
 	out := bytes.Buffer{}
 	logger := zerolog.New(&out)
-	actRegistry := NewRegistry(
+	actRegistry := NewActRegistry(
 		BuiltinSignals(), BuiltinPolicies(), BuiltinActions(),
 		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
 	assert.NotNil(t, actRegistry)
@@ -350,7 +382,7 @@ func Test_Run_Async(t *testing.T) {
 func Test_Run_NilOutput(t *testing.T) {
 	buf := bytes.Buffer{}
 	logger := zerolog.New(&buf)
-	actRegistry := NewRegistry(
+	actRegistry := NewActRegistry(
 		BuiltinSignals(), BuiltinPolicies(), BuiltinActions(),
 		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
 	assert.NotNil(t, actRegistry)
@@ -365,7 +397,7 @@ func Test_Run_NilOutput(t *testing.T) {
 func Test_Run_ActionNotExist(t *testing.T) {
 	buf := bytes.Buffer{}
 	logger := zerolog.New(&buf)
-	actRegistry := NewRegistry(
+	actRegistry := NewActRegistry(
 		BuiltinSignals(), BuiltinPolicies(), BuiltinActions(),
 		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
 	assert.NotNil(t, actRegistry)

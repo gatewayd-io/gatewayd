@@ -44,8 +44,8 @@ func TestNewProxy(t *testing.T) {
 	err := newPool.Put(client.ID, client)
 	assert.Nil(t, err)
 
-	// Create a new Act registry
-	actRegistry := act.NewRegistry(
+	// Create a new act registry
+	actRegistry := act.NewActRegistry(
 		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
 		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
 
@@ -90,8 +90,8 @@ func BenchmarkNewProxy(b *testing.B) {
 	// Create a connection newPool
 	newPool := pool.NewPool(context.Background(), config.EmptyPoolCapacity)
 
-	// Create a new Act registry
-	actRegistry := act.NewRegistry(
+	// Create a new act registry
+	actRegistry := act.NewActRegistry(
 		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
 		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
 
@@ -139,8 +139,8 @@ func BenchmarkProxyConnectDisconnect(b *testing.B) {
 	}
 	newPool.Put("client", NewClient(context.Background(), &clientConfig, logger, nil)) //nolint:errcheck
 
-	// Create a new Act registry
-	actRegistry := act.NewRegistry(
+	// Create a new act registry
+	actRegistry := act.NewActRegistry(
 		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
 		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
 
@@ -194,8 +194,8 @@ func BenchmarkProxyPassThrough(b *testing.B) {
 	}
 	newPool.Put("client", NewClient(context.Background(), &clientConfig, logger, nil)) //nolint:errcheck
 
-	// Create a new Act registry
-	actRegistry := act.NewRegistry(
+	// Create a new act registry
+	actRegistry := act.NewActRegistry(
 		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
 		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
 
@@ -254,8 +254,8 @@ func BenchmarkProxyIsHealthyAndIsExhausted(b *testing.B) {
 	client := NewClient(context.Background(), &clientConfig, logger, nil)
 	newPool.Put("client", client) //nolint:errcheck
 
-	// Create a new Act registry
-	actRegistry := act.NewRegistry(
+	// Create a new act registry
+	actRegistry := act.NewActRegistry(
 		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
 		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
 
@@ -312,8 +312,8 @@ func BenchmarkProxyAvailableAndBusyConnections(b *testing.B) {
 	client := NewClient(context.Background(), &clientConfig, logger, nil)
 	newPool.Put("client", client) //nolint:errcheck
 
-	// Create a new Act registry
-	actRegistry := act.NewRegistry(
+	// Create a new act registry
+	actRegistry := act.NewActRegistry(
 		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
 		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
 

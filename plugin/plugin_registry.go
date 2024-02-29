@@ -50,7 +50,7 @@ type IRegistry interface {
 	LoadPlugins(ctx context.Context, plugins []config.Plugin, startTimeout time.Duration)
 	RegisterHooks(ctx context.Context, pluginID sdkPlugin.Identifier)
 	Apply(hookName string, result *v1.Struct) ([]*sdkAct.Output, bool)
-	PolicyRegistry() *act.Registry
+	ActRegistry() *act.Registry
 
 	// Hook management
 	IHook
@@ -365,7 +365,7 @@ func (reg *Registry) Apply(hookName string, result *v1.Struct) ([]*sdkAct.Output
 	// Apply policies to the signals.
 	// The outputs contains the verdicts of the policies and their metadata.
 	// And using this list, the caller can take further actions.
-	outputs := applyPolicies(hookName, signals, reg.Logger, reg.PolicyRegistry())
+	outputs := applyPolicies(hookName, signals, reg.Logger, reg.ActRegistry())
 
 	// If no policies are found, return a default output.
 	// Note: this should never happen, as the default policy is always loaded.
@@ -729,9 +729,9 @@ func (reg *Registry) RegisterHooks(ctx context.Context, pluginID sdkPlugin.Ident
 	}
 }
 
-// PolicyRegistry returns the policy registry.
-func (reg *Registry) PolicyRegistry() *act.Registry {
-	_, span := otel.Tracer(config.TracerName).Start(reg.ctx, "PolicyRegistry")
+// ActRegistry returns the act registry.
+func (reg *Registry) ActRegistry() *act.Registry {
+	_, span := otel.Tracer(config.TracerName).Start(reg.ctx, "ActRegistry")
 	defer span.End()
 	return reg.policiesRegistry
 }

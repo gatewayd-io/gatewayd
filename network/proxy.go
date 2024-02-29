@@ -860,7 +860,7 @@ func (pr *Proxy) shouldTerminate(result map[string]interface{}) (bool, map[strin
 	if slices.Contains(keys, sdkAct.Terminal) {
 		var actionResult map[string]interface{}
 		for _, output := range outputs {
-			actRes, err := pr.pluginRegistry.PolicyRegistry().Run(
+			actRes, err := pr.pluginRegistry.ActRegistry().Run(
 				output, act.WithResult(result))
 			// If the action is async and we received a sentinel error,
 			// don't log the error.

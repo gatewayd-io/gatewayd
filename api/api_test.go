@@ -106,7 +106,7 @@ func TestGetPluginConfig(t *testing.T) {
 }
 
 func TestGetPlugins(t *testing.T) {
-	actRegistry := act.NewRegistry(
+	actRegistry := act.NewActRegistry(
 		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
 		config.DefaultPolicy, config.DefaultPolicyTimeout, zerolog.Logger{})
 	pluginRegistry := plugin.NewRegistry(
@@ -135,7 +135,7 @@ func TestGetPlugins(t *testing.T) {
 }
 
 func TestGetPluginsWithEmptyPluginRegistry(t *testing.T) {
-	actRegistry := act.NewRegistry(
+	actRegistry := act.NewActRegistry(
 		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
 		config.DefaultPolicy, config.DefaultPolicyTimeout, zerolog.Logger{})
 	pluginRegistry := plugin.NewRegistry(
@@ -243,7 +243,7 @@ func TestGetServers(t *testing.T) {
 		config.DefaultPluginTimeout,
 	)
 
-	actRegistry := act.NewRegistry(
+	actRegistry := act.NewActRegistry(
 		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
 		config.DefaultPolicy, config.DefaultPolicyTimeout, zerolog.Logger{})
 

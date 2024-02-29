@@ -57,7 +57,7 @@ var (
 	globalConfigFile  string
 	conf              *config.Config
 	pluginRegistry    *plugin.Registry
-	policiesRegistry  *act.Registry
+	actRegistry       *act.Registry
 	metricsServer     *http.Server
 
 	UsageReportURL = "localhost:59091"
@@ -253,11 +253,16 @@ var runCmd = &cobra.Command{
 				"Running GatewayD in development mode (not recommended for production)")
 		}
 
-		// Create a new policy registry given the built-in signals, policies, and actions.
-		policiesRegistry = act.NewRegistry(
+		// Create a new act registry given the built-in signals, policies, and actions.
+		actRegistry = act.NewActRegistry(
 			act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
 			conf.Plugin.DefaultPolicy, conf.Plugin.PolicyTimeout, logger,
 		)
+
+		if actRegistry == nil {
+			logger.Error().Msg("Failed to create act registry")
+			os.Exit(gerr.FailedToCreateActRegistry)
+		}
 
 		// Load policies from the configuration file and add them to the registry.
 		for _, plc := range conf.Plugin.Policies {
@@ -266,19 +271,19 @@ var runCmd = &cobra.Command{
 			); err != nil || policy == nil {
 				logger.Error().Err(err).Str("name", plc.Name).Msg("Failed to create policy")
 			} else {
-				policiesRegistry.Add(policy)
+				actRegistry.Add(policy)
 			}
 		}
 
 		logger.Info().Fields(map[string]interface{}{
-			"policies": maps.Keys(policiesRegistry.Policies),
+			"policies": maps.Keys(actRegistry.Policies),
 		}).Msg("Policies are loaded")
 
 		// Create a new plugin registry.
 		// The plugins are loaded and hooks registered before the configuration is loaded.
 		pluginRegistry = plugin.NewRegistry(
 			runCtx,
-			policiesRegistry,
+			actRegistry,
 			config.If[config.CompatibilityPolicy](
 				config.Exists[string, config.CompatibilityPolicy](
 					config.CompatibilityPolicies, conf.Plugin.CompatibilityPolicy),

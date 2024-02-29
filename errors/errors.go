@@ -158,10 +158,11 @@ var (
 )
 
 const (
-	FailedToLoadPluginConfig = 1
-	FailedToLoadGlobalConfig = 2
-	FailedToCreateClient     = 3
-	FailedToInitializePool   = 4
-	FailedToStartServer      = 5
-	FailedToStartTracer      = 6
+	FailedToLoadPluginConfig  = 1
+	FailedToLoadGlobalConfig  = 2
+	FailedToCreateClient      = 3
+	FailedToInitializePool    = 4
+	FailedToStartServer       = 5
+	FailedToStartTracer       = 6
+	FailedToCreateActRegistry = 7
 )

@@ -39,7 +39,7 @@ func TestRunServer(t *testing.T) {
 		FileName:          "server_test.log",
 	})
 
-	actRegistry := act.NewRegistry(
+	actRegistry := act.NewActRegistry(
 		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
 		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
 	pluginRegistry := plugin.NewRegistry(
@@ -55,12 +55,12 @@ func TestRunServer(t *testing.T) {
 	pluginRegistry.AddHook(v1.HookName_HOOK_NAME_ON_TRAFFIC_FROM_SERVER, 1, onOutgoingTraffic)
 	pluginRegistry.AddHook(v1.HookName_HOOK_NAME_ON_TRAFFIC_TO_CLIENT, 1, onOutgoingTraffic)
 
-	assert.NotNil(t, pluginRegistry.PolicyRegistry())
-	assert.NotNil(t, pluginRegistry.PolicyRegistry().Signals)
-	assert.NotNil(t, pluginRegistry.PolicyRegistry().Policies)
-	assert.NotNil(t, pluginRegistry.PolicyRegistry().Actions)
-	assert.Equal(t, config.DefaultPolicy, pluginRegistry.PolicyRegistry().DefaultPolicy.Name)
-	assert.Equal(t, config.DefaultPolicy, pluginRegistry.PolicyRegistry().DefaultSignal.Name)
+	assert.NotNil(t, pluginRegistry.ActRegistry())
+	assert.NotNil(t, pluginRegistry.ActRegistry().Signals)
+	assert.NotNil(t, pluginRegistry.ActRegistry().Policies)
+	assert.NotNil(t, pluginRegistry.ActRegistry().Actions)
+	assert.Equal(t, config.DefaultPolicy, pluginRegistry.ActRegistry().DefaultPolicy.Name)
+	assert.Equal(t, config.DefaultPolicy, pluginRegistry.ActRegistry().DefaultSignal.Name)
 
 	clientConfig := config.Client{
 		Network:            "tcp",

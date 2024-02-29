@@ -90,7 +90,7 @@ func Test_getSignals_empty(t *testing.T) {
 // It also tests the Run function of the registered passthrough (built-in) action.
 func Test_applyPolicies(t *testing.T) {
 	logger := zerolog.Logger{}
-	actRegistry := act.NewRegistry(
+	actRegistry := act.NewActRegistry(
 		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
 		config.DefaultPolicy, config.DefaultPolicyTimeout, logger,
 	)

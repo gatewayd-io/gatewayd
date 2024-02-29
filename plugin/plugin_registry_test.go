@@ -26,7 +26,7 @@ func NewPluginRegistry(t *testing.T) *Registry {
 		NoColor:           true,
 	}
 	logger := logging.NewLogger(context.Background(), cfg)
-	actRegistry := act.NewRegistry(
+	actRegistry := act.NewActRegistry(
 		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
 		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
 	reg := NewRegistry(
@@ -128,7 +128,7 @@ func BenchmarkHookRun(b *testing.B) {
 		NoColor:           true,
 	}
 	logger := logging.NewLogger(context.Background(), cfg)
-	actRegistry := act.NewRegistry(
+	actRegistry := act.NewActRegistry(
 		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
 		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
 	reg := NewRegistry(
