@@ -2,6 +2,7 @@ package act
 
 import (
 	"context"
+	"errors"
 	"slices"
 	"time"
 
@@ -107,6 +108,7 @@ func (r *Registry) Apply(signals []sdkAct.Signal) []*sdkAct.Output {
 	}
 
 	outputs := []*sdkAct.Output{}
+	evalErr := false
 	for _, signal := range signals {
 		// Ignore contradictory actions (forward vs. terminate) if one of the signals is terminal.
 		// If the signal is terminal, all non-terminal signals are ignored. Also, it only
@@ -120,12 +122,16 @@ func (r *Registry) Apply(signals []sdkAct.Signal) []*sdkAct.Output {
 		output, err := r.apply(signal)
 		if err != nil {
 			r.logger.Error().Err(err).Str("name", signal.Name).Msg("Error applying signal")
+			if errors.Is(err, gerr.ErrEvalError) {
+				evalErr = true
+			}
 			continue
 		}
+
 		outputs = append(outputs, output)
 	}
 
-	if len(outputs) == 0 {
+	if len(outputs) == 0 && !evalErr {
 		return r.Apply([]sdkAct.Signal{*r.DefaultSignal})
 	}
 
@@ -148,6 +154,7 @@ func (r *Registry) apply(signal sdkAct.Signal) (*sdkAct.Output, *gerr.GatewayDEr
 	defer cancel()
 
 	// Action dictates the sync mode, not the signal.
+	// TODO: Policy should be able to receive other parameters like server and client IPs, etc.
 	verdict, err := policy.Eval(
 		ctx, sdkAct.Input{
 			Name:   signal.Name,
