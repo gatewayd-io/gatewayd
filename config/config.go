@@ -206,7 +206,6 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 
 	c.pluginDefaults = PluginConfig{
 		CompatibilityPolicy: string(Strict),
-		TerminationPolicy:   string(Stop),
 		EnableMetricsMerger: true,
 		MetricsMergerPeriod: DefaultMetricsMergerPeriod,
 		HealthCheckPeriod:   DefaultPluginHealthCheckPeriod,

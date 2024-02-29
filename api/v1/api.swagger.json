@@ -183,7 +183,6 @@
                   }
                 ],
                 "reloadOnCrash": true,
-                "terminationPolicy": "stop",
                 "timeout": "30s"
               }
             }

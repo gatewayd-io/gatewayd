@@ -115,7 +115,6 @@ jobs:
           export SHA256SUM=$(sha256sum ptg | awk '{print $1}')
           cat <<EOF > gatewayd_plugins.yaml
           compatibilityPolicy: "strict"
-          terminationPolicy: "stop"
           metricsMergerPeriod: 1s
           healthCheckPeriod: 1s
           reloadOnCrash: true
