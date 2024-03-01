@@ -57,11 +57,11 @@ type IRegistry interface {
 }
 
 type Registry struct {
-	plugins          pool.IPool
-	policiesRegistry *act.Registry
-	hooks            map[v1.HookName]map[sdkPlugin.Priority]sdkPlugin.Method
-	ctx              context.Context //nolint:containedctx
-	devMode          bool
+	plugins     pool.IPool
+	actRegistry *act.Registry
+	hooks       map[v1.HookName]map[sdkPlugin.Priority]sdkPlugin.Method
+	ctx         context.Context //nolint:containedctx
+	devMode     bool
 
 	Logger        zerolog.Logger
 	Compatibility config.CompatibilityPolicy
@@ -73,7 +73,7 @@ var _ IRegistry = (*Registry)(nil)
 // NewRegistry creates a new plugin registry.
 func NewRegistry(
 	ctx context.Context,
-	policiesRegistry *act.Registry,
+	actRegistry *act.Registry,
 	compatibility config.CompatibilityPolicy,
 	logger zerolog.Logger,
 	devMode bool,
@@ -82,13 +82,13 @@ func NewRegistry(
 	defer span.End()
 
 	return &Registry{
-		plugins:          pool.NewPool(regCtx, config.EmptyPoolCapacity),
-		policiesRegistry: policiesRegistry,
-		hooks:            map[v1.HookName]map[sdkPlugin.Priority]sdkPlugin.Method{},
-		ctx:              regCtx,
-		devMode:          devMode,
-		Logger:           logger,
-		Compatibility:    compatibility,
+		plugins:       pool.NewPool(regCtx, config.EmptyPoolCapacity),
+		actRegistry:   actRegistry,
+		hooks:         map[v1.HookName]map[sdkPlugin.Priority]sdkPlugin.Method{},
+		ctx:           regCtx,
+		devMode:       devMode,
+		Logger:        logger,
+		Compatibility: compatibility,
 	}
 }
 
@@ -733,5 +733,5 @@ func (reg *Registry) RegisterHooks(ctx context.Context, pluginID sdkPlugin.Ident
 func (reg *Registry) ActRegistry() *act.Registry {
 	_, span := otel.Tracer(config.TracerName).Start(reg.ctx, "ActRegistry")
 	defer span.End()
-	return reg.policiesRegistry
+	return reg.actRegistry
 }
