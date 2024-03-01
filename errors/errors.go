@@ -1,5 +1,7 @@
 package errors
 
+import "errors"
+
 const (
 	ErrCodeUnknown ErrCode = iota
 	ErrCodeNilContext
@@ -41,6 +43,10 @@ const (
 	ErrCodeLintingFailed
 	ErrCodeExtractFailed
 	ErrCodeDownloadFailed
+	ErrCodeKeyNotFound
+	ErrCodeRunError
+	ErrCodeAsyncAction
+	ErrCodeEvalError
 )
 
 var (
@@ -133,13 +139,30 @@ var (
 		ErrCodeExtractFailed, "failed to extract the archive", nil)
 	ErrDownloadFailed = NewGatewayDError(
 		ErrCodeDownloadFailed, "failed to download the file", nil)
+
+	ErrActionNotExist = NewGatewayDError(
+		ErrCodeKeyNotFound, "action does not exist", nil)
+	ErrRunningAction = NewGatewayDError(
+		ErrCodeRunError, "error running action", nil)
+	ErrAsyncAction = NewGatewayDError(
+		ErrCodeAsyncAction, "async action", nil)
+	ErrActionNotMatched = NewGatewayDError(
+		ErrCodeKeyNotFound, "no matching action", nil)
+	ErrPolicyNotMatched = NewGatewayDError(
+		ErrCodeKeyNotFound, "no matching policy", nil)
+	ErrEvalError = NewGatewayDError(
+		ErrCodeEvalError, "error evaluating expression", nil)
+
+	// Unwrapped errors.
+	ErrLoggerRequired = errors.New("terminate action requires a logger parameter")
 )
 
 const (
-	FailedToLoadPluginConfig = 1
-	FailedToLoadGlobalConfig = 2
-	FailedToCreateClient     = 3
-	FailedToInitializePool   = 4
-	FailedToStartServer      = 5
-	FailedToStartTracer      = 6
+	FailedToLoadPluginConfig  = 1
+	FailedToLoadGlobalConfig  = 2
+	FailedToCreateClient      = 3
+	FailedToInitializePool    = 4
+	FailedToStartServer       = 5
+	FailedToStartTracer       = 6
+	FailedToCreateActRegistry = 7
 )

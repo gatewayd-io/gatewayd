@@ -15,9 +15,14 @@ type Plugin struct {
 	URL       string   `json:"url"`
 }
 
+type Policy struct {
+	Name     string         `json:"name" jsonschema:"required"`
+	Policy   string         `json:"policy" jsonschema:"required"`
+	Metadata map[string]any `json:"metadata,omitempty"`
+}
+
 type PluginConfig struct {
 	CompatibilityPolicy string        `json:"compatibilityPolicy" jsonschema:"enum=strict,enum=loose"`
-	TerminationPolicy   string        `json:"terminationPolicy" jsonschema:"enum=continue,enum=stop"`
 	EnableMetricsMerger bool          `json:"enableMetricsMerger"`
 	MetricsMergerPeriod time.Duration `json:"metricsMergerPeriod" jsonschema:"oneof_type=string;integer"`
 	HealthCheckPeriod   time.Duration `json:"healthCheckPeriod" jsonschema:"oneof_type=string;integer"`
@@ -25,6 +30,9 @@ type PluginConfig struct {
 	Timeout             time.Duration `json:"timeout" jsonschema:"oneof_type=string;integer"`
 	StartTimeout        time.Duration `json:"startTimeout" jsonschema:"oneof_type=string;integer"`
 	Plugins             []Plugin      `json:"plugins"`
+	DefaultPolicy       string        `json:"defaultPolicy" jsonschema:"enum=passthrough,enum=terminate"` // TODO: Add more policies.
+	PolicyTimeout       time.Duration `json:"policyTimeout" jsonschema:"oneof_type=string;integer"`
+	Policies            []Policy      `json:"policies"`
 }
 
 type Client struct {

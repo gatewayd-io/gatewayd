@@ -13,10 +13,6 @@ var (
 		"strict": Strict,
 		"loose":  Loose,
 	}
-	TerminationPolicies = map[string]TerminationPolicy{
-		"continue": Continue,
-		"stop":     Stop,
-	}
 	logOutputs = map[string]LogOutput{
 		"console": Console,
 		"stdout":  Stdout,

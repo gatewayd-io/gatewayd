@@ -43,19 +43,21 @@ jobs:
           --health-retries 5
     steps:
       - name: Checkout 🛎️
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Install Go 🧑‍💻
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v5
         with:
-          go-version: "1.21"
+          go-version: "1.22"
 
       - name: Lint code issues 🚨
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v4
         with:
+          version: "v1.56"
           skip-pkg-cache: true
+          install-mode: "goinstall"
 
       - name: Run Go tests 🔬
         run: go test -p 1 -cover -covermode atomic -coverprofile=profile.cov -v ./...
@@ -89,17 +91,17 @@ jobs:
           --health-retries 5
     steps:
       - name: Checkout 🛎️
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Install Go 🧑‍💻
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v5
         with:
-          go-version: "1.21"
+          go-version: "1.22"
 
       - name: Checkout test plugin 🛎️
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: gatewayd-io/plugin-template-go
           path: plugin-template-go
@@ -113,7 +115,6 @@ jobs:
           export SHA256SUM=$(sha256sum ptg | awk '{print $1}')
           cat <<EOF > gatewayd_plugins.yaml
           compatibilityPolicy: "strict"
-          terminationPolicy: "stop"
           metricsMergerPeriod: 1s
           healthCheckPeriod: 1s
           reloadOnCrash: true

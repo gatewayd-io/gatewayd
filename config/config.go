@@ -206,13 +206,15 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 
 	c.pluginDefaults = PluginConfig{
 		CompatibilityPolicy: string(Strict),
-		TerminationPolicy:   string(Stop),
 		EnableMetricsMerger: true,
 		MetricsMergerPeriod: DefaultMetricsMergerPeriod,
 		HealthCheckPeriod:   DefaultPluginHealthCheckPeriod,
 		ReloadOnCrash:       true,
 		Timeout:             DefaultPluginTimeout,
 		StartTimeout:        DefaultPluginStartTimeout,
+		DefaultPolicy:       DefaultPolicy,
+		PolicyTimeout:       DefaultPolicyTimeout,
+		Policies:            []Policy{},
 	}
 
 	if c.GlobalKoanf != nil {

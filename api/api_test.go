@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	sdkPlugin "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin"
+	"github.com/gatewayd-io/gatewayd/act"
 	v1 "github.com/gatewayd-io/gatewayd/api/v1"
 	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/gatewayd-io/gatewayd/network"
@@ -105,10 +106,13 @@ func TestGetPluginConfig(t *testing.T) {
 }
 
 func TestGetPlugins(t *testing.T) {
+	actRegistry := act.NewActRegistry(
+		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
+		config.DefaultPolicy, config.DefaultPolicyTimeout, zerolog.Logger{})
 	pluginRegistry := plugin.NewRegistry(
 		context.TODO(),
+		actRegistry,
 		config.Loose,
-		config.Stop,
 		zerolog.Logger{},
 		true,
 	)
@@ -131,10 +135,13 @@ func TestGetPlugins(t *testing.T) {
 }
 
 func TestGetPluginsWithEmptyPluginRegistry(t *testing.T) {
+	actRegistry := act.NewActRegistry(
+		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
+		config.DefaultPolicy, config.DefaultPolicyTimeout, zerolog.Logger{})
 	pluginRegistry := plugin.NewRegistry(
 		context.TODO(),
+		actRegistry,
 		config.Loose,
-		config.Stop,
 		zerolog.Logger{},
 		true,
 	)
@@ -237,10 +244,14 @@ func TestGetServers(t *testing.T) {
 		config.DefaultPluginTimeout,
 	)
 
+	actRegistry := act.NewActRegistry(
+		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
+		config.DefaultPolicy, config.DefaultPolicyTimeout, zerolog.Logger{})
+
 	pluginRegistry := plugin.NewRegistry(
 		context.TODO(),
+		actRegistry,
 		config.Loose,
-		config.Stop,
 		zerolog.Logger{},
 		true,
 	)

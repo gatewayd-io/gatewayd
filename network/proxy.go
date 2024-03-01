@@ -6,9 +6,12 @@ import (
 	"errors"
 	"io"
 	"net"
+	"slices"
 	"time"
 
+	sdkAct "github.com/gatewayd-io/gatewayd-plugin-sdk/act"
 	v1 "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin/v1"
+	"github.com/gatewayd-io/gatewayd/act"
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/metrics"
@@ -17,7 +20,9 @@ import (
 	"github.com/getsentry/sentry-go"
 	"github.com/go-co-op/gocron"
 	"github.com/rs/zerolog"
+	"github.com/spf13/cast"
 	"go.opentelemetry.io/otel"
+	"golang.org/x/exp/maps"
 )
 
 type IProxy interface {
@@ -385,7 +390,19 @@ func (pr *Proxy) PassThroughToServer(conn *ConnWrapper, stack *Stack) *gerr.Gate
 	stack.Push(&Request{Data: request})
 
 	// If the hook wants to terminate the connection, do it.
-	if pr.shouldTerminate(result) {
+	if terminate, resp := pr.shouldTerminate(result); terminate {
+		if resp != nil {
+			pr.logger.Trace().Fields(
+				map[string]interface{}{
+					"function": "proxy.passthrough",
+					"result":   resp,
+				},
+			).Msg("Terminating connection with a result from the action")
+
+			// If the terminate action returned a result, use it.
+			result = resp
+		}
+
 		if modResponse, modReceived := pr.getPluginModifiedResponse(result); modResponse != nil {
 			metrics.ProxyPassThroughsToClient.Inc()
 			metrics.ProxyPassThroughTerminations.Inc()
@@ -821,20 +838,50 @@ func (pr *Proxy) sendTrafficToClient(
 }
 
 // shouldTerminate is a function that retrieves the terminate field from the hook result.
-// Only the OnTrafficFromClient hook will terminate the connection.
-func (pr *Proxy) shouldTerminate(result map[string]interface{}) bool {
+// Only the OnTrafficFromClient hook will terminate the request.
+func (pr *Proxy) shouldTerminate(result map[string]interface{}) (bool, map[string]interface{}) {
 	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "shouldTerminate")
 	defer span.End()
 
-	// If the hook wants to terminate the connection, do it.
-	if result != nil {
-		if terminate, ok := result["terminate"].(bool); ok && terminate {
-			pr.logger.Debug().Str("function", "proxy.passthrough").Msg("Terminating connection")
-			return true
-		}
+	if result == nil {
+		return false, result
 	}
 
-	return false
+	outputs, ok := result[sdkAct.Outputs].([]*sdkAct.Output)
+	if !ok {
+		pr.logger.Error().Msg("Failed to cast the outputs to the []*act.Output type")
+		return false, result
+	}
+
+	// This is a shortcut to avoid running the actions' functions.
+	// The Terminal field is only present if the action wants to terminate the request,
+	// that is the `__terminal__` field is set in one of the outputs.
+	keys := maps.Keys(result)
+	if slices.Contains(keys, sdkAct.Terminal) {
+		var actionResult map[string]interface{}
+		for _, output := range outputs {
+			actRes, err := pr.pluginRegistry.ActRegistry().Run(
+				output, act.WithResult(result))
+			// If the action is async and we received a sentinel error,
+			// don't log the error.
+			if err != nil && !errors.Is(err, gerr.ErrAsyncAction) {
+				pr.logger.Error().Err(err).Msg("Error running policy")
+			}
+			// The terminate action should return a map.
+			if v, ok := actRes.(map[string]interface{}); ok {
+				actionResult = v
+			}
+		}
+		pr.logger.Debug().Fields(
+			map[string]interface{}{
+				"function": "proxy.passthrough",
+				"reason":   "terminate",
+			},
+		).Msg("Terminating request")
+		return cast.ToBool(result[sdkAct.Terminal]), actionResult
+	}
+
+	return false, result
 }
 
 // getPluginModifiedRequest is a function that retrieves the modified request

@@ -7,7 +7,6 @@ import (
 type (
 	Status              uint
 	CompatibilityPolicy string
-	TerminationPolicy   string
 	LogOutput           uint
 )
 
@@ -21,13 +20,6 @@ const (
 const (
 	Strict CompatibilityPolicy = "strict" // Expect all required plugins to be loaded and present
 	Loose  CompatibilityPolicy = "loose"  // Load the plugin, even if the requirements are not met
-)
-
-// TerminationPolicy is the termination policy for
-// the functions registered to the OnTrafficFromClient hook.
-const (
-	Continue TerminationPolicy = "continue" // Continue to the next function
-	Stop     TerminationPolicy = "stop"     // Stop the execution of the functions
 )
 
 // LogOutput is the output type for the logger.
@@ -129,5 +121,8 @@ const (
 
 	// Policies.
 	DefaultCompatibilityPolicy = Strict
-	DefaultTerminationPolicy   = Stop
+
+	// Act.
+	DefaultPolicy        = "passthrough"
+	DefaultPolicyTimeout = 30 * time.Second
 )

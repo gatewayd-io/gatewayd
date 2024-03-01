@@ -8,8 +8,10 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	sdkAct "github.com/gatewayd-io/gatewayd-plugin-sdk/act"
 	sdkPlugin "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin"
 	v1 "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin/v1"
+	"github.com/gatewayd-io/gatewayd/act"
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/logging"
@@ -28,10 +30,10 @@ type IHook interface {
 	Hooks() map[v1.HookName]map[sdkPlugin.Priority]sdkPlugin.Method
 	Run(
 		ctx context.Context,
-		args map[string]interface{},
+		args map[string]any,
 		hookName v1.HookName,
 		opts ...grpc.CallOption,
-	) (map[string]interface{}, *gerr.GatewayDError)
+	) (map[string]any, *gerr.GatewayDError)
 }
 
 //nolint:interfacebloat
@@ -47,20 +49,22 @@ type IRegistry interface {
 	Shutdown()
 	LoadPlugins(ctx context.Context, plugins []config.Plugin, startTimeout time.Duration)
 	RegisterHooks(ctx context.Context, pluginID sdkPlugin.Identifier)
+	Apply(hookName string, result *v1.Struct) ([]*sdkAct.Output, bool)
+	ActRegistry() *act.Registry
 
 	// Hook management
 	IHook
 }
 
 type Registry struct {
-	plugins pool.IPool
-	hooks   map[v1.HookName]map[sdkPlugin.Priority]sdkPlugin.Method
-	ctx     context.Context //nolint:containedctx
-	devMode bool
+	plugins     pool.IPool
+	actRegistry *act.Registry
+	hooks       map[v1.HookName]map[sdkPlugin.Priority]sdkPlugin.Method
+	ctx         context.Context //nolint:containedctx
+	devMode     bool
 
 	Logger        zerolog.Logger
 	Compatibility config.CompatibilityPolicy
-	Termination   config.TerminationPolicy
 	StartTimeout  time.Duration
 }
 
@@ -69,8 +73,8 @@ var _ IRegistry = (*Registry)(nil)
 // NewRegistry creates a new plugin registry.
 func NewRegistry(
 	ctx context.Context,
+	actRegistry *act.Registry,
 	compatibility config.CompatibilityPolicy,
-	termination config.TerminationPolicy,
 	logger zerolog.Logger,
 	devMode bool,
 ) *Registry {
@@ -79,12 +83,12 @@ func NewRegistry(
 
 	return &Registry{
 		plugins:       pool.NewPool(regCtx, config.EmptyPoolCapacity),
+		actRegistry:   actRegistry,
 		hooks:         map[v1.HookName]map[sdkPlugin.Priority]sdkPlugin.Method{},
 		ctx:           regCtx,
 		devMode:       devMode,
 		Logger:        logger,
 		Compatibility: compatibility,
-		Termination:   termination,
 	}
 }
 
@@ -236,7 +240,7 @@ func (reg *Registry) AddHook(hookName v1.HookName, priority sdkPlugin.Priority, 
 	} else {
 		if _, ok := reg.hooks[hookName][priority]; ok {
 			reg.Logger.Warn().Fields(
-				map[string]interface{}{
+				map[string]any{
 					"hookName": hookName.String(),
 					"priority": priority,
 				},
@@ -254,10 +258,10 @@ func (reg *Registry) AddHook(hookName v1.HookName, priority sdkPlugin.Priority, 
 // The opts are passed to the hooks as well to allow them to use the grpc.CallOption.
 func (reg *Registry) Run(
 	ctx context.Context,
-	args map[string]interface{},
+	args map[string]any,
 	hookName v1.HookName,
 	opts ...grpc.CallOption,
-) (map[string]interface{}, *gerr.GatewayDError) {
+) (map[string]any, *gerr.GatewayDError) {
 	_, span := otel.Tracer(config.TracerName).Start(reg.ctx, "Run")
 	defer span.End()
 
@@ -272,7 +276,7 @@ func (reg *Registry) Run(
 	defer cancel()
 
 	// Cast custom fields to their primitive types, like time.Duration to float64.
-	args = CastToPrimitiveTypes(args)
+	args = castToPrimitiveTypes(args)
 
 	// Create v1.Struct from args.
 	var params *v1.Struct
@@ -296,6 +300,7 @@ func (reg *Registry) Run(
 
 	// Run hooks, passing the result of the previous hook to the next one.
 	returnVal := &v1.Struct{}
+	outputs := []*sdkAct.Output{}
 	// The signature of parameters and args MUST be the same for this to work.
 	for idx, priority := range priorities {
 		var result *v1.Struct
@@ -308,7 +313,7 @@ func (reg *Registry) Run(
 
 		if err != nil {
 			reg.Logger.Error().Err(err).Fields(
-				map[string]interface{}{
+				map[string]any{
 					"hookName": hookName.String(),
 					"priority": priority,
 				},
@@ -316,21 +321,69 @@ func (reg *Registry) Run(
 			span.RecordError(err)
 		}
 
-		// Update the last return value with the current result
-		returnVal = result
+		if result == nil {
+			// Remove the hook from the registry, log the error and execute the next hook.
+			reg.Logger.Error().Fields(
+				map[string]any{
+					"hookName": hookName.String(),
+					"priority": priority,
+				},
+			).Msg("Hook returned nil result, so it won't work properly")
+			delete(reg.hooks[hookName], priority)
+			continue
+		}
 
-		// If the termination policy is set to Stop, check if the terminate flag
-		// is set to true. If it is, abort the execution of the rest of the registered hooks.
-		if reg.Termination == config.Stop {
-			// If the terminate flag is set to true,
-			// abort the execution of the rest of the registered hooks.
-			if terminate, ok := result.GetFields()["terminate"]; ok && terminate.GetBoolValue() {
-				break
-			}
+		out, terminal := reg.Apply(hookName.String(), result)
+		outputs = append(outputs, out...)
+
+		if terminal {
+			// Any signal matching a policy with a terminal action
+			// will terminate the execution of the rest of the hooks.
+			reg.Logger.Debug().Msg("Terminal signal received")
+			span.AddEvent("Terminal signal received")
+			resultMap := result.AsMap()
+			resultMap[sdkAct.Outputs] = outputs
+			resultMap[sdkAct.Terminal] = true
+			return resultMap, nil
+		}
+
+		returnVal = result
+	}
+
+	returnMap := returnVal.AsMap()
+	returnMap[sdkAct.Outputs] = outputs
+	return returnMap, nil
+}
+
+// Apply applies policies to the result.
+func (reg *Registry) Apply(hookName string, result *v1.Struct) ([]*sdkAct.Output, bool) {
+	_, span := otel.Tracer(config.TracerName).Start(reg.ctx, "Apply")
+	defer span.End()
+
+	// Get signals from the result.
+	signals := getSignals(result.AsMap())
+	// Apply policies to the signals.
+	// The outputs contains the verdicts of the policies and their metadata.
+	// And using this list, the caller can take further actions.
+	outputs := applyPolicies(hookName, signals, reg.Logger, reg.ActRegistry())
+
+	// If no policies are found, return a default output.
+	// Note: this should never happen, as the default policy is always loaded.
+	if len(outputs) == 0 {
+		reg.Logger.Debug().Msg("No policies found for the given signals")
+		return nil, false
+	}
+
+	// Check if any of the policies have a terminal action.
+	var terminal bool
+	for _, output := range outputs {
+		if output.Verdict != nil && output.Terminal {
+			terminal = true
+			break
 		}
 	}
 
-	return returnVal.AsMap(), nil
+	return outputs, terminal
 }
 
 // LoadPlugins loads plugins from the config file.
@@ -499,7 +552,7 @@ func (reg *Registry) LoadPlugins(
 		for _, req := range plugin.Requires {
 			if !reg.Exists(req.Name, req.Version, req.RemoteURL) {
 				reg.Logger.Debug().Fields(
-					map[string]interface{}{
+					map[string]any{
 						"name":        plugin.ID.Name,
 						"requirement": req.Name,
 					},
@@ -511,7 +564,7 @@ func (reg *Registry) LoadPlugins(
 					continue
 				}
 				reg.Logger.Debug().Fields(
-					map[string]interface{}{
+					map[string]any{
 						"name":        plugin.ID.Name,
 						"requirement": req.Name,
 					},
@@ -666,7 +719,7 @@ func (reg *Registry) RegisterHooks(ctx context.Context, pluginID sdkPlugin.Ident
 			continue
 		}
 
-		reg.Logger.Debug().Fields(map[string]interface{}{
+		reg.Logger.Debug().Fields(map[string]any{
 			"hook":     hookName.String(),
 			"priority": pluginImpl.Priority,
 			"name":     pluginImpl.ID.Name,
@@ -674,4 +727,11 @@ func (reg *Registry) RegisterHooks(ctx context.Context, pluginID sdkPlugin.Ident
 		metrics.PluginHooksRegistered.Inc()
 		reg.AddHook(hookName, pluginImpl.Priority, hookMethod)
 	}
+}
+
+// ActRegistry returns the act registry.
+func (reg *Registry) ActRegistry() *act.Registry {
+	_, span := otel.Tracer(config.TracerName).Start(reg.ctx, "ActRegistry")
+	defer span.End()
+	return reg.actRegistry
 }

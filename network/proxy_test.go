@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gatewayd-io/gatewayd/act"
 	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/gatewayd-io/gatewayd/plugin"
@@ -43,14 +44,19 @@ func TestNewProxy(t *testing.T) {
 	err := newPool.Put(client.ID, client)
 	assert.Nil(t, err)
 
+	// Create a new act registry
+	actRegistry := act.NewActRegistry(
+		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
+		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
+
 	// Create a proxy with a fixed buffer newPool
 	proxy := NewProxy(
 		context.Background(),
 		newPool,
 		plugin.NewRegistry(
 			context.Background(),
+			actRegistry,
 			config.Loose,
-			config.Stop,
 			logger,
 			false,
 		),
@@ -84,6 +90,11 @@ func BenchmarkNewProxy(b *testing.B) {
 	// Create a connection newPool
 	newPool := pool.NewPool(context.Background(), config.EmptyPoolCapacity)
 
+	// Create a new act registry
+	actRegistry := act.NewActRegistry(
+		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
+		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
+
 	// Create a proxy with a fixed buffer newPool
 	for i := 0; i < b.N; i++ {
 		proxy := NewProxy(
@@ -91,8 +102,8 @@ func BenchmarkNewProxy(b *testing.B) {
 			newPool,
 			plugin.NewRegistry(
 				context.Background(),
+				actRegistry,
 				config.Loose,
-				config.Stop,
 				logger,
 				false,
 			),
@@ -128,14 +139,19 @@ func BenchmarkProxyConnectDisconnect(b *testing.B) {
 	}
 	newPool.Put("client", NewClient(context.Background(), &clientConfig, logger, nil)) //nolint:errcheck
 
+	// Create a new act registry
+	actRegistry := act.NewActRegistry(
+		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
+		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
+
 	// Create a proxy with a fixed buffer newPool
 	proxy := NewProxy(
 		context.Background(),
 		newPool,
 		plugin.NewRegistry(
 			context.Background(),
+			actRegistry,
 			config.Loose,
-			config.Stop,
 			logger,
 			false,
 		),
@@ -178,14 +194,19 @@ func BenchmarkProxyPassThrough(b *testing.B) {
 	}
 	newPool.Put("client", NewClient(context.Background(), &clientConfig, logger, nil)) //nolint:errcheck
 
+	// Create a new act registry
+	actRegistry := act.NewActRegistry(
+		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
+		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
+
 	// Create a proxy with a fixed buffer newPool
 	proxy := NewProxy(
 		context.Background(),
 		newPool,
 		plugin.NewRegistry(
 			context.Background(),
+			actRegistry,
 			config.Loose,
-			config.Stop,
 			logger,
 			false,
 		),
@@ -233,14 +254,19 @@ func BenchmarkProxyIsHealthyAndIsExhausted(b *testing.B) {
 	client := NewClient(context.Background(), &clientConfig, logger, nil)
 	newPool.Put("client", client) //nolint:errcheck
 
+	// Create a new act registry
+	actRegistry := act.NewActRegistry(
+		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
+		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
+
 	// Create a proxy with a fixed buffer newPool
 	proxy := NewProxy(
 		context.Background(),
 		newPool,
 		plugin.NewRegistry(
 			context.Background(),
+			actRegistry,
 			config.Loose,
-			config.Stop,
 			logger,
 			false,
 		),
@@ -286,14 +312,19 @@ func BenchmarkProxyAvailableAndBusyConnections(b *testing.B) {
 	client := NewClient(context.Background(), &clientConfig, logger, nil)
 	newPool.Put("client", client) //nolint:errcheck
 
+	// Create a new act registry
+	actRegistry := act.NewActRegistry(
+		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
+		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
+
 	// Create a proxy with a fixed buffer newPool
 	proxy := NewProxy(
 		context.Background(),
 		newPool,
 		plugin.NewRegistry(
 			context.Background(),
+			actRegistry,
 			config.Loose,
-			config.Stop,
 			logger,
 			false,
 		),
