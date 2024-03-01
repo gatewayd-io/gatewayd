@@ -184,6 +184,7 @@ func TestGetProxies(t *testing.T) {
 		Address: config.DefaultAddress,
 	}
 	client := network.NewClient(context.TODO(), clientConfig, zerolog.Logger{}, nil)
+	require.NotNil(t, client)
 	newPool := pool.NewPool(context.TODO(), 1)
 	assert.Nil(t, newPool.Put(client.ID, client))
 
