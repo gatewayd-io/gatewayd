@@ -89,8 +89,8 @@ func Terminate(_ map[string]any, params ...sdkAct.Parameter) (any, error) {
 		return nil, gerr.ErrLoggerRequired
 	}
 
-	logger, ok := params[0].Value.(zerolog.Logger)
-	if !ok {
+	logger, isValid := params[0].Value.(zerolog.Logger)
+	if !isValid {
 		// The first parameter is not a logger.
 		return nil, gerr.ErrLoggerRequired
 	}
@@ -101,8 +101,8 @@ func Terminate(_ map[string]any, params ...sdkAct.Parameter) (any, error) {
 		return true, nil
 	}
 
-	result, ok := params[1].Value.(map[string]any)
-	if !ok {
+	result, isValid := params[1].Value.(map[string]any)
+	if !isValid {
 		logger.Debug().Msg("terminate action received a non-map result parameter")
 		return true, nil
 	}
@@ -141,16 +141,16 @@ func Log(data map[string]any, params ...sdkAct.Parameter) (any, error) {
 
 	fields := map[string]any{}
 	if len(data) > LogDefaultKeyCount {
-		for k, v := range data {
+		for key, value := range data {
 			// Skip these necessary fields, as they are already used by the logger.
 			// level: The log level.
 			// message: The log message.
 			// log: The log signal.
-			if k == "level" || k == "message" || k == "log" {
+			if key == "level" || key == "message" || key == "log" {
 				continue
 			}
 			// Add the rest of the fields to the logger as extra fields.
-			fields[k] = v
+			fields[key] = value
 		}
 	}
 
