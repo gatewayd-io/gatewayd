@@ -11,11 +11,6 @@ import (
 	"github.com/rs/zerolog"
 )
 
-const (
-	LoggerKey = "__logger__"
-	ResultKey = "__result__"
-)
-
 type IRegistry interface {
 	Add(policy *sdkAct.Policy)
 	Apply(signals []sdkAct.Signal) []*sdkAct.Output

@@ -11,10 +11,18 @@ import (
 )
 
 const (
-	LogDefaultFieldCount       = 3
-	TerminateDefaultFieldCount = 2
+	// TerminateDefaultParamCount is the default parameter count for the terminate action.
+	TerminateDefaultParamCount = 2
+
+	// LogDefaultKeyCount is the default key count in the metadata for the log action.
+	LogDefaultKeyCount = 3
+
+	// These are the keys used to pass the logger and the result to the built-in actions.
+	LoggerKey = "__logger__"
+	ResultKey = "__result__"
 )
 
+// BuiltinSignals returns a map of built-in signals.
 func BuiltinSignals() map[string]*sdkAct.Signal {
 	return map[string]*sdkAct.Signal{
 		"passthrough": sdkAct.Passthrough(),
@@ -23,6 +31,7 @@ func BuiltinSignals() map[string]*sdkAct.Signal {
 	}
 }
 
+// BuiltinPolicies returns a map of built-in policies.
 func BuiltinPolicies() map[string]*sdkAct.Policy {
 	return map[string]*sdkAct.Policy{
 		"passthrough": sdkAct.MustNewPolicy("passthrough", "true", nil),
@@ -39,6 +48,7 @@ func BuiltinPolicies() map[string]*sdkAct.Policy {
 	}
 }
 
+// BuiltinActions returns a map of built-in actions.
 func BuiltinActions() map[string]*sdkAct.Action {
 	return map[string]*sdkAct.Action{
 		"passthrough": {
@@ -85,7 +95,7 @@ func Terminate(_ map[string]any, params ...sdkAct.Parameter) (any, error) {
 		return nil, gerr.ErrLoggerRequired
 	}
 
-	if len(params) < TerminateDefaultFieldCount || params[1].Key != ResultKey {
+	if len(params) < TerminateDefaultParamCount || params[1].Key != ResultKey {
 		logger.Debug().Msg(
 			"terminate action can optionally receive a result parameter")
 		return true, nil
@@ -130,7 +140,7 @@ func Log(data map[string]any, params ...sdkAct.Parameter) (any, error) {
 	}
 
 	fields := map[string]any{}
-	if len(data) > LogDefaultFieldCount {
+	if len(data) > LogDefaultKeyCount {
 		for k, v := range data {
 			// Skip these necessary fields, as they are already used by the logger.
 			// level: The log level.
