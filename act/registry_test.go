@@ -28,6 +28,63 @@ func Test_NewRegistry(t *testing.T) {
 	assert.Equal(t, config.DefaultPolicy, actRegistry.DefaultSignal.Name)
 }
 
+// Test_NewRegistry_NilSignals tests the NewRegistry function with nil signals,
+// actions, and policies. It should return a nil registry.
+func Test_NewRegistry_NilBuiltins(t *testing.T) {
+	buf := bytes.Buffer{}
+	logger := zerolog.New(&buf)
+	actRegistry := NewActRegistry(
+		nil, nil, nil, config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
+	assert.Nil(t, actRegistry)
+	assert.Contains(t, buf.String(), "Builtin signals, policies, or actions are nil, not adding")
+}
+
+// Test_NewRegistry_NilPolicy tests the NewRegistry function with a nil signal.
+// It should return a nil registry.
+func Test_NewRegistry_NilSignal(t *testing.T) {
+	buf := bytes.Buffer{}
+	logger := zerolog.New(&buf)
+	actRegistry := NewActRegistry(
+		map[string]*sdkAct.Signal{
+			"bad": nil,
+		},
+		BuiltinPolicies(), BuiltinActions(),
+		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
+	assert.Nil(t, actRegistry)
+	assert.Contains(t, buf.String(), "Signal is nil, not adding")
+}
+
+// Test_NewRegistry_NilPolicy tests the NewRegistry function with a nil policy.
+// It should return a nil registry.
+func Test_NewRegistry_NilPolicy(t *testing.T) {
+	buf := bytes.Buffer{}
+	logger := zerolog.New(&buf)
+	actRegistry := NewActRegistry(
+		BuiltinSignals(),
+		map[string]*sdkAct.Policy{
+			"bad": nil,
+		},
+		BuiltinActions(),
+		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
+	assert.Nil(t, actRegistry)
+	assert.Contains(t, buf.String(), "Policy is nil, not adding")
+}
+
+// Test_NewRegistry_NilAction tests the NewRegistry function with a nil action.
+// It should return a nil registry.
+func Test_NewRegistry_NilAction(t *testing.T) {
+	buf := bytes.Buffer{}
+	logger := zerolog.New(&buf)
+	actRegistry := NewActRegistry(
+		BuiltinSignals(), BuiltinPolicies(),
+		map[string]*sdkAct.Action{
+			"bad": nil,
+		},
+		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
+	assert.Nil(t, actRegistry)
+	assert.Contains(t, buf.String(), "Action is nil, not adding")
+}
+
 // Test_Add tests the Add function of the act registry.
 func Test_Add(t *testing.T) {
 	actRegistry := NewActRegistry(

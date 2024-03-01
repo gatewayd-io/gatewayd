@@ -32,7 +32,8 @@ type Registry struct {
 
 var _ IRegistry = (*Registry)(nil)
 
-// NewActRegistry creates a new act registry with the specified default policy and timeout.
+// NewActRegistry creates a new act registry with the specified default policy and timeout
+// and the builtin signals, policies, and actions.
 func NewActRegistry(
 	builtinSignals map[string]*sdkAct.Signal,
 	builtinsPolicies map[string]*sdkAct.Policy,
@@ -41,6 +42,11 @@ func NewActRegistry(
 	policyTimeout time.Duration,
 	logger zerolog.Logger,
 ) *Registry {
+	if builtinSignals == nil || builtinsPolicies == nil || builtinActions == nil {
+		logger.Warn().Msg("Builtin signals, policies, or actions are nil, not adding")
+		return nil
+	}
+
 	for _, signal := range builtinSignals {
 		if signal == nil {
 			logger.Warn().Msg("Signal is nil, not adding")
