@@ -65,76 +65,83 @@ func BuiltinActions() map[string]*sdkAct.Action {
 	}
 }
 
+// Passthrough is a built-in action that always returns true and no error.
 func Passthrough(map[string]any, ...sdkAct.Parameter) (any, error) {
 	return true, nil
 }
 
+// Terminate is a built-in action that terminates the connection if the
+// terminate signal is true and the policy is set to "stop". The action
+// can optionally receive a result parameter.
 func Terminate(_ map[string]any, params ...sdkAct.Parameter) (any, error) {
-	if len(params) == 0 || params[0].Key != "logger" {
-		return nil, gerr.ErrLoggerRequired
-	}
-
-	logger, ok := params[0].Value.(zerolog.Logger)
-	if !ok {
-		return nil, gerr.ErrLoggerRequired
-	}
-
-	if len(params) >= TerminateDefaultFieldCount {
-		if params[1].Key != "result" {
-			logger.Debug().Msg(
-				"terminate action can optionally receive a result parameter")
-			return true, nil
-		}
-
-		result, ok := params[1].Value.(map[string]any)
-		if !ok {
-			logger.Debug().Msg("terminate action can receive a result parameter")
-			return true, nil
-		}
-
-		// If the result from the plugin does not contain a response,
-		// yet it is a terminal action (hence running this action),
-		// add an error response to the result and terminate the connection.
-		if _, exists := result["response"]; !exists {
-			logger.Trace().Fields(result).Msg(
-				"Terminating without response, returning an error response")
-			result["response"] = (&pgproto3.Terminate{}).Encode(
-				postgres.ErrorResponse(
-					"Request terminated",
-					"ERROR",
-					"42000",
-					"Policy terminated the request",
-				),
-			)
-		}
-
-		return result, nil
-	}
-
-	return true, nil
-}
-
-func Log(data map[string]any, params ...sdkAct.Parameter) (any, error) {
-	fields := map[string]any{}
-	// Only log the fields that are not level, message, or log.
-	if len(data) > LogDefaultFieldCount {
-		for k, v := range data {
-			if k == "level" || k == "message" || k == "log" {
-				continue
-			}
-			fields[k] = v
-		}
-	}
-
-	if len(params) == 0 || params[0].Key != "logger" {
+	if len(params) == 0 || params[0].Key != LoggerKey {
 		// No logger parameter or the first parameter is not a logger.
-		return false, nil
+		return nil, gerr.ErrLoggerRequired
 	}
 
 	logger, ok := params[0].Value.(zerolog.Logger)
 	if !ok {
 		// The first parameter is not a logger.
-		return false, nil
+		return nil, gerr.ErrLoggerRequired
+	}
+
+	if len(params) < TerminateDefaultFieldCount || params[1].Key != ResultKey {
+		logger.Debug().Msg(
+			"terminate action can optionally receive a result parameter")
+		return true, nil
+	}
+
+	result, ok := params[1].Value.(map[string]any)
+	if !ok {
+		logger.Debug().Msg("terminate action received a non-map result parameter")
+		return true, nil
+	}
+
+	// If the result from the plugin does not contain a response,
+	// yet it is a terminal action (hence running this action),
+	// add an error response to the result and terminate the connection.
+	if _, exists := result["response"]; !exists {
+		logger.Trace().Fields(result).Msg(
+			"Terminating without response, returning an error response")
+		result["response"] = (&pgproto3.Terminate{}).Encode(
+			postgres.ErrorResponse(
+				"Request terminated",
+				"ERROR",
+				"42000",
+				"Policy terminated the request",
+			),
+		)
+	}
+
+	return result, nil
+}
+
+// Log is a built-in action that logs the data received from the plugin.
+func Log(data map[string]any, params ...sdkAct.Parameter) (any, error) {
+	if len(params) == 0 || params[0].Key != LoggerKey {
+		// No logger parameter or the first parameter is not a logger.
+		return nil, gerr.ErrLoggerRequired
+	}
+
+	logger, ok := params[0].Value.(zerolog.Logger)
+	if !ok {
+		// The first parameter is not a logger.
+		return nil, gerr.ErrLoggerRequired
+	}
+
+	fields := map[string]any{}
+	if len(data) > LogDefaultFieldCount {
+		for k, v := range data {
+			// Skip these necessary fields, as they are already used by the logger.
+			// level: The log level.
+			// message: The log message.
+			// log: The log signal.
+			if k == "level" || k == "message" || k == "log" {
+				continue
+			}
+			// Add the rest of the fields to the logger as extra fields.
+			fields[k] = v
+		}
 	}
 
 	logger.WithLevel(

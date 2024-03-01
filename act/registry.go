@@ -11,6 +11,11 @@ import (
 	"github.com/rs/zerolog"
 )
 
+const (
+	LoggerKey = "__logger__"
+	ResultKey = "__result__"
+)
+
 type IRegistry interface {
 	Add(policy *sdkAct.Policy)
 	Apply(signals []sdkAct.Signal) []*sdkAct.Output
@@ -248,7 +253,7 @@ func (r *Registry) Run(
 // This is automatically prepended to the parameters when running an action.
 func WithLogger(logger zerolog.Logger) sdkAct.Parameter {
 	return sdkAct.Parameter{
-		Key:   "logger",
+		Key:   LoggerKey,
 		Value: logger,
 	}
 }
@@ -257,7 +262,7 @@ func WithLogger(logger zerolog.Logger) sdkAct.Parameter {
 // to be used by the action.
 func WithResult(result map[string]any) sdkAct.Parameter {
 	return sdkAct.Parameter{
-		Key:   "result",
+		Key:   ResultKey,
 		Value: result,
 	}
 }
