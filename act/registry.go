@@ -7,6 +7,7 @@ import (
 	"time"
 
 	sdkAct "github.com/gatewayd-io/gatewayd-plugin-sdk/act"
+	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/rs/zerolog"
 )
@@ -73,9 +74,9 @@ func NewActRegistry(
 
 	// The default policy must exist, otherwise use passthrough.
 	if _, exists := builtinsPolicies[defaultPolicy]; !exists || defaultPolicy == "" {
-		logger.Warn().Str("name", defaultPolicy).Msg(
-			"The specified default policy does not exist, using passthrough")
-		defaultPolicy = "passthrough"
+		logger.Warn().Str("name", defaultPolicy).Msgf(
+			"The specified default policy does not exist, using %s", config.DefaultPolicy)
+		defaultPolicy = config.DefaultPolicy
 	}
 
 	logger.Debug().Str("name", defaultPolicy).Msg("Using default policy")
@@ -114,6 +115,7 @@ func (r *Registry) Apply(signals []sdkAct.Signal) []*sdkAct.Output {
 		return r.Apply([]sdkAct.Signal{*r.DefaultSignal})
 	}
 
+	// Separate terminal and non-terminal signals to find contradictions.
 	terminal := []string{}
 	nonTerminal := []string{}
 	for _, signal := range signals {
@@ -137,9 +139,13 @@ func (r *Registry) Apply(signals []sdkAct.Signal) []*sdkAct.Output {
 			continue
 		}
 
+		// Apply the signal and append the output to the list of outputs.
 		output, err := r.apply(signal)
 		if err != nil {
 			r.logger.Error().Err(err).Str("name", signal.Name).Msg("Error applying signal")
+			// If there is an error evaluating the policy, continue to the next signal.
+			// This also prevents stack overflows from infinite loops of the external
+			// if condition below.
 			if errors.Is(err, gerr.ErrEvalError) {
 				evalErr = true
 			}
@@ -168,17 +174,19 @@ func (r *Registry) apply(signal sdkAct.Signal) (*sdkAct.Output, *gerr.GatewayDEr
 		return nil, gerr.ErrPolicyNotMatched
 	}
 
+	// Create a context with a timeout for policy evaluation.
 	ctx, cancel := context.WithTimeout(context.Background(), r.policyTimeout)
 	defer cancel()
 
-	// Action dictates the sync mode, not the signal.
+	// Evaluate the policy.
 	// TODO: Policy should be able to receive other parameters like server and client IPs, etc.
 	verdict, err := policy.Eval(
 		ctx, sdkAct.Input{
 			Name:   signal.Name,
 			Policy: policy.Metadata,
 			Signal: signal.Metadata,
-			Sync:   action.Sync,
+			// Action dictates the sync mode, not the signal.
+			Sync: action.Sync,
 		},
 	)
 	if err != nil {
@@ -194,10 +202,16 @@ func (r *Registry) apply(signal sdkAct.Signal) (*sdkAct.Output, *gerr.GatewayDEr
 	}, nil
 }
 
-// Run runs the output and returns the result.
+// Run runs the function associated with the output.MatchedPolicy and
+// returns its result. If the action is synchronous, the result is returned
+// immediately. If the action is asynchronous, the result is nil and the
+// error is ErrAsyncAction, which is a sentinel error to indicate that the
+// action is running asynchronously.
 func (r *Registry) Run(
 	output *sdkAct.Output, params ...sdkAct.Parameter,
 ) (any, *gerr.GatewayDError) {
+	// In certain cases, the output may be nil, for example, if the policy
+	// evaluation fails. In this case, the run is aborted.
 	if output == nil {
 		// This should never happen, since the output is always set by the registry
 		// to be the default policy if no signals are provided.
@@ -215,11 +229,13 @@ func (r *Registry) Run(
 	// Prepend the logger to the parameters.
 	params = append([]sdkAct.Parameter{WithLogger(r.logger)}, params...)
 
+	// If the action is synchronous, run it and return the result immediately.
 	if action.Sync {
 		r.logger.Debug().Fields(map[string]interface{}{
 			"execution_mode": "sync",
 			"action":         action.Name,
 		}).Msgf("Running action")
+
 		output, err := action.Run(output.Metadata, params...)
 		if err != nil {
 			r.logger.Error().Err(err).Str("action", action.Name).Msg("Error running action")
