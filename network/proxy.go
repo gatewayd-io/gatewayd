@@ -492,10 +492,10 @@ func (pr *Proxy) PassThroughToClient(conn *ConnWrapper, stack *Stack) *gerr.Gate
 	if received == 0 || err != nil {
 		fields := map[string]interface{}{"function": "proxy.passthrough"}
 		if client.LocalAddr() != "" {
-			fields["local_addr"] = client.LocalAddr()
+			fields["localAddr"] = client.LocalAddr()
 		}
 		if client.RemoteAddr() != "" {
-			fields["remote_addr"] = client.RemoteAddr()
+			fields["remoteAddr"] = client.RemoteAddr()
 		}
 		pr.logger.Debug().Fields(fields).Msg("No data to send to client")
 		span.AddEvent("No data to send to client")

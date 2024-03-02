@@ -221,7 +221,7 @@ func (r *Registry) Run(
 
 	action, ok := r.Actions[output.MatchedPolicy]
 	if !ok {
-		r.logger.Warn().Str("matched_policy", output.MatchedPolicy).Msg(
+		r.logger.Warn().Str("matchedPolicy", output.MatchedPolicy).Msg(
 			"Action does not exist, run aborted")
 		return nil, gerr.ErrActionNotExist
 	}
@@ -232,8 +232,8 @@ func (r *Registry) Run(
 	// If the action is synchronous, run it and return the result immediately.
 	if action.Sync {
 		r.logger.Debug().Fields(map[string]interface{}{
-			"execution_mode": "sync",
-			"action":         action.Name,
+			"executionMode": "sync",
+			"action":        action.Name,
 		}).Msgf("Running action")
 
 		output, err := action.Run(output.Metadata, params...)
@@ -245,8 +245,8 @@ func (r *Registry) Run(
 	}
 
 	r.logger.Debug().Fields(map[string]interface{}{
-		"execution_mode": "async",
-		"action":         action.Name,
+		"executionMode": "async",
+		"action":        action.Name,
 	}).Msgf("Running action")
 
 	// Run the action asynchronously.
