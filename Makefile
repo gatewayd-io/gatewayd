@@ -7,7 +7,7 @@ LAST_TAGGED_COMMIT_SHORT=$(shell git rev-parse --short ${LAST_TAGGED_COMMIT})
 VERSION=$(shell git describe --tags ${LAST_TAGGED_COMMIT})
 TIMESTAMP=$(shell date -u +"%FT%T%z")
 VERSION_DETAILS=${TIMESTAMP}/${LAST_TAGGED_COMMIT_SHORT}
-EXTRA_LDFLAGS=-X ${CONFIG_PACKAGE}.Version=${VERSION} -X ${CONFIG_PACKAGE}.VersionDetails=${VERSION_DETAILS} -X ${CMD_PACKAGE}.UsageReportURL=usage.gatewayd.io:59091
+EXTRA_LDFLAGS=-X ${CONFIG_PACKAGE}.Version=${VERSION} -X ${CONFIG_PACKAGE}.VersionDetails=${VERSION_DETAILS} -X ${CMD_PACKAGE}.UsageReportURL=usage.gatewayd.io:443
 FILES=gatewayd README.md LICENSE gatewayd.yaml gatewayd_plugins.yaml
 
 tidy:
