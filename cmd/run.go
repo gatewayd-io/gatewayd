@@ -215,18 +215,18 @@ var runCmd = &cobra.Command{
 		for name, cfg := range conf.Global.Loggers {
 			loggers[name] = logging.NewLogger(runCtx, logging.LoggerConfig{
 				Output: cfg.GetOutput(),
-				Level: config.If[zerolog.Level](
-					config.Exists[string, zerolog.Level](config.LogLevels, cfg.Level),
+				Level: config.If(
+					config.Exists(config.LogLevels, cfg.Level),
 					config.LogLevels[cfg.Level],
 					config.LogLevels[config.DefaultLogLevel],
 				),
-				TimeFormat: config.If[string](
-					config.Exists[string, string](config.TimeFormats, cfg.TimeFormat),
+				TimeFormat: config.If(
+					config.Exists(config.TimeFormats, cfg.TimeFormat),
 					config.TimeFormats[cfg.TimeFormat],
 					config.TimeFormats[config.DefaultTimeFormat],
 				),
-				ConsoleTimeFormat: config.If[string](
-					config.Exists[string, string](
+				ConsoleTimeFormat: config.If(
+					config.Exists(
 						config.ConsoleTimeFormats, cfg.ConsoleTimeFormat),
 					config.ConsoleTimeFormats[cfg.ConsoleTimeFormat],
 					config.ConsoleTimeFormats[config.DefaultConsoleTimeFormat],
@@ -284,9 +284,10 @@ var runCmd = &cobra.Command{
 		pluginRegistry = plugin.NewRegistry(
 			runCtx,
 			actRegistry,
-			config.If[config.CompatibilityPolicy](
-				config.Exists[string, config.CompatibilityPolicy](
-					config.CompatibilityPolicies, conf.Plugin.CompatibilityPolicy),
+			config.If(
+				config.Exists(
+					config.CompatibilityPolicies, conf.Plugin.CompatibilityPolicy,
+				),
 				config.CompatibilityPolicies[conf.Plugin.CompatibilityPolicy],
 				config.DefaultCompatibilityPolicy),
 			logger,
@@ -459,7 +460,7 @@ var runCmd = &cobra.Command{
 				handler = mergedMetricsHandler(handler)
 			}
 
-			readHeaderTimeout := config.If[time.Duration](
+			readHeaderTimeout := config.If(
 				metricsConfig.ReadHeaderTimeout > 0,
 				metricsConfig.ReadHeaderTimeout,
 				config.DefaultReadHeaderTimeout,
@@ -482,7 +483,7 @@ var runCmd = &cobra.Command{
 			}
 
 			// Create a new metrics server.
-			timeout := config.If[time.Duration](
+			timeout := config.If(
 				metricsConfig.Timeout > 0,
 				metricsConfig.Timeout,
 				config.DefaultMetricsServerTimeout,
@@ -557,10 +558,10 @@ var runCmd = &cobra.Command{
 		for name, cfg := range conf.Global.Pools {
 			logger := loggers[name]
 			// Check if the pool size is greater than zero.
-			currentPoolSize := config.If[int](
+			currentPoolSize := config.If(
 				cfg.Size > 0,
 				// Check if the pool size is greater than the minimum pool size.
-				config.If[int](
+				config.If(
 					cfg.Size > config.MinimumPoolSize,
 					cfg.Size,
 					config.MinimumPoolSize,
@@ -585,32 +586,32 @@ var runCmd = &cobra.Command{
 			}
 
 			// Fill the missing and zero values with the default ones.
-			clients[name].TCPKeepAlivePeriod = config.If[time.Duration](
+			clients[name].TCPKeepAlivePeriod = config.If(
 				clients[name].TCPKeepAlivePeriod > 0,
 				clients[name].TCPKeepAlivePeriod,
 				config.DefaultTCPKeepAlivePeriod,
 			)
-			clients[name].ReceiveDeadline = config.If[time.Duration](
+			clients[name].ReceiveDeadline = config.If(
 				clients[name].ReceiveDeadline > 0,
 				clients[name].ReceiveDeadline,
 				config.DefaultReceiveDeadline,
 			)
-			clients[name].ReceiveTimeout = config.If[time.Duration](
+			clients[name].ReceiveTimeout = config.If(
 				clients[name].ReceiveTimeout > 0,
 				clients[name].ReceiveTimeout,
 				config.DefaultReceiveTimeout,
 			)
-			clients[name].SendDeadline = config.If[time.Duration](
+			clients[name].SendDeadline = config.If(
 				clients[name].SendDeadline > 0,
 				clients[name].SendDeadline,
 				config.DefaultSendDeadline,
 			)
-			clients[name].ReceiveChunkSize = config.If[int](
+			clients[name].ReceiveChunkSize = config.If(
 				clients[name].ReceiveChunkSize > 0,
 				clients[name].ReceiveChunkSize,
 				config.DefaultChunkSize,
 			)
-			clients[name].DialTimeout = config.If[time.Duration](
+			clients[name].DialTimeout = config.If(
 				clients[name].DialTimeout > 0,
 				clients[name].DialTimeout,
 				config.DefaultDialTimeout,
@@ -623,7 +624,7 @@ var runCmd = &cobra.Command{
 					runCtx, clientConfig, logger,
 					network.NewRetry(
 						clientConfig.Retries,
-						config.If[time.Duration](
+						config.If(
 							clientConfig.Backoff > 0,
 							clientConfig.Backoff,
 							config.DefaultBackoff,
@@ -738,7 +739,7 @@ var runCmd = &cobra.Command{
 			logger := loggers[name]
 			clientConfig := clients[name]
 			// Fill the missing and zero value with the default one.
-			cfg.HealthCheckPeriod = config.If[time.Duration](
+			cfg.HealthCheckPeriod = config.If(
 				cfg.HealthCheckPeriod > 0,
 				cfg.HealthCheckPeriod,
 				config.DefaultHealthCheckPeriod,
@@ -785,7 +786,7 @@ var runCmd = &cobra.Command{
 				runCtx,
 				cfg.Network,
 				cfg.Address,
-				config.If[time.Duration](
+				config.If(
 					cfg.TickInterval > 0,
 					cfg.TickInterval,
 					config.DefaultTickInterval,
