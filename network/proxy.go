@@ -92,7 +92,7 @@ func NewProxy(
 						proxyCtx, proxy.ClientConfig, proxy.logger,
 						NewRetry(
 							proxy.ClientConfig.Retries,
-							config.If[time.Duration](
+							config.If(
 								proxy.ClientConfig.Backoff > 0,
 								proxy.ClientConfig.Backoff,
 								config.DefaultBackoff,
