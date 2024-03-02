@@ -430,7 +430,7 @@ func Test_Run_Async(t *testing.T) {
 	time.Sleep(time.Millisecond) // wait for async action to complete
 
 	// The following is the expected log output from running the async action.
-	assert.Contains(t, out.String(), "{\"level\":\"debug\",\"action\":\"log\",\"execution_mode\":\"async\",\"message\":\"Running action\"}") //nolint:lll
+	assert.Contains(t, out.String(), "{\"level\":\"debug\",\"action\":\"log\",\"executionMode\":\"async\",\"message\":\"Running action\"}") //nolint:lll
 	// The following is the expected log output from the run function of the async action.
 	assert.Contains(t, out.String(), "{\"level\":\"info\",\"async\":true,\"message\":\"test\"}")
 }
