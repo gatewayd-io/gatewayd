@@ -6,7 +6,21 @@ on:
       - main
     tags:
       - v*
+    paths-ignore:
+      - "README.md"
+      - "LICENSE"
+      - "CONTRIBUTING.md"
+      - "CODE_OF_CONDUCT.md"
+      - ".gitignore"
+      - ".gitattributes"
   pull_request:
+    paths-ignore:
+      - "README.md"
+      - "LICENSE"
+      - "CONTRIBUTING.md"
+      - "CODE_OF_CONDUCT.md"
+      - ".gitignore"
+      - ".gitattributes"
 
 jobs:
   test:

@@ -29,39 +29,43 @@ GatewayD is developed by [GatewayD Labs](https://gatewayd.io/) and the community
 
 - **Cloud-native**:
 
-    GatewayD is built with cloud-native principles in mind. It is containerized, <!--stateless, scalable,--> observable and extensible.
+    Built with cloud-native principles in mind: containerized, stateless, <!--, scalable,--> observable and extensible, while being secure and reliable.
 
 - **Connection pooling and proxying**:
 
-    GatewayD pools connections to database servers and proxies them to clients. It also pools connections to clients and proxies them to database servers.
+    Pools connections to database servers and clients and proxies them together.
 
 - **Database-agnostic**:
 
-    GatewayD is database-agnostic. It supports databases through plugins.
+    GatewayD proxies connections, while plugins enable database support.
 
 - **Plugin-based & extensible**:
 
-    GatewayD is plugin-based. You can write your own plugins or use our built-in, community and enterprise plugins.
+    Plugins extend functionality. You can write your own plugins or use our built-in, community and enterprise plugins.
 
 - **Multi-tenancy**:
 
-    GatewayD supports multiple databases and clients.
+    Manage multiple databases and clients within a single GatewayD instance.
 
 - **Full observability**:
 
-    GatewayD is fully observable. It supports logging, metrics and tracing.
+    Integrated logging, metrics, and tracing for comprehensive monitoring and observability.
 
 ## Plugins & SDK
 
 The plugins are the lifeblood of GatewayD. They are loaded on startup to add tons of functionality, for example:
 
 - **Query parsing and processing**
+- **Authentication, authorization and access management**
 - **Caching**
 - **Injection detection and prevention**
-- **Schema and data** management and transformation
+- **Firewalling**
+- **Query, schema and data management and transformation**
+- **Change data capture**
+- **Distributed query processing**
 - Many other possibilities
 
-The plugins are *usually* written in Go and are compiled into stand-alone executables. They are loaded on startup and are ready to be used by the users. In turn, the developers can write their own plugins and use them in their applications, which is made straightforward by using the [SDK](https://github.com/gatewayd-io/gatewayd-plugin-sdk).
+The plugins are *usually* written in Go and are compiled into stand-alone executables. They are loaded on startup and are ready to be used by the users. In turn, the developers can write their own plugins and use them in their applications, which is made possible by using the [SDK](https://github.com/gatewayd-io/gatewayd-plugin-sdk).
 
 ## Documentation
 
