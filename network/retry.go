@@ -43,7 +43,7 @@ func (r *Retry) Retry(callback RetryCallback) (any, error) {
 	}
 
 	// If the number of retries is 0, just run the callback once (first attempt).
-	if r == nil && callback != nil {
+	if r == nil {
 		return callback()
 	}
 

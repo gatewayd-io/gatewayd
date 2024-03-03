@@ -352,21 +352,16 @@ func (c *Client) Close() {
 
 // IsConnected checks if the client is still connected to the server.
 func (c *Client) IsConnected() bool {
-	if c != nil && c.ctx.Err() != nil {
+	if c == nil {
+		return false
+	}
+
+	if c.ctx.Err() != nil {
 		_, span := otel.Tracer(config.TracerName).Start(c.ctx, "IsConnected")
 		defer span.End()
 	}
 
-	if c == nil {
-		c.logger.Debug().Fields(
-			map[string]interface{}{
-				"address": c.Address,
-				"reason":  "client is nil",
-			}).Msg("Connection to server is closed")
-		return false
-	}
-
-	if c != nil && c.conn == nil || c.ID == "" {
+	if c.conn == nil || c.ID == "" {
 		c.logger.Debug().Fields(
 			map[string]interface{}{
 				"address": c.Address,
