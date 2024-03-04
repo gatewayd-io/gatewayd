@@ -137,6 +137,7 @@ jobs:
           plugins:
             - name: plugin-template-go
               enabled: True
+              url: github.com/gatewayd-io/plugin-template-go
               localPath: ./ptg
               args: ["--log-level", "debug"]
               env:

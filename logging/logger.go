@@ -36,6 +36,9 @@ type LoggerConfig struct {
 	Compress   bool
 	LocalTime  bool
 
+	// the output of config.Console log will be written to this writer, if it is nil os.Stdout will be used.
+	ConsoleOut io.Writer
+
 	// group name
 	Name string
 }
@@ -45,8 +48,13 @@ func NewLogger(ctx context.Context, cfg LoggerConfig) zerolog.Logger {
 	_, span := otel.Tracer(config.TracerName).Start(ctx, "Create new logger")
 
 	// Create a new logger.
+	var consoleOut io.Writer = os.Stdout
+	if cfg.ConsoleOut != nil {
+		consoleOut = cfg.ConsoleOut
+	}
+
 	consoleWriter := zerolog.ConsoleWriter{
-		Out:        os.Stdout,
+		Out:        consoleOut,
 		TimeFormat: cfg.ConsoleTimeFormat,
 		NoColor:    cfg.NoColor,
 	}
@@ -92,7 +100,6 @@ func NewLogger(ctx context.Context, cfg LoggerConfig) zerolog.Logger {
 			outputs = append(outputs, consoleWriter)
 		}
 	}
-
 	zerolog.SetGlobalLevel(cfg.Level)
 	zerolog.TimeFieldFormat = cfg.TimeFormat
 

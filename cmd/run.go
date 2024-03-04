@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -43,6 +44,17 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
+
+var _ io.Writer = &cobraCmdWriter{}
+
+type cobraCmdWriter struct {
+	*cobra.Command
+}
+
+func (c *cobraCmdWriter) Write(p []byte) (int, error) {
+	c.Print(string(p))
+	return len(p), nil
+}
 
 // TODO: Get rid of the global variables.
 // https://github.com/gatewayd-io/gatewayd/issues/324
@@ -212,9 +224,12 @@ var runCmd = &cobra.Command{
 		conf.InitConfig(runCtx)
 
 		// Create and initialize loggers from the config.
+		// Use cobra command cmd instead of os.Stdout for the console output.
+		cmdLogger := &cobraCmdWriter{cmd}
 		for name, cfg := range conf.Global.Loggers {
 			loggers[name] = logging.NewLogger(runCtx, logging.LoggerConfig{
-				Output: cfg.GetOutput(),
+				Output:     cfg.GetOutput(),
+				ConsoleOut: cmdLogger,
 				Level: config.If(
 					config.Exists(config.LogLevels, cfg.Level),
 					config.LogLevels[cfg.Level],
