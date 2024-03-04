@@ -1,6 +1,7 @@
 package logging
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"testing"
@@ -104,6 +105,27 @@ func TestNewLogger_Stderr(t *testing.T) {
 	assert.Contains(t, stderr, `"level":"error"`)
 	assert.Contains(t, stderr, "This is an error")
 	assert.Contains(t, stderr, `"key":"value"`)
+}
+
+// TestNewLogger_CustomOutput tests the creation of a new logger with bytes.Buffer as custom output.
+func TestNewLogger_ConsoleOut(t *testing.T) {
+	out := &bytes.Buffer{}
+	logger := NewLogger(
+		context.Background(),
+		LoggerConfig{
+			Output:     []config.LogOutput{config.Console},
+			ConsoleOut: out,
+			Level:      zerolog.DebugLevel,
+			TimeFormat: zerolog.TimeFormatUnix,
+			NoColor:    true,
+		},
+	)
+	assert.NotNil(t, logger)
+
+	logger.Error().Str("key", "value").Msg("This is an error")
+	got := out.String()
+	assert.Contains(t, got, `ERR This is an error`)
+	assert.Contains(t, got, `key=value`)
 }
 
 // TestNewLogger_MultipleOutputs tests the creation of a new logger with multiple outputs.

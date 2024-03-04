@@ -1,6 +1,7 @@
 package logging
 
 import (
+	"bytes"
 	"context"
 	"testing"
 	"time"
@@ -9,36 +10,37 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
-	"github.com/zenizh/go-capturer"
 )
 
 // TestNewHcLogAdapter tests the HcLogAdapter.
 func TestNewHcLogAdapter(t *testing.T) {
-	consoleOutput := capturer.CaptureStdout(func() {
-		logger := NewLogger(
-			context.Background(),
-			LoggerConfig{
-				Output:            []config.LogOutput{config.Console},
-				Level:             zerolog.TraceLevel,
-				TimeFormat:        zerolog.TimeFormatUnix,
-				ConsoleTimeFormat: time.RFC3339,
-				NoColor:           true,
-			},
-		)
+	out := &bytes.Buffer{}
+	logger := NewLogger(
+		context.Background(),
+		LoggerConfig{
+			Output:            []config.LogOutput{config.Console},
+			Level:             zerolog.TraceLevel,
+			TimeFormat:        zerolog.TimeFormatUnix,
+			ConsoleTimeFormat: time.RFC3339,
+			NoColor:           true,
+			ConsoleOut:        out,
+		},
+	)
 
-		hcLogAdapter := NewHcLogAdapter(&logger, "test")
-		hcLogAdapter.SetLevel(hclog.Trace)
+	hcLogAdapter := NewHcLogAdapter(&logger, "test")
+	hcLogAdapter.SetLevel(hclog.Trace)
 
-		hcLogAdapter.Trace("This is a trace message")
-		hcLogAdapter.Debug("This is a debug message")
-		hcLogAdapter.Info("This is an info message")
-		hcLogAdapter.Warn("This is a warn message")
-		hcLogAdapter.Error("This is an error message")
-		hcLogAdapter.Log(hclog.Debug, "This is a log message")
+	hcLogAdapter.Trace("This is a trace message")
+	hcLogAdapter.Debug("This is a debug message")
+	hcLogAdapter.Info("This is an info message")
+	hcLogAdapter.Warn("This is a warn message")
+	hcLogAdapter.Error("This is an error message")
+	hcLogAdapter.Log(hclog.Debug, "This is a log message")
 
-		hcLogAdapter.SetLevel(hclog.Warn)
-		hcLogAdapter.Trace("This is a trace message, but it should not be logged")
-	})
+	hcLogAdapter.SetLevel(hclog.Warn)
+	hcLogAdapter.Trace("This is a trace message, but it should not be logged")
+
+	consoleOutput := out.String()
 
 	assert.Contains(t, consoleOutput, "TRC This is a trace message")
 	assert.Contains(t, consoleOutput, "DBG This is a debug message")
@@ -53,30 +55,31 @@ func TestNewHcLogAdapter(t *testing.T) {
 // TestNewHcLogAdapter_LogLevel_Difference tests the HcLogAdapter when the
 // logger and the hclog adapter have different log levels.
 func TestNewHcLogAdapter_LogLevel_Difference(t *testing.T) {
-	consoleOutput := capturer.CaptureStdout(func() {
-		logger := NewLogger(
-			context.Background(),
-			LoggerConfig{
-				Output:     []config.LogOutput{config.Console},
-				Level:      zerolog.WarnLevel,
-				TimeFormat: zerolog.TimeFormatUnix,
-				NoColor:    true,
-			},
-		)
+	out := &bytes.Buffer{}
+	logger := NewLogger(
+		context.Background(),
+		LoggerConfig{
+			Output:     []config.LogOutput{config.Console},
+			ConsoleOut: out,
+			Level:      zerolog.WarnLevel,
+			TimeFormat: zerolog.TimeFormatUnix,
+			NoColor:    true,
+		},
+	)
 
-		// The logger is set to WarnLevel, but the hclog adapter is set to TraceLevel.
-		// This means that the hclog adapter will log everything, but the logger will
-		// only log WarnLevel and above.
-		hcLogAdapter := NewHcLogAdapter(&logger, "test")
-		hcLogAdapter.SetLevel(hclog.Trace)
-		hcLogAdapter.Trace("This is a trace message, but it should not be logged")
-		hcLogAdapter.Debug("This is a debug message, but it should not be logged")
-		hcLogAdapter.Info("This is an info message, but it should not be logged")
-		hcLogAdapter.Warn("This is a warn message")
-		hcLogAdapter.Error("This is an error message")
-		hcLogAdapter.Log(hclog.Debug, "This is a log message, but it should not be logged")
-	})
+	// The logger is set to WarnLevel, but the hclog adapter is set to TraceLevel.
+	// This means that the hclog adapter will log everything, but the logger will
+	// only log WarnLevel and above.
+	hcLogAdapter := NewHcLogAdapter(&logger, "test")
+	hcLogAdapter.SetLevel(hclog.Trace)
+	hcLogAdapter.Trace("This is a trace message, but it should not be logged")
+	hcLogAdapter.Debug("This is a debug message, but it should not be logged")
+	hcLogAdapter.Info("This is an info message, but it should not be logged")
+	hcLogAdapter.Warn("This is a warn message")
+	hcLogAdapter.Error("This is an error message")
+	hcLogAdapter.Log(hclog.Debug, "This is a log message, but it should not be logged")
 
+	consoleOutput := out.String()
 	assert.NotContains(t, consoleOutput, "TRC This is a trace message, but it should not be logged")
 	assert.NotContains(t, consoleOutput, "DBG This is a debug message, but it should not be logged")
 	assert.NotContains(t, consoleOutput, "INF This is an info message, but it should not be logged")
@@ -87,29 +90,30 @@ func TestNewHcLogAdapter_LogLevel_Difference(t *testing.T) {
 
 // TestNewHcLogAdapter_Log tests the HcLogAdapter.Log method.
 func TestNewHcLogAdapter_Log(t *testing.T) {
-	consoleOutput := capturer.CaptureStdout(func() {
-		logger := NewLogger(
-			context.Background(),
-			LoggerConfig{
-				Output:     []config.LogOutput{config.Console},
-				Level:      zerolog.TraceLevel,
-				TimeFormat: zerolog.TimeFormatUnix,
-				NoColor:    true,
-			},
-		)
+	out := &bytes.Buffer{}
+	logger := NewLogger(
+		context.Background(),
+		LoggerConfig{
+			Output:     []config.LogOutput{config.Console},
+			ConsoleOut: out,
+			Level:      zerolog.TraceLevel,
+			TimeFormat: zerolog.TimeFormatUnix,
+			NoColor:    true,
+		},
+	)
 
-		hcLogAdapter := NewHcLogAdapter(&logger, "test")
-		hcLogAdapter.SetLevel(hclog.Trace)
+	hcLogAdapter := NewHcLogAdapter(&logger, "test")
+	hcLogAdapter.SetLevel(hclog.Trace)
 
-		hcLogAdapter.Log(hclog.Off, "This is a message")
-		hcLogAdapter.Log(hclog.NoLevel, "This is yet another message")
-		hcLogAdapter.Log(hclog.Trace, "This is a trace message")
-		hcLogAdapter.Log(hclog.Debug, "This is a debug message")
-		hcLogAdapter.Log(hclog.Info, "This is an info message")
-		hcLogAdapter.Log(hclog.Warn, "This is a warn message")
-		hcLogAdapter.Log(hclog.Error, "This is an error message")
-	})
+	hcLogAdapter.Log(hclog.Off, "This is a message")
+	hcLogAdapter.Log(hclog.NoLevel, "This is yet another message")
+	hcLogAdapter.Log(hclog.Trace, "This is a trace message")
+	hcLogAdapter.Log(hclog.Debug, "This is a debug message")
+	hcLogAdapter.Log(hclog.Info, "This is an info message")
+	hcLogAdapter.Log(hclog.Warn, "This is a warn message")
+	hcLogAdapter.Log(hclog.Error, "This is an error message")
 
+	consoleOutput := out.String()
 	assert.NotContains(t, consoleOutput, "This is a message")
 	assert.NotContains(t, consoleOutput, "This is yet another message")
 	assert.Contains(t, consoleOutput, "TRC This is a trace message")
@@ -137,5 +141,5 @@ func TestNewHcLogAdapter_GetLevel(t *testing.T) {
 	hcLogAdapter.SetLevel(hclog.Debug)
 	assert.Equal(t, hclog.Debug, hcLogAdapter.GetLevel())
 	assert.NotEqual(t, zerolog.DebugLevel, logger.GetLevel(),
-		"The logger should not be affected by the hclog adapter's level")
+		"The logger should not be affected by the hclog adapter's loggerLevel")
 }

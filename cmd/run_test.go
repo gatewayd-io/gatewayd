@@ -10,7 +10,6 @@ import (
 	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/zenizh/go-capturer"
 )
 
 var (
@@ -39,10 +38,9 @@ func Test_runCmd(t *testing.T) {
 	waitGroup.Add(1)
 	go func(waitGroup *sync.WaitGroup) {
 		// Test run command.
-		output := capturer.CaptureOutput(func() {
-			_, err := executeCommandC(rootCmd, "run", "-c", globalTestConfigFile, "-p", pluginTestConfigFile)
-			require.NoError(t, err, "run command should not have returned an error")
-		})
+		output, err := executeCommandC(rootCmd, "run", "-c", globalTestConfigFile, "-p", pluginTestConfigFile)
+		require.NoError(t, err, "run command should not have returned an error")
+
 		// Print the output for debugging purposes.
 		runCmd.Print(output)
 		// Check if GatewayD started and stopped correctly.
@@ -93,10 +91,8 @@ func Test_runCmdWithTLS(t *testing.T) {
 	waitGroup.Add(1)
 	go func(waitGroup *sync.WaitGroup) {
 		// Test run command.
-		output := capturer.CaptureOutput(func() {
-			_, err := executeCommandC(rootCmd, "run", "-c", globalTLSTestConfigFile, "-p", pluginTestConfigFile)
-			require.NoError(t, err, "run command should not have returned an error")
-		})
+		output, err := executeCommandC(rootCmd, "run", "-c", globalTLSTestConfigFile, "-p", pluginTestConfigFile)
+		require.NoError(t, err, "run command should not have returned an error")
 
 		// Print the output for debugging purposes.
 		runCmd.Print(output)
@@ -149,11 +145,10 @@ func Test_runCmdWithMultiTenancy(t *testing.T) {
 	waitGroup.Add(1)
 	go func(waitGroup *sync.WaitGroup) {
 		// Test run command.
-		output := capturer.CaptureOutput(func() {
-			_, err := executeCommandC(
-				rootCmd, "run", "-c", globalTestConfigFile, "-p", pluginTestConfigFile)
-			require.NoError(t, err, "run command should not have returned an error")
-		})
+		output, err := executeCommandC(
+			rootCmd, "run", "-c", globalTestConfigFile, "-p", pluginTestConfigFile)
+		require.NoError(t, err, "run command should not have returned an error")
+
 		// Print the output for debugging purposes.
 		runCmd.Print(output)
 		// Check if GatewayD started and stopped correctly.
@@ -232,10 +227,9 @@ func Test_runCmdWithCachePlugin(t *testing.T) {
 	waitGroup.Add(1)
 	go func(waitGroup *sync.WaitGroup) {
 		// Test run command.
-		output := capturer.CaptureOutput(func() {
-			_, err := executeCommandC(rootCmd, "run", "-c", globalTestConfigFile, "-p", pluginTestConfigFile)
-			require.NoError(t, err, "run command should not have returned an error")
-		})
+		output, err := executeCommandC(rootCmd, "run", "-c", globalTestConfigFile, "-p", pluginTestConfigFile)
+		require.NoError(t, err, "run command should not have returned an error")
+
 		// Print the output for debugging purposes.
 		runCmd.Print(output)
 		// Check if GatewayD started and stopped correctly.
