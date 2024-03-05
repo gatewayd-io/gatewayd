@@ -113,7 +113,7 @@ func Terminate(_ map[string]any, params ...sdkAct.Parameter) (any, error) {
 	if _, exists := result["response"]; !exists {
 		logger.Trace().Fields(result).Msg(
 			"Terminating without response, returning an error response")
-		result["response"] = (&pgproto3.Terminate{}).Encode(
+		response, err := (&pgproto3.Terminate{}).Encode(
 			postgres.ErrorResponse(
 				"Request terminated",
 				"ERROR",
@@ -121,6 +121,12 @@ func Terminate(_ map[string]any, params ...sdkAct.Parameter) (any, error) {
 				"Policy terminated the request",
 			),
 		)
+		if err != nil {
+			// This should never happen, since everything is hardcoded.
+			logger.Error().Err(err).Msg("Failed to encode the error response")
+			return nil, gerr.ErrMsgEncodeError.Wrap(err)
+		}
+		result["response"] = response
 	}
 
 	return result, nil

@@ -47,6 +47,7 @@ const (
 	ErrCodeRunError
 	ErrCodeAsyncAction
 	ErrCodeEvalError
+	ErrCodeMsgEncodeError
 )
 
 var (
@@ -152,6 +153,8 @@ var (
 		ErrCodeKeyNotFound, "no matching policy", nil)
 	ErrEvalError = NewGatewayDError(
 		ErrCodeEvalError, "error evaluating expression", nil)
+	ErrMsgEncodeError = NewGatewayDError(
+		ErrCodeMsgEncodeError, "error encoding message", nil)
 
 	// Unwrapped errors.
 	ErrLoggerRequired = errors.New("terminate action requires a logger parameter")
