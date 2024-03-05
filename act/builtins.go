@@ -124,7 +124,7 @@ func Terminate(_ map[string]any, params ...sdkAct.Parameter) (any, error) {
 		if err != nil {
 			// This should never happen, since everything is hardcoded.
 			logger.Error().Err(err).Msg("Failed to encode the error response")
-			return nil, err
+			return nil, gerr.ErrMsgEncodeError.Wrap(err)
 		}
 		result["response"] = response
 	}
