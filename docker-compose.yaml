@@ -22,6 +22,11 @@ services:
       - "15432:15432"
     links:
       - postgres
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://gatewayd:18080/healthz"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     depends_on:
       postgres:
         condition: service_healthy
