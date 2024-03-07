@@ -34,3 +34,6 @@ libtensorflow*
 # Test generated files
 cmd/test_*.yaml.bak
 cmd/test_*.yaml
+
+# docker-compose
+gatewayd-files/
