@@ -53,6 +53,8 @@ func (a *API) Version(context.Context, *emptypb.Empty) (*v1.VersionResponse, err
 //
 //nolint:wrapcheck
 func (a *API) GetGlobalConfig(_ context.Context, group *v1.Group) (*structpb.Struct, error) {
+	span := otel.Tacer(config.TracerName).Start(ctx, "GetGlobalConfig")
+	defer span.End()
 	var (
 		jsonData []byte
 		global   map[string]interface{}
