@@ -1,5 +1,20 @@
 version: "3.8"
 services:
+  install_plugins:
+    # This intermediate service is used to install the plugins
+    # before starting the GatewayD service.
+    image: alpine:3.18
+    command: ["/bin/sh", "/setup.sh"]
+    volumes:
+      - ./setup.sh:/setup.sh:ro
+      # Use the variable defined above to mount the GatewayD files.
+      - ./gatewayd-files:/gatewayd-files:rw
+    environment:
+      - GATEWAYD_FILES=/gatewayd-files
+      # If you want to install a specific version of GatewayD, you can set the
+      # GATEWAYD_VERSION environment variable to the desired version. Otherwise,
+      # the latest version will be installed.
+      # - GATEWAYD_VERSION=v0.9.2
   postgres:
     image: postgres:latest
     environment:
@@ -10,18 +25,39 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+  redis:
+    image: redis:latest
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
   gatewayd:
     image: gatewaydio/gatewayd:latest
-    command: ["run"]
+    command: [
+      "run",
+      "--config", "/gatewayd-files/gatewayd.yaml",
+      "--plugin-config", "/gatewayd-files/gatewayd_plugins.yaml"
+    ]
     environment:
       # For more information about the environment variables, see:
       # https://docs.gatewayd.io/using-gatewayd/configuration#environment-variables
       - GATEWAYD_CLIENTS_DEFAULT_ADDRESS=postgres:5432
       # - GATEWAYD_LOGGERS_DEFAULT_LEVEL=debug
     ports:
-      - "15432:15432"
+      - "15432:15432" # GatewayD server for PostgreSQL clients to connect to
+      - "9090:9090"   # Prometheus metrics:
+                      #   http://localhost:9090/metrics
+      - "18080:18080" # GatewayD HTTP gateway:
+                      #   http://localhost:18080/swagger-ui/ for the API documentation
+                      #   http://localhost:18080/healthz for the health check
+      - "19090:19090" # GatewayD gRPC API with reflection enabled:
+                      #   You can use grpcurl or grpc-client-cli to interact with it
+    volumes:
+      - ./gatewayd-files:/gatewayd-files:ro
     links:
       - postgres
+      - redis
     healthcheck:
       test: ["CMD", "curl", "-f", "http://gatewayd:18080/healthz"]
       interval: 5s
@@ -30,3 +66,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+      install_plugins:
+        condition: service_completed_successfully
