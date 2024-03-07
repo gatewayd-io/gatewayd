@@ -713,7 +713,23 @@ var runCmd = &cobra.Command{
 					}
 				} else {
 					logger.Error().Msg("Failed to create client, please check the configuration")
-					os.Exit(gerr.FailedToCreateClient)
+					go func() {
+						// Wait for the stop signal to exit gracefully.
+						// This prevents the program from waiting indefinitely
+						// after the StopGracefully function is called.
+						<-stopChan
+						os.Exit(gerr.FailedToCreateClient)
+					}()
+					StopGracefully(
+						runCtx,
+						nil,
+						metricsMerger,
+						metricsServer,
+						pluginRegistry,
+						logger,
+						servers,
+						stopChan,
+					)
 				}
 			}
 
