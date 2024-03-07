@@ -462,7 +462,7 @@ func downloadFile(
 
 	// Create the output file in the current directory and write the downloaded content.
 	var filePath string
-	if outputDir == "" {
+	if outputDir == "" || !filepath.IsAbs(outputDir) {
 		cwd, err := os.Getwd()
 		if err != nil {
 			return "", gerr.ErrDownloadFailed.Wrap(err)
@@ -470,18 +470,6 @@ func downloadFile(
 		filePath = path.Join([]string{cwd, filename}...)
 	} else {
 		filePath = path.Join([]string{outputDir, filename}...)
-	}
-
-	absPath, err := filepath.Abs(filePath)
-	if err != nil {
-		return "", gerr.ErrDownloadFailed.Wrap(err)
-	}
-
-	// If the file exists and is not empty, return the file path.
-	// NOTE: This is to prevent re-downloading the same file.
-	// The user can delete the file and re-run the command to download the file again.
-	if fileInfo, err := os.Stat(absPath); err == nil && fileInfo.Size() > 0 {
-		return absPath, nil
 	}
 
 	output, err := os.Create(filePath)
@@ -648,13 +636,6 @@ func installPlugin(cmd *cobra.Command, pluginURL string) {
 		// Create the output directory if it doesn't exist.
 		if err := os.MkdirAll(pluginOutputDir, FolderPermissions); err != nil {
 			cmd.Println("There was an error creating the output directory: ", err)
-			return
-		}
-
-		// The output directory should be an absolute path.
-		pluginOutputDir, err = filepath.Abs(pluginOutputDir)
-		if err != nil {
-			cmd.Println("There was an error getting the absolute path: ", err)
 			return
 		}
 
