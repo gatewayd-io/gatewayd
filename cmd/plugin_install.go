@@ -59,14 +59,15 @@ const (
 )
 
 var (
-	pluginOutputDir string
-	pullOnly        bool
-	cleanup         bool
-	update          bool
-	backupConfig    bool
-	noPrompt        bool
-	pluginName      string
-	overwriteConfig bool
+	pluginOutputDir          string
+	pullOnly                 bool
+	cleanup                  bool
+	update                   bool
+	backupConfig             bool
+	noPrompt                 bool
+	pluginName               string
+	overwriteConfig          bool
+	skipPathSlipVerification bool
 )
 
 // pluginInstallCmd represents the plugin install command.
@@ -229,11 +230,13 @@ func init() {
 	pluginInstallCmd.Flags().BoolVar(
 		&overwriteConfig, "overwrite-config", true, "Overwrite the existing plugins configuration file (overrides --update, only used for installing from the plugins configuration file)") //nolint:lll
 	pluginInstallCmd.Flags().BoolVar(
+		&skipPathSlipVerification, "skip-path-slip-verification", false, "Skip path slip verification when extracting the plugin archive from a TRUSTED source") //nolint:lll
+	pluginInstallCmd.Flags().BoolVar(
 		&enableSentry, "sentry", true, "Enable Sentry") // Already exists in run.go
 }
 
 // extractZip extracts the files from a zip archive.
-func extractZip(filename, dest string) ([]string, error) {
+func extractZip(filename, dest string) ([]string, *gerr.GatewayDError) {
 	// Open and extract the zip file.
 	zipRc, err := zip.OpenReader(filename)
 	if err != nil {
@@ -265,7 +268,8 @@ func extractZip(filename, dest string) ([]string, error) {
 			outFilename := filepath.Join(filepath.Clean(dest), filepath.Clean(fileOrDir.Name))
 
 			// Check for ZipSlip.
-			if strings.HasPrefix(outFilename, string(os.PathSeparator)) {
+			if !skipPathSlipVerification &&
+				strings.HasPrefix(outFilename, string(os.PathSeparator)) {
 				return nil, gerr.ErrExtractFailed.Wrap(
 					fmt.Errorf("illegal file path: %s", outFilename))
 			}
@@ -313,7 +317,7 @@ func extractZip(filename, dest string) ([]string, error) {
 }
 
 // extractTarGz extracts the files from a tar.gz archive.
-func extractTarGz(filename, dest string) ([]string, error) {
+func extractTarGz(filename, dest string) ([]string, *gerr.GatewayDError) {
 	// Open and extract the tar.gz file.
 	gzipStream, err := os.Open(filename)
 	if err != nil {
@@ -362,8 +366,10 @@ func extractTarGz(filename, dest string) ([]string, error) {
 			outFilename := path.Join(filepath.Clean(dest), filepath.Clean(header.Name))
 
 			// Check for TarSlip.
-			if strings.HasPrefix(outFilename, string(os.PathSeparator)) {
-				return nil, gerr.ErrExtractFailed.Wrap(err)
+			if !skipPathSlipVerification &&
+				strings.HasPrefix(outFilename, string(os.PathSeparator)) {
+				return nil, gerr.ErrExtractFailed.Wrap(
+					fmt.Errorf("illegal file path: %s", outFilename))
 			}
 
 			// Create the file.
@@ -417,8 +423,11 @@ func findAsset(release *github.RepositoryRelease, match func(string) bool) (stri
 
 // downloadFile downloads the plugin from the given GitHub URL from the release assets.
 func downloadFile(
-	client *github.Client, account, pluginName string, releaseID int64, filename string,
-) (string, error) {
+	client *github.Client,
+	account, pluginName string,
+	releaseID int64,
+	filename, outputDir string,
+) (string, *gerr.GatewayDError) {
 	// Download the plugin.
 	readCloser, redirectURL, err := client.Repositories.DownloadReleaseAsset(
 		context.Background(), account, pluginName, releaseID, http.DefaultClient)
@@ -452,11 +461,29 @@ func downloadFile(
 	}
 
 	// Create the output file in the current directory and write the downloaded content.
-	cwd, err := os.Getwd()
+	var filePath string
+	if outputDir == "" {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return "", gerr.ErrDownloadFailed.Wrap(err)
+		}
+		filePath = path.Join([]string{cwd, filename}...)
+	} else {
+		filePath = path.Join([]string{outputDir, filename}...)
+	}
+
+	absPath, err := filepath.Abs(filePath)
 	if err != nil {
 		return "", gerr.ErrDownloadFailed.Wrap(err)
 	}
-	filePath := path.Join([]string{cwd, filename}...)
+
+	// If the file exists and is not empty, return the file path.
+	// NOTE: This is to prevent re-downloading the same file.
+	// The user can delete the file and re-run the command to download the file again.
+	if fileInfo, err := os.Stat(absPath); err == nil && fileInfo.Size() > 0 {
+		return absPath, nil
+	}
+
 	output, err := os.Create(filePath)
 	if err != nil {
 		return "", gerr.ErrDownloadFailed.Wrap(err)
@@ -618,24 +645,38 @@ func installPlugin(cmd *cobra.Command, pluginURL string) {
 			return
 		}
 
+		// Create the output directory if it doesn't exist.
+		if err := os.MkdirAll(pluginOutputDir, FolderPermissions); err != nil {
+			cmd.Println("There was an error creating the output directory: ", err)
+			return
+		}
+
+		// The output directory should be an absolute path.
+		pluginOutputDir, err = filepath.Abs(pluginOutputDir)
+		if err != nil {
+			cmd.Println("There was an error getting the absolute path: ", err)
+			return
+		}
+
 		// Find and download the plugin binary from the release assets.
 		pluginFilename, downloadURL, releaseID = findAsset(release, func(name string) bool {
 			return strings.Contains(name, runtime.GOOS) &&
 				strings.Contains(name, runtime.GOARCH) &&
 				strings.Contains(name, string(archiveExt))
 		})
-		var filePath string
 		if downloadURL != "" && releaseID != 0 {
 			cmd.Println("Downloading", downloadURL)
-			filePath, err = downloadFile(client, account, pluginName, releaseID, pluginFilename)
+			filePath, gErr := downloadFile(
+				client, account, pluginName, releaseID, pluginFilename, pluginOutputDir)
 			toBeDeleted = append(toBeDeleted, filePath)
-			if err != nil {
-				cmd.Println("Download failed: ", err)
+			if gErr != nil {
+				cmd.Println("Download failed: ", gErr)
 				if cleanup {
 					deleteFiles(toBeDeleted)
 				}
 				return
 			}
+			cmd.Println("File downloaded to", filePath)
 			cmd.Println("Download completed successfully")
 		} else {
 			cmd.Println("The plugin file could not be found in the release assets")
@@ -648,15 +689,17 @@ func installPlugin(cmd *cobra.Command, pluginURL string) {
 		})
 		if checksumsFilename != "" && downloadURL != "" && releaseID != 0 {
 			cmd.Println("Downloading", downloadURL)
-			filePath, err = downloadFile(client, account, pluginName, releaseID, checksumsFilename)
+			filePath, gErr := downloadFile(
+				client, account, pluginName, releaseID, checksumsFilename, pluginOutputDir)
 			toBeDeleted = append(toBeDeleted, filePath)
-			if err != nil {
-				cmd.Println("Download failed: ", err)
+			if gErr != nil {
+				cmd.Println("Download failed: ", gErr)
 				if cleanup {
 					deleteFiles(toBeDeleted)
 				}
 				return
 			}
+			cmd.Println("File downloaded to", filePath)
 			cmd.Println("Download completed successfully")
 		} else {
 			cmd.Println("The checksum file could not be found in the release assets")
@@ -779,18 +822,19 @@ func installPlugin(cmd *cobra.Command, pluginURL string) {
 
 	// Extract the archive.
 	var filenames []string
+	var gErr *gerr.GatewayDError
 	switch archiveExt {
 	case ExtensionZip:
-		filenames, err = extractZip(pluginFilename, pluginOutputDir)
+		filenames, gErr = extractZip(pluginFilename, pluginOutputDir)
 	case ExtensionTarGz:
-		filenames, err = extractTarGz(pluginFilename, pluginOutputDir)
+		filenames, gErr = extractTarGz(pluginFilename, pluginOutputDir)
 	default:
 		cmd.Println("Invalid archive extension")
 		return
 	}
 
-	if err != nil {
-		cmd.Println("There was an error extracting the plugin archive: ", err)
+	if gErr != nil {
+		cmd.Println("There was an error extracting the plugin archive:", gErr)
 		if cleanup {
 			deleteFiles(toBeDeleted)
 		}

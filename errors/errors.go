@@ -48,6 +48,7 @@ const (
 	ErrCodeAsyncAction
 	ErrCodeEvalError
 	ErrCodeMsgEncodeError
+	ErrCodePathSlipError
 )
 
 var (
