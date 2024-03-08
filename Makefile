@@ -128,3 +128,6 @@ gen:
 
 update:
 	@buf mod update
+
+gen-docs:
+	@go run main.go gen-docs

@@ -6,6 +6,11 @@
 
 ## Development Checklist
 
+<!--
+Not all of these are mandatory or sometimes relevant.
+Please ignore any that don't apply to your PR.
+-->
+
 - [ ] I have added a descriptive title to this PR.
 - [ ] I have squashed related commits together.
 - [ ] I have rebased my branch on top of the latest main branch.
