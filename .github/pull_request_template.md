@@ -6,6 +6,11 @@
 
 ## Development Checklist
 
+<!--
+Not all of these are mandatory or sometimes relevant.
+Please ignore any that don't apply to your PR.
+-->
+
 - [ ] I have added a descriptive title to this PR.
 - [ ] I have squashed related commits together.
 - [ ] I have rebased my branch on top of the latest main branch.
@@ -13,6 +18,7 @@
 - [ ] I have commented on my code, particularly in hard-to-understand areas.
 - [ ] I have added docstring(s) to my code.
 - [ ] I have made corresponding changes to the documentation (docs).
+- [ ] I have updated docs using `make gen-docs` command.
 - [ ] I have added tests for my changes.
 - [ ] I have signed all the commits.
 
