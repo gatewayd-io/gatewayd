@@ -18,6 +18,7 @@ Please ignore any that don't apply to your PR.
 - [ ] I have commented on my code, particularly in hard-to-understand areas.
 - [ ] I have added docstring(s) to my code.
 - [ ] I have made corresponding changes to the documentation (docs).
+- [ ] I have updated docs using `make gen-docs` command.
 - [ ] I have added tests for my changes.
 - [ ] I have signed all the commits.
 
