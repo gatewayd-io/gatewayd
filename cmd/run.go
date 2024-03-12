@@ -285,7 +285,7 @@ var runCmd = &cobra.Command{
 		// Create a new act registry given the built-in signals, policies, and actions.
 		actRegistry = act.NewActRegistry(
 			act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
-			conf.Plugin.DefaultPolicy, conf.Plugin.PolicyTimeout, logger,
+			conf.Plugin.DefaultPolicy, conf.Plugin.PolicyTimeout, conf.Plugin.ActionTimeout, logger,
 		)
 
 		if actRegistry == nil {

@@ -11,6 +11,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spf13/cast"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // Test_NewRegistry tests the NewRegistry function.
@@ -19,7 +20,7 @@ func Test_NewRegistry(t *testing.T) {
 
 	actRegistry := NewActRegistry(
 		BuiltinSignals(), BuiltinPolicies(), BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
+		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
 	assert.NotNil(t, actRegistry)
 	assert.NotNil(t, actRegistry.Signals)
 	assert.NotNil(t, actRegistry.Policies)
@@ -34,7 +35,7 @@ func Test_NewRegistry_NilBuiltins(t *testing.T) {
 	buf := bytes.Buffer{}
 	logger := zerolog.New(&buf)
 	actRegistry := NewActRegistry(
-		nil, nil, nil, config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
+		nil, nil, nil, config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
 	assert.Nil(t, actRegistry)
 	assert.Contains(t, buf.String(), "Builtin signals, policies, or actions are nil, not adding")
 }
@@ -49,7 +50,7 @@ func Test_NewRegistry_NilSignal(t *testing.T) {
 			"bad": nil,
 		},
 		BuiltinPolicies(), BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
+		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
 	assert.Nil(t, actRegistry)
 	assert.Contains(t, buf.String(), "Signal is nil, not adding")
 }
@@ -65,7 +66,7 @@ func Test_NewRegistry_NilPolicy(t *testing.T) {
 			"bad": nil,
 		},
 		BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
+		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
 	assert.Nil(t, actRegistry)
 	assert.Contains(t, buf.String(), "Policy is nil, not adding")
 }
@@ -80,7 +81,7 @@ func Test_NewRegistry_NilAction(t *testing.T) {
 		map[string]*sdkAct.Action{
 			"bad": nil,
 		},
-		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
+		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
 	assert.Nil(t, actRegistry)
 	assert.Contains(t, buf.String(), "Action is nil, not adding")
 }
@@ -89,7 +90,7 @@ func Test_NewRegistry_NilAction(t *testing.T) {
 func Test_Add(t *testing.T) {
 	actRegistry := NewActRegistry(
 		BuiltinSignals(), BuiltinPolicies(), BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, zerolog.Logger{})
+		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, zerolog.Logger{})
 	assert.NotNil(t, actRegistry)
 
 	assert.Len(t, actRegistry.Policies, len(BuiltinPolicies()))
@@ -107,7 +108,7 @@ func Test_Add_NilPolicy(t *testing.T) {
 	logger := zerolog.New(&buf)
 	actRegistry := NewActRegistry(
 		BuiltinSignals(), map[string]*sdkAct.Policy{}, BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
+		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
 	assert.NotNil(t, actRegistry)
 
 	assert.Len(t, actRegistry.Policies, 0)
@@ -122,7 +123,7 @@ func Test_Add_ExistentPolicy(t *testing.T) {
 	logger := zerolog.New(&buf)
 	actRegistry := NewActRegistry(
 		BuiltinSignals(), BuiltinPolicies(), BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
+		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
 	assert.NotNil(t, actRegistry)
 
 	assert.Len(t, actRegistry.Policies, len(BuiltinPolicies()))
@@ -135,7 +136,7 @@ func Test_Add_ExistentPolicy(t *testing.T) {
 func Test_Apply(t *testing.T) {
 	actRegistry := NewActRegistry(
 		BuiltinSignals(), BuiltinPolicies(), BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, zerolog.Logger{})
+		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, zerolog.Logger{})
 	assert.NotNil(t, actRegistry)
 
 	outputs := actRegistry.Apply([]sdkAct.Signal{
@@ -157,7 +158,7 @@ func Test_Apply_NoSignals(t *testing.T) {
 	logger := zerolog.New(&buf)
 	actRegistry := NewActRegistry(
 		BuiltinSignals(), BuiltinPolicies(), BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
+		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
 	assert.NotNil(t, actRegistry)
 
 	outputs := actRegistry.Apply([]sdkAct.Signal{})
@@ -196,7 +197,7 @@ func Test_Apply_ContradictorySignals(t *testing.T) {
 	logger := zerolog.New(&buf)
 	actRegistry := NewActRegistry(
 		BuiltinSignals(), BuiltinPolicies(), BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
+		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
 	assert.NotNil(t, actRegistry)
 
 	for _, s := range signals {
@@ -234,7 +235,7 @@ func Test_Apply_ActionNotMatched(t *testing.T) {
 	logger := zerolog.New(&buf)
 	actRegistry := NewActRegistry(
 		BuiltinSignals(), BuiltinPolicies(), BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
+		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
 	assert.NotNil(t, actRegistry)
 
 	outputs := actRegistry.Apply([]sdkAct.Signal{
@@ -262,7 +263,7 @@ func Test_Apply_PolicyNotMatched(t *testing.T) {
 			"passthrough": BuiltinPolicies()["passthrough"],
 		},
 		BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
+		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
 	assert.NotNil(t, actRegistry)
 
 	outputs := actRegistry.Apply([]sdkAct.Signal{
@@ -305,7 +306,7 @@ func Test_Apply_NonBoolPolicy(t *testing.T) {
 			BuiltinSignals(),
 			policies,
 			BuiltinActions(),
-			config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
+			config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
 		assert.NotNil(t, actRegistry)
 
 		outputs := actRegistry.Apply([]sdkAct.Signal{
@@ -348,7 +349,7 @@ func Test_Apply_BadPolicy(t *testing.T) {
 			BuiltinSignals(),
 			policies,
 			BuiltinActions(),
-			config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
+			config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
 		assert.Nil(t, actRegistry)
 	}
 }
@@ -358,7 +359,7 @@ func Test_Run(t *testing.T) {
 	logger := zerolog.Logger{}
 	actRegistry := NewActRegistry(
 		BuiltinSignals(), BuiltinPolicies(), BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
+		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
 	assert.NotNil(t, actRegistry)
 
 	outputs := actRegistry.Apply([]sdkAct.Signal{
@@ -376,7 +377,7 @@ func Test_Run_Terminate(t *testing.T) {
 	logger := zerolog.Logger{}
 	actRegistry := NewActRegistry(
 		BuiltinSignals(), BuiltinPolicies(), BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
+		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
 	assert.NotNil(t, actRegistry)
 
 	outputs := actRegistry.Apply([]sdkAct.Signal{
@@ -402,7 +403,7 @@ func Test_Run_Async(t *testing.T) {
 	logger := zerolog.New(&out)
 	actRegistry := NewActRegistry(
 		BuiltinSignals(), BuiltinPolicies(), BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
+		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
 	assert.NotNil(t, actRegistry)
 
 	outputs := actRegistry.Apply([]sdkAct.Signal{
@@ -441,7 +442,7 @@ func Test_Run_NilOutput(t *testing.T) {
 	logger := zerolog.New(&buf)
 	actRegistry := NewActRegistry(
 		BuiltinSignals(), BuiltinPolicies(), BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
+		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
 	assert.NotNil(t, actRegistry)
 
 	result, err := actRegistry.Run(nil, WithLogger(logger))
@@ -456,11 +457,92 @@ func Test_Run_ActionNotExist(t *testing.T) {
 	logger := zerolog.New(&buf)
 	actRegistry := NewActRegistry(
 		BuiltinSignals(), BuiltinPolicies(), BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
+		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
 	assert.NotNil(t, actRegistry)
 
 	result, err := actRegistry.Run(&sdkAct.Output{}, WithLogger(logger))
 	assert.Nil(t, result)
 	assert.Equal(t, err, gerr.ErrActionNotExist)
 	assert.Contains(t, buf.String(), "Action does not exist, run aborted")
+}
+
+// Test_Run_Timeout tests the Run function of the action with a timeout.
+func Test_Run_Timeout(t *testing.T) {
+	tests := []struct {
+		name           string
+		isAsync        bool
+		expectedErr    error
+		expectedLog    string
+		expectedResult any
+		timeout        time.Duration
+	}{
+		{
+			name:           "sync action",
+			isAsync:        false,
+			expectedErr:    gerr.ErrRunningActionTimeout,
+			expectedLog:    "",
+			timeout:        1 * time.Millisecond,
+			expectedResult: nil,
+		},
+		{
+			name:           "async action",
+			isAsync:        true,
+			expectedErr:    gerr.ErrAsyncAction,
+			expectedLog:    "{\"level\":\"error\",\"action\":\"waitAsync\",\"message\":\"Action timed out\"}",
+			timeout:        1 * time.Millisecond,
+			expectedResult: nil,
+		},
+		{
+			name:           "action with no timeout",
+			isAsync:        false,
+			expectedErr:    nil,
+			expectedLog:    "",
+			timeout:        0,
+			expectedResult: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			isAsync := test.isAsync
+			name, actions, signals, policies := createWaitActEntities(isAsync)
+			out := bytes.Buffer{}
+			logger := zerolog.New(&out)
+			actRegistry := NewActRegistry(
+				signals, policies, actions,
+				config.DefaultPolicy, config.DefaultPolicyTimeout, test.timeout, logger)
+			assert.NotNil(t, actRegistry)
+
+			outputs := actRegistry.Apply([]sdkAct.Signal{*signals[name]})
+			assert.NotNil(t, outputs)
+			assert.Equal(t, name, outputs[0].MatchedPolicy)
+			assert.Equal(t,
+				map[string]interface{}{
+					"async":   isAsync,
+					"level":   "info",
+					"log":     true,
+					"message": "test",
+				},
+				outputs[0].Metadata,
+			)
+			assert.Equal(t, !isAsync, outputs[0].Sync)
+			assert.True(t, cast.ToBool(outputs[0].Verdict))
+			assert.False(t, outputs[0].Terminal)
+
+			result, err := actRegistry.Run(outputs[0], WithResult(map[string]any{}))
+			if test.expectedErr != nil {
+				require.NotNil(t, err)
+				assert.ErrorIs(t, err, test.expectedErr)
+			} else {
+				require.Nil(t, err)
+			}
+			assert.Equal(t, test.expectedResult, result)
+
+			if isAsync {
+				time.Sleep(3 * time.Millisecond)
+			}
+			if test.expectedLog != "" {
+				assert.Contains(t, out.String(), test.expectedLog)
+			}
+		})
+	}
 }
