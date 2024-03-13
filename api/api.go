@@ -14,6 +14,7 @@ import (
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
 	"github.com/rs/zerolog"
+	"go.opentelemetry.io/otel"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -52,8 +53,8 @@ func (a *API) Version(context.Context, *emptypb.Empty) (*v1.VersionResponse, err
 // GetGlobalConfig returns the global configuration of the GatewayD.
 //
 //nolint:wrapcheck
-func (a *API) GetGlobalConfig(_ context.Context, group *v1.Group) (*structpb.Struct, error) {
-	span := otel.Tacer(config.TracerName).Start(ctx, "GetGlobalConfig")
+func (a *API) GetGlobalConfig(ctx context.Context, group *v1.Group) (*structpb.Struct, error) {
+	_, span := otel.Tracer(config.TracerName).Start(ctx, "Get Global Config")
 	defer span.End()
 	var (
 		jsonData []byte
