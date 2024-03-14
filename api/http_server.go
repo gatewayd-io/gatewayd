@@ -3,22 +3,53 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io/fs"
 	"net/http"
+	"time"
 
 	v1 "github.com/gatewayd-io/gatewayd/api/v1"
 	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
+
+const headerReadTimeout = 10 * time.Second
 
 type Healthz struct {
 	Status string `json:"status"`
 }
 
-// StartHTTPAPI starts the HTTP API.
-func StartHTTPAPI(options *Options) {
+type HTTPServer struct {
+	httpServer *http.Server
+	options    *Options
+	logger     zerolog.Logger
+}
+
+// NewHTTPServer creates a new HTTP server.
+func NewHTTPServer(options *Options) *HTTPServer {
+	httpServer := createHTTPAPI(options)
+	return &HTTPServer{
+		httpServer: httpServer,
+		options:    options,
+		logger:     options.Logger,
+	}
+}
+
+// Start starts the HTTP server.
+func (s *HTTPServer) Start() {
+	s.start(s.options, s.httpServer)
+}
+
+// Shutdown shuts down the HTTP server.
+func (s *HTTPServer) Shutdown(ctx context.Context) {
+	s.shutdown(ctx, s.httpServer, s.logger)
+}
+
+// CreateHTTPAPI creates a new HTTP API.
+func createHTTPAPI(options *Options) *http.Server {
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -73,13 +104,31 @@ func StartHTTPAPI(options *Options) {
 		fsys, err := fs.Sub(swaggerUI, "v1/swagger-ui")
 		if err != nil {
 			options.Logger.Err(err).Msg("failed to serve swagger-ui")
-			return
+			return nil
 		}
 		mux.Handle("/swagger-ui/", http.StripPrefix("/swagger-ui/", http.FileServer(http.FS(fsys))))
 	}
 
+	server := &http.Server{
+		Addr:              options.HTTPAddress,
+		Handler:           mux,
+		ReadHeaderTimeout: headerReadTimeout,
+	}
+
+	return server
+}
+
+// start starts the HTTP API.
+func (s *HTTPServer) start(options *Options, server *http.Server) {
 	// Start HTTP server (and proxy calls to gRPC server endpoint)
-	if err := http.ListenAndServe(options.HTTPAddress, mux); err != nil { //nolint:gosec
+	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		options.Logger.Err(err).Msg("failed to start HTTP API")
+	}
+}
+
+// shutdown shuts down the HTTP API.
+func (s *HTTPServer) shutdown(ctx context.Context, server *http.Server, logger zerolog.Logger) {
+	if err := server.Shutdown(ctx); err != nil {
+		logger.Err(err).Msg("failed to shutdown HTTP API")
 	}
 }

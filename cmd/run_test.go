@@ -63,6 +63,8 @@ func Test_runCmd(t *testing.T) {
 			loggers[config.Default],
 			servers,
 			stopChan,
+			nil,
+			nil,
 		)
 
 		waitGroup.Done()
@@ -118,6 +120,8 @@ func Test_runCmdWithTLS(t *testing.T) {
 			loggers[config.Default],
 			servers,
 			stopChan,
+			nil,
+			nil,
 		)
 
 		waitGroup.Done()
@@ -175,6 +179,8 @@ func Test_runCmdWithMultiTenancy(t *testing.T) {
 			loggers[config.Default],
 			servers,
 			stopChan,
+			nil,
+			nil,
 		)
 
 		waitGroup.Done()
@@ -252,6 +258,8 @@ func Test_runCmdWithCachePlugin(t *testing.T) {
 			loggers[config.Default],
 			servers,
 			stopChan,
+			nil,
+			nil,
 		)
 
 		waitGroup.Done()
