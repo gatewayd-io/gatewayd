@@ -100,7 +100,7 @@ func (a *API) GetGlobalConfig(_ context.Context, group *v1.Group) (*structpb.Str
 
 // GetPluginConfig returns the plugin configuration of the GatewayD.
 func (a *API) GetPluginConfig(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
-	jsonData, err := json.Marshal(a.Config.PluginKoanf.All())
+	jsonData, err := json.Marshal(a.Config.Plugin)
 	if err != nil {
 		metrics.APIRequestsErrors.WithLabelValues(
 			"GET", "/v1/GatewayDPluginService/GetPluginConfig", codes.Internal.String(),
