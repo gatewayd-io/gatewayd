@@ -7,7 +7,7 @@ require (
 	github.com/NYTimes/gziphandler v1.1.1
 	github.com/codingsince1985/checksum v1.3.0
 	github.com/envoyproxy/protoc-gen-validate v1.0.4
-	github.com/gatewayd-io/gatewayd-plugin-sdk v0.2.6
+	github.com/gatewayd-io/gatewayd-plugin-sdk v0.2.7
 	github.com/getsentry/sentry-go v0.27.0
 	github.com/go-co-op/gocron v1.37.0
 	github.com/google/go-github/v53 v53.2.0
@@ -15,12 +15,12 @@ require (
 	github.com/hashicorp/go-hclog v1.6.2
 	github.com/hashicorp/go-plugin v1.6.0
 	github.com/invopop/jsonschema v0.12.0
-	github.com/jackc/pgx/v5 v5.5.4
+	github.com/jackc/pgx/v5 v5.5.5
 	github.com/knadh/koanf v1.5.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/prometheus/client_golang v1.19.0
 	github.com/prometheus/client_model v0.6.0
-	github.com/prometheus/common v0.49.0
+	github.com/prometheus/common v0.50.0
 	github.com/rs/zerolog v1.32.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/spf13/cast v1.6.0
@@ -32,10 +32,10 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.24.0
 	go.opentelemetry.io/otel/sdk v1.24.0
 	go.opentelemetry.io/otel/trace v1.24.0
-	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225
-	google.golang.org/genproto/googleapis/api v0.0.0-20240304212257-790db918fca8
-	google.golang.org/grpc v1.62.0
-	google.golang.org/protobuf v1.32.0
+	golang.org/x/exp v0.0.0-20240314144324-c7f7c6466f7f
+	google.golang.org/genproto/googleapis/api v0.0.0-20240314204616-9694c7771956
+	google.golang.org/grpc v1.62.1
+	google.golang.org/protobuf v1.33.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -56,7 +56,7 @@ require (
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/golang/protobuf v1.5.3 // indirect
+	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/yamux v0.1.1 // indirect
@@ -71,12 +71,12 @@ require (
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pganalyze/pg_query_go/v5 v5.1.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/prometheus/procfs v0.12.0 // indirect
+	github.com/prometheus/procfs v0.13.0 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/tetratelabs/wazero v1.6.1-0.20240124004658-4185e533bb18 // indirect
-	github.com/wasilibs/go-pgquery v0.0.0-20240124010238-c9a912d768dc // indirect
+	github.com/tetratelabs/wazero v1.7.0-pre.1.0.20240312010644-4242b5e21147 // indirect
+	github.com/wasilibs/go-pgquery v0.0.0-20240312013253-ea2c9a5ef70c // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	go.opentelemetry.io/otel/metric v1.24.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.1.0 // indirect
@@ -87,5 +87,5 @@ require (
 	golang.org/x/sys v0.18.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240304212257-790db918fca8 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240314204616-9694c7771956 // indirect
 )
