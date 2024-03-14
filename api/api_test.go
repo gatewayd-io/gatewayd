@@ -108,7 +108,7 @@ func TestGetPluginConfig(t *testing.T) {
 func TestGetPlugins(t *testing.T) {
 	actRegistry := act.NewActRegistry(
 		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, zerolog.Logger{})
+		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, zerolog.Logger{})
 	pluginRegistry := plugin.NewRegistry(
 		context.TODO(),
 		actRegistry,
@@ -137,7 +137,7 @@ func TestGetPlugins(t *testing.T) {
 func TestGetPluginsWithEmptyPluginRegistry(t *testing.T) {
 	actRegistry := act.NewActRegistry(
 		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, zerolog.Logger{})
+		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, zerolog.Logger{})
 	pluginRegistry := plugin.NewRegistry(
 		context.TODO(),
 		actRegistry,
@@ -229,6 +229,7 @@ func TestGetServers(t *testing.T) {
 	}
 	client := network.NewClient(context.TODO(), clientConfig, zerolog.Logger{}, nil)
 	newPool := pool.NewPool(context.TODO(), 1)
+	require.NotNil(t, newPool)
 	assert.Nil(t, newPool.Put(client.ID, client))
 
 	proxy := network.NewProxy(
@@ -246,7 +247,7 @@ func TestGetServers(t *testing.T) {
 
 	actRegistry := act.NewActRegistry(
 		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, zerolog.Logger{})
+		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, zerolog.Logger{})
 
 	pluginRegistry := plugin.NewRegistry(
 		context.TODO(),

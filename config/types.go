@@ -32,6 +32,7 @@ type PluginConfig struct {
 	Plugins             []Plugin      `json:"plugins"`
 	DefaultPolicy       string        `json:"defaultPolicy" jsonschema:"enum=passthrough,enum=terminate"` // TODO: Add more policies.
 	PolicyTimeout       time.Duration `json:"policyTimeout" jsonschema:"oneof_type=string;integer"`
+	ActionTimeout       time.Duration `json:"actionTimeout" jsonschema:"oneof_type=string;integer"`
 	Policies            []Policy      `json:"policies"`
 }
 

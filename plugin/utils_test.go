@@ -92,7 +92,7 @@ func Test_applyPolicies(t *testing.T) {
 	logger := zerolog.Logger{}
 	actRegistry := act.NewActRegistry(
 		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, logger,
+		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger,
 	)
 
 	output := applyPolicies(

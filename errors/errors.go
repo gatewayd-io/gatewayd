@@ -148,6 +148,8 @@ var (
 		ErrCodeRunError, "error running action", nil)
 	ErrAsyncAction = NewGatewayDError(
 		ErrCodeAsyncAction, "async action", nil)
+	ErrRunningActionTimeout = NewGatewayDError(
+		ErrCodeRunError, "timeout running action", nil)
 	ErrActionNotMatched = NewGatewayDError(
 		ErrCodeKeyNotFound, "no matching action", nil)
 	ErrPolicyNotMatched = NewGatewayDError(

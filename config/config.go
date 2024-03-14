@@ -214,6 +214,7 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 		StartTimeout:        DefaultPluginStartTimeout,
 		DefaultPolicy:       DefaultPolicy,
 		PolicyTimeout:       DefaultPolicyTimeout,
+		ActionTimeout:       DefaultActionTimeout,
 		Policies:            []Policy{},
 	}
 

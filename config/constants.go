@@ -125,4 +125,5 @@ const (
 	// Act.
 	DefaultPolicy        = "passthrough"
 	DefaultPolicyTimeout = 30 * time.Second
+	DefaultActionTimeout = 30 * time.Second
 )

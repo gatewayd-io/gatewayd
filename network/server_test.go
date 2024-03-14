@@ -41,7 +41,7 @@ func TestRunServer(t *testing.T) {
 
 	actRegistry := act.NewActRegistry(
 		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, logger)
+		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
 	pluginRegistry := plugin.NewRegistry(
 		context.Background(),
 		actRegistry,
