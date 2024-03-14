@@ -93,6 +93,8 @@ func StopGracefully(
 	logger zerolog.Logger,
 	servers map[string]*network.Server,
 	stopChan chan struct{},
+	httpServer *api.HTTPServer,
+	grpcServer *api.GRPCServer,
 ) {
 	_, span := otel.Tracer(config.TracerName).Start(runCtx, "Shutdown server")
 	signal := "unknown"
@@ -154,6 +156,18 @@ func StopGracefully(
 		span.AddEvent("Stopped plugin registry")
 	}
 	span.End()
+
+	if httpServer != nil {
+		httpServer.Shutdown(runCtx)
+		logger.Info().Msg("Stopped HTTP Server")
+		span.AddEvent("Stopped HTTP Server")
+	}
+
+	if grpcServer != nil {
+		grpcServer.Shutdown(runCtx)
+		logger.Info().Msg("Stopped gRPC Server")
+		span.AddEvent("Stopped gRPC Server")
+	}
 
 	// Close the stop channel to notify the other goroutines to stop.
 	stopChan <- struct{}{}
@@ -568,6 +582,10 @@ var runCmd = &cobra.Command{
 			logger.Error().Msg("Failed to get loggers from config")
 		}
 
+		// Declare httpServer and grpcServer here as it is used in the StopGracefully function ahead of their definition.
+		var httpServer *api.HTTPServer
+		var grpcServer *api.GRPCServer
+
 		_, span = otel.Tracer(config.TracerName).Start(runCtx, "Create pools and clients")
 		// Create and initialize pools of connections.
 		for name, cfg := range conf.Global.Pools {
@@ -729,6 +747,8 @@ var runCmd = &cobra.Command{
 						logger,
 						servers,
 						stopChan,
+						httpServer,
+						grpcServer,
 					)
 				}
 			}
@@ -876,25 +896,27 @@ var runCmd = &cobra.Command{
 				Servers:     servers,
 			}
 
-			go api.StartGRPCAPI(
-				&api.API{
-					Options:        &apiOptions,
-					Config:         conf,
-					PluginRegistry: pluginRegistry,
-					Pools:          pools,
-					Proxies:        proxies,
-					Servers:        servers,
-				},
-				&api.HealthChecker{Servers: servers})
+			apiObj := &api.API{
+				Options:        &apiOptions,
+				Config:         conf,
+				PluginRegistry: pluginRegistry,
+				Pools:          pools,
+				Proxies:        proxies,
+				Servers:        servers,
+			}
+			grpcServer = api.NewGRPCServer(apiObj, &api.HealthChecker{Servers: servers})
+			go grpcServer.Start()
 			logger.Info().Str("address", apiOptions.HTTPAddress).Msg("Started the HTTP API")
 
-			go api.StartHTTPAPI(&apiOptions)
+			httpServer = api.NewHTTPServer(&apiOptions)
+			go httpServer.Start()
+
 			logger.Info().Fields(
 				map[string]interface{}{
 					"network": apiOptions.GRPCNetwork,
 					"address": apiOptions.GRPCAddress,
 				},
-			).Msg("Started the gRPC API")
+			).Msg("Started the gRPC Server")
 		}
 
 		// Report usage statistics.
@@ -960,6 +982,8 @@ var runCmd = &cobra.Command{
 			metricsMerger *metrics.Merger,
 			metricsServer *http.Server,
 			stopChan chan struct{},
+			httpServer *api.HTTPServer,
+			grpcServer *api.GRPCServer,
 		) {
 			for sig := range signalsCh {
 				for _, s := range signals {
@@ -973,12 +997,14 @@ var runCmd = &cobra.Command{
 							logger,
 							servers,
 							stopChan,
+							httpServer,
+							grpcServer,
 						)
 						os.Exit(0)
 					}
 				}
 			}
-		}(pluginRegistry, logger, servers, metricsMerger, metricsServer, stopChan)
+		}(pluginRegistry, logger, servers, metricsMerger, metricsServer, stopChan, httpServer, grpcServer)
 
 		_, span = otel.Tracer(config.TracerName).Start(runCtx, "Start servers")
 		// Start the server.
