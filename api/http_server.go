@@ -50,16 +50,12 @@ func (s *HTTPServer) Shutdown(ctx context.Context) {
 
 // CreateHTTPAPI creates a new HTTP API.
 func createHTTPAPI(options *Options) *http.Server {
-	ctx := context.Background()
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
 	// Register gRPC server endpoint
 	// TODO: Make this configurable with TLS and Auth.
 	rmux := runtime.NewServeMux()
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 	err := v1.RegisterGatewayDAdminAPIServiceHandlerFromEndpoint(
-		ctx, rmux, options.GRPCAddress, opts)
+		context.Background(), rmux, options.GRPCAddress, opts)
 	if err != nil {
 		options.Logger.Err(err).Msg("failed to start HTTP API")
 	}
