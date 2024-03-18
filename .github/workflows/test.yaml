@@ -73,6 +73,9 @@ jobs:
           skip-pkg-cache: true
           install-mode: "goinstall"
 
+      - name: Lint BASH script with shellcheck 🚨
+        uses: ludeeus/action-shellcheck@master
+
       - name: Run Go tests 🔬
         run: go test -p 1 -cover -covermode atomic -coverprofile=profile.cov -v ./...
         env:
