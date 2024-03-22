@@ -11,11 +11,11 @@ type GatewayDError struct {
 }
 
 // NewGatewayDError creates a new GatewayDError.
-func NewGatewayDError(code ErrCode, message string, err error) *GatewayDError {
+func NewGatewayDError(gatewayDError GatewayDError) *GatewayDError {
 	return &GatewayDError{
-		Code:          code,
-		Message:       message,
-		OriginalError: err,
+		Code:          gatewayDError.Code,
+		Message:       gatewayDError.Message,
+		OriginalError: gatewayDError.OriginalError,
 	}
 }
 

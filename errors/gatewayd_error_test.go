@@ -9,7 +9,11 @@ import (
 
 // TestNewGatewayDError tests the creation of a new GatewayDError.
 func TestNewGatewayDError(t *testing.T) {
-	err := NewGatewayDError(ErrCodeUnknown, "test", nil)
+	err := NewGatewayDError(GatewayDError{
+		Code:          ErrCodeUnknown,
+		Message:       "test",
+		OriginalError: nil,
+	})
 	assert.NotNil(t, err)
 	assert.Equal(t, err.Code, ErrCodeUnknown)
 	assert.Equal(t, err.Error(), "test")
