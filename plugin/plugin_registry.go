@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"os/exec"
 	"sort"
 
 	semver "github.com/Masterminds/semver/v3"
@@ -467,7 +468,10 @@ func (reg *Registry) LoadPlugins(ctx context.Context, plugins []config.Plugin) {
 			&goplugin.ClientConfig{
 				HandshakeConfig: v1.Handshake,
 				Plugins:         v1.GetPluginMap(plugin.ID.Name),
-				Cmd:             NewCommand(plugin.LocalPath, plugin.Args, plugin.Env),
+				Cmd: NewCommand(exec.Cmd{
+					Path: plugin.LocalPath,
+					Args: plugin.Args,
+					Env:  plugin.Env}),
 				AllowedProtocols: []goplugin.Protocol{
 					goplugin.ProtocolGRPC,
 				},

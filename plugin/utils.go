@@ -20,10 +20,10 @@ func Verify(params, returnVal *structpb.Struct) bool {
 }
 
 // NewCommand returns a command with the given arguments and environment variables.
-func NewCommand(cmd string, args []string, env []string) *exec.Cmd {
-	command := exec.Command(cmd, args...)
-	if env != nil {
-		command.Env = append(command.Env, env...)
+func NewCommand(cmd exec.Cmd) *exec.Cmd {
+	command := exec.Command(cmd.Path, cmd.Args...)
+	if cmd.Env != nil {
+		command.Env = append(command.Env, cmd.Env...)
 	}
 	return command
 }
