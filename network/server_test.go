@@ -171,7 +171,7 @@ func TestRunServer(t *testing.T) {
 	err = pool.Put(client3.ID, client3)
 	assert.Nil(t, err)
 
-	// Create a proxy with a fixed buffer pool.
+	// Create a Proxy with a fixed buffer pool.
 	proxy := NewProxy(
 		context.Background(),
 		Proxy{
@@ -187,21 +187,22 @@ func TestRunServer(t *testing.T) {
 	// Create a server.
 	server := NewServer(
 		context.Background(),
-		"tcp",
-		"127.0.0.1:15432",
-		0,
-		0,
-		config.DefaultTickInterval,
-		[]gnet.Option{
-			gnet.WithMulticore(false),
-			gnet.WithReuseAddr(true),
-			gnet.WithReusePort(true),
-		},
-		proxy,
-		logger,
-		pluginRegistry,
-		config.DefaultPluginTimeout,
-	)
+		Server{
+			Network:      "tcp",
+			Address:      "127.0.0.1:15432",
+			SoftLimit:    0,
+			HardLimit:    0,
+			TickInterval: config.DefaultTickInterval,
+			Options: []gnet.Option{
+				gnet.WithMulticore(false),
+				gnet.WithReuseAddr(true),
+				gnet.WithReusePort(true),
+			},
+			Proxy:          proxy,
+			Logger:         logger,
+			PluginRegistry: pluginRegistry,
+			PluginTimeout:  config.DefaultPluginTimeout,
+		})
 	assert.NotNil(t, server)
 
 	go func(server *Server, errs chan error) {

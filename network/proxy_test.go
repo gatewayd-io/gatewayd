@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestNewProxy tests the creation of a new proxy with a fixed connection pool.
+// TestNewProxy tests the creation of a new Proxy with a fixed connection pool.
 func TestNewProxy(t *testing.T) {
 	logger := logging.NewLogger(context.Background(), logging.LoggerConfig{
 		Output:            []config.LogOutput{config.Console},
@@ -39,7 +39,7 @@ func TestNewProxy(t *testing.T) {
 	err := pool.Put(client.ID, client)
 	assert.Nil(t, err)
 
-	// Create a proxy with a fixed buffer pool
+	// Create a Proxy with a fixed buffer pool
 	pluginRegistry := plugin.NewRegistry(
 		context.Background(),
 		plugin.Registry{
@@ -74,7 +74,7 @@ func TestNewProxy(t *testing.T) {
 	assert.Equal(t, client, c)
 }
 
-// TestNewProxyElastic tests the creation of a new proxy with an elastic connection pool.
+// TestNewProxyElastic tests the creation of a new Proxy with an elastic connection pool.
 func TestNewProxyElastic(t *testing.T) {
 	logger := logging.NewLogger(context.Background(), logging.LoggerConfig{
 		Output:            []config.LogOutput{config.Console},
@@ -87,7 +87,7 @@ func TestNewProxyElastic(t *testing.T) {
 	// Create a connection pool
 	pool := pool.NewPool(context.Background(), config.EmptyPoolCapacity)
 
-	// Create a proxy with an elastic buffer pool
+	// Create a Proxy with an elastic buffer pool
 	pluginRegistry := plugin.NewRegistry(
 		context.Background(),
 		plugin.Registry{

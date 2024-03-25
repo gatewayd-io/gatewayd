@@ -40,13 +40,13 @@ type Proxy struct {
 	ReuseElasticClients bool
 	HealthCheckPeriod   time.Duration
 
-	// Client is used for elastic proxy and reconnection
+	// Client is used for elastic Proxy and reconnection
 	Client *Client
 }
 
 var _ IProxy = &Proxy{}
 
-// NewProxy creates a new proxy.
+// NewProxy creates a new Proxy.
 func NewProxy(
 	ctx context.Context,
 	pxy Proxy,
@@ -166,7 +166,7 @@ func (pr *Proxy) Connect(gconn gnet.Conn) *gerr.GatewayDError {
 	metrics.ProxiedConnections.Inc()
 
 	fields := map[string]interface{}{
-		"function": "proxy.connect",
+		"function": "Proxy.connect",
 		"client":   "unknown",
 		"server":   gconn.RemoteAddr().String(),
 	}
@@ -177,13 +177,13 @@ func (pr *Proxy) Connect(gconn gnet.Conn) *gerr.GatewayDError {
 
 	pr.Logger.Debug().Fields(
 		map[string]interface{}{
-			"function": "proxy.connect",
+			"function": "Proxy.connect",
 			"count":    pr.AvailableConnections.Size(),
 		},
 	).Msg("Available client connections")
 	pr.Logger.Debug().Fields(
 		map[string]interface{}{
-			"function": "proxy.connect",
+			"function": "Proxy.connect",
 			"count":    pr.busyConnections.Size(),
 		},
 	).Msg("Busy client connections")
@@ -232,13 +232,13 @@ func (pr *Proxy) Disconnect(gconn gnet.Conn) *gerr.GatewayDError {
 
 	pr.Logger.Debug().Fields(
 		map[string]interface{}{
-			"function": "proxy.disconnect",
+			"function": "Proxy.disconnect",
 			"count":    pr.AvailableConnections.Size(),
 		},
 	).Msg("Available client connections")
 	pr.Logger.Debug().Fields(
 		map[string]interface{}{
-			"function": "proxy.disconnect",
+			"function": "Proxy.disconnect",
 			"count":    pr.busyConnections.Size(),
 		},
 	).Msg("Busy client connections")
@@ -350,7 +350,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	if IsConnClosed(received, err) || IsConnTimedOut(err) {
 		pr.Logger.Debug().Fields(
 			map[string]interface{}{
-				"function": "proxy.passthrough",
+				"function": "Proxy.passthrough",
 				"local":    client.Conn.LocalAddr().String(),
 				"remote":   client.Conn.RemoteAddr().String(),
 			}).Msg("Client disconnected")
@@ -369,7 +369,7 @@ func (pr *Proxy) PassThrough(gconn gnet.Conn) *gerr.GatewayDError {
 	if received == 0 {
 		pr.Logger.Debug().Fields(
 			map[string]interface{}{
-				"function": "proxy.passthrough",
+				"function": "Proxy.passthrough",
 				"local":    client.Conn.LocalAddr().String(),
 				"remote":   client.Conn.RemoteAddr().String(),
 			}).Msg("No data to send to client")
@@ -558,7 +558,7 @@ func (pr *Proxy) sendTrafficToServer(client *Client, request []byte) (int, *gerr
 	}
 	pr.Logger.Debug().Fields(
 		map[string]interface{}{
-			"function": "proxy.passthrough",
+			"function": "Proxy.passthrough",
 			"length":   sent,
 			"local":    client.Conn.LocalAddr().String(),
 			"remote":   client.Conn.RemoteAddr().String(),
@@ -580,7 +580,7 @@ func (pr *Proxy) receiveTrafficFromServer(client *Client) (int, []byte, *gerr.Ga
 	received, response, err := client.Receive()
 	pr.Logger.Debug().Fields(
 		map[string]interface{}{
-			"function": "proxy.passthrough",
+			"function": "Proxy.passthrough",
 			"length":   received,
 			"local":    client.Conn.LocalAddr().String(),
 			"remote":   client.Conn.RemoteAddr().String(),
@@ -604,7 +604,7 @@ func (pr *Proxy) sendTrafficToClient(
 	origErr := gconn.AsyncWrite(response[:received], func(gconn gnet.Conn, err error) error {
 		pr.Logger.Debug().Fields(
 			map[string]interface{}{
-				"function": "proxy.passthrough",
+				"function": "Proxy.passthrough",
 				"length":   received,
 				"local":    gconn.LocalAddr().String(),
 				"remote":   gconn.RemoteAddr().String(),
@@ -634,7 +634,7 @@ func (pr *Proxy) shouldTerminate(result map[string]interface{}) bool {
 	// If the hook wants to terminate the connection, do it.
 	if result != nil {
 		if terminate, ok := result["terminate"].(bool); ok && terminate {
-			pr.Logger.Debug().Str("function", "proxy.passthrough").Msg("Terminating connection")
+			pr.Logger.Debug().Str("function", "Proxy.passthrough").Msg("Terminating connection")
 			return true
 		}
 	}

@@ -479,41 +479,42 @@ var runCmd = &cobra.Command{
 			softLimit, hardLimit := cfg.GetRLimits(logger)
 			servers[name] = network.NewServer(
 				runCtx,
-				cfg.Network,
-				cfg.Address,
-				softLimit,
-				hardLimit,
-				cfg.GetTickInterval(),
-				[]gnet.Option{
-					// Scheduling options
-					gnet.WithMulticore(cfg.MultiCore),
-					gnet.WithLockOSThread(cfg.LockOSThread),
-					// NumEventLoop overrides Multicore option.
-					// gnet.WithNumEventLoop(1),
+				network.Server{
+					Network:      cfg.Network,
+					Address:      cfg.Address,
+					SoftLimit:    softLimit,
+					HardLimit:    hardLimit,
+					TickInterval: cfg.GetTickInterval(),
+					Options: []gnet.Option{
+						// Scheduling options
+						gnet.WithMulticore(cfg.MultiCore),
+						gnet.WithLockOSThread(cfg.LockOSThread),
+						// NumEventLoop overrides Multicore option.
+						// gnet.WithNumEventLoop(1),
 
-					// Can be used to send keepalive messages to the client.
-					gnet.WithTicker(cfg.EnableTicker),
+						// Can be used to send keepalive messages to the client.
+						gnet.WithTicker(cfg.EnableTicker),
 
-					// Internal event-loop load balancing options
-					gnet.WithLoadBalancing(cfg.GetLoadBalancer()),
+						// Internal event-loop load balancing options
+						gnet.WithLoadBalancing(cfg.GetLoadBalancer()),
 
-					// Buffer options
-					gnet.WithReadBufferCap(cfg.ReadBufferCap),
-					gnet.WithWriteBufferCap(cfg.WriteBufferCap),
-					gnet.WithSocketRecvBuffer(cfg.SocketRecvBuffer),
-					gnet.WithSocketSendBuffer(cfg.SocketSendBuffer),
+						// Buffer options
+						gnet.WithReadBufferCap(cfg.ReadBufferCap),
+						gnet.WithWriteBufferCap(cfg.WriteBufferCap),
+						gnet.WithSocketRecvBuffer(cfg.SocketRecvBuffer),
+						gnet.WithSocketSendBuffer(cfg.SocketSendBuffer),
 
-					// TCP options
-					gnet.WithReuseAddr(cfg.ReuseAddress),
-					gnet.WithReusePort(cfg.ReusePort),
-					gnet.WithTCPKeepAlive(cfg.TCPKeepAlive),
-					gnet.WithTCPNoDelay(cfg.GetTCPNoDelay()),
-				},
-				proxies[name],
-				logger,
-				pluginRegistry,
-				conf.Plugin.Timeout,
-			)
+						// TCP options
+						gnet.WithReuseAddr(cfg.ReuseAddress),
+						gnet.WithReusePort(cfg.ReusePort),
+						gnet.WithTCPKeepAlive(cfg.TCPKeepAlive),
+						gnet.WithTCPNoDelay(cfg.GetTCPNoDelay()),
+					},
+					Proxy:          proxies[name],
+					Logger:         logger,
+					PluginRegistry: pluginRegistry,
+					PluginTimeout:  conf.Plugin.Timeout,
+				})
 
 			span.AddEvent("Create server", trace.WithAttributes(
 				attribute.String("name", name),
