@@ -56,7 +56,7 @@ type Registry struct {
 	plugins pool.IPool
 	hooks   map[v1.HookName]map[sdkPlugin.Priority]sdkPlugin.Method
 	ctx     context.Context //nolint:containedctx
-	devMode bool
+	DevMode bool
 
 	Logger        zerolog.Logger
 	Compatibility config.CompatibilityPolicy
@@ -68,15 +68,7 @@ type Registry struct {
 var _ IRegistry = &Registry{}
 
 // NewRegistry creates a new plugin registry.
-func NewRegistry(
-	ctx context.Context,
-	compatibility config.CompatibilityPolicy,
-	verification config.VerificationPolicy,
-	acceptance config.AcceptancePolicy,
-	termination config.TerminationPolicy,
-	logger zerolog.Logger,
-	devMode bool,
-) *Registry {
+func NewRegistry(ctx context.Context, registry Registry) *Registry {
 	regCtx, span := otel.Tracer(config.TracerName).Start(ctx, "Create new registry")
 	defer span.End()
 
@@ -84,12 +76,12 @@ func NewRegistry(
 		plugins:       pool.NewPool(regCtx, config.EmptyPoolCapacity),
 		hooks:         map[v1.HookName]map[sdkPlugin.Priority]sdkPlugin.Method{},
 		ctx:           regCtx,
-		devMode:       devMode,
-		Logger:        logger,
-		Compatibility: compatibility,
-		Verification:  verification,
-		Acceptance:    acceptance,
-		Termination:   termination,
+		DevMode:       registry.DevMode,
+		Logger:        registry.Logger,
+		Compatibility: registry.Compatibility,
+		Verification:  registry.Verification,
+		Acceptance:    registry.Acceptance,
+		Termination:   registry.Termination,
 	}
 }
 
@@ -431,7 +423,7 @@ func (reg *Registry) LoadPlugins(ctx context.Context, plugins []config.Plugin) {
 		}
 
 		var secureConfig *goplugin.SecureConfig
-		if !reg.devMode {
+		if !reg.DevMode {
 			// Checksum of the plugin.
 			if plugin.ID.Checksum == "" {
 				reg.Logger.Debug().Str("name", plugin.ID.Name).Msg(

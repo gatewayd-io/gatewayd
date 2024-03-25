@@ -42,13 +42,13 @@ func TestNewProxy(t *testing.T) {
 	// Create a proxy with a fixed buffer pool
 	pluginRegistry := plugin.NewRegistry(
 		context.Background(),
-		config.Loose,
-		config.PassDown,
-		config.Accept,
-		config.Stop,
-		logger,
-		false,
-	)
+		plugin.Registry{
+			Compatibility: config.Loose,
+			Verification:  config.PassDown,
+			Acceptance:    config.Accept,
+			Termination:   config.Stop,
+			Logger:        logger,
+		})
 	proxy := NewProxy(
 		context.Background(),
 		Proxy{
@@ -90,13 +90,13 @@ func TestNewProxyElastic(t *testing.T) {
 	// Create a proxy with an elastic buffer pool
 	pluginRegistry := plugin.NewRegistry(
 		context.Background(),
-		config.Loose,
-		config.PassDown,
-		config.Accept,
-		config.Stop,
-		logger,
-		false,
-	)
+		plugin.Registry{
+			Compatibility: config.Loose,
+			Verification:  config.PassDown,
+			Acceptance:    config.Accept,
+			Termination:   config.Stop,
+			Logger:        logger,
+		})
 	proxy := NewProxy(
 		context.Background(),
 		Proxy{

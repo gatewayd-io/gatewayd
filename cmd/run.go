@@ -142,12 +142,14 @@ var runCmd = &cobra.Command{
 		// The plugins are loaded and hooks registered before the configuration is loaded.
 		pluginRegistry = plugin.NewRegistry(
 			runCtx,
-			conf.Plugin.GetPluginCompatibilityPolicy(),
-			conf.Plugin.GetVerificationPolicy(),
-			conf.Plugin.GetAcceptancePolicy(),
-			conf.Plugin.GetTerminationPolicy(),
-			logger,
-			devMode,
+			plugin.Registry{
+				Compatibility: conf.Plugin.GetPluginCompatibilityPolicy(),
+				Verification:  conf.Plugin.GetVerificationPolicy(),
+				Acceptance:    conf.Plugin.GetAcceptancePolicy(),
+				Termination:   conf.Plugin.GetTerminationPolicy(),
+				Logger:        logger,
+				DevMode:       devMode,
+			},
 		)
 
 		// Load plugins and register their hooks.
@@ -429,6 +431,14 @@ var runCmd = &cobra.Command{
 
 			proxies[name] = network.NewProxy(
 				runCtx,
+				//pools[name],
+				//pluginRegistry,
+				//cfg.Elastic,
+				//cfg.ReuseElasticClients,
+				//cfg.HealthCheckPeriod,
+				//client,
+				//logger,
+				//conf.Plugin.Timeout,
 				network.Proxy{
 					AvailableConnections: pools[name],
 					PluginRegistry:       pluginRegistry,

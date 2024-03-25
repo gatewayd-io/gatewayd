@@ -27,13 +27,13 @@ func NewPluginRegistry(t *testing.T) *Registry {
 	logger := logging.NewLogger(context.Background(), cfg)
 	reg := NewRegistry(
 		context.Background(),
-		config.Loose,
-		config.PassDown,
-		config.Accept,
-		config.Stop,
-		logger,
-		false,
-	)
+		Registry{
+			Compatibility: config.Loose,
+			Verification:  config.PassDown,
+			Acceptance:    config.Accept,
+			Termination:   config.Stop,
+			Logger:        logger,
+		})
 	return reg
 }
 
