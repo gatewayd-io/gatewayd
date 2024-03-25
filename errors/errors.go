@@ -35,165 +35,165 @@ const (
 )
 
 var (
-	ErrClientNotFound = NewGatewayDError(GatewayDError{
+	ErrClientNotFound = &GatewayDError{
 		Code:          ErrCodeClientNotFound,
 		Message:       "client not found",
 		OriginalError: nil,
-	})
-	ErrNilContext = NewGatewayDError(GatewayDError{
+	}
+	ErrNilContext = &GatewayDError{
 		Code:          ErrCodeNilContext,
 		Message:       "context is nil",
 		OriginalError: nil,
-	})
-	ErrClientNotConnected = NewGatewayDError(GatewayDError{
+	}
+	ErrClientNotConnected = &GatewayDError{
 		Code:          ErrCodeClientNotConnected,
 		Message:       "client is not connected",
 		OriginalError: nil,
-	})
-	ErrClientConnectionFailed = NewGatewayDError(GatewayDError{
+	}
+	ErrClientConnectionFailed = &GatewayDError{
 		Code:          ErrCodeClientConnectionFailed,
 		Message:       "failed to create a new connection",
 		OriginalError: nil,
-	})
-	ErrNetworkNotSupported = NewGatewayDError(GatewayDError{
+	}
+	ErrNetworkNotSupported = &GatewayDError{
 		Code:          ErrCodeNetworkNotSupported,
 		Message:       "network is not supported",
 		OriginalError: nil,
-	})
-	ErrResolveFailed = NewGatewayDError(GatewayDError{
+	}
+	ErrResolveFailed = &GatewayDError{
 		Code:          ErrCodeResolveFailed,
 		Message:       "failed to resolve address",
 		OriginalError: nil,
-	})
-	ErrPoolExhausted = NewGatewayDError(GatewayDError{
+	}
+	ErrPoolExhausted = &GatewayDError{
 		Code:          ErrCodePoolExhausted,
 		Message:       "pool is exhausted",
 		OriginalError: nil,
-	})
-	ErrFailedToStartServer = NewGatewayDError(GatewayDError{
+	}
+	ErrFailedToStartServer = &GatewayDError{
 		Code:          ErrCodeStartServerFailed,
 		Message:       "failed to start server",
 		OriginalError: nil,
-	})
+	}
 
-	ErrPluginNotFound = NewGatewayDError(GatewayDError{
+	ErrPluginNotFound = &GatewayDError{
 		Code:          ErrCodePluginNotFound,
 		Message:       "plugin not found",
 		OriginalError: nil,
-	})
-	ErrPluginNotReady = NewGatewayDError(GatewayDError{
+	}
+	ErrPluginNotReady = &GatewayDError{
 		Code:          ErrCodePluginNotReady,
 		Message:       "plugin is not ready",
 		OriginalError: nil,
-	})
-	ErrFailedToStartPlugin = NewGatewayDError(GatewayDError{
+	}
+	ErrFailedToStartPlugin = &GatewayDError{
 		Code:          ErrCodeStartPluginFailed,
 		Message:       "failed to start plugin",
 		OriginalError: nil,
-	})
-	ErrFailedToGetRPCClient = NewGatewayDError(GatewayDError{
+	}
+	ErrFailedToGetRPCClient = &GatewayDError{
 		Code:          ErrCodeGetRPCClientFailed,
 		Message:       "failed to get RPC client",
 		OriginalError: nil,
-	})
-	ErrFailedToDispensePlugin = NewGatewayDError(GatewayDError{
+	}
+	ErrFailedToDispensePlugin = &GatewayDError{
 		Code:          ErrCodeDispensePluginFailed,
 		Message:       "failed to dispense plugin",
 		OriginalError: nil,
-	})
-	ErrFailedToMergePluginMetrics = NewGatewayDError(GatewayDError{
+	}
+	ErrFailedToMergePluginMetrics = &GatewayDError{
 		Code:          ErrCodePluginMetricsMergeFailed,
 		Message:       "failed to merge plugin metrics",
 		OriginalError: nil,
-	})
-	ErrFailedToPingPlugin = NewGatewayDError(GatewayDError{
+	}
+	ErrFailedToPingPlugin = &GatewayDError{
 		Code:          ErrCodePluginPingFailed,
 		Message:       "failed to ping plugin",
 		OriginalError: nil,
-	})
+	}
 
-	ErrClientReceiveFailed = NewGatewayDError(GatewayDError{
+	ErrClientReceiveFailed = &GatewayDError{
 		Code:          ErrCodeClientReceiveFailed,
 		Message:       "couldn't receive data from the server",
 		OriginalError: nil,
-	})
-	ErrClientSendFailed = NewGatewayDError(GatewayDError{
+	}
+	ErrClientSendFailed = &GatewayDError{
 		Code:          ErrCodeClientSendFailed,
 		Message:       "couldn't send data to the server",
 		OriginalError: nil,
-	})
+	}
 
-	ErrServerSendFailed = NewGatewayDError(GatewayDError{
+	ErrServerSendFailed = &GatewayDError{
 		Code:          ErrCodeServerSendFailed,
 		Message:       "couldn't send data to the client",
 		OriginalError: nil,
-	})
-	ErrServerReceiveFailed = NewGatewayDError(GatewayDError{
+	}
+	ErrServerReceiveFailed = &GatewayDError{
 		Code:          ErrCodeServerReceiveFailed,
 		Message:       "couldn't receive data from the client",
 		OriginalError: nil,
-	})
+	}
 
-	ErrPutFailed = NewGatewayDError(GatewayDError{
+	ErrPutFailed = &GatewayDError{
 		Code:          ErrCodePutFailed,
 		Message:       "failed to put in pool",
 		OriginalError: nil,
-	})
+	}
 
-	ErrCastFailed = NewGatewayDError(GatewayDError{
+	ErrCastFailed = &GatewayDError{
 		Code:          ErrCodeCastFailed,
 		Message:       "failed to cast",
 		OriginalError: nil,
-	})
+	}
 
-	ErrHookVerificationFailed = NewGatewayDError(GatewayDError{
+	ErrHookVerificationFailed = &GatewayDError{
 		Code:          ErrCodeHookVerificationFailed,
 		Message:       "failed to verify hook",
 		OriginalError: nil,
-	})
-	ErrHookReturnedError = NewGatewayDError(GatewayDError{
+	}
+	ErrHookReturnedError = &GatewayDError{
 		Code:          ErrCodeHookReturnedError,
 		Message:       "hook returned error",
 		OriginalError: nil,
-	})
-	ErrHookTerminatedConnection = NewGatewayDError(GatewayDError{
+	}
+	ErrHookTerminatedConnection = &GatewayDError{
 		Code:          ErrCodeHookTerminatedConnection,
 		Message:       "hook terminated connection",
 		OriginalError: nil,
-	})
+	}
 
-	ErrFileNotFound = NewGatewayDError(GatewayDError{
+	ErrFileNotFound = &GatewayDError{
 		Code:          ErrCodeFileNotFound,
 		Message:       "file not found",
 		OriginalError: nil,
-	})
-	ErrFileOpenFailed = NewGatewayDError(GatewayDError{
+	}
+	ErrFileOpenFailed = &GatewayDError{
 		Code:          ErrCodeFileOpenFailed,
 		Message:       "failed to open file",
 		OriginalError: nil,
-	})
-	ErrFileReadFailed = NewGatewayDError(GatewayDError{
+	}
+	ErrFileReadFailed = &GatewayDError{
 		Code:          ErrCodeFileReadFailed,
 		Message:       "failed to read file",
 		OriginalError: nil,
-	})
+	}
 
-	ErrDuplicateMetricsCollector = NewGatewayDError(GatewayDError{
+	ErrDuplicateMetricsCollector = &GatewayDError{
 		Code:          ErrCodeDuplicateMetricsCollector,
 		Message:       "duplicate metrics collector",
 		OriginalError: nil,
-	})
-	ErrInvalidMetricType = NewGatewayDError(GatewayDError{
+	}
+	ErrInvalidMetricType = &GatewayDError{
 		Code:          ErrCodeInvalidMetricType,
 		Message:       "invalid metric type",
 		OriginalError: nil,
-	})
+	}
 
-	ErrValidationFailed = NewGatewayDError(GatewayDError{
+	ErrValidationFailed = &GatewayDError{
 		Code:          ErrCodeValidationFailed,
 		Message:       "validation failed",
 		OriginalError: nil,
-	})
+	}
 )
 
 const (
