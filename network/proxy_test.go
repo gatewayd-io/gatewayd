@@ -27,7 +27,7 @@ func TestNewProxy(t *testing.T) {
 
 	client := NewClient(
 		context.Background(),
-		&config.Client{
+		&Client{
 			Network:            "tcp",
 			Address:            "localhost:5432",
 			ReceiveChunkSize:   config.DefaultChunkSize,
@@ -35,36 +35,35 @@ func TestNewProxy(t *testing.T) {
 			SendDeadline:       config.DefaultSendDeadline,
 			TCPKeepAlive:       false,
 			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
-		},
-		logger)
+		})
 	err := pool.Put(client.ID, client)
 	assert.Nil(t, err)
 
 	// Create a proxy with a fixed buffer pool
+	pluginRegistry := plugin.NewRegistry(
+		context.Background(),
+		config.Loose,
+		config.PassDown,
+		config.Accept,
+		config.Stop,
+		logger,
+		false,
+	)
 	proxy := NewProxy(
 		context.Background(),
-		pool,
-		plugin.NewRegistry(
-			context.Background(),
-			config.Loose,
-			config.PassDown,
-			config.Accept,
-			config.Stop,
-			logger,
-			false,
-		),
-		false,
-		false,
-		config.DefaultHealthCheckPeriod,
-		nil,
-		logger,
-		config.DefaultPluginTimeout)
+		Proxy{
+			AvailableConnections: pool,
+			PluginRegistry:       pluginRegistry,
+			HealthCheckPeriod:    config.DefaultHealthCheckPeriod,
+			Logger:               logger,
+			PluginTimeout:        config.DefaultPluginTimeout,
+		})
 	defer proxy.Shutdown()
 
 	assert.NotNil(t, proxy)
 	assert.Equal(t, 0, proxy.busyConnections.Size(), "Proxy should have no connected clients")
-	assert.Equal(t, 1, proxy.availableConnections.Size())
-	if c, ok := proxy.availableConnections.Pop(client.ID).(*Client); ok {
+	assert.Equal(t, 1, proxy.AvailableConnections.Size())
+	if c, ok := proxy.AvailableConnections.Pop(client.ID).(*Client); ok {
 		assert.NotEqual(t, "", c.ID)
 	}
 	assert.Equal(t, false, proxy.Elastic)
@@ -89,39 +88,41 @@ func TestNewProxyElastic(t *testing.T) {
 	pool := pool.NewPool(context.Background(), config.EmptyPoolCapacity)
 
 	// Create a proxy with an elastic buffer pool
+	pluginRegistry := plugin.NewRegistry(
+		context.Background(),
+		config.Loose,
+		config.PassDown,
+		config.Accept,
+		config.Stop,
+		logger,
+		false,
+	)
 	proxy := NewProxy(
 		context.Background(),
-		pool,
-		plugin.NewRegistry(
-			context.Background(),
-			config.Loose,
-			config.PassDown,
-			config.Accept,
-			config.Stop,
-			logger,
-			false,
-		),
-		true,
-		false,
-		config.DefaultHealthCheckPeriod,
-		&config.Client{
-			Network:            "tcp",
-			Address:            "localhost:5432",
-			ReceiveChunkSize:   config.DefaultChunkSize,
-			ReceiveDeadline:    config.DefaultReceiveDeadline,
-			SendDeadline:       config.DefaultSendDeadline,
-			TCPKeepAlive:       false,
-			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
-		},
-		logger,
-		config.DefaultPluginTimeout)
+		Proxy{
+			AvailableConnections: pool,
+			Elastic:              true,
+			HealthCheckPeriod:    config.DefaultHealthCheckPeriod,
+			Client: &Client{
+				Network:            "tcp",
+				Address:            "localhost:5432",
+				ReceiveChunkSize:   config.DefaultChunkSize,
+				ReceiveDeadline:    config.DefaultReceiveDeadline,
+				SendDeadline:       config.DefaultSendDeadline,
+				TCPKeepAlive:       false,
+				TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
+			},
+			Logger:         logger,
+			PluginTimeout:  config.DefaultPluginTimeout,
+			PluginRegistry: pluginRegistry,
+		})
 	defer proxy.Shutdown()
 
 	assert.NotNil(t, proxy)
 	assert.Equal(t, 0, proxy.busyConnections.Size())
-	assert.Equal(t, 0, proxy.availableConnections.Size())
+	assert.Equal(t, 0, proxy.AvailableConnections.Size())
 	assert.Equal(t, true, proxy.Elastic)
 	assert.Equal(t, false, proxy.ReuseElasticClients)
-	assert.Equal(t, "tcp", proxy.ClientConfig.Network)
-	assert.Equal(t, "localhost:5432", proxy.ClientConfig.Address)
+	assert.Equal(t, "tcp", proxy.Client.Network)
+	assert.Equal(t, "localhost:5432", proxy.Client.Address)
 }

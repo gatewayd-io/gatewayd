@@ -56,7 +56,7 @@ var (
 
 	loggers              = make(map[string]zerolog.Logger)
 	pools                = make(map[string]*pool.Pool)
-	clients              = make(map[string]*config.Client)
+	clients              = make(map[string]*network.Client)
 	proxies              = make(map[string]*network.Proxy)
 	servers              = make(map[string]*network.Server)
 	healthCheckScheduler = gocron.NewScheduler(time.UTC)
@@ -333,22 +333,15 @@ var runCmd = &cobra.Command{
 			if clientConfig, ok := conf.Global.Clients[name]; !ok {
 				// This ensures that the default client config is used if the pool name is not
 				// found in the clients section.
-				clients[name] = conf.Global.Clients[config.Default]
+				clients[name] = network.ClientFromConfig(conf.Global.Clients[config.Default])
 			} else {
 				// Merge the default client config with the one from the pool.
-				clients[name] = clientConfig
+				clients[name] = network.ClientFromConfig(clientConfig)
 			}
-
-			// Fill the missing and zero values with the default ones.
-			clients[name].TCPKeepAlivePeriod = clients[name].GetTCPKeepAlivePeriod()
-			clients[name].ReceiveDeadline = clients[name].GetReceiveDeadline()
-			clients[name].SendDeadline = clients[name].GetSendDeadline()
-			clients[name].ReceiveChunkSize = clients[name].GetReceiveChunkSize()
 
 			// Add clients to the pool.
 			for i := 0; i < cfg.GetSize(); i++ {
-				clientConfig := clients[name]
-				client := network.NewClient(runCtx, clientConfig, logger)
+				client := network.NewClient(runCtx, clients[name])
 
 				if client != nil {
 					eventOptions := trace.WithAttributes(
@@ -430,20 +423,22 @@ var runCmd = &cobra.Command{
 		// Create and initialize prefork proxies with each pool of clients.
 		for name, cfg := range conf.Global.Proxies {
 			logger := loggers[name]
-			clientConfig := clients[name]
+			client := clients[name]
 			// Fill the missing and zero value with the default one.
 			cfg.HealthCheckPeriod = cfg.GetHealthCheckPeriod()
 
 			proxies[name] = network.NewProxy(
 				runCtx,
-				pools[name],
-				pluginRegistry,
-				cfg.Elastic,
-				cfg.ReuseElasticClients,
-				cfg.HealthCheckPeriod,
-				clientConfig,
-				logger,
-				conf.Plugin.Timeout,
+				network.Proxy{
+					AvailableConnections: pools[name],
+					PluginRegistry:       pluginRegistry,
+					Elastic:              cfg.Elastic,
+					ReuseElasticClients:  cfg.ReuseElasticClients,
+					HealthCheckPeriod:    cfg.HealthCheckPeriod,
+					Client:               client,
+					Logger:               logger,
+					PluginTimeout:        conf.Plugin.Timeout,
+				},
 			)
 
 			span.AddEvent("Create proxy", trace.WithAttributes(

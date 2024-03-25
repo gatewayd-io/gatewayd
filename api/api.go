@@ -134,12 +134,15 @@ func (a *API) GetPools(context.Context, *emptypb.Empty) (*structpb.Struct, error
 func (a *API) GetProxies(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
 	proxies := make(map[string]interface{}, 0)
 	for name, proxy := range a.Proxies {
-		available := make([]interface{}, 0)
-		for _, c := range proxy.AvailableConnections() {
-			available = append(available, c)
-		}
+		available := make([]string, 0)
+		proxy.AvailableConnections.ForEach(func(_, value interface{}) bool {
+			if cl, ok := value.(*network.Client); ok {
+				available = append(available, cl.Conn.LocalAddr().String())
+			}
+			return true
+		})
 
-		busy := make([]interface{}, 0)
+		busy := make([]string, 0)
 		for _, conn := range proxy.BusyConnections() {
 			busy = append(busy, conn)
 		}

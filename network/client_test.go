@@ -24,7 +24,7 @@ func CreateNewClient(t *testing.T) *Client {
 
 	client := NewClient(
 		context.Background(),
-		&config.Client{
+		&Client{
 			Network:            "tcp",
 			Address:            "localhost:5432",
 			ReceiveChunkSize:   config.DefaultChunkSize,
@@ -32,8 +32,8 @@ func CreateNewClient(t *testing.T) *Client {
 			SendDeadline:       config.DefaultSendDeadline,
 			TCPKeepAlive:       false,
 			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
-		},
-		logger)
+			Logger:             logger,
+		})
 
 	return client
 }

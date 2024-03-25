@@ -148,7 +148,7 @@ func TestRunServer(t *testing.T) {
 	}
 	pluginRegistry.AddHook(v1.HookName_HOOK_NAME_ON_TRAFFIC_TO_CLIENT, 1, onTrafficToClient)
 
-	clientConfig := config.Client{
+	client := Client{
 		Network:            "tcp",
 		Address:            "localhost:5432",
 		ReceiveChunkSize:   config.DefaultChunkSize,
@@ -156,31 +156,33 @@ func TestRunServer(t *testing.T) {
 		SendDeadline:       config.DefaultSendDeadline,
 		TCPKeepAlive:       false,
 		TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
+		Logger:             logger,
 	}
 
 	// Create a connection pool.
-	pool := pool.NewPool(context.Background(), 3)
-	client1 := NewClient(context.Background(), &clientConfig, logger)
+	pool := pool.NewPool(context.Background(), pool.Pool{Cap: 3})
+	client1 := NewClient(context.Background(), &client)
 	err := pool.Put(client1.ID, client1)
 	assert.Nil(t, err)
-	client2 := NewClient(context.Background(), &clientConfig, logger)
+	client2 := NewClient(context.Background(), &client)
 	err = pool.Put(client2.ID, client2)
 	assert.Nil(t, err)
-	client3 := NewClient(context.Background(), &clientConfig, logger)
+	client3 := NewClient(context.Background(), &client)
 	err = pool.Put(client3.ID, client3)
 	assert.Nil(t, err)
 
 	// Create a proxy with a fixed buffer pool.
 	proxy := NewProxy(
 		context.Background(),
-		pool,
-		pluginRegistry,
-		false,
-		false,
-		config.DefaultHealthCheckPeriod,
-		&clientConfig,
-		logger,
-		config.DefaultPluginTimeout)
+		Proxy{
+			AvailableConnections: pool,
+			PluginRegistry:       pluginRegistry,
+			HealthCheckPeriod:    config.DefaultHealthCheckPeriod,
+			Client:               &client,
+			Logger:               logger,
+			PluginTimeout:        config.DefaultPluginTimeout,
+		},
+	)
 
 	// Create a server.
 	server := NewServer(
@@ -215,7 +217,7 @@ func TestRunServer(t *testing.T) {
 			if server.IsRunning() {
 				client := NewClient(
 					context.Background(),
-					&config.Client{
+					&Client{
 						Network:            "tcp",
 						Address:            "127.0.0.1:15432",
 						ReceiveChunkSize:   config.DefaultChunkSize,
@@ -223,8 +225,8 @@ func TestRunServer(t *testing.T) {
 						SendDeadline:       config.DefaultSendDeadline,
 						TCPKeepAlive:       false,
 						TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
-					},
-					logger)
+						Logger:             logger,
+					})
 
 				assert.NotNil(t, client)
 				sent, err := client.Send(CreatePgStartupPacket())
@@ -248,7 +250,7 @@ func TestRunServer(t *testing.T) {
 				// AuthenticationOk.
 				assert.Equal(t, uint8(0x52), data[0])
 
-				assert.Equal(t, 2, proxy.availableConnections.Size())
+				assert.Equal(t, 2, proxy.AvailableConnections.Size())
 				assert.Equal(t, 1, proxy.busyConnections.Size())
 
 				// Test Prometheus metrics.

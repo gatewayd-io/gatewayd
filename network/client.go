@@ -24,7 +24,7 @@ type IClient interface {
 type Client struct {
 	net.Conn
 
-	logger zerolog.Logger
+	Logger zerolog.Logger
 	ctx    context.Context //nolint:containedctx
 
 	TCPKeepAlive       bool
@@ -39,103 +39,107 @@ type Client struct {
 
 var _ IClient = &Client{}
 
+// ClientFromConfig create Client from config.Client
+func ClientFromConfig(config *config.Client) *Client {
+	return &Client{
+		Network:            config.Network,
+		Address:            config.Address,
+		TCPKeepAlive:       config.TCPKeepAlive,
+		TCPKeepAlivePeriod: config.GetTCPKeepAlivePeriod(),
+		ReceiveChunkSize:   config.GetReceiveChunkSize(),
+		ReceiveDeadline:    config.GetReceiveDeadline(),
+		SendDeadline:       config.GetSendDeadline(),
+	}
+}
+
 // NewClient creates a new client.
-func NewClient(ctx context.Context, clientConfig *config.Client, logger zerolog.Logger) *Client {
+func NewClient(ctx context.Context, client *Client) *Client {
 	clientCtx, span := otel.Tracer(config.TracerName).Start(ctx, "NewClient")
 	defer span.End()
 
-	var client Client
-
-	if clientConfig == nil || clientConfig == (&config.Client{}) {
+	if client == nil || client == (&Client{}) {
 		return nil
 	}
 
-	client.logger = logger
-
 	// Try to resolve the address and log an error if it can't be resolved.
-	addr, err := Resolve(clientConfig.Network, clientConfig.Address, logger)
+	addr, err := Resolve(client.Network, client.Address, client.Logger)
 	if err != nil {
-		logger.Error().Err(err).Msg("Failed to resolve address")
+		client.Logger.Error().Err(err).Msg("Failed to resolve address")
 		span.RecordError(err)
-	}
-
-	// Create a resolved client.
-	client = Client{
-		ctx:     clientCtx,
-		Network: clientConfig.Network,
-		Address: addr,
 	}
 
 	// Fall back to the original network and address if the address can't be resolved.
-	if client.Address == "" || client.Network == "" {
-		client = Client{
-			Network: clientConfig.Network,
-			Address: clientConfig.Address,
-		}
+	if addr == "" || client.Network == "" {
+		addr = client.Address
+	}
+
+	// Create a resolved client.
+	clt := Client{
+		ctx:                clientCtx,
+		Address:            addr,
+		Network:            client.Network,
+		Logger:             client.Logger,
+		TCPKeepAlive:       client.TCPKeepAlive,
+		TCPKeepAlivePeriod: client.TCPKeepAlivePeriod,
+		ReceiveDeadline:    client.ReceiveDeadline,
+		SendDeadline:       client.SendDeadline,
+		ReceiveChunkSize:   client.ReceiveChunkSize,
 	}
 
 	// Create a new connection.
-	conn, origErr := net.Dial(client.Network, client.Address)
+	conn, origErr := net.Dial(clt.Network, clt.Address)
 	if origErr != nil {
 		err := gerr.ErrClientConnectionFailed.Wrap(origErr)
-		logger.Error().Err(err).Msg("Failed to create a new connection")
+		clt.Logger.Error().Err(err).Msg("Failed to create a new connection")
 		span.RecordError(err)
 		return nil
 	}
 
-	client.Conn = conn
+	clt.Conn = conn
 
-	// Set the TCP keep alive.
-	client.TCPKeepAlive = clientConfig.TCPKeepAlive
-	client.TCPKeepAlivePeriod = clientConfig.TCPKeepAlivePeriod
-
-	if c, ok := client.Conn.(*net.TCPConn); ok {
-		if err := c.SetKeepAlive(client.TCPKeepAlive); err != nil {
-			logger.Error().Err(err).Msg("Failed to set keep alive")
+	if c, ok := clt.Conn.(*net.TCPConn); ok {
+		if err := c.SetKeepAlive(clt.TCPKeepAlive); err != nil {
+			clt.Logger.Error().Err(err).Msg("Failed to set keep alive")
 			span.RecordError(err)
 		} else {
-			if err := c.SetKeepAlivePeriod(client.TCPKeepAlivePeriod); err != nil {
-				logger.Error().Err(err).Msg("Failed to set keep alive period")
+			if err := c.SetKeepAlivePeriod(clt.TCPKeepAlivePeriod); err != nil {
+				clt.Logger.Error().Err(err).Msg("Failed to set keep alive period")
 				span.RecordError(err)
 			}
 		}
 	}
 
 	// Set the receive deadline (timeout).
-	client.ReceiveDeadline = clientConfig.ReceiveDeadline
-	if client.ReceiveDeadline > 0 {
-		if err := client.Conn.SetReadDeadline(time.Now().Add(client.ReceiveDeadline)); err != nil {
-			logger.Error().Err(err).Msg("Failed to set receive deadline")
+	if clt.ReceiveDeadline > 0 {
+		if err := clt.Conn.SetReadDeadline(time.Now().Add(clt.ReceiveDeadline)); err != nil {
+			clt.Logger.Error().Err(err).Msg("Failed to set receive deadline")
 			span.RecordError(err)
 		} else {
-			logger.Debug().Str("duration", fmt.Sprint(client.ReceiveDeadline.String())).Msg(
+			clt.Logger.Debug().Str("duration", fmt.Sprint(clt.ReceiveDeadline.String())).Msg(
 				"Set receive deadline")
 		}
 	}
 
 	// Set the send deadline (timeout).
-	client.SendDeadline = clientConfig.SendDeadline
-	if client.SendDeadline > 0 {
-		if err := client.Conn.SetWriteDeadline(time.Now().Add(client.SendDeadline)); err != nil {
-			logger.Error().Err(err).Msg("Failed to set send deadline")
+	if clt.SendDeadline > 0 {
+		if err := clt.Conn.SetWriteDeadline(time.Now().Add(clt.SendDeadline)); err != nil {
+			clt.Logger.Error().Err(err).Msg("Failed to set send deadline")
 			span.RecordError(err)
 		} else {
-			logger.Debug().Str("duration", fmt.Sprint(client.SendDeadline)).Msg(
+			clt.Logger.Debug().Str("duration", fmt.Sprint(clt.SendDeadline)).Msg(
 				"Set send deadline")
 		}
 	}
 
 	// Set the receive chunk size. This is the size of the buffer that is read from the connection
 	// in chunks.
-	client.ReceiveChunkSize = clientConfig.ReceiveChunkSize
-
-	logger.Trace().Str("address", client.Address).Msg("New client created")
-	client.ID = GetID(
-		conn.LocalAddr().Network(), conn.LocalAddr().String(), config.DefaultSeed, logger)
+	clt.Logger.Trace().Str("address", clt.Address).Msg("New client created")
+	clt.ID = GetID(
+		conn.LocalAddr().Network(), conn.LocalAddr().String(), config.DefaultSeed, clt.Logger)
 
 	metrics.ServerConnections.Inc()
 
-	return &client
+	return &clt
 }
 
 // Send sends data to the server.
@@ -145,11 +149,11 @@ func (c *Client) Send(data []byte) (int, *gerr.GatewayDError) {
 
 	sent, err := c.Conn.Write(data)
 	if err != nil {
-		c.logger.Error().Err(err).Msg("Couldn't send data to the server")
+		c.Logger.Error().Err(err).Msg("Couldn't send data to the server")
 		span.RecordError(err)
 		return 0, gerr.ErrClientSendFailed.Wrap(err)
 	}
-	c.logger.Debug().Fields(
+	c.Logger.Debug().Fields(
 		map[string]interface{}{
 			"length":  sent,
 			"address": c.Address,
@@ -175,7 +179,7 @@ func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 			chunk := make([]byte, c.ReceiveChunkSize)
 			read, err := c.Conn.Read(chunk)
 			if err != nil {
-				c.logger.Error().Err(err).Msg("Couldn't receive data from the server")
+				c.Logger.Error().Err(err).Msg("Couldn't receive data from the server")
 				span.RecordError(err)
 				metrics.BytesReceivedFromServer.Observe(float64(received))
 				return received, buffer.Bytes(), gerr.ErrClientReceiveFailed.Wrap(err)
@@ -197,7 +201,7 @@ func (c *Client) Close() {
 	_, span := otel.Tracer(config.TracerName).Start(c.ctx, "Close")
 	defer span.End()
 
-	c.logger.Debug().Str("address", c.Address).Msg("Closing connection to server")
+	c.Logger.Debug().Str("address", c.Address).Msg("Closing connection to server")
 	if c.Conn != nil {
 		c.Conn.Close()
 	}
@@ -217,7 +221,7 @@ func (c *Client) IsConnected() bool {
 	}
 
 	if c == nil {
-		c.logger.Debug().Fields(
+		c.Logger.Debug().Fields(
 			map[string]interface{}{
 				"address": c.Address,
 				"reason":  "client is nil",
@@ -226,7 +230,7 @@ func (c *Client) IsConnected() bool {
 	}
 
 	if c != nil && c.Conn == nil || c.ID == "" {
-		c.logger.Debug().Fields(
+		c.Logger.Debug().Fields(
 			map[string]interface{}{
 				"address": c.Address,
 				"reason":  "connection is nil or invalid",
@@ -235,7 +239,7 @@ func (c *Client) IsConnected() bool {
 	}
 
 	if n, err := c.Read([]byte{}); n == 0 && err != nil {
-		c.logger.Debug().Fields(
+		c.Logger.Debug().Fields(
 			map[string]interface{}{
 				"address": c.Address,
 				"reason":  "read 0 bytes",
