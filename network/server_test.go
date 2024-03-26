@@ -160,7 +160,7 @@ func TestRunServer(t *testing.T) {
 	}
 
 	// Create a connection pool.
-	pool := pool.NewPool(context.Background(), pool.Pool{Cap: 3})
+	pool := pool.NewPool(context.Background(), 3)
 	client1 := NewClient(context.Background(), &client)
 	err := pool.Put(client1.ID, client1)
 	assert.Nil(t, err)

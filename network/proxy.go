@@ -56,7 +56,7 @@ func NewProxy(
 
 	proxy := Proxy{
 		AvailableConnections: pxy.AvailableConnections,
-		busyConnections:      pool.NewPool(proxyCtx, pool.Pool{Cap: config.EmptyPoolCapacity}),
+		busyConnections:      pool.NewPool(proxyCtx, config.EmptyPoolCapacity),
 		Logger:               pxy.Logger,
 		PluginRegistry:       pxy.PluginRegistry,
 		scheduler:            gocron.NewScheduler(time.UTC),
@@ -473,7 +473,7 @@ func (pr *Proxy) IsExhausted() bool {
 	if pr.Elastic {
 		return false
 	}
-	return pr.AvailableConnections.Size() == 0 && pr.AvailableConnections.(*pool.Pool).Cap > 0
+	return pr.AvailableConnections.Size() == 0 && pr.AvailableConnections.Cap() > 0
 }
 
 // Shutdown closes all connections and clears the connection pools.
