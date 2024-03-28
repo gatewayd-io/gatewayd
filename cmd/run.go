@@ -337,7 +337,9 @@ var runCmd = &cobra.Command{
 		// Start the metrics merger if enabled.
 		var metricsMerger *metrics.Merger
 		if conf.Plugin.EnableMetricsMerger {
-			metricsMerger = metrics.NewMerger(runCtx, conf.Plugin.MetricsMergerPeriod, logger)
+			metricsMerger = metrics.NewMerger(runCtx, metrics.Merger{
+				MetricsMergerPeriod: conf.Plugin.MetricsMergerPeriod,
+				Logger:              logger})
 			pluginRegistry.ForEach(func(_ sdkPlugin.Identifier, plugin *plugin.Plugin) {
 				if metricsEnabled, err := strconv.ParseBool(plugin.Config["metricsEnabled"]); err == nil && metricsEnabled {
 					metricsMerger.Add(plugin.ID.Name, plugin.Config["metricsUnixDomainSocket"])
