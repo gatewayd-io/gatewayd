@@ -666,15 +666,17 @@ var runCmd = &cobra.Command{
 				client := network.NewClient(
 					runCtx, clientConfig, logger,
 					network.NewRetry(
-						clientConfig.Retries,
-						config.If(
-							clientConfig.Backoff > 0,
-							clientConfig.Backoff,
-							config.DefaultBackoff,
-						),
-						clientConfig.BackoffMultiplier,
-						clientConfig.DisableBackoffCaps,
-						loggers[name],
+						network.Retry{
+							Retries: clientConfig.Retries,
+							Backoff: config.If(
+								clientConfig.Backoff > 0,
+								clientConfig.Backoff,
+								config.DefaultBackoff,
+							),
+							BackoffMultiplier:  clientConfig.BackoffMultiplier,
+							DisableBackoffCaps: clientConfig.DisableBackoffCaps,
+							Logger:             loggers[name],
+						},
 					),
 				)
 
