@@ -849,25 +849,27 @@ var runCmd = &cobra.Command{
 			logger := loggers[name]
 			servers[name] = network.NewServer(
 				runCtx,
-				cfg.Network,
-				cfg.Address,
-				config.If(
-					cfg.TickInterval > 0,
-					cfg.TickInterval,
-					config.DefaultTickInterval,
-				),
-				network.Option{
-					// Can be used to send keepalive messages to the client.
-					EnableTicker: cfg.EnableTicker,
+				network.Server{
+					Network: cfg.Network,
+					Address: cfg.Address,
+					TickInterval: config.If(
+						cfg.TickInterval > 0,
+						cfg.TickInterval,
+						config.DefaultTickInterval,
+					),
+					Options: network.Option{
+						// Can be used to send keepalive messages to the client.
+						EnableTicker: cfg.EnableTicker,
+					},
+					Proxy:            proxies[name],
+					Logger:           logger,
+					PluginRegistry:   pluginRegistry,
+					PluginTimeout:    conf.Plugin.Timeout,
+					EnableTLS:        cfg.EnableTLS,
+					CertFile:         cfg.CertFile,
+					KeyFile:          cfg.KeyFile,
+					HandshakeTimeout: cfg.HandshakeTimeout,
 				},
-				proxies[name],
-				logger,
-				pluginRegistry,
-				conf.Plugin.Timeout,
-				cfg.EnableTLS,
-				cfg.CertFile,
-				cfg.KeyFile,
-				cfg.HandshakeTimeout,
 			)
 
 			span.AddEvent("Create server", trace.WithAttributes(

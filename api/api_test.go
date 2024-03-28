@@ -292,20 +292,19 @@ func TestGetServers(t *testing.T) {
 
 	server := network.NewServer(
 		context.TODO(),
-		config.DefaultNetwork,
-		config.DefaultAddress,
-		config.DefaultTickInterval,
-		network.Option{
-			EnableTicker: false,
+		network.Server{
+			Network:      config.DefaultNetwork,
+			Address:      config.DefaultAddress,
+			TickInterval: config.DefaultTickInterval,
+			Options: network.Option{
+				EnableTicker: false,
+			},
+			Proxy:            proxy,
+			Logger:           zerolog.Logger{},
+			PluginRegistry:   pluginRegistry,
+			PluginTimeout:    config.DefaultPluginTimeout,
+			HandshakeTimeout: config.DefaultHandshakeTimeout,
 		},
-		proxy,
-		zerolog.Logger{},
-		pluginRegistry,
-		config.DefaultPluginTimeout,
-		false,
-		"",
-		"",
-		config.DefaultHandshakeTimeout,
 	)
 
 	api := API{
