@@ -111,8 +111,15 @@ func TestGetPluginConfig(t *testing.T) {
 
 func TestGetPlugins(t *testing.T) {
 	actRegistry := act.NewActRegistry(
-		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, zerolog.Logger{})
+		act.Registry{
+			Signals:              act.BuiltinSignals(),
+			Policies:             act.BuiltinPolicies(),
+			Actions:              act.BuiltinActions(),
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               zerolog.Logger{},
+		})
 	pluginRegistry := plugin.NewRegistry(
 		context.TODO(),
 		actRegistry,
@@ -140,8 +147,15 @@ func TestGetPlugins(t *testing.T) {
 
 func TestGetPluginsWithEmptyPluginRegistry(t *testing.T) {
 	actRegistry := act.NewActRegistry(
-		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, zerolog.Logger{})
+		act.Registry{
+			Signals:              act.BuiltinSignals(),
+			Policies:             act.BuiltinPolicies(),
+			Actions:              act.BuiltinActions(),
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               zerolog.Logger{},
+		})
 	pluginRegistry := plugin.NewRegistry(
 		context.TODO(),
 		actRegistry,
@@ -250,8 +264,15 @@ func TestGetServers(t *testing.T) {
 	)
 
 	actRegistry := act.NewActRegistry(
-		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, zerolog.Logger{})
+		act.Registry{
+			Signals:              act.BuiltinSignals(),
+			Policies:             act.BuiltinPolicies(),
+			Actions:              act.BuiltinActions(),
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               zerolog.Logger{},
+		})
 
 	pluginRegistry := plugin.NewRegistry(
 		context.TODO(),
