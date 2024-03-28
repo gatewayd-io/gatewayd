@@ -94,12 +94,15 @@ func TestRunServer(t *testing.T) {
 	// Create a proxy with a fixed buffer newPool.
 	proxy := NewProxy(
 		context.Background(),
-		newPool,
-		pluginRegistry,
-		config.DefaultHealthCheckPeriod,
-		&clientConfig,
-		logger,
-		config.DefaultPluginTimeout)
+		Proxy{
+			AvailableConnections: newPool,
+			PluginRegistry:       pluginRegistry,
+			HealthCheckPeriod:    config.DefaultHealthCheckPeriod,
+			ClientConfig:         &clientConfig,
+			Logger:               logger,
+			PluginTimeout:        config.DefaultPluginTimeout,
+		},
+	)
 
 	// Create a server.
 	server := NewServer(
@@ -184,7 +187,7 @@ func TestRunServer(t *testing.T) {
 		// AuthenticationOk.
 		assert.Equal(t, uint8(0x52), data[0])
 
-		assert.Equal(t, 2, proxy.availableConnections.Size())
+		assert.Equal(t, 2, proxy.AvailableConnections.Size())
 		assert.Equal(t, 1, proxy.busyConnections.Size())
 
 		// Terminate the connection.

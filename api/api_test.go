@@ -212,15 +212,16 @@ func TestGetProxies(t *testing.T) {
 
 	proxy := network.NewProxy(
 		context.TODO(),
-		newPool,
-		nil,
-		config.DefaultHealthCheckPeriod,
-		&config.Client{
-			Network: config.DefaultNetwork,
-			Address: config.DefaultAddress,
+		network.Proxy{
+			AvailableConnections: newPool,
+			HealthCheckPeriod:    config.DefaultHealthCheckPeriod,
+			ClientConfig: &config.Client{
+				Network: config.DefaultNetwork,
+				Address: config.DefaultAddress,
+			},
+			Logger:        zerolog.Logger{},
+			PluginTimeout: config.DefaultPluginTimeout,
 		},
-		zerolog.Logger{},
-		config.DefaultPluginTimeout,
 	)
 
 	api := API{
@@ -256,15 +257,16 @@ func TestGetServers(t *testing.T) {
 
 	proxy := network.NewProxy(
 		context.TODO(),
-		newPool,
-		nil,
-		config.DefaultHealthCheckPeriod,
-		&config.Client{
-			Network: config.DefaultNetwork,
-			Address: config.DefaultAddress,
+		network.Proxy{
+			AvailableConnections: newPool,
+			HealthCheckPeriod:    config.DefaultHealthCheckPeriod,
+			ClientConfig: &config.Client{
+				Network: config.DefaultNetwork,
+				Address: config.DefaultAddress,
+			},
+			Logger:        zerolog.Logger{},
+			PluginTimeout: config.DefaultPluginTimeout,
 		},
-		zerolog.Logger{},
-		config.DefaultPluginTimeout,
 	)
 
 	actRegistry := act.NewActRegistry(

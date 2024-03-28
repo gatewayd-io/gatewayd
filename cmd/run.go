@@ -810,12 +810,14 @@ var runCmd = &cobra.Command{
 
 			proxies[name] = network.NewProxy(
 				runCtx,
-				pools[name],
-				pluginRegistry,
-				cfg.HealthCheckPeriod,
-				clientConfig,
-				logger,
-				conf.Plugin.Timeout,
+				network.Proxy{
+					AvailableConnections: pools[name],
+					PluginRegistry:       pluginRegistry,
+					HealthCheckPeriod:    cfg.HealthCheckPeriod,
+					ClientConfig:         clientConfig,
+					Logger:               logger,
+					PluginTimeout:        conf.Plugin.Timeout,
+				},
 			)
 
 			span.AddEvent("Create proxy", trace.WithAttributes(
