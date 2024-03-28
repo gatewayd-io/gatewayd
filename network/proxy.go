@@ -91,15 +91,17 @@ func NewProxy(
 					client = NewClient(
 						proxyCtx, proxy.ClientConfig, proxy.logger,
 						NewRetry(
-							proxy.ClientConfig.Retries,
-							config.If(
-								proxy.ClientConfig.Backoff > 0,
-								proxy.ClientConfig.Backoff,
-								config.DefaultBackoff,
-							),
-							proxy.ClientConfig.BackoffMultiplier,
-							proxy.ClientConfig.DisableBackoffCaps,
-							proxy.logger,
+							Retry{
+								Retries: proxy.ClientConfig.Retries,
+								Backoff: config.If(
+									proxy.ClientConfig.Backoff > 0,
+									proxy.ClientConfig.Backoff,
+									config.DefaultBackoff,
+								),
+								BackoffMultiplier:  proxy.ClientConfig.BackoffMultiplier,
+								DisableBackoffCaps: proxy.ClientConfig.DisableBackoffCaps,
+								Logger:             proxy.logger,
+							},
 						),
 					)
 					if client != nil && client.ID != "" {
