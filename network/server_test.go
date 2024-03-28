@@ -107,20 +107,19 @@ func TestRunServer(t *testing.T) {
 	// Create a server.
 	server := NewServer(
 		context.Background(),
-		"tcp",
-		"127.0.0.1:15432",
-		config.DefaultTickInterval,
-		Option{
-			EnableTicker: true,
+		Server{
+			Network:      "tcp",
+			Address:      "127.0.0.1:15432",
+			TickInterval: config.DefaultTickInterval,
+			Options: Option{
+				EnableTicker: true,
+			},
+			Proxy:            proxy,
+			Logger:           logger,
+			PluginRegistry:   pluginRegistry,
+			PluginTimeout:    config.DefaultPluginTimeout,
+			HandshakeTimeout: config.DefaultHandshakeTimeout,
 		},
-		proxy,
-		logger,
-		pluginRegistry,
-		config.DefaultPluginTimeout,
-		false,
-		"",
-		"",
-		config.DefaultHandshakeTimeout,
 	)
 	assert.NotNil(t, server)
 	assert.Zero(t, server.connections)
