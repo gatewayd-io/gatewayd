@@ -910,7 +910,10 @@ var runCmd = &cobra.Command{
 				Proxies:        proxies,
 				Servers:        servers,
 			}
-			grpcServer = api.NewGRPCServer(apiObj, &api.HealthChecker{Servers: servers})
+			grpcServer = api.NewGRPCServer(api.GRPCServer{
+				Api:           apiObj,
+				HealthChecker: &api.HealthChecker{Servers: servers},
+			})
 			go grpcServer.Start()
 			logger.Info().Str("address", apiOptions.HTTPAddress).Msg("Started the HTTP API")
 

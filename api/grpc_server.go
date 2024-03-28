@@ -11,24 +11,26 @@ import (
 )
 
 type GRPCServer struct {
-	api        *API
+	Api        *API
 	grpcServer *grpc.Server
 	listener   net.Listener
+	*HealthChecker
 }
 
 // NewGRPCServer creates a new gRPC server.
-func NewGRPCServer(api *API, healthchecker *HealthChecker) *GRPCServer {
-	grpcServer, listener := createGRPCAPI(api, healthchecker)
+func NewGRPCServer(server GRPCServer) *GRPCServer {
+	grpcServer, listener := createGRPCAPI(server.Api, server.HealthChecker)
 	return &GRPCServer{
-		api:        api,
-		grpcServer: grpcServer,
-		listener:   listener,
+		Api:           server.Api,
+		grpcServer:    grpcServer,
+		listener:      listener,
+		HealthChecker: server.HealthChecker,
 	}
 }
 
 // Start starts the gRPC server.
 func (s *GRPCServer) Start() {
-	s.start(s.api, s.grpcServer, s.listener)
+	s.start(s.Api, s.grpcServer, s.listener)
 }
 
 // Shutdown shuts down the gRPC server.
