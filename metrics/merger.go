@@ -48,7 +48,7 @@ var _ IMerger = (*Merger)(nil)
 
 // NewMerger creates a new metrics merger.
 func NewMerger(
-	ctx context.Context, metricsMergerPeriod time.Duration, logger zerolog.Logger,
+	ctx context.Context, merger Merger,
 ) *Merger {
 	mergerCtx, span := otel.Tracer(config.TracerName).Start(ctx, "NewMerger")
 	defer span.End()
@@ -56,10 +56,10 @@ func NewMerger(
 	return &Merger{
 		scheduler:           gocron.NewScheduler(time.UTC),
 		ctx:                 mergerCtx,
-		Logger:              logger,
+		Logger:              merger.Logger,
 		Addresses:           map[string]string{},
 		OutputMetrics:       []byte{},
-		MetricsMergerPeriod: metricsMergerPeriod,
+		MetricsMergerPeriod: merger.MetricsMergerPeriod,
 	}
 }
 
