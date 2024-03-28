@@ -200,12 +200,12 @@ func (a *API) GetProxies(context.Context, *emptypb.Empty) (*structpb.Struct, err
 	proxies := make(map[string]interface{}, 0)
 	for name, proxy := range a.Proxies {
 		available := make([]interface{}, 0)
-		for _, c := range proxy.AvailableConnections() {
+		for _, c := range proxy.AvailableConnectionsString() {
 			available = append(available, c)
 		}
 
 		busy := make([]interface{}, 0)
-		for _, conn := range proxy.BusyConnections() {
+		for _, conn := range proxy.BusyConnectionsString() {
 			busy = append(busy, conn)
 		}
 

@@ -59,25 +59,27 @@ func TestNewProxy(t *testing.T) {
 	// Create a proxy with a fixed buffer newPool
 	proxy := NewProxy(
 		context.Background(),
-		newPool,
-		plugin.NewRegistry(
-			context.Background(),
-			plugin.Registry{
-				ActRegistry:   actRegistry,
-				Compatibility: config.Loose,
-				Logger:        logger,
-			},
-		),
-		config.DefaultHealthCheckPeriod,
-		nil,
-		logger,
-		config.DefaultPluginTimeout)
+		Proxy{
+			AvailableConnections: newPool,
+			PluginRegistry: plugin.NewRegistry(
+				context.Background(),
+				plugin.Registry{
+					ActRegistry:   actRegistry,
+					Compatibility: config.Loose,
+					Logger:        logger,
+				},
+			),
+			HealthCheckPeriod: config.DefaultHealthCheckPeriod,
+			Logger:            logger,
+			PluginTimeout:     config.DefaultPluginTimeout,
+		},
+	)
 	defer proxy.Shutdown()
 
 	assert.NotNil(t, proxy)
 	assert.Equal(t, 0, proxy.busyConnections.Size(), "Proxy should have no connected clients")
-	assert.Equal(t, 1, proxy.availableConnections.Size())
-	if c, ok := proxy.availableConnections.Pop(client.ID).(*Client); ok {
+	assert.Equal(t, 1, proxy.AvailableConnections.Size())
+	if c, ok := proxy.AvailableConnections.Pop(client.ID).(*Client); ok {
 		assert.NotEqual(t, "", c.ID)
 	}
 	assert.False(t, proxy.IsExhausted())
@@ -114,19 +116,21 @@ func BenchmarkNewProxy(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		proxy := NewProxy(
 			context.Background(),
-			newPool,
-			plugin.NewRegistry(
-				context.Background(),
-				plugin.Registry{
-					ActRegistry:   actRegistry,
-					Compatibility: config.Loose,
-					Logger:        logger,
-				},
-			),
-			config.DefaultHealthCheckPeriod,
-			nil,
-			logger,
-			config.DefaultPluginTimeout)
+			Proxy{
+				AvailableConnections: newPool,
+				PluginRegistry: plugin.NewRegistry(
+					context.Background(),
+					plugin.Registry{
+						ActRegistry:   actRegistry,
+						Compatibility: config.Loose,
+						Logger:        logger,
+					},
+				),
+				HealthCheckPeriod: config.DefaultHealthCheckPeriod,
+				Logger:            logger,
+				PluginTimeout:     config.DefaultPluginTimeout,
+			},
+		)
 		proxy.Shutdown()
 	}
 }
@@ -170,19 +174,22 @@ func BenchmarkProxyConnectDisconnect(b *testing.B) {
 	// Create a proxy with a fixed buffer newPool
 	proxy := NewProxy(
 		context.Background(),
-		newPool,
-		plugin.NewRegistry(
-			context.Background(),
-			plugin.Registry{
-				ActRegistry:   actRegistry,
-				Compatibility: config.Loose,
-				Logger:        logger,
-			},
-		),
-		config.DefaultHealthCheckPeriod,
-		&clientConfig,
-		logger,
-		config.DefaultPluginTimeout)
+		Proxy{
+			AvailableConnections: newPool,
+			PluginRegistry: plugin.NewRegistry(
+				context.Background(),
+				plugin.Registry{
+					ActRegistry:   actRegistry,
+					Compatibility: config.Loose,
+					Logger:        logger,
+				},
+			),
+			HealthCheckPeriod: config.DefaultHealthCheckPeriod,
+			ClientConfig:      &clientConfig,
+			Logger:            logger,
+			PluginTimeout:     config.DefaultPluginTimeout,
+		},
+	)
 	defer proxy.Shutdown()
 
 	conn := testConnection{}
@@ -233,19 +240,22 @@ func BenchmarkProxyPassThrough(b *testing.B) {
 	// Create a proxy with a fixed buffer newPool
 	proxy := NewProxy(
 		context.Background(),
-		newPool,
-		plugin.NewRegistry(
-			context.Background(),
-			plugin.Registry{
-				ActRegistry:   actRegistry,
-				Compatibility: config.Loose,
-				Logger:        logger,
-			},
-		),
-		config.DefaultHealthCheckPeriod,
-		&clientConfig,
-		logger,
-		config.DefaultPluginTimeout)
+		Proxy{
+			AvailableConnections: newPool,
+			PluginRegistry: plugin.NewRegistry(
+				context.Background(),
+				plugin.Registry{
+					ActRegistry:   actRegistry,
+					Compatibility: config.Loose,
+					Logger:        logger,
+				},
+			),
+			HealthCheckPeriod: config.DefaultHealthCheckPeriod,
+			ClientConfig:      &clientConfig,
+			Logger:            logger,
+			PluginTimeout:     config.DefaultPluginTimeout,
+		},
+	)
 	defer proxy.Shutdown()
 
 	conn := testConnection{}
@@ -301,19 +311,22 @@ func BenchmarkProxyIsHealthyAndIsExhausted(b *testing.B) {
 	// Create a proxy with a fixed buffer newPool
 	proxy := NewProxy(
 		context.Background(),
-		newPool,
-		plugin.NewRegistry(
-			context.Background(),
-			plugin.Registry{
-				ActRegistry:   actRegistry,
-				Compatibility: config.Loose,
-				Logger:        logger,
-			},
-		),
-		config.DefaultHealthCheckPeriod,
-		&clientConfig,
-		logger,
-		config.DefaultPluginTimeout)
+		Proxy{
+			AvailableConnections: newPool,
+			PluginRegistry: plugin.NewRegistry(
+				context.Background(),
+				plugin.Registry{
+					ActRegistry:   actRegistry,
+					Compatibility: config.Loose,
+					Logger:        logger,
+				},
+			),
+			HealthCheckPeriod: config.DefaultHealthCheckPeriod,
+			ClientConfig:      &clientConfig,
+			Logger:            logger,
+			PluginTimeout:     config.DefaultPluginTimeout,
+		},
+	)
 	defer proxy.Shutdown()
 
 	conn := testConnection{}
@@ -327,7 +340,7 @@ func BenchmarkProxyIsHealthyAndIsExhausted(b *testing.B) {
 	}
 }
 
-func BenchmarkProxyAvailableAndBusyConnections(b *testing.B) {
+func BenchmarkProxyAvailableAndBusyConnectionsString(b *testing.B) {
 	logger := logging.NewLogger(context.Background(), logging.LoggerConfig{
 		Output:            []config.LogOutput{config.Console},
 		TimeFormat:        zerolog.TimeFormatUnix,
@@ -367,19 +380,22 @@ func BenchmarkProxyAvailableAndBusyConnections(b *testing.B) {
 	// Create a proxy with a fixed buffer newPool
 	proxy := NewProxy(
 		context.Background(),
-		newPool,
-		plugin.NewRegistry(
-			context.Background(),
-			plugin.Registry{
-				ActRegistry:   actRegistry,
-				Compatibility: config.Loose,
-				Logger:        logger,
-			},
-		),
-		config.DefaultHealthCheckPeriod,
-		&clientConfig,
-		logger,
-		config.DefaultPluginTimeout)
+		Proxy{
+			AvailableConnections: newPool,
+			PluginRegistry: plugin.NewRegistry(
+				context.Background(),
+				plugin.Registry{
+					ActRegistry:   actRegistry,
+					Compatibility: config.Loose,
+					Logger:        logger,
+				},
+			),
+			HealthCheckPeriod: config.DefaultHealthCheckPeriod,
+			ClientConfig:      &clientConfig,
+			Logger:            logger,
+			PluginTimeout:     config.DefaultPluginTimeout,
+		},
+	)
 	defer proxy.Shutdown()
 
 	conn := testConnection{}
@@ -388,7 +404,7 @@ func BenchmarkProxyAvailableAndBusyConnections(b *testing.B) {
 
 	// Connect to the proxy
 	for i := 0; i < b.N; i++ {
-		proxy.AvailableConnections()
-		proxy.BusyConnections()
+		proxy.AvailableConnectionsString()
+		proxy.BusyConnectionsString()
 	}
 }
