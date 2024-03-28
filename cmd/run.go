@@ -318,15 +318,17 @@ var runCmd = &cobra.Command{
 		// The plugins are loaded and hooks registered before the configuration is loaded.
 		pluginRegistry = plugin.NewRegistry(
 			runCtx,
-			actRegistry,
-			config.If(
-				config.Exists(
-					config.CompatibilityPolicies, conf.Plugin.CompatibilityPolicy,
-				),
-				config.CompatibilityPolicies[conf.Plugin.CompatibilityPolicy],
-				config.DefaultCompatibilityPolicy),
-			logger,
-			devMode,
+			plugin.Registry{
+				ActRegistry: actRegistry,
+				Compatibility: config.If(
+					config.Exists(
+						config.CompatibilityPolicies, conf.Plugin.CompatibilityPolicy,
+					),
+					config.CompatibilityPolicies[conf.Plugin.CompatibilityPolicy],
+					config.DefaultCompatibilityPolicy),
+				Logger:  logger,
+				DevMode: devMode,
+			},
 		)
 
 		// Load plugins and register their hooks.
