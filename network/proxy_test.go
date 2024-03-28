@@ -46,8 +46,15 @@ func TestNewProxy(t *testing.T) {
 
 	// Create a new act registry
 	actRegistry := act.NewActRegistry(
-		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
+		act.Registry{
+			Signals:              act.BuiltinSignals(),
+			Policies:             act.BuiltinPolicies(),
+			Actions:              act.BuiltinActions(),
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               logger,
+		})
 
 	// Create a proxy with a fixed buffer newPool
 	proxy := NewProxy(
@@ -92,8 +99,15 @@ func BenchmarkNewProxy(b *testing.B) {
 
 	// Create a new act registry
 	actRegistry := act.NewActRegistry(
-		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
+		act.Registry{
+			Signals:              act.BuiltinSignals(),
+			Policies:             act.BuiltinPolicies(),
+			Actions:              act.BuiltinActions(),
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               logger,
+		})
 
 	// Create a proxy with a fixed buffer newPool
 	for i := 0; i < b.N; i++ {
@@ -141,8 +155,15 @@ func BenchmarkProxyConnectDisconnect(b *testing.B) {
 
 	// Create a new act registry
 	actRegistry := act.NewActRegistry(
-		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
+		act.Registry{
+			Signals:              act.BuiltinSignals(),
+			Policies:             act.BuiltinPolicies(),
+			Actions:              act.BuiltinActions(),
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               logger,
+		})
 
 	// Create a proxy with a fixed buffer newPool
 	proxy := NewProxy(
@@ -196,8 +217,15 @@ func BenchmarkProxyPassThrough(b *testing.B) {
 
 	// Create a new act registry
 	actRegistry := act.NewActRegistry(
-		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
+		act.Registry{
+			Signals:              act.BuiltinSignals(),
+			Policies:             act.BuiltinPolicies(),
+			Actions:              act.BuiltinActions(),
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               logger,
+		})
 
 	// Create a proxy with a fixed buffer newPool
 	proxy := NewProxy(
@@ -256,8 +284,15 @@ func BenchmarkProxyIsHealthyAndIsExhausted(b *testing.B) {
 
 	// Create a new act registry
 	actRegistry := act.NewActRegistry(
-		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
+		act.Registry{
+			Signals:              act.BuiltinSignals(),
+			Policies:             act.BuiltinPolicies(),
+			Actions:              act.BuiltinActions(),
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               logger,
+		})
 
 	// Create a proxy with a fixed buffer newPool
 	proxy := NewProxy(
@@ -314,8 +349,15 @@ func BenchmarkProxyAvailableAndBusyConnections(b *testing.B) {
 
 	// Create a new act registry
 	actRegistry := act.NewActRegistry(
-		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
+		act.Registry{
+			Signals:              act.BuiltinSignals(),
+			Policies:             act.BuiltinPolicies(),
+			Actions:              act.BuiltinActions(),
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               logger,
+		})
 
 	// Create a proxy with a fixed buffer newPool
 	proxy := NewProxy(

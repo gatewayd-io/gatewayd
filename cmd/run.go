@@ -284,9 +284,15 @@ var runCmd = &cobra.Command{
 
 		// Create a new act registry given the built-in signals, policies, and actions.
 		actRegistry = act.NewActRegistry(
-			act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
-			conf.Plugin.DefaultPolicy, conf.Plugin.PolicyTimeout, conf.Plugin.ActionTimeout, logger,
-		)
+			act.Registry{
+				Signals:              act.BuiltinSignals(),
+				Policies:             act.BuiltinPolicies(),
+				Actions:              act.BuiltinActions(),
+				DefaultPolicyName:    conf.Plugin.DefaultPolicy,
+				PolicyTimeout:        conf.Plugin.PolicyTimeout,
+				DefaultActionTimeout: conf.Plugin.ActionTimeout,
+				Logger:               logger,
+			})
 
 		if actRegistry == nil {
 			logger.Error().Msg("Failed to create act registry")
