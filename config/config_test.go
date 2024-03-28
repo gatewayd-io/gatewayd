@@ -13,10 +13,10 @@ var parentDir = "../"
 // TestNewConfig tests the NewConfig function.
 func TestNewConfig(t *testing.T) {
 	config := NewConfig(
-		context.Background(), GlobalConfigFilename, PluginsConfigFilename)
+		context.Background(), Config{GlobalConfigFile: GlobalConfigFilename, PluginConfigFile: PluginsConfigFilename})
 	assert.NotNil(t, config)
-	assert.Equal(t, GlobalConfigFilename, config.globalConfigFile)
-	assert.Equal(t, PluginsConfigFilename, config.pluginConfigFile)
+	assert.Equal(t, GlobalConfigFilename, config.GlobalConfigFile)
+	assert.Equal(t, PluginsConfigFilename, config.PluginConfigFile)
 	assert.Equal(t, GlobalConfig{}, config.globalDefaults)
 	assert.Equal(t, PluginConfig{}, config.pluginDefaults)
 	assert.Equal(t, GlobalConfig{}, config.Global)
@@ -29,7 +29,8 @@ func TestNewConfig(t *testing.T) {
 // the other functions.
 func TestInitConfig(t *testing.T) {
 	ctx := context.Background()
-	config := NewConfig(ctx, parentDir+GlobalConfigFilename, parentDir+PluginsConfigFilename)
+	config := NewConfig(ctx,
+		Config{GlobalConfigFile: parentDir + GlobalConfigFilename, PluginConfigFile: parentDir + PluginsConfigFilename})
 	config.InitConfig(ctx)
 	assert.NotNil(t, config.Global)
 	assert.NotEqual(t, GlobalConfig{}, config.Global)
@@ -53,7 +54,8 @@ func TestInitConfig(t *testing.T) {
 // TestMergeGlobalConfig tests the MergeGlobalConfig function.
 func TestMergeGlobalConfig(t *testing.T) {
 	ctx := context.Background()
-	config := NewConfig(ctx, parentDir+GlobalConfigFilename, parentDir+PluginsConfigFilename)
+	config := NewConfig(ctx,
+		Config{GlobalConfigFile: parentDir + GlobalConfigFilename, PluginConfigFile: parentDir + PluginsConfigFilename})
 	config.InitConfig(ctx)
 	// The default log level is info.
 	assert.Equal(t, DefaultLogLevel, config.Global.Loggers[Default].Level)

@@ -36,8 +36,8 @@ type Config struct {
 	globalDefaults GlobalConfig
 	pluginDefaults PluginConfig
 
-	globalConfigFile string
-	pluginConfigFile string
+	GlobalConfigFile string
+	PluginConfigFile string
 
 	GlobalKoanf *koanf.Koanf
 	PluginKoanf *koanf.Koanf
@@ -48,19 +48,19 @@ type Config struct {
 
 var _ IConfig = (*Config)(nil)
 
-func NewConfig(ctx context.Context, globalConfigFile, pluginConfigFile string) *Config {
+func NewConfig(ctx context.Context, config Config) *Config {
 	_, span := otel.Tracer(TracerName).Start(ctx, "Create new config")
 	defer span.End()
-	span.SetAttributes(attribute.String("globalConfigFile", globalConfigFile))
-	span.SetAttributes(attribute.String("pluginConfigFile", pluginConfigFile))
+	span.SetAttributes(attribute.String("GlobalConfigFile", config.GlobalConfigFile))
+	span.SetAttributes(attribute.String("PluginConfigFile", config.PluginConfigFile))
 
 	return &Config{
 		GlobalKoanf:      koanf.New("."),
 		PluginKoanf:      koanf.New("."),
 		globalDefaults:   GlobalConfig{},
 		pluginDefaults:   PluginConfig{},
-		globalConfigFile: globalConfigFile,
-		pluginConfigFile: pluginConfigFile,
+		GlobalConfigFile: config.GlobalConfigFile,
+		PluginConfigFile: config.PluginConfigFile,
 	}
 }
 
@@ -159,7 +159,7 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 	}
 
 	//nolint:nestif
-	if contents, err := os.ReadFile(c.globalConfigFile); err == nil {
+	if contents, err := os.ReadFile(c.GlobalConfigFile); err == nil {
 		gconf, err := yaml.Parser().Unmarshal(contents)
 		if err != nil {
 			span.RecordError(err)
@@ -275,7 +275,7 @@ func loadEnvVars() *env.Env {
 func (c *Config) LoadGlobalConfigFile(ctx context.Context) {
 	_, span := otel.Tracer(TracerName).Start(ctx, "Load global config file")
 
-	if err := c.GlobalKoanf.Load(file.Provider(c.globalConfigFile), yaml.Parser()); err != nil {
+	if err := c.GlobalKoanf.Load(file.Provider(c.GlobalConfigFile), yaml.Parser()); err != nil {
 		span.RecordError(err)
 		span.End()
 		log.Fatal(fmt.Errorf("failed to load global configuration: %w", err))
@@ -288,7 +288,7 @@ func (c *Config) LoadGlobalConfigFile(ctx context.Context) {
 func (c *Config) LoadPluginConfigFile(ctx context.Context) {
 	_, span := otel.Tracer(TracerName).Start(ctx, "Load plugin config file")
 
-	if err := c.PluginKoanf.Load(file.Provider(c.pluginConfigFile), yaml.Parser()); err != nil {
+	if err := c.PluginKoanf.Load(file.Provider(c.PluginConfigFile), yaml.Parser()); err != nil {
 		span.RecordError(err)
 		span.End()
 		log.Fatal(fmt.Errorf("failed to load plugin configuration: %w", err))
