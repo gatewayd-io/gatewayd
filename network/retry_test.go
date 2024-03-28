@@ -30,7 +30,7 @@ func TestRetry(t *testing.T) {
 			assert.ErrorContains(t, err, "callback is nil")
 		})
 		t.Run("retry without timeout", func(t *testing.T) {
-			retry := NewRetry(0, 0, 0, false, logger)
+			retry := NewRetry(Retry{0, 0, 0, false, logger})
 			assert.Equal(t, 0, retry.Retries)
 			assert.Equal(t, time.Duration(0), retry.Backoff)
 			assert.Equal(t, float64(0), retry.BackoffMultiplier)
@@ -50,11 +50,13 @@ func TestRetry(t *testing.T) {
 		})
 		t.Run("retry with timeout", func(t *testing.T) {
 			retry := NewRetry(
-				config.DefaultRetries,
-				config.DefaultBackoff,
-				config.DefaultBackoffMultiplier,
-				config.DefaultDisableBackoffCaps,
-				logger,
+				Retry{
+					config.DefaultRetries,
+					config.DefaultBackoff,
+					config.DefaultBackoffMultiplier,
+					config.DefaultDisableBackoffCaps,
+					logger,
+				},
 			)
 			assert.Equal(t, config.DefaultRetries, retry.Retries)
 			assert.Equal(t, config.DefaultBackoff, retry.Backoff)

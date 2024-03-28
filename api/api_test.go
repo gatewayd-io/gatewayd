@@ -28,7 +28,8 @@ func TestGetVersion(t *testing.T) {
 
 func TestGetGlobalConfig(t *testing.T) {
 	// Load config from the default config file.
-	conf := config.NewConfig(context.TODO(), "../gatewayd.yaml", "../gatewayd_plugins.yaml")
+	conf := config.NewConfig(context.TODO(),
+		config.Config{GlobalConfigFile: "../gatewayd.yaml", PluginConfigFile: "../gatewayd_plugins.yaml"})
 	conf.InitConfig(context.TODO())
 	assert.NotEmpty(t, conf.Global)
 
@@ -50,7 +51,8 @@ func TestGetGlobalConfig(t *testing.T) {
 
 func TestGetGlobalConfigWithGroupName(t *testing.T) {
 	// Load config from the default config file.
-	conf := config.NewConfig(context.TODO(), "../gatewayd.yaml", "../gatewayd_plugins.yaml")
+	conf := config.NewConfig(context.TODO(),
+		config.Config{GlobalConfigFile: "../gatewayd.yaml", PluginConfigFile: "../gatewayd_plugins.yaml"})
 	conf.InitConfig(context.TODO())
 	assert.NotEmpty(t, conf.Global)
 
@@ -76,7 +78,8 @@ func TestGetGlobalConfigWithGroupName(t *testing.T) {
 
 func TestGetGlobalConfigWithNonExistingGroupName(t *testing.T) {
 	// Load config from the default config file.
-	conf := config.NewConfig(context.TODO(), "../gatewayd.yaml", "../gatewayd_plugins.yaml")
+	conf := config.NewConfig(context.TODO(),
+		config.Config{GlobalConfigFile: "../gatewayd.yaml", PluginConfigFile: "../gatewayd_plugins.yaml"})
 	conf.InitConfig(context.TODO())
 	assert.NotEmpty(t, conf.Global)
 
@@ -91,7 +94,8 @@ func TestGetGlobalConfigWithNonExistingGroupName(t *testing.T) {
 
 func TestGetPluginConfig(t *testing.T) {
 	// Load config from the default config file.
-	conf := config.NewConfig(context.TODO(), "../gatewayd.yaml", "../gatewayd_plugins.yaml")
+	conf := config.NewConfig(context.TODO(),
+		config.Config{GlobalConfigFile: "../gatewayd.yaml", PluginConfigFile: "../gatewayd_plugins.yaml"})
 	conf.InitConfig(context.TODO())
 	assert.NotEmpty(t, conf.Global)
 
@@ -107,14 +111,23 @@ func TestGetPluginConfig(t *testing.T) {
 
 func TestGetPlugins(t *testing.T) {
 	actRegistry := act.NewActRegistry(
-		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, zerolog.Logger{})
+		act.Registry{
+			Signals:              act.BuiltinSignals(),
+			Policies:             act.BuiltinPolicies(),
+			Actions:              act.BuiltinActions(),
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               zerolog.Logger{},
+		})
 	pluginRegistry := plugin.NewRegistry(
 		context.TODO(),
-		actRegistry,
-		config.Loose,
-		zerolog.Logger{},
-		true,
+		plugin.Registry{
+			ActRegistry:   actRegistry,
+			Compatibility: config.Loose,
+			Logger:        zerolog.Logger{},
+			DevMode:       true,
+		},
 	)
 	pluginRegistry.Add(&plugin.Plugin{
 		ID: sdkPlugin.Identifier{
@@ -136,14 +149,23 @@ func TestGetPlugins(t *testing.T) {
 
 func TestGetPluginsWithEmptyPluginRegistry(t *testing.T) {
 	actRegistry := act.NewActRegistry(
-		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, zerolog.Logger{})
+		act.Registry{
+			Signals:              act.BuiltinSignals(),
+			Policies:             act.BuiltinPolicies(),
+			Actions:              act.BuiltinActions(),
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               zerolog.Logger{},
+		})
 	pluginRegistry := plugin.NewRegistry(
 		context.TODO(),
-		actRegistry,
-		config.Loose,
-		zerolog.Logger{},
-		true,
+		plugin.Registry{
+			ActRegistry:   actRegistry,
+			Compatibility: config.Loose,
+			Logger:        zerolog.Logger{},
+			DevMode:       true,
+		},
 	)
 
 	api := API{
@@ -190,15 +212,16 @@ func TestGetProxies(t *testing.T) {
 
 	proxy := network.NewProxy(
 		context.TODO(),
-		newPool,
-		nil,
-		config.DefaultHealthCheckPeriod,
-		&config.Client{
-			Network: config.DefaultNetwork,
-			Address: config.DefaultAddress,
+		network.Proxy{
+			AvailableConnections: newPool,
+			HealthCheckPeriod:    config.DefaultHealthCheckPeriod,
+			ClientConfig: &config.Client{
+				Network: config.DefaultNetwork,
+				Address: config.DefaultAddress,
+			},
+			Logger:        zerolog.Logger{},
+			PluginTimeout: config.DefaultPluginTimeout,
 		},
-		zerolog.Logger{},
-		config.DefaultPluginTimeout,
 	)
 
 	api := API{
@@ -234,45 +257,54 @@ func TestGetServers(t *testing.T) {
 
 	proxy := network.NewProxy(
 		context.TODO(),
-		newPool,
-		nil,
-		config.DefaultHealthCheckPeriod,
-		&config.Client{
-			Network: config.DefaultNetwork,
-			Address: config.DefaultAddress,
+		network.Proxy{
+			AvailableConnections: newPool,
+			HealthCheckPeriod:    config.DefaultHealthCheckPeriod,
+			ClientConfig: &config.Client{
+				Network: config.DefaultNetwork,
+				Address: config.DefaultAddress,
+			},
+			Logger:        zerolog.Logger{},
+			PluginTimeout: config.DefaultPluginTimeout,
 		},
-		zerolog.Logger{},
-		config.DefaultPluginTimeout,
 	)
 
 	actRegistry := act.NewActRegistry(
-		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, zerolog.Logger{})
+		act.Registry{
+			Signals:              act.BuiltinSignals(),
+			Policies:             act.BuiltinPolicies(),
+			Actions:              act.BuiltinActions(),
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               zerolog.Logger{},
+		})
 
 	pluginRegistry := plugin.NewRegistry(
 		context.TODO(),
-		actRegistry,
-		config.Loose,
-		zerolog.Logger{},
-		true,
+		plugin.Registry{
+			ActRegistry:   actRegistry,
+			Compatibility: config.Loose,
+			Logger:        zerolog.Logger{},
+			DevMode:       true,
+		},
 	)
 
 	server := network.NewServer(
 		context.TODO(),
-		config.DefaultNetwork,
-		config.DefaultAddress,
-		config.DefaultTickInterval,
-		network.Option{
-			EnableTicker: false,
+		network.Server{
+			Network:      config.DefaultNetwork,
+			Address:      config.DefaultAddress,
+			TickInterval: config.DefaultTickInterval,
+			Options: network.Option{
+				EnableTicker: false,
+			},
+			Proxy:            proxy,
+			Logger:           zerolog.Logger{},
+			PluginRegistry:   pluginRegistry,
+			PluginTimeout:    config.DefaultPluginTimeout,
+			HandshakeTimeout: config.DefaultHandshakeTimeout,
 		},
-		proxy,
-		zerolog.Logger{},
-		pluginRegistry,
-		config.DefaultPluginTimeout,
-		false,
-		"",
-		"",
-		config.DefaultHandshakeTimeout,
 	)
 
 	api := API{

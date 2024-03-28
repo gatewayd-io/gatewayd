@@ -27,15 +27,22 @@ func NewPluginRegistry(t *testing.T) *Registry {
 	}
 	logger := logging.NewLogger(context.Background(), cfg)
 	actRegistry := act.NewActRegistry(
-		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
+		act.Registry{
+			Signals:              act.BuiltinSignals(),
+			Policies:             act.BuiltinPolicies(),
+			Actions:              act.BuiltinActions(),
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               logger,
+		})
 	reg := NewRegistry(
 		context.Background(),
-		actRegistry,
-		config.Loose,
-		logger,
-		false,
-	)
+		Registry{
+			ActRegistry:   actRegistry,
+			Compatibility: config.Loose,
+			Logger:        logger,
+		})
 	return reg
 }
 
@@ -129,15 +136,23 @@ func BenchmarkHookRun(b *testing.B) {
 	}
 	logger := logging.NewLogger(context.Background(), cfg)
 	actRegistry := act.NewActRegistry(
-		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
+		act.Registry{
+			Signals:              act.BuiltinSignals(),
+			Policies:             act.BuiltinPolicies(),
+			Actions:              act.BuiltinActions(),
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               logger,
+		})
+
 	reg := NewRegistry(
 		context.Background(),
-		actRegistry,
-		config.Loose,
-		logger,
-		false,
-	)
+		Registry{
+			ActRegistry:   actRegistry,
+			Compatibility: config.Loose,
+			Logger:        logger,
+		})
 	hookFunction := func(
 		_ context.Context, args *v1.Struct, _ ...grpc.CallOption,
 	) (*v1.Struct, error) {

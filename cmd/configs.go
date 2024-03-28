@@ -71,12 +71,12 @@ func lintConfig(fileType configFileType, configFile string) error {
 	var conf *config.Config
 	switch fileType {
 	case Global:
-		conf = config.NewConfig(context.TODO(), configFile, "")
+		conf = config.NewConfig(context.TODO(), config.Config{GlobalConfigFile: configFile})
 		conf.LoadDefaults(context.TODO())
 		conf.LoadGlobalConfigFile(context.TODO())
 		conf.UnmarshalGlobalConfig(context.TODO())
 	case Plugins:
-		conf = config.NewConfig(context.TODO(), "", configFile)
+		conf = config.NewConfig(context.TODO(), config.Config{PluginConfigFile: configFile})
 		conf.LoadDefaults(context.TODO())
 		conf.LoadPluginConfigFile(context.TODO())
 		conf.UnmarshalPluginConfig(context.TODO())
