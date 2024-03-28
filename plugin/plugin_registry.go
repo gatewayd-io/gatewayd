@@ -50,7 +50,6 @@ type IRegistry interface {
 	LoadPlugins(ctx context.Context, plugins []config.Plugin, startTimeout time.Duration)
 	RegisterHooks(ctx context.Context, pluginID sdkPlugin.Identifier)
 	Apply(hookName string, result *v1.Struct) ([]*sdkAct.Output, bool)
-	ActRegistry() *act.Registry
 
 	// Hook management
 	IHook
@@ -58,10 +57,10 @@ type IRegistry interface {
 
 type Registry struct {
 	plugins     pool.IPool
-	actRegistry *act.Registry
+	ActRegistry *act.Registry
 	hooks       map[v1.HookName]map[sdkPlugin.Priority]sdkPlugin.Method
 	ctx         context.Context //nolint:containedctx
-	devMode     bool
+	DevMode     bool
 
 	Logger        zerolog.Logger
 	Compatibility config.CompatibilityPolicy
@@ -73,22 +72,19 @@ var _ IRegistry = (*Registry)(nil)
 // NewRegistry creates a new plugin registry.
 func NewRegistry(
 	ctx context.Context,
-	actRegistry *act.Registry,
-	compatibility config.CompatibilityPolicy,
-	logger zerolog.Logger,
-	devMode bool,
+	registry Registry,
 ) *Registry {
 	regCtx, span := otel.Tracer(config.TracerName).Start(ctx, "Create new registry")
 	defer span.End()
 
 	return &Registry{
 		plugins:       pool.NewPool(regCtx, config.EmptyPoolCapacity),
-		actRegistry:   actRegistry,
 		hooks:         map[v1.HookName]map[sdkPlugin.Priority]sdkPlugin.Method{},
+		ActRegistry:   registry.ActRegistry,
 		ctx:           regCtx,
-		devMode:       devMode,
-		Logger:        logger,
-		Compatibility: compatibility,
+		DevMode:       registry.DevMode,
+		Logger:        registry.Logger,
+		Compatibility: registry.Compatibility,
 	}
 }
 
@@ -365,7 +361,7 @@ func (reg *Registry) Apply(hookName string, result *v1.Struct) ([]*sdkAct.Output
 	// Apply policies to the signals.
 	// The outputs contains the verdicts of the policies and their metadata.
 	// And using this list, the caller can take further actions.
-	outputs := applyPolicies(hookName, signals, reg.Logger, reg.ActRegistry())
+	outputs := applyPolicies(hookName, signals, reg.Logger, reg.ActRegistry)
 
 	// If no policies are found, return a default output.
 	// Note: this should never happen, as the default policy is always loaded.
@@ -437,7 +433,7 @@ func (reg *Registry) LoadPlugins(
 		}
 
 		var secureConfig *goplugin.SecureConfig
-		if !reg.devMode {
+		if !reg.DevMode {
 			// Checksum of the plugin.
 			if plugin.ID.Checksum == "" {
 				reg.Logger.Debug().Str("name", plugin.ID.Name).Msg(
@@ -727,11 +723,4 @@ func (reg *Registry) RegisterHooks(ctx context.Context, pluginID sdkPlugin.Ident
 		metrics.PluginHooksRegistered.Inc()
 		reg.AddHook(hookName, pluginImpl.Priority, hookMethod)
 	}
-}
-
-// ActRegistry returns the act registry.
-func (reg *Registry) ActRegistry() *act.Registry {
-	_, span := otel.Tracer(config.TracerName).Start(reg.ctx, "ActRegistry")
-	defer span.End()
-	return reg.actRegistry
 }

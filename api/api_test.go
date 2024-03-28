@@ -122,10 +122,12 @@ func TestGetPlugins(t *testing.T) {
 		})
 	pluginRegistry := plugin.NewRegistry(
 		context.TODO(),
-		actRegistry,
-		config.Loose,
-		zerolog.Logger{},
-		true,
+		plugin.Registry{
+			ActRegistry:   actRegistry,
+			Compatibility: config.Loose,
+			Logger:        zerolog.Logger{},
+			DevMode:       true,
+		},
 	)
 	pluginRegistry.Add(&plugin.Plugin{
 		ID: sdkPlugin.Identifier{
@@ -158,10 +160,12 @@ func TestGetPluginsWithEmptyPluginRegistry(t *testing.T) {
 		})
 	pluginRegistry := plugin.NewRegistry(
 		context.TODO(),
-		actRegistry,
-		config.Loose,
-		zerolog.Logger{},
-		true,
+		plugin.Registry{
+			ActRegistry:   actRegistry,
+			Compatibility: config.Loose,
+			Logger:        zerolog.Logger{},
+			DevMode:       true,
+		},
 	)
 
 	api := API{
@@ -276,10 +280,12 @@ func TestGetServers(t *testing.T) {
 
 	pluginRegistry := plugin.NewRegistry(
 		context.TODO(),
-		actRegistry,
-		config.Loose,
-		zerolog.Logger{},
-		true,
+		plugin.Registry{
+			ActRegistry:   actRegistry,
+			Compatibility: config.Loose,
+			Logger:        zerolog.Logger{},
+			DevMode:       true,
+		},
 	)
 
 	server := network.NewServer(

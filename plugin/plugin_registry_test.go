@@ -38,11 +38,11 @@ func NewPluginRegistry(t *testing.T) *Registry {
 		})
 	reg := NewRegistry(
 		context.Background(),
-		actRegistry,
-		config.Loose,
-		logger,
-		false,
-	)
+		Registry{
+			ActRegistry:   actRegistry,
+			Compatibility: config.Loose,
+			Logger:        logger,
+		})
 	return reg
 }
 
@@ -148,11 +148,11 @@ func BenchmarkHookRun(b *testing.B) {
 
 	reg := NewRegistry(
 		context.Background(),
-		actRegistry,
-		config.Loose,
-		logger,
-		false,
-	)
+		Registry{
+			ActRegistry:   actRegistry,
+			Compatibility: config.Loose,
+			Logger:        logger,
+		})
 	hookFunction := func(
 		_ context.Context, args *v1.Struct, _ ...grpc.CallOption,
 	) (*v1.Struct, error) {
