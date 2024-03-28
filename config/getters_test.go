@@ -28,7 +28,8 @@ func TestGetDefaultConfigFilePath(t *testing.T) {
 // TestFilter tests the Filter function.
 func TestFilter(t *testing.T) {
 	// Load config from the default config file.
-	conf := NewConfig(context.TODO(), "../gatewayd.yaml", "../gatewayd_plugins.yaml")
+	conf := NewConfig(context.TODO(),
+		Config{GlobalConfigFile: "../gatewayd.yaml", PluginConfigFile: "../gatewayd_plugins.yaml"})
 	conf.InitConfig(context.TODO())
 	assert.NotEmpty(t, conf.Global)
 

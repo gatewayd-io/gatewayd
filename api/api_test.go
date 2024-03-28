@@ -28,7 +28,8 @@ func TestGetVersion(t *testing.T) {
 
 func TestGetGlobalConfig(t *testing.T) {
 	// Load config from the default config file.
-	conf := config.NewConfig(context.TODO(), "../gatewayd.yaml", "../gatewayd_plugins.yaml")
+	conf := config.NewConfig(context.TODO(),
+		config.Config{GlobalConfigFile: "../gatewayd.yaml", PluginConfigFile: "../gatewayd_plugins.yaml"})
 	conf.InitConfig(context.TODO())
 	assert.NotEmpty(t, conf.Global)
 
@@ -50,7 +51,8 @@ func TestGetGlobalConfig(t *testing.T) {
 
 func TestGetGlobalConfigWithGroupName(t *testing.T) {
 	// Load config from the default config file.
-	conf := config.NewConfig(context.TODO(), "../gatewayd.yaml", "../gatewayd_plugins.yaml")
+	conf := config.NewConfig(context.TODO(),
+		config.Config{GlobalConfigFile: "../gatewayd.yaml", PluginConfigFile: "../gatewayd_plugins.yaml"})
 	conf.InitConfig(context.TODO())
 	assert.NotEmpty(t, conf.Global)
 
@@ -76,7 +78,8 @@ func TestGetGlobalConfigWithGroupName(t *testing.T) {
 
 func TestGetGlobalConfigWithNonExistingGroupName(t *testing.T) {
 	// Load config from the default config file.
-	conf := config.NewConfig(context.TODO(), "../gatewayd.yaml", "../gatewayd_plugins.yaml")
+	conf := config.NewConfig(context.TODO(),
+		config.Config{GlobalConfigFile: "../gatewayd.yaml", PluginConfigFile: "../gatewayd_plugins.yaml"})
 	conf.InitConfig(context.TODO())
 	assert.NotEmpty(t, conf.Global)
 
@@ -91,7 +94,8 @@ func TestGetGlobalConfigWithNonExistingGroupName(t *testing.T) {
 
 func TestGetPluginConfig(t *testing.T) {
 	// Load config from the default config file.
-	conf := config.NewConfig(context.TODO(), "../gatewayd.yaml", "../gatewayd_plugins.yaml")
+	conf := config.NewConfig(context.TODO(),
+		config.Config{GlobalConfigFile: "../gatewayd.yaml", PluginConfigFile: "../gatewayd_plugins.yaml"})
 	conf.InitConfig(context.TODO())
 	assert.NotEmpty(t, conf.Global)
 
