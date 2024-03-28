@@ -30,11 +30,11 @@ type IConnWrapper interface {
 }
 
 type ConnWrapper struct {
-	netConn          net.Conn
+	NetConn          net.Conn
 	tlsConn          *tls.Conn
-	tlsConfig        *tls.Config
+	TlsConfig        *tls.Config
 	isTLSEnabled     bool
-	handshakeTimeout time.Duration
+	HandshakeTimeout time.Duration
 }
 
 var _ IConnWrapper = (*ConnWrapper)(nil)
@@ -44,7 +44,7 @@ func (cw *ConnWrapper) Conn() net.Conn {
 	if cw.tlsConn != nil {
 		return net.Conn(cw.tlsConn)
 	}
-	return cw.netConn
+	return cw.NetConn
 }
 
 // UpgradeToTLS upgrades the connection to TLS.
@@ -58,12 +58,12 @@ func (cw *ConnWrapper) UpgradeToTLS(upgrader UpgraderFunc) *gerr.GatewayDError {
 	}
 
 	if upgrader != nil {
-		upgrader(cw.netConn)
+		upgrader(cw.NetConn)
 	}
 
-	tlsConn := tls.Server(cw.netConn, cw.tlsConfig)
+	tlsConn := tls.Server(cw.NetConn, cw.TlsConfig)
 
-	ctx, cancel := context.WithTimeout(context.Background(), cw.handshakeTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), cw.HandshakeTimeout)
 	defer cancel()
 
 	if err := tlsConn.HandshakeContext(ctx); err != nil {
@@ -79,7 +79,7 @@ func (cw *ConnWrapper) Close() error {
 	if cw.tlsConn != nil {
 		return cw.tlsConn.Close()
 	}
-	return cw.netConn.Close()
+	return cw.NetConn.Close()
 }
 
 // Write writes data to the connection.
@@ -87,7 +87,7 @@ func (cw *ConnWrapper) Write(data []byte) (int, error) {
 	if cw.tlsConn != nil {
 		return cw.tlsConn.Write(data)
 	}
-	return cw.netConn.Write(data)
+	return cw.NetConn.Write(data)
 }
 
 // Read reads data from the connection.
@@ -95,7 +95,7 @@ func (cw *ConnWrapper) Read(data []byte) (int, error) {
 	if cw.tlsConn != nil {
 		return cw.tlsConn.Read(data)
 	}
-	return cw.netConn.Read(data)
+	return cw.NetConn.Read(data)
 }
 
 // RemoteAddr returns the remote address.
@@ -103,7 +103,7 @@ func (cw *ConnWrapper) RemoteAddr() net.Addr {
 	if cw.tlsConn != nil {
 		return cw.tlsConn.RemoteAddr()
 	}
-	return cw.netConn.RemoteAddr()
+	return cw.NetConn.RemoteAddr()
 }
 
 // LocalAddr returns the local address.
@@ -111,7 +111,7 @@ func (cw *ConnWrapper) LocalAddr() net.Addr {
 	if cw.tlsConn != nil {
 		return cw.tlsConn.LocalAddr()
 	}
-	return cw.netConn.LocalAddr()
+	return cw.NetConn.LocalAddr()
 }
 
 // IsTLSEnabled returns true if TLS is enabled.
@@ -122,13 +122,13 @@ func (cw *ConnWrapper) IsTLSEnabled() bool {
 // NewConnWrapper creates a new connection wrapper. The connection
 // wrapper is used to upgrade the connection to TLS if need be.
 func NewConnWrapper(
-	conn net.Conn, tlsConfig *tls.Config, handshakeTimeout time.Duration,
+	connWrapper ConnWrapper,
 ) *ConnWrapper {
 	return &ConnWrapper{
-		netConn:          conn,
-		tlsConfig:        tlsConfig,
-		isTLSEnabled:     tlsConfig != nil && tlsConfig.Certificates != nil,
-		handshakeTimeout: handshakeTimeout,
+		NetConn:          connWrapper.NetConn,
+		TlsConfig:        connWrapper.TlsConfig,
+		isTLSEnabled:     connWrapper.TlsConfig != nil && connWrapper.TlsConfig.Certificates != nil,
+		HandshakeTimeout: connWrapper.HandshakeTimeout,
 	}
 }
 
