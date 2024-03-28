@@ -32,7 +32,7 @@ type IConnWrapper interface {
 type ConnWrapper struct {
 	NetConn          net.Conn
 	tlsConn          *tls.Conn
-	TlsConfig        *tls.Config
+	TLSConfig        *tls.Config
 	isTLSEnabled     bool
 	HandshakeTimeout time.Duration
 }
@@ -61,7 +61,7 @@ func (cw *ConnWrapper) UpgradeToTLS(upgrader UpgraderFunc) *gerr.GatewayDError {
 		upgrader(cw.NetConn)
 	}
 
-	tlsConn := tls.Server(cw.NetConn, cw.TlsConfig)
+	tlsConn := tls.Server(cw.NetConn, cw.TLSConfig)
 
 	ctx, cancel := context.WithTimeout(context.Background(), cw.HandshakeTimeout)
 	defer cancel()
@@ -126,8 +126,8 @@ func NewConnWrapper(
 ) *ConnWrapper {
 	return &ConnWrapper{
 		NetConn:          connWrapper.NetConn,
-		TlsConfig:        connWrapper.TlsConfig,
-		isTLSEnabled:     connWrapper.TlsConfig != nil && connWrapper.TlsConfig.Certificates != nil,
+		TLSConfig:        connWrapper.TLSConfig,
+		isTLSEnabled:     connWrapper.TLSConfig != nil && connWrapper.TLSConfig.Certificates != nil,
 		HandshakeTimeout: connWrapper.HandshakeTimeout,
 	}
 }
