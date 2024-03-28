@@ -339,7 +339,8 @@ var runCmd = &cobra.Command{
 		if conf.Plugin.EnableMetricsMerger {
 			metricsMerger = metrics.NewMerger(runCtx, metrics.Merger{
 				MetricsMergerPeriod: conf.Plugin.MetricsMergerPeriod,
-				Logger:              logger})
+				Logger:              logger,
+			})
 			pluginRegistry.ForEach(func(_ sdkPlugin.Identifier, plugin *plugin.Plugin) {
 				if metricsEnabled, err := strconv.ParseBool(plugin.Config["metricsEnabled"]); err == nil && metricsEnabled {
 					metricsMerger.Add(plugin.ID.Name, plugin.Config["metricsUnixDomainSocket"])
@@ -921,7 +922,7 @@ var runCmd = &cobra.Command{
 				Servers:        servers,
 			}
 			grpcServer = api.NewGRPCServer(api.GRPCServer{
-				Api:           apiObj,
+				API:           apiObj,
 				HealthChecker: &api.HealthChecker{Servers: servers},
 			})
 			go grpcServer.Start()

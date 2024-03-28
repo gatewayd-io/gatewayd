@@ -523,7 +523,7 @@ func (s *Server) Run() *gerr.GatewayDError {
 
 			conn := NewConnWrapper(ConnWrapper{
 				NetConn:          netConn,
-				TlsConfig:        tlsConfig,
+				TLSConfig:        tlsConfig,
 				HandshakeTimeout: s.HandshakeTimeout,
 			})
 
