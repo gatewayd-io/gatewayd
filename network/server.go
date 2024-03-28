@@ -521,7 +521,11 @@ func (s *Server) Run() *gerr.GatewayDError {
 				return gerr.ErrAcceptFailed.Wrap(err)
 			}
 
-			conn := NewConnWrapper(netConn, tlsConfig, s.HandshakeTimeout)
+			conn := NewConnWrapper(ConnWrapper{
+				NetConn:          netConn,
+				TlsConfig:        tlsConfig,
+				HandshakeTimeout: s.HandshakeTimeout,
+			})
 
 			if out, action := s.OnOpen(conn); action != None {
 				if _, err := conn.Write(out); err != nil {
