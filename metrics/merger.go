@@ -96,8 +96,6 @@ func (m *Merger) Remove(pluginName string) {
 }
 
 // ReadMetrics reads metrics from plugins by reading from their unix domain sockets.
-//
-//nolint:wrapcheck
 func (m *Merger) ReadMetrics() (map[string][]byte, *gerr.GatewayDError) {
 	_, span := otel.Tracer(config.TracerName).Start(m.ctx, "ReadMetrics")
 	defer span.End()

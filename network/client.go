@@ -92,7 +92,6 @@ func NewClient(
 
 	var origErr error
 	// Create a new connection and retry a few times if needed.
-	//nolint:wrapcheck
 	if conn, err := client.retry.Retry(func() (any, error) {
 		if client.DialTimeout > 0 {
 			return net.DialTimeout(client.Network, client.Address, client.DialTimeout)
@@ -278,7 +277,6 @@ func (c *Client) Reconnect() error {
 
 	var origErr error
 	// Create a new connection and retry a few times if needed.
-	//nolint:wrapcheck
 	if conn, err := c.retry.Retry(func() (any, error) {
 		if c.DialTimeout > 0 {
 			return net.DialTimeout(c.Network, c.Address, c.DialTimeout)
