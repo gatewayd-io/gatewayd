@@ -160,8 +160,7 @@ func (m *Merger) MergeMetrics(pluginMetrics map[string][]byte) *gerr.GatewayDErr
 
 	// TODO: There should be a better, more efficient way to merge metrics from plugins.
 	var metricsOutput bytes.Buffer
-	enc := expfmt.NewEncoder(io.Writer(&metricsOutput),
-		expfmt.NewFormat(expfmt.FormatType(expfmt.TypeTextPlain)))
+	enc := expfmt.NewEncoder(io.Writer(&metricsOutput), expfmt.NewFormat(expfmt.TypeTextPlain))
 	for pluginName, metrics := range pluginMetrics {
 		// Skip empty metrics.
 		if metrics == nil {
