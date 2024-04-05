@@ -922,7 +922,8 @@ var runCmd = &cobra.Command{
 		// Report usage statistics.
 		if enableUsageReport {
 			go func() {
-				conn, err := grpc.Dial(UsageReportURL,
+				conn, err := grpc.NewClient(
+					UsageReportURL,
 					grpc.WithTransportCredentials(
 						credentials.NewTLS(
 							&tls.Config{
