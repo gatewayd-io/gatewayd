@@ -20,6 +20,11 @@ type GRPCServer struct {
 // NewGRPCServer creates a new gRPC server.
 func NewGRPCServer(server GRPCServer) *GRPCServer {
 	grpcServer, listener := createGRPCAPI(server.API, server.HealthChecker)
+	if grpcServer == nil || listener == nil {
+		server.API.Options.Logger.Error().Msg("Failed to create gRPC API server and listener")
+		return nil
+	}
+
 	return &GRPCServer{
 		API:           server.API,
 		grpcServer:    grpcServer,
@@ -43,6 +48,7 @@ func createGRPCAPI(api *API, healthchecker *HealthChecker) (*grpc.Server, net.Li
 	listener, err := net.Listen(api.Options.GRPCNetwork, api.Options.GRPCAddress)
 	if err != nil {
 		api.Options.Logger.Err(err).Msg("failed to start gRPC API")
+		return nil, nil
 	}
 
 	grpcServer := grpc.NewServer()
