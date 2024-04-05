@@ -144,7 +144,7 @@ func BenchmarkHookRun(b *testing.B) {
 		args.Fields["test"] = v1.NewStringValue("test1")
 		return args, nil
 	}
-	for priority := 0; priority < 1000; priority++ {
+	for priority := range 1000 {
 		reg.AddHook(v1.HookName_HOOK_NAME_ON_NEW_LOGGER,
 			sdkPlugin.Priority(priority),
 			hookFunction,

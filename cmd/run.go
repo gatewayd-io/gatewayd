@@ -651,7 +651,7 @@ var runCmd = &cobra.Command{
 			)
 
 			// Add clients to the pool.
-			for i := 0; i < currentPoolSize; i++ {
+			for range currentPoolSize {
 				clientConfig := clients[name]
 				client := network.NewClient(
 					runCtx, clientConfig, logger,
