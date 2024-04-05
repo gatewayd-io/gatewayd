@@ -97,9 +97,9 @@ func StopGracefully(
 	grpcServer *api.GRPCServer,
 ) {
 	_, span := otel.Tracer(config.TracerName).Start(runCtx, "Shutdown server")
-	signal := "unknown"
+	currentSignal := "unknown"
 	if sig != nil {
-		signal = sig.String()
+		currentSignal = sig.String()
 	}
 
 	logger.Info().Msg("Notifying the plugins that the server is shutting down")
@@ -110,7 +110,7 @@ func StopGracefully(
 		//nolint:contextcheck
 		_, err := pluginRegistry.Run(
 			pluginTimeoutCtx,
-			map[string]interface{}{"signal": signal},
+			map[string]interface{}{"signal": currentSignal},
 			v1.HookName_HOOK_NAME_ON_SIGNAL,
 		)
 		if err != nil {
@@ -121,7 +121,7 @@ func StopGracefully(
 
 	logger.Info().Msg("GatewayD is shutting down")
 	span.AddEvent("GatewayD is shutting down", trace.WithAttributes(
-		attribute.String("signal", signal),
+		attribute.String("signal", currentSignal),
 	))
 	if healthCheckScheduler != nil {
 		healthCheckScheduler.Stop()
@@ -541,7 +541,6 @@ var runCmd = &cobra.Command{
 						tls.CurveP384,
 						tls.CurveP256,
 					},
-					PreferServerCipherSuites: true,
 					CipherSuites: []uint16{
 						tls.TLS_AES_128_GCM_SHA256,
 						tls.TLS_AES_256_GCM_SHA384,
@@ -549,7 +548,7 @@ var runCmd = &cobra.Command{
 					},
 				}
 				metricsServer.TLSNextProto = make(
-					map[string]func(*http.Server, *tls.Conn, http.Handler), 0)
+					map[string]func(*http.Server, *tls.Conn, http.Handler))
 				logger.Debug().Msg("Metrics server is running with TLS")
 
 				// Start the metrics server with TLS.
@@ -905,18 +904,20 @@ var runCmd = &cobra.Command{
 				Servers:        servers,
 			}
 			grpcServer = api.NewGRPCServer(apiObj, &api.HealthChecker{Servers: servers})
-			go grpcServer.Start()
-			logger.Info().Str("address", apiOptions.HTTPAddress).Msg("Started the HTTP API")
+			if grpcServer != nil {
+				go grpcServer.Start()
+				logger.Info().Str("address", apiOptions.HTTPAddress).Msg("Started the HTTP API")
 
-			httpServer = api.NewHTTPServer(&apiOptions)
-			go httpServer.Start()
+				httpServer = api.NewHTTPServer(&apiOptions)
+				go httpServer.Start()
 
-			logger.Info().Fields(
-				map[string]interface{}{
-					"network": apiOptions.GRPCNetwork,
-					"address": apiOptions.GRPCAddress,
-				},
-			).Msg("Started the gRPC Server")
+				logger.Info().Fields(
+					map[string]interface{}{
+						"network": apiOptions.GRPCNetwork,
+						"address": apiOptions.GRPCAddress,
+					},
+				).Msg("Started the gRPC Server")
+			}
 		}
 
 		// Report usage statistics.
@@ -936,7 +937,12 @@ var runCmd = &cobra.Command{
 					logger.Trace().Err(err).Msg(
 						"Failed to dial to the gRPC server for usage reporting")
 				}
-				defer conn.Close()
+				defer func(conn *grpc.ClientConn) {
+					err := conn.Close()
+					if err != nil {
+						logger.Trace().Err(err).Msg("Failed to close the connection to the usage report service")
+					}
+				}(conn)
 
 				client := usage.NewUsageReportServiceClient(conn)
 				report := usage.UsageReportRequest{
@@ -1036,7 +1042,7 @@ var runCmd = &cobra.Command{
 		}
 		span.End()
 
-		// Wait for the server to shutdown.
+		// Wait for the server to shut down.
 		<-stopChan
 	},
 }
