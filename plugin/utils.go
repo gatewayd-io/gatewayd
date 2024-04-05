@@ -34,12 +34,11 @@ func castToPrimitiveTypes(args map[string]interface{}) map[string]interface{} {
 			// Recursively cast nested arrays.
 			array := make([]interface{}, len(value))
 			for idx, v := range value {
-				result := v
 				if v, ok := v.(time.Duration); ok {
 					// Cast time.Duration to string.
 					array[idx] = v.String()
 				} else {
-					array[idx] = result
+					array[idx] = v
 				}
 			}
 			args[key] = array
