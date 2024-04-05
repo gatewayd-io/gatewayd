@@ -96,8 +96,6 @@ func (m *Merger) Remove(pluginName string) {
 }
 
 // ReadMetrics reads metrics from plugins by reading from their unix domain sockets.
-//
-//nolint:wrapcheck
 func (m *Merger) ReadMetrics() (map[string][]byte, *gerr.GatewayDError) {
 	_, span := otel.Tracer(config.TracerName).Start(m.ctx, "ReadMetrics")
 	defer span.End()
@@ -160,8 +158,7 @@ func (m *Merger) MergeMetrics(pluginMetrics map[string][]byte) *gerr.GatewayDErr
 
 	// TODO: There should be a better, more efficient way to merge metrics from plugins.
 	var metricsOutput bytes.Buffer
-	enc := expfmt.NewEncoder(io.Writer(&metricsOutput),
-		expfmt.NewFormat(expfmt.FormatType(expfmt.TypeTextPlain)))
+	enc := expfmt.NewEncoder(io.Writer(&metricsOutput), expfmt.NewFormat(expfmt.TypeTextPlain))
 	for pluginName, metrics := range pluginMetrics {
 		// Skip empty metrics.
 		if metrics == nil {
