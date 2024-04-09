@@ -91,9 +91,15 @@ func Test_getSignals_empty(t *testing.T) {
 func Test_applyPolicies(t *testing.T) {
 	logger := zerolog.Logger{}
 	actRegistry := act.NewActRegistry(
-		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger,
-	)
+		act.Registry{
+			Signals:              act.BuiltinSignals(),
+			Policies:             act.BuiltinPolicies(),
+			Actions:              act.BuiltinActions(),
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               logger,
+		})
 
 	output := applyPolicies(
 		"onTrafficFromClient", []sdkAct.Signal{*sdkAct.Passthrough()}, logger, actRegistry)

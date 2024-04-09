@@ -20,11 +20,11 @@ type IRetry interface {
 }
 
 type Retry struct {
-	logger             zerolog.Logger
 	Retries            int
 	Backoff            time.Duration
 	BackoffMultiplier  float64
 	DisableBackoffCaps bool
+	Logger             zerolog.Logger
 }
 
 var _ IRetry = (*Retry)(nil)
@@ -77,14 +77,14 @@ func (r *Retry) Retry(callback RetryCallback) (any, error) {
 		}
 
 		if retry > 0 {
-			r.logger.Debug().Fields(
+			r.Logger.Debug().Fields(
 				map[string]interface{}{
 					"retry": retry,
 					"delay": backoffDuration.String(),
 				},
 			).Msg("Trying to run callback again")
 		} else {
-			r.logger.Trace().Msg("First attempt to run callback")
+			r.Logger.Trace().Msg("First attempt to run callback")
 		}
 
 		// Try and retry the callback.
@@ -96,24 +96,20 @@ func (r *Retry) Retry(callback RetryCallback) (any, error) {
 		time.Sleep(backoffDuration)
 	}
 
-	r.logger.Error().Err(err).Msgf("Failed to run callback after %d retries", retry)
+	r.Logger.Error().Err(err).Msgf("Failed to run callback after %d retries", retry)
 
 	return nil, err
 }
 
 func NewRetry(
-	retries int,
-	backoff time.Duration,
-	backoffMultiplier float64,
-	disableBackoffCaps bool,
-	logger zerolog.Logger,
+	rty Retry,
 ) *Retry {
 	retry := Retry{
-		Retries:            retries,
-		Backoff:            backoff,
-		BackoffMultiplier:  backoffMultiplier,
-		DisableBackoffCaps: disableBackoffCaps,
-		logger:             logger,
+		Retries:            rty.Retries,
+		Backoff:            rty.Backoff,
+		BackoffMultiplier:  rty.BackoffMultiplier,
+		DisableBackoffCaps: rty.DisableBackoffCaps,
+		Logger:             rty.Logger,
 	}
 
 	// If the number of retries is less than 0, set it to 0 to disable retries.

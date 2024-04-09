@@ -48,11 +48,11 @@ type IServer interface {
 }
 
 type Server struct {
-	proxy          IProxy
-	logger         zerolog.Logger
-	pluginRegistry *plugin.Registry
+	Proxy          IProxy
+	Logger         zerolog.Logger
+	PluginRegistry *plugin.Registry
 	ctx            context.Context //nolint:containedctx
-	pluginTimeout  time.Duration
+	PluginTimeout  time.Duration
 	mu             *sync.RWMutex
 
 	Network      string // tcp/udp/unix
@@ -84,17 +84,17 @@ func (s *Server) OnBoot() Action {
 	_, span := otel.Tracer("gatewayd").Start(s.ctx, "OnBoot")
 	defer span.End()
 
-	s.logger.Debug().Msg("GatewayD is booting...")
+	s.Logger.Debug().Msg("GatewayD is booting...")
 
-	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.pluginTimeout)
+	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.PluginTimeout)
 	defer cancel()
 	// Run the OnBooting hooks.
-	_, err := s.pluginRegistry.Run(
+	_, err := s.PluginRegistry.Run(
 		pluginTimeoutCtx,
 		map[string]interface{}{"status": fmt.Sprint(s.Status)},
 		v1.HookName_HOOK_NAME_ON_BOOTING)
 	if err != nil {
-		s.logger.Error().Err(err).Msg("Failed to run OnBooting hook")
+		s.Logger.Error().Err(err).Msg("Failed to run OnBooting hook")
 		span.RecordError(err)
 	}
 	span.AddEvent("Ran the OnBooting hooks")
@@ -105,20 +105,20 @@ func (s *Server) OnBoot() Action {
 	s.mu.Unlock()
 
 	// Run the OnBooted hooks.
-	pluginTimeoutCtx, cancel = context.WithTimeout(context.Background(), s.pluginTimeout)
+	pluginTimeoutCtx, cancel = context.WithTimeout(context.Background(), s.PluginTimeout)
 	defer cancel()
 
-	_, err = s.pluginRegistry.Run(
+	_, err = s.PluginRegistry.Run(
 		pluginTimeoutCtx,
 		map[string]interface{}{"status": fmt.Sprint(s.Status)},
 		v1.HookName_HOOK_NAME_ON_BOOTED)
 	if err != nil {
-		s.logger.Error().Err(err).Msg("Failed to run OnBooted hook")
+		s.Logger.Error().Err(err).Msg("Failed to run OnBooted hook")
 		span.RecordError(err)
 	}
 	span.AddEvent("Ran the OnBooted hooks")
 
-	s.logger.Debug().Msg("GatewayD booted")
+	s.Logger.Debug().Msg("GatewayD booted")
 
 	return None
 }
@@ -129,10 +129,10 @@ func (s *Server) OnOpen(conn *ConnWrapper) ([]byte, Action) {
 	_, span := otel.Tracer("gatewayd").Start(s.ctx, "OnOpen")
 	defer span.End()
 
-	s.logger.Debug().Str("from", RemoteAddr(conn.Conn())).Msg(
+	s.Logger.Debug().Str("from", RemoteAddr(conn.Conn())).Msg(
 		"GatewayD is opening a connection")
 
-	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.pluginTimeout)
+	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.PluginTimeout)
 	defer cancel()
 	// Run the OnOpening hooks.
 	onOpeningData := map[string]interface{}{
@@ -141,10 +141,10 @@ func (s *Server) OnOpen(conn *ConnWrapper) ([]byte, Action) {
 			"remote": RemoteAddr(conn.Conn()),
 		},
 	}
-	_, err := s.pluginRegistry.Run(
+	_, err := s.PluginRegistry.Run(
 		pluginTimeoutCtx, onOpeningData, v1.HookName_HOOK_NAME_ON_OPENING)
 	if err != nil {
-		s.logger.Error().Err(err).Msg("Failed to run OnOpening hook")
+		s.Logger.Error().Err(err).Msg("Failed to run OnOpening hook")
 		span.RecordError(err)
 	}
 	span.AddEvent("Ran the OnOpening hooks")
@@ -152,7 +152,7 @@ func (s *Server) OnOpen(conn *ConnWrapper) ([]byte, Action) {
 	// Use the proxy to connect to the backend. Close the connection if the pool is exhausted.
 	// This effectively get a connection from the pool and puts both the incoming and the server
 	// connections in the pool of the busy connections.
-	if err := s.proxy.Connect(conn); err != nil {
+	if err := s.Proxy.Connect(conn); err != nil {
 		if errors.Is(err, gerr.ErrPoolExhausted) {
 			span.RecordError(err)
 			return nil, Close
@@ -160,13 +160,13 @@ func (s *Server) OnOpen(conn *ConnWrapper) ([]byte, Action) {
 
 		// This should never happen.
 		// TODO: Send error to client or retry connection
-		s.logger.Error().Err(err).Msg("Failed to connect to proxy")
+		s.Logger.Error().Err(err).Msg("Failed to connect to proxy")
 		span.RecordError(err)
 		return nil, None
 	}
 
 	// Run the OnOpened hooks.
-	pluginTimeoutCtx, cancel = context.WithTimeout(context.Background(), s.pluginTimeout)
+	pluginTimeoutCtx, cancel = context.WithTimeout(context.Background(), s.PluginTimeout)
 	defer cancel()
 
 	onOpenedData := map[string]interface{}{
@@ -175,10 +175,10 @@ func (s *Server) OnOpen(conn *ConnWrapper) ([]byte, Action) {
 			"remote": RemoteAddr(conn.Conn()),
 		},
 	}
-	_, err = s.pluginRegistry.Run(
+	_, err = s.PluginRegistry.Run(
 		pluginTimeoutCtx, onOpenedData, v1.HookName_HOOK_NAME_ON_OPENED)
 	if err != nil {
-		s.logger.Error().Err(err).Msg("Failed to run OnOpened hook")
+		s.Logger.Error().Err(err).Msg("Failed to run OnOpened hook")
 		span.RecordError(err)
 	}
 	span.AddEvent("Ran the OnOpened hooks")
@@ -194,11 +194,11 @@ func (s *Server) OnClose(conn *ConnWrapper, err error) Action {
 	_, span := otel.Tracer("gatewayd").Start(s.ctx, "OnClose")
 	defer span.End()
 
-	s.logger.Debug().Str("from", RemoteAddr(conn.Conn())).Msg(
+	s.Logger.Debug().Str("from", RemoteAddr(conn.Conn())).Msg(
 		"GatewayD is closing a connection")
 
 	// Run the OnClosing hooks.
-	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.pluginTimeout)
+	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.PluginTimeout)
 	defer cancel()
 
 	data := map[string]interface{}{
@@ -211,10 +211,10 @@ func (s *Server) OnClose(conn *ConnWrapper, err error) Action {
 	if err != nil {
 		data["error"] = err.Error()
 	}
-	_, gatewaydErr := s.pluginRegistry.Run(
+	_, gatewaydErr := s.PluginRegistry.Run(
 		pluginTimeoutCtx, data, v1.HookName_HOOK_NAME_ON_CLOSING)
 	if gatewaydErr != nil {
-		s.logger.Error().Err(gatewaydErr).Msg("Failed to run OnClosing hook")
+		s.Logger.Error().Err(gatewaydErr).Msg("Failed to run OnClosing hook")
 		span.RecordError(gatewaydErr)
 	}
 	span.AddEvent("Ran the OnClosing hooks")
@@ -228,8 +228,8 @@ func (s *Server) OnClose(conn *ConnWrapper, err error) Action {
 	// Disconnect the connection from the proxy. This effectively removes the mapping between
 	// the incoming and the server connections in the pool of the busy connections and either
 	// recycles or disconnects the connections.
-	if err := s.proxy.Disconnect(conn); err != nil {
-		s.logger.Error().Err(err).Msg("Failed to disconnect the server connection")
+	if err := s.Proxy.Disconnect(conn); err != nil {
+		s.Logger.Error().Err(err).Msg("Failed to disconnect the server connection")
 		span.RecordError(err)
 		return Close
 	}
@@ -240,13 +240,13 @@ func (s *Server) OnClose(conn *ConnWrapper, err error) Action {
 
 	// Close the incoming connection.
 	if err := conn.Close(); err != nil {
-		s.logger.Error().Err(err).Msg("Failed to close the incoming connection")
+		s.Logger.Error().Err(err).Msg("Failed to close the incoming connection")
 		span.RecordError(err)
 		return Close
 	}
 
 	// Run the OnClosed hooks.
-	pluginTimeoutCtx, cancel = context.WithTimeout(context.Background(), s.pluginTimeout)
+	pluginTimeoutCtx, cancel = context.WithTimeout(context.Background(), s.PluginTimeout)
 	defer cancel()
 
 	data = map[string]interface{}{
@@ -259,10 +259,10 @@ func (s *Server) OnClose(conn *ConnWrapper, err error) Action {
 	if err != nil {
 		data["error"] = err.Error()
 	}
-	_, gatewaydErr = s.pluginRegistry.Run(
+	_, gatewaydErr = s.PluginRegistry.Run(
 		pluginTimeoutCtx, data, v1.HookName_HOOK_NAME_ON_CLOSED)
 	if gatewaydErr != nil {
-		s.logger.Error().Err(gatewaydErr).Msg("Failed to run OnClosed hook")
+		s.Logger.Error().Err(gatewaydErr).Msg("Failed to run OnClosed hook")
 		span.RecordError(gatewaydErr)
 	}
 	span.AddEvent("Ran the OnClosed hooks")
@@ -279,7 +279,7 @@ func (s *Server) OnTraffic(conn *ConnWrapper, stopConnection chan struct{}) Acti
 	defer span.End()
 
 	// Run the OnTraffic hooks.
-	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.pluginTimeout)
+	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.PluginTimeout)
 	defer cancel()
 
 	onTrafficData := map[string]interface{}{
@@ -288,10 +288,10 @@ func (s *Server) OnTraffic(conn *ConnWrapper, stopConnection chan struct{}) Acti
 			"remote": RemoteAddr(conn.Conn()),
 		},
 	}
-	_, err := s.pluginRegistry.Run(
+	_, err := s.PluginRegistry.Run(
 		pluginTimeoutCtx, onTrafficData, v1.HookName_HOOK_NAME_ON_TRAFFIC)
 	if err != nil {
-		s.logger.Error().Err(err).Msg("Failed to run OnTraffic hook")
+		s.Logger.Error().Err(err).Msg("Failed to run OnTraffic hook")
 		span.RecordError(err)
 	}
 	span.AddEvent("Ran the OnTraffic hooks")
@@ -302,9 +302,9 @@ func (s *Server) OnTraffic(conn *ConnWrapper, stopConnection chan struct{}) Acti
 	// If there is an error, log it and close the connection.
 	go func(server *Server, conn *ConnWrapper, stopConnection chan struct{}, stack *Stack) {
 		for {
-			server.logger.Trace().Msg("Passing through traffic from client to server")
-			if err := server.proxy.PassThroughToServer(conn, stack); err != nil {
-				server.logger.Trace().Err(err).Msg("Failed to pass through traffic")
+			server.Logger.Trace().Msg("Passing through traffic from client to server")
+			if err := server.Proxy.PassThroughToServer(conn, stack); err != nil {
+				server.Logger.Trace().Err(err).Msg("Failed to pass through traffic")
 				span.RecordError(err)
 				stopConnection <- struct{}{}
 				break
@@ -316,9 +316,9 @@ func (s *Server) OnTraffic(conn *ConnWrapper, stopConnection chan struct{}) Acti
 	// If there is an error, log it and close the connection.
 	go func(server *Server, conn *ConnWrapper, stopConnection chan struct{}, stack *Stack) {
 		for {
-			server.logger.Trace().Msg("Passing through traffic from server to client")
-			if err := server.proxy.PassThroughToClient(conn, stack); err != nil {
-				server.logger.Trace().Err(err).Msg("Failed to pass through traffic")
+			server.Logger.Trace().Msg("Passing through traffic from server to client")
+			if err := server.Proxy.PassThroughToClient(conn, stack); err != nil {
+				server.Logger.Trace().Err(err).Msg("Failed to pass through traffic")
 				span.RecordError(err)
 				stopConnection <- struct{}{}
 				break
@@ -337,23 +337,23 @@ func (s *Server) OnShutdown() {
 	_, span := otel.Tracer("gatewayd").Start(s.ctx, "OnShutdown")
 	defer span.End()
 
-	s.logger.Debug().Msg("GatewayD is shutting down")
+	s.Logger.Debug().Msg("GatewayD is shutting down")
 
-	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.pluginTimeout)
+	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.PluginTimeout)
 	defer cancel()
 	// Run the OnShutdown hooks.
-	_, err := s.pluginRegistry.Run(
+	_, err := s.PluginRegistry.Run(
 		pluginTimeoutCtx,
 		map[string]interface{}{"connections": s.CountConnections()},
 		v1.HookName_HOOK_NAME_ON_SHUTDOWN)
 	if err != nil {
-		s.logger.Error().Err(err).Msg("Failed to run OnShutdown hook")
+		s.Logger.Error().Err(err).Msg("Failed to run OnShutdown hook")
 		span.RecordError(err)
 	}
 	span.AddEvent("Ran the OnShutdown hooks")
 
 	// Shutdown the proxy.
-	s.proxy.Shutdown()
+	s.Proxy.Shutdown()
 
 	// Set the server status to stopped. This is used to shutdown the server gracefully in OnClose.
 	s.mu.Lock()
@@ -366,19 +366,19 @@ func (s *Server) OnTick() (time.Duration, Action) {
 	_, span := otel.Tracer("gatewayd").Start(s.ctx, "OnTick")
 	defer span.End()
 
-	s.logger.Debug().Msg("GatewayD is ticking...")
-	s.logger.Info().Str("count", strconv.Itoa(s.CountConnections())).Msg(
+	s.Logger.Debug().Msg("GatewayD is ticking...")
+	s.Logger.Info().Str("count", strconv.Itoa(s.CountConnections())).Msg(
 		"Active client connections")
 
-	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.pluginTimeout)
+	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.PluginTimeout)
 	defer cancel()
 	// Run the OnTick hooks.
-	_, err := s.pluginRegistry.Run(
+	_, err := s.PluginRegistry.Run(
 		pluginTimeoutCtx,
 		map[string]interface{}{"connections": s.CountConnections()},
 		v1.HookName_HOOK_NAME_ON_TICK)
 	if err != nil {
-		s.logger.Error().Err(err).Msg("Failed to run OnTick hook")
+		s.Logger.Error().Err(err).Msg("Failed to run OnTick hook")
 		span.RecordError(err)
 	}
 	span.AddEvent("Ran the OnTick hooks")
@@ -397,16 +397,16 @@ func (s *Server) Run() *gerr.GatewayDError {
 	_, span := otel.Tracer("gatewayd").Start(s.ctx, "Run")
 	defer span.End()
 
-	s.logger.Info().Str("pid", strconv.Itoa(os.Getpid())).Msg("GatewayD is running")
+	s.Logger.Info().Str("pid", strconv.Itoa(os.Getpid())).Msg("GatewayD is running")
 
 	// Try to resolve the address and log an error if it can't be resolved
-	addr, err := Resolve(s.Network, s.Address, s.logger)
+	addr, err := Resolve(s.Network, s.Address, s.Logger)
 	if err != nil {
-		s.logger.Error().Err(err).Msg("Failed to resolve address")
+		s.Logger.Error().Err(err).Msg("Failed to resolve address")
 		span.RecordError(err)
 	}
 
-	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.pluginTimeout)
+	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.PluginTimeout)
 	defer cancel()
 	// Run the OnRun hooks.
 	// Since Run is blocking, we need to run OnRun before it.
@@ -414,17 +414,17 @@ func (s *Server) Run() *gerr.GatewayDError {
 	if err != nil && err.Unwrap() != nil {
 		onRunData["error"] = err.OriginalError.Error()
 	}
-	result, err := s.pluginRegistry.Run(
+	result, err := s.PluginRegistry.Run(
 		pluginTimeoutCtx, onRunData, v1.HookName_HOOK_NAME_ON_RUN)
 	if err != nil {
-		s.logger.Error().Err(err).Msg("Failed to run the hook")
+		s.Logger.Error().Err(err).Msg("Failed to run the hook")
 		span.RecordError(err)
 	}
 	span.AddEvent("Ran the OnRun hooks")
 
 	if result != nil {
 		if errMsg, ok := result["error"].(string); ok && errMsg != "" {
-			s.logger.Error().Str("error", errMsg).Msg("Error in hook")
+			s.Logger.Error().Str("error", errMsg).Msg("Error in hook")
 		}
 
 		if address, ok := result["address"].(string); ok {
@@ -438,7 +438,7 @@ func (s *Server) Run() *gerr.GatewayDError {
 
 	listener, origErr := net.Listen(s.Network, addr)
 	if origErr != nil {
-		s.logger.Error().Err(origErr).Msg("Server failed to start listening")
+		s.Logger.Error().Err(origErr).Msg("Server failed to start listening")
 		return gerr.ErrServerListenFailed.Wrap(origErr)
 	}
 	s.mu.Lock()
@@ -447,26 +447,26 @@ func (s *Server) Run() *gerr.GatewayDError {
 	defer s.listener.Close()
 
 	if s.listener == nil {
-		s.logger.Error().Msg("Server is not properly initialized")
+		s.Logger.Error().Msg("Server is not properly initialized")
 		return nil
 	}
 
 	var port string
 	s.host, port, origErr = net.SplitHostPort(s.listener.Addr().String())
 	if origErr != nil {
-		s.logger.Error().Err(origErr).Msg("Failed to split host and port")
+		s.Logger.Error().Err(origErr).Msg("Failed to split host and port")
 		return gerr.ErrSplitHostPortFailed.Wrap(origErr)
 	}
 
 	if s.port, origErr = strconv.Atoi(port); origErr != nil {
-		s.logger.Error().Err(origErr).Msg("Failed to convert port to integer")
+		s.Logger.Error().Err(origErr).Msg("Failed to convert port to integer")
 		return gerr.ErrCastFailed.Wrap(origErr)
 	}
 
 	go func(server *Server) {
 		<-server.stopServer
 		server.OnShutdown()
-		server.logger.Debug().Msg("Server stopped")
+		server.Logger.Debug().Msg("Server stopped")
 	}(s)
 
 	go func(server *Server) {
@@ -498,18 +498,18 @@ func (s *Server) Run() *gerr.GatewayDError {
 	if s.EnableTLS {
 		tlsConfig, origErr = CreateTLSConfig(s.CertFile, s.KeyFile)
 		if origErr != nil {
-			s.logger.Error().Err(origErr).Msg("Failed to create TLS config")
+			s.Logger.Error().Err(origErr).Msg("Failed to create TLS config")
 			return gerr.ErrGetTLSConfigFailed.Wrap(origErr)
 		}
-		s.logger.Info().Msg("TLS is enabled")
+		s.Logger.Info().Msg("TLS is enabled")
 	} else {
-		s.logger.Debug().Msg("TLS is disabled")
+		s.Logger.Debug().Msg("TLS is disabled")
 	}
 
 	for {
 		select {
 		case <-s.stopServer:
-			s.logger.Info().Msg("Server stopped")
+			s.Logger.Info().Msg("Server stopped")
 			return nil
 		default:
 			netConn, err := s.listener.Accept()
@@ -517,15 +517,19 @@ func (s *Server) Run() *gerr.GatewayDError {
 				if !s.running.Load() {
 					return nil
 				}
-				s.logger.Error().Err(err).Msg("Failed to accept connection")
+				s.Logger.Error().Err(err).Msg("Failed to accept connection")
 				return gerr.ErrAcceptFailed.Wrap(err)
 			}
 
-			conn := NewConnWrapper(netConn, tlsConfig, s.HandshakeTimeout)
+			conn := NewConnWrapper(ConnWrapper{
+				NetConn:          netConn,
+				TLSConfig:        tlsConfig,
+				HandshakeTimeout: s.HandshakeTimeout,
+			})
 
 			if out, action := s.OnOpen(conn); action != None {
 				if _, err := conn.Write(out); err != nil {
-					s.logger.Error().Err(err).Msg("Failed to write to connection")
+					s.Logger.Error().Err(err).Msg("Failed to write to connection")
 				}
 				_ = conn.Close()
 				if action == Shutdown {
@@ -570,7 +574,7 @@ func (s *Server) Shutdown() {
 	defer span.End()
 
 	// Shutdown the proxy.
-	s.proxy.Shutdown()
+	s.Proxy.Shutdown()
 
 	// Set the server status to stopped. This is used to shutdown the server gracefully in OnClose.
 	s.mu.Lock()
@@ -582,22 +586,22 @@ func (s *Server) Shutdown() {
 	s.running.Store(false)
 	if s.listener != nil {
 		if err = s.listener.Close(); err != nil {
-			s.logger.Error().Err(err).Msg("Failed to close listener")
+			s.Logger.Error().Err(err).Msg("Failed to close listener")
 		}
 	} else {
-		s.logger.Error().Msg("Listener is not initialized")
+		s.Logger.Error().Msg("Listener is not initialized")
 	}
 
 	select {
 	case <-s.stopServer:
-		s.logger.Info().Msg("Server stopped")
+		s.Logger.Info().Msg("Server stopped")
 	default:
 		s.stopServer <- struct{}{}
 		close(s.stopServer)
 	}
 
 	if err != nil {
-		s.logger.Error().Err(err).Msg("Failed to shutdown server")
+		s.Logger.Error().Err(err).Msg("Failed to shutdown server")
 		span.RecordError(err)
 	}
 }
@@ -616,16 +620,7 @@ func (s *Server) IsRunning() bool {
 // NewServer creates a new server.
 func NewServer(
 	ctx context.Context,
-	network, address string,
-	tickInterval time.Duration,
-	options Option,
-	proxy IProxy,
-	logger zerolog.Logger,
-	pluginRegistry *plugin.Registry,
-	pluginTimeout time.Duration,
-	enableTLS bool,
-	certFile, keyFile string,
-	handshakeTimeout time.Duration,
+	srv Server,
 ) *Server {
 	serverCtx, span := otel.Tracer(config.TracerName).Start(ctx, "NewServer")
 	defer span.End()
@@ -633,19 +628,19 @@ func NewServer(
 	// Create the server.
 	server := Server{
 		ctx:              serverCtx,
-		Network:          network,
-		Address:          address,
-		Options:          options,
-		TickInterval:     tickInterval,
+		Network:          srv.Network,
+		Address:          srv.Address,
+		Options:          srv.Options,
+		TickInterval:     srv.TickInterval,
 		Status:           config.Stopped,
-		EnableTLS:        enableTLS,
-		CertFile:         certFile,
-		KeyFile:          keyFile,
-		HandshakeTimeout: handshakeTimeout,
-		proxy:            proxy,
-		logger:           logger,
-		pluginRegistry:   pluginRegistry,
-		pluginTimeout:    pluginTimeout,
+		EnableTLS:        srv.EnableTLS,
+		CertFile:         srv.CertFile,
+		KeyFile:          srv.KeyFile,
+		HandshakeTimeout: srv.HandshakeTimeout,
+		Proxy:            srv.Proxy,
+		Logger:           srv.Logger,
+		PluginRegistry:   srv.PluginRegistry,
+		PluginTimeout:    srv.PluginTimeout,
 		mu:               &sync.RWMutex{},
 		connections:      0,
 		running:          &atomic.Bool{},
@@ -653,19 +648,19 @@ func NewServer(
 	}
 
 	// Try to resolve the address and log an error if it can't be resolved.
-	addr, err := Resolve(server.Network, server.Address, logger)
+	addr, err := Resolve(server.Network, server.Address, srv.Logger)
 	if err != nil {
-		logger.Error().Err(err).Msg("Failed to resolve address")
+		srv.Logger.Error().Err(err).Msg("Failed to resolve address")
 		span.AddEvent(err.Error())
 	}
 
 	if addr != "" {
 		server.Address = addr
-		logger.Debug().Str("address", addr).Msg("Resolved address")
-		logger.Info().Str("address", addr).Msg("GatewayD is listening")
+		srv.Logger.Debug().Str("address", addr).Msg("Resolved address")
+		srv.Logger.Info().Str("address", addr).Msg("GatewayD is listening")
 	} else {
-		logger.Error().Msg("Failed to resolve address")
-		logger.Warn().Str("address", server.Address).Msg(
+		srv.Logger.Error().Msg("Failed to resolve address")
+		srv.Logger.Warn().Str("address", server.Address).Msg(
 			"GatewayD is listening on an unresolved address")
 	}
 

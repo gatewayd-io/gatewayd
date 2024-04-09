@@ -51,90 +51,127 @@ const (
 )
 
 var (
-	ErrClientNotFound = NewGatewayDError(
-		ErrCodeClientNotFound, "client not found", nil)
-	ErrNilContext = NewGatewayDError(
-		ErrCodeNilContext, "context is nil", nil)
-	ErrClientNotConnected = NewGatewayDError(
-		ErrCodeClientNotConnected, "client is not connected", nil)
-	ErrClientConnectionFailed = NewGatewayDError(
-		ErrCodeClientConnectionFailed, "failed to create a new connection", nil)
-	ErrNetworkNotSupported = NewGatewayDError(
-		ErrCodeNetworkNotSupported, "network is not supported", nil)
-	ErrResolveFailed = NewGatewayDError(
-		ErrCodeResolveFailed, "failed to resolve address", nil)
-	ErrPoolExhausted = NewGatewayDError(
-		ErrCodePoolExhausted, "pool is exhausted", nil)
+	ErrClientNotFound = &GatewayDError{
+		ErrCodeClientNotFound, "client not found", nil,
+	}
+	ErrNilContext = &GatewayDError{
+		ErrCodeNilContext, "context is nil", nil,
+	}
+	ErrClientNotConnected = &GatewayDError{
+		ErrCodeClientNotConnected, "client is not connected", nil,
+	}
+	ErrClientConnectionFailed = &GatewayDError{
+		ErrCodeClientConnectionFailed, "failed to create a new connection", nil,
+	}
+	ErrNetworkNotSupported = &GatewayDError{
+		ErrCodeNetworkNotSupported, "network is not supported", nil,
+	}
+	ErrResolveFailed = &GatewayDError{
+		ErrCodeResolveFailed, "failed to resolve address", nil,
+	}
+	ErrPoolExhausted = &GatewayDError{
+		ErrCodePoolExhausted, "pool is exhausted", nil,
+	}
 
-	ErrPluginNotReady = NewGatewayDError(
-		ErrCodePluginNotReady, "plugin is not ready", nil)
-	ErrFailedToStartPlugin = NewGatewayDError(
-		ErrCodeStartPluginFailed, "failed to start plugin", nil)
-	ErrFailedToGetRPCClient = NewGatewayDError(
-		ErrCodeGetRPCClientFailed, "failed to get RPC client", nil)
-	ErrFailedToDispensePlugin = NewGatewayDError(
-		ErrCodeDispensePluginFailed, "failed to dispense plugin", nil)
-	ErrFailedToMergePluginMetrics = NewGatewayDError(
-		ErrCodePluginMetricsMergeFailed, "failed to merge plugin metrics", nil)
-	ErrFailedToPingPlugin = NewGatewayDError(
-		ErrCodePluginPingFailed, "failed to ping plugin", nil)
+	ErrPluginNotReady = &GatewayDError{
+		ErrCodePluginNotReady, "plugin is not ready", nil,
+	}
+	ErrFailedToStartPlugin = &GatewayDError{
+		ErrCodeStartPluginFailed, "failed to start plugin", nil,
+	}
+	ErrFailedToGetRPCClient = &GatewayDError{
+		ErrCodeGetRPCClientFailed, "failed to get RPC client", nil,
+	}
+	ErrFailedToDispensePlugin = &GatewayDError{
+		ErrCodeDispensePluginFailed, "failed to dispense plugin", nil,
+	}
+	ErrFailedToMergePluginMetrics = &GatewayDError{
+		ErrCodePluginMetricsMergeFailed, "failed to merge plugin metrics", nil,
+	}
+	ErrFailedToPingPlugin = &GatewayDError{
+		ErrCodePluginPingFailed, "failed to ping plugin", nil,
+	}
 
-	ErrClientReceiveFailed = NewGatewayDError(
-		ErrCodeClientReceiveFailed, "couldn't receive data from the server", nil)
-	ErrClientSendFailed = NewGatewayDError(
-		ErrCodeClientSendFailed, "couldn't send data to the server", nil)
+	ErrClientReceiveFailed = &GatewayDError{
+		ErrCodeClientReceiveFailed, "couldn't receive data from the server", nil,
+	}
+	ErrClientSendFailed = &GatewayDError{
+		ErrCodeClientSendFailed, "couldn't send data to the server", nil,
+	}
 
-	ErrServerSendFailed = NewGatewayDError(
-		ErrCodeServerSendFailed, "couldn't send data to the client", nil)
-	ErrServerListenFailed = NewGatewayDError(
-		ErrCodeServerListenFailed, "couldn't listen on the server", nil)
-	ErrSplitHostPortFailed = NewGatewayDError(
-		ErrCodeSplitHostPortFailed, "failed to split host:port", nil)
-	ErrAcceptFailed = NewGatewayDError(
-		ErrCodeAcceptFailed, "failed to accept connection", nil)
-	ErrGetTLSConfigFailed = NewGatewayDError(
-		ErrCodeGetTLSConfigFailed, "failed to get TLS config", nil)
-	ErrUpgradeToTLSFailed = NewGatewayDError(
-		ErrCodeUpgradeToTLSFailed, "failed to upgrade to TLS", nil)
+	ErrServerSendFailed = &GatewayDError{
+		ErrCodeServerSendFailed, "couldn't send data to the client", nil,
+	}
+	ErrServerListenFailed = &GatewayDError{
+		ErrCodeServerListenFailed, "couldn't listen on the server", nil,
+	}
+	ErrSplitHostPortFailed = &GatewayDError{
+		ErrCodeSplitHostPortFailed, "failed to split host:port", nil,
+	}
+	ErrAcceptFailed = &GatewayDError{
+		ErrCodeAcceptFailed, "failed to accept connection", nil,
+	}
+	ErrGetTLSConfigFailed = &GatewayDError{
+		ErrCodeGetTLSConfigFailed, "failed to get TLS config", nil,
+	}
+	ErrUpgradeToTLSFailed = &GatewayDError{
+		ErrCodeUpgradeToTLSFailed, "failed to upgrade to TLS", nil,
+	}
 
-	ErrReadFailed = NewGatewayDError(
-		ErrCodeReadFailed, "failed to read from the client", nil)
+	ErrReadFailed = &GatewayDError{
+		ErrCodeReadFailed, "failed to read from the client", nil,
+	}
 
-	ErrNilPointer = NewGatewayDError(
-		ErrCodeNilPointer, "nil pointer", nil)
+	ErrNilPointer = &GatewayDError{
+		ErrCodeNilPointer, "nil pointer", nil,
+	}
 
-	ErrCastFailed = NewGatewayDError(
-		ErrCodeCastFailed, "failed to cast", nil)
+	ErrCastFailed = &GatewayDError{
+		ErrCodeCastFailed, "failed to cast", nil,
+	}
 
-	ErrHookTerminatedConnection = NewGatewayDError(
-		ErrCodeHookTerminatedConnection, "hook terminated connection", nil)
+	ErrHookTerminatedConnection = &GatewayDError{
+		ErrCodeHookTerminatedConnection, "hook terminated connection", nil,
+	}
 
-	ErrValidationFailed = NewGatewayDError(
-		ErrCodeValidationFailed, "validation failed", nil)
-	ErrLintingFailed = NewGatewayDError(
-		ErrCodeLintingFailed, "linting failed", nil)
+	ErrValidationFailed = &GatewayDError{
+		ErrCodeValidationFailed, "validation failed", nil,
+	}
+	ErrLintingFailed = &GatewayDError{
+		ErrCodeLintingFailed, "linting failed", nil,
+	}
 
-	ErrExtractFailed = NewGatewayDError(
-		ErrCodeExtractFailed, "failed to extract the archive", nil)
-	ErrDownloadFailed = NewGatewayDError(
-		ErrCodeDownloadFailed, "failed to download the file", nil)
+	ErrExtractFailed = &GatewayDError{
+		ErrCodeExtractFailed, "failed to extract the archive", nil,
+	}
+	ErrDownloadFailed = &GatewayDError{
+		ErrCodeDownloadFailed, "failed to download the file", nil,
+	}
 
-	ErrActionNotExist = NewGatewayDError(
-		ErrCodeKeyNotFound, "action does not exist", nil)
-	ErrRunningAction = NewGatewayDError(
-		ErrCodeRunError, "error running action", nil)
-	ErrAsyncAction = NewGatewayDError(
-		ErrCodeAsyncAction, "async action", nil)
-	ErrRunningActionTimeout = NewGatewayDError(
-		ErrCodeRunError, "timeout running action", nil)
-	ErrActionNotMatched = NewGatewayDError(
-		ErrCodeKeyNotFound, "no matching action", nil)
-	ErrPolicyNotMatched = NewGatewayDError(
-		ErrCodeKeyNotFound, "no matching policy", nil)
-	ErrEvalError = NewGatewayDError(
-		ErrCodeEvalError, "error evaluating expression", nil)
-	ErrMsgEncodeError = NewGatewayDError(
-		ErrCodeMsgEncodeError, "error encoding message", nil)
+	ErrActionNotExist = &GatewayDError{
+		ErrCodeKeyNotFound, "action does not exist", nil,
+	}
+	ErrRunningAction = &GatewayDError{
+		ErrCodeRunError, "error running action", nil,
+	}
+	ErrAsyncAction = &GatewayDError{
+		ErrCodeAsyncAction, "async action", nil,
+	}
+	ErrRunningActionTimeout = &GatewayDError{
+		ErrCodeRunError, "timeout running action", nil,
+	}
+	ErrActionNotMatched = &GatewayDError{
+		ErrCodeKeyNotFound, "no matching action", nil,
+	}
+	ErrPolicyNotMatched = &GatewayDError{
+		ErrCodeKeyNotFound, "no matching policy", nil,
+	}
+	ErrEvalError = &GatewayDError{
+		ErrCodeEvalError, "error evaluating expression", nil,
+	}
+	ErrMsgEncodeError = &GatewayDError{
+		ErrCodeMsgEncodeError, "error encoding message", nil,
+	}
 
 	// Unwrapped errors.
 	ErrLoggerRequired = errors.New("terminate action requires a logger parameter")

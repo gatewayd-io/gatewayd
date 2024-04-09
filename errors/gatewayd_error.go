@@ -10,15 +10,6 @@ type GatewayDError struct {
 	OriginalError error
 }
 
-// NewGatewayDError creates a new GatewayDError.
-func NewGatewayDError(code ErrCode, message string, err error) *GatewayDError {
-	return &GatewayDError{
-		Code:          code,
-		Message:       message,
-		OriginalError: err,
-	}
-}
-
 // Error returns the error message of the GatewayDError.
 func (e *GatewayDError) Error() string {
 	if e.OriginalError == nil {

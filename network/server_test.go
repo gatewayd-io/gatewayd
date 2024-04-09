@@ -40,27 +40,34 @@ func TestRunServer(t *testing.T) {
 	})
 
 	actRegistry := act.NewActRegistry(
-		act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
+		act.Registry{
+			Signals:              act.BuiltinSignals(),
+			Policies:             act.BuiltinPolicies(),
+			Actions:              act.BuiltinActions(),
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               logger,
+		})
 	pluginRegistry := plugin.NewRegistry(
 		context.Background(),
-		actRegistry,
-		config.Loose,
-		logger,
-		false,
-	)
+		plugin.Registry{
+			ActRegistry:   actRegistry,
+			Compatibility: config.Loose,
+			Logger:        logger,
+		})
 
 	pluginRegistry.AddHook(v1.HookName_HOOK_NAME_ON_TRAFFIC_FROM_CLIENT, 1, onIncomingTraffic)
 	pluginRegistry.AddHook(v1.HookName_HOOK_NAME_ON_TRAFFIC_TO_SERVER, 1, onIncomingTraffic)
 	pluginRegistry.AddHook(v1.HookName_HOOK_NAME_ON_TRAFFIC_FROM_SERVER, 1, onOutgoingTraffic)
 	pluginRegistry.AddHook(v1.HookName_HOOK_NAME_ON_TRAFFIC_TO_CLIENT, 1, onOutgoingTraffic)
 
-	assert.NotNil(t, pluginRegistry.ActRegistry())
-	assert.NotNil(t, pluginRegistry.ActRegistry().Signals)
-	assert.NotNil(t, pluginRegistry.ActRegistry().Policies)
-	assert.NotNil(t, pluginRegistry.ActRegistry().Actions)
-	assert.Equal(t, config.DefaultPolicy, pluginRegistry.ActRegistry().DefaultPolicy.Name)
-	assert.Equal(t, config.DefaultPolicy, pluginRegistry.ActRegistry().DefaultSignal.Name)
+	assert.NotNil(t, pluginRegistry.ActRegistry)
+	assert.NotNil(t, pluginRegistry.ActRegistry.Signals)
+	assert.NotNil(t, pluginRegistry.ActRegistry.Policies)
+	assert.NotNil(t, pluginRegistry.ActRegistry.Actions)
+	assert.Equal(t, config.DefaultPolicy, pluginRegistry.ActRegistry.DefaultPolicy.Name)
+	assert.Equal(t, config.DefaultPolicy, pluginRegistry.ActRegistry.DefaultSignal.Name)
 
 	clientConfig := config.Client{
 		Network:            "tcp",
@@ -87,30 +94,32 @@ func TestRunServer(t *testing.T) {
 	// Create a proxy with a fixed buffer newPool.
 	proxy := NewProxy(
 		context.Background(),
-		newPool,
-		pluginRegistry,
-		config.DefaultHealthCheckPeriod,
-		&clientConfig,
-		logger,
-		config.DefaultPluginTimeout)
+		Proxy{
+			AvailableConnections: newPool,
+			PluginRegistry:       pluginRegistry,
+			HealthCheckPeriod:    config.DefaultHealthCheckPeriod,
+			ClientConfig:         &clientConfig,
+			Logger:               logger,
+			PluginTimeout:        config.DefaultPluginTimeout,
+		},
+	)
 
 	// Create a server.
 	server := NewServer(
 		context.Background(),
-		"tcp",
-		"127.0.0.1:15432",
-		config.DefaultTickInterval,
-		Option{
-			EnableTicker: true,
+		Server{
+			Network:      "tcp",
+			Address:      "127.0.0.1:15432",
+			TickInterval: config.DefaultTickInterval,
+			Options: Option{
+				EnableTicker: true,
+			},
+			Proxy:            proxy,
+			Logger:           logger,
+			PluginRegistry:   pluginRegistry,
+			PluginTimeout:    config.DefaultPluginTimeout,
+			HandshakeTimeout: config.DefaultHandshakeTimeout,
 		},
-		proxy,
-		logger,
-		pluginRegistry,
-		config.DefaultPluginTimeout,
-		false,
-		"",
-		"",
-		config.DefaultHandshakeTimeout,
 	)
 	assert.NotNil(t, server)
 	assert.Zero(t, server.connections)
@@ -177,7 +186,7 @@ func TestRunServer(t *testing.T) {
 		// AuthenticationOk.
 		assert.Equal(t, uint8(0x52), data[0])
 
-		assert.Equal(t, 2, proxy.availableConnections.Size())
+		assert.Equal(t, 2, proxy.AvailableConnections.Size())
 		assert.Equal(t, 1, proxy.busyConnections.Size())
 
 		// Terminate the connection.

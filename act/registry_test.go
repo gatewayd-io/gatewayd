@@ -19,8 +19,15 @@ func Test_NewRegistry(t *testing.T) {
 	logger := zerolog.Logger{}
 
 	actRegistry := NewActRegistry(
-		BuiltinSignals(), BuiltinPolicies(), BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
+		Registry{
+			Signals:              BuiltinSignals(),
+			Policies:             BuiltinPolicies(),
+			Actions:              BuiltinActions(),
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               logger,
+		})
 	assert.NotNil(t, actRegistry)
 	assert.NotNil(t, actRegistry.Signals)
 	assert.NotNil(t, actRegistry.Policies)
@@ -35,7 +42,12 @@ func Test_NewRegistry_NilBuiltins(t *testing.T) {
 	buf := bytes.Buffer{}
 	logger := zerolog.New(&buf)
 	actRegistry := NewActRegistry(
-		nil, nil, nil, config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
+		Registry{
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               logger,
+		})
 	assert.Nil(t, actRegistry)
 	assert.Contains(t, buf.String(), "Builtin signals, policies, or actions are nil, not adding")
 }
@@ -46,11 +58,17 @@ func Test_NewRegistry_NilSignal(t *testing.T) {
 	buf := bytes.Buffer{}
 	logger := zerolog.New(&buf)
 	actRegistry := NewActRegistry(
-		map[string]*sdkAct.Signal{
-			"bad": nil,
-		},
-		BuiltinPolicies(), BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
+		Registry{
+			Signals: map[string]*sdkAct.Signal{
+				"bad": nil,
+			},
+			Policies:             BuiltinPolicies(),
+			Actions:              BuiltinActions(),
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               logger,
+		})
 	assert.Nil(t, actRegistry)
 	assert.Contains(t, buf.String(), "Signal is nil, not adding")
 }
@@ -61,12 +79,17 @@ func Test_NewRegistry_NilPolicy(t *testing.T) {
 	buf := bytes.Buffer{}
 	logger := zerolog.New(&buf)
 	actRegistry := NewActRegistry(
-		BuiltinSignals(),
-		map[string]*sdkAct.Policy{
-			"bad": nil,
-		},
-		BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
+		Registry{
+			Signals: BuiltinSignals(),
+			Policies: map[string]*sdkAct.Policy{
+				"bad": nil,
+			},
+			Actions:              BuiltinActions(),
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               logger,
+		})
 	assert.Nil(t, actRegistry)
 	assert.Contains(t, buf.String(), "Policy is nil, not adding")
 }
@@ -77,11 +100,17 @@ func Test_NewRegistry_NilAction(t *testing.T) {
 	buf := bytes.Buffer{}
 	logger := zerolog.New(&buf)
 	actRegistry := NewActRegistry(
-		BuiltinSignals(), BuiltinPolicies(),
-		map[string]*sdkAct.Action{
-			"bad": nil,
-		},
-		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
+		Registry{
+			Signals:  BuiltinSignals(),
+			Policies: BuiltinPolicies(),
+			Actions: map[string]*sdkAct.Action{
+				"bad": nil,
+			},
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               logger,
+		})
 	assert.Nil(t, actRegistry)
 	assert.Contains(t, buf.String(), "Action is nil, not adding")
 }
@@ -89,8 +118,15 @@ func Test_NewRegistry_NilAction(t *testing.T) {
 // Test_Add tests the Add function of the act registry.
 func Test_Add(t *testing.T) {
 	actRegistry := NewActRegistry(
-		BuiltinSignals(), BuiltinPolicies(), BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, zerolog.Logger{})
+		Registry{
+			Signals:              BuiltinSignals(),
+			Policies:             BuiltinPolicies(),
+			Actions:              BuiltinActions(),
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               zerolog.Logger{},
+		})
 	assert.NotNil(t, actRegistry)
 
 	assert.Len(t, actRegistry.Policies, len(BuiltinPolicies()))
@@ -107,8 +143,15 @@ func Test_Add_NilPolicy(t *testing.T) {
 	buf := bytes.Buffer{}
 	logger := zerolog.New(&buf)
 	actRegistry := NewActRegistry(
-		BuiltinSignals(), map[string]*sdkAct.Policy{}, BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
+		Registry{
+			Signals:              BuiltinSignals(),
+			Policies:             map[string]*sdkAct.Policy{},
+			Actions:              BuiltinActions(),
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               logger,
+		})
 	assert.NotNil(t, actRegistry)
 
 	assert.Len(t, actRegistry.Policies, 0)
@@ -122,8 +165,15 @@ func Test_Add_ExistentPolicy(t *testing.T) {
 	buf := bytes.Buffer{}
 	logger := zerolog.New(&buf)
 	actRegistry := NewActRegistry(
-		BuiltinSignals(), BuiltinPolicies(), BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
+		Registry{
+			Signals:              BuiltinSignals(),
+			Policies:             BuiltinPolicies(),
+			Actions:              BuiltinActions(),
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               logger,
+		})
 	assert.NotNil(t, actRegistry)
 
 	assert.Len(t, actRegistry.Policies, len(BuiltinPolicies()))
@@ -135,8 +185,15 @@ func Test_Add_ExistentPolicy(t *testing.T) {
 // Test_Apply tests the Apply function of the act registry.
 func Test_Apply(t *testing.T) {
 	actRegistry := NewActRegistry(
-		BuiltinSignals(), BuiltinPolicies(), BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, zerolog.Logger{})
+		Registry{
+			Signals:              BuiltinSignals(),
+			Policies:             BuiltinPolicies(),
+			Actions:              BuiltinActions(),
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               zerolog.Logger{},
+		})
 	assert.NotNil(t, actRegistry)
 
 	outputs := actRegistry.Apply([]sdkAct.Signal{
@@ -157,8 +214,15 @@ func Test_Apply_NoSignals(t *testing.T) {
 	buf := bytes.Buffer{}
 	logger := zerolog.New(&buf)
 	actRegistry := NewActRegistry(
-		BuiltinSignals(), BuiltinPolicies(), BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
+		Registry{
+			Signals:              BuiltinSignals(),
+			Policies:             BuiltinPolicies(),
+			Actions:              BuiltinActions(),
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               logger,
+		})
 	assert.NotNil(t, actRegistry)
 
 	outputs := actRegistry.Apply([]sdkAct.Signal{})
@@ -196,8 +260,15 @@ func Test_Apply_ContradictorySignals(t *testing.T) {
 	buf := bytes.Buffer{}
 	logger := zerolog.New(&buf)
 	actRegistry := NewActRegistry(
-		BuiltinSignals(), BuiltinPolicies(), BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
+		Registry{
+			Signals:              BuiltinSignals(),
+			Policies:             BuiltinPolicies(),
+			Actions:              BuiltinActions(),
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               logger,
+		})
 	assert.NotNil(t, actRegistry)
 
 	for _, s := range signals {
@@ -234,8 +305,15 @@ func Test_Apply_ActionNotMatched(t *testing.T) {
 	buf := bytes.Buffer{}
 	logger := zerolog.New(&buf)
 	actRegistry := NewActRegistry(
-		BuiltinSignals(), BuiltinPolicies(), BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
+		Registry{
+			Signals:              BuiltinSignals(),
+			Policies:             BuiltinPolicies(),
+			Actions:              BuiltinActions(),
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               logger,
+		})
 	assert.NotNil(t, actRegistry)
 
 	outputs := actRegistry.Apply([]sdkAct.Signal{
@@ -258,12 +336,17 @@ func Test_Apply_PolicyNotMatched(t *testing.T) {
 	buf := bytes.Buffer{}
 	logger := zerolog.New(&buf)
 	actRegistry := NewActRegistry(
-		BuiltinSignals(),
-		map[string]*sdkAct.Policy{
-			"passthrough": BuiltinPolicies()["passthrough"],
-		},
-		BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
+		Registry{
+			Signals: BuiltinSignals(),
+			Policies: map[string]*sdkAct.Policy{
+				"passthrough": BuiltinPolicies()["passthrough"],
+			},
+			Actions:              BuiltinActions(),
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               logger,
+		})
 	assert.NotNil(t, actRegistry)
 
 	outputs := actRegistry.Apply([]sdkAct.Signal{
@@ -303,10 +386,15 @@ func Test_Apply_NonBoolPolicy(t *testing.T) {
 		buf := bytes.Buffer{}
 		logger := zerolog.New(&buf)
 		actRegistry := NewActRegistry(
-			BuiltinSignals(),
-			policies,
-			BuiltinActions(),
-			config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
+			Registry{
+				Signals:              BuiltinSignals(),
+				Policies:             policies,
+				Actions:              BuiltinActions(),
+				DefaultPolicyName:    config.DefaultPolicy,
+				PolicyTimeout:        config.DefaultPolicyTimeout,
+				DefaultActionTimeout: config.DefaultActionTimeout,
+				Logger:               logger,
+			})
 		assert.NotNil(t, actRegistry)
 
 		outputs := actRegistry.Apply([]sdkAct.Signal{
@@ -346,10 +434,15 @@ func Test_Apply_BadPolicy(t *testing.T) {
 		buf := bytes.Buffer{}
 		logger := zerolog.New(&buf)
 		actRegistry := NewActRegistry(
-			BuiltinSignals(),
-			policies,
-			BuiltinActions(),
-			config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
+			Registry{
+				Signals:              BuiltinSignals(),
+				Policies:             policies,
+				Actions:              BuiltinActions(),
+				DefaultPolicyName:    config.DefaultPolicy,
+				PolicyTimeout:        config.DefaultPolicyTimeout,
+				DefaultActionTimeout: config.DefaultActionTimeout,
+				Logger:               logger,
+			})
 		assert.Nil(t, actRegistry)
 	}
 }
@@ -358,8 +451,15 @@ func Test_Apply_BadPolicy(t *testing.T) {
 func Test_Run(t *testing.T) {
 	logger := zerolog.Logger{}
 	actRegistry := NewActRegistry(
-		BuiltinSignals(), BuiltinPolicies(), BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
+		Registry{
+			Signals:              BuiltinSignals(),
+			Policies:             BuiltinPolicies(),
+			Actions:              BuiltinActions(),
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               logger,
+		})
 	assert.NotNil(t, actRegistry)
 
 	outputs := actRegistry.Apply([]sdkAct.Signal{
@@ -376,8 +476,15 @@ func Test_Run(t *testing.T) {
 func Test_Run_Terminate(t *testing.T) {
 	logger := zerolog.Logger{}
 	actRegistry := NewActRegistry(
-		BuiltinSignals(), BuiltinPolicies(), BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
+		Registry{
+			Signals:              BuiltinSignals(),
+			Policies:             BuiltinPolicies(),
+			Actions:              BuiltinActions(),
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               logger,
+		})
 	assert.NotNil(t, actRegistry)
 
 	outputs := actRegistry.Apply([]sdkAct.Signal{
@@ -402,8 +509,15 @@ func Test_Run_Async(t *testing.T) {
 	out := bytes.Buffer{}
 	logger := zerolog.New(&out)
 	actRegistry := NewActRegistry(
-		BuiltinSignals(), BuiltinPolicies(), BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
+		Registry{
+			Signals:              BuiltinSignals(),
+			Policies:             BuiltinPolicies(),
+			Actions:              BuiltinActions(),
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               logger,
+		})
 	assert.NotNil(t, actRegistry)
 
 	outputs := actRegistry.Apply([]sdkAct.Signal{
@@ -441,8 +555,15 @@ func Test_Run_NilOutput(t *testing.T) {
 	buf := bytes.Buffer{}
 	logger := zerolog.New(&buf)
 	actRegistry := NewActRegistry(
-		BuiltinSignals(), BuiltinPolicies(), BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
+		Registry{
+			Signals:              BuiltinSignals(),
+			Policies:             BuiltinPolicies(),
+			Actions:              BuiltinActions(),
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               logger,
+		})
 	assert.NotNil(t, actRegistry)
 
 	result, err := actRegistry.Run(nil, WithLogger(logger))
@@ -456,8 +577,15 @@ func Test_Run_ActionNotExist(t *testing.T) {
 	buf := bytes.Buffer{}
 	logger := zerolog.New(&buf)
 	actRegistry := NewActRegistry(
-		BuiltinSignals(), BuiltinPolicies(), BuiltinActions(),
-		config.DefaultPolicy, config.DefaultPolicyTimeout, config.DefaultActionTimeout, logger)
+		Registry{
+			Signals:              BuiltinSignals(),
+			Policies:             BuiltinPolicies(),
+			Actions:              BuiltinActions(),
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               logger,
+		})
 	assert.NotNil(t, actRegistry)
 
 	result, err := actRegistry.Run(&sdkAct.Output{}, WithLogger(logger))
@@ -508,8 +636,15 @@ func Test_Run_Timeout(t *testing.T) {
 			out := bytes.Buffer{}
 			logger := zerolog.New(&out)
 			actRegistry := NewActRegistry(
-				signals, policies, actions,
-				config.DefaultPolicy, config.DefaultPolicyTimeout, test.timeout, logger)
+				Registry{
+					Signals:              signals,
+					Policies:             policies,
+					Actions:              actions,
+					DefaultPolicyName:    config.DefaultPolicy,
+					PolicyTimeout:        config.DefaultPolicyTimeout,
+					DefaultActionTimeout: test.timeout,
+					Logger:               logger,
+				})
 			assert.NotNil(t, actRegistry)
 
 			outputs := actRegistry.Apply([]sdkAct.Signal{*signals[name]})

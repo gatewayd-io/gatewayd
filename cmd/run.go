@@ -234,7 +234,7 @@ var runCmd = &cobra.Command{
 		}
 
 		// Load global and plugin configuration.
-		conf = config.NewConfig(runCtx, globalConfigFile, pluginConfigFile)
+		conf = config.NewConfig(runCtx, config.Config{GlobalConfigFile: globalConfigFile, PluginConfigFile: pluginConfigFile})
 		conf.InitConfig(runCtx)
 
 		// Create and initialize loggers from the config.
@@ -284,9 +284,15 @@ var runCmd = &cobra.Command{
 
 		// Create a new act registry given the built-in signals, policies, and actions.
 		actRegistry = act.NewActRegistry(
-			act.BuiltinSignals(), act.BuiltinPolicies(), act.BuiltinActions(),
-			conf.Plugin.DefaultPolicy, conf.Plugin.PolicyTimeout, conf.Plugin.ActionTimeout, logger,
-		)
+			act.Registry{
+				Signals:              act.BuiltinSignals(),
+				Policies:             act.BuiltinPolicies(),
+				Actions:              act.BuiltinActions(),
+				DefaultPolicyName:    conf.Plugin.DefaultPolicy,
+				PolicyTimeout:        conf.Plugin.PolicyTimeout,
+				DefaultActionTimeout: conf.Plugin.ActionTimeout,
+				Logger:               logger,
+			})
 
 		if actRegistry == nil {
 			logger.Error().Msg("Failed to create act registry")
@@ -312,15 +318,17 @@ var runCmd = &cobra.Command{
 		// The plugins are loaded and hooks registered before the configuration is loaded.
 		pluginRegistry = plugin.NewRegistry(
 			runCtx,
-			actRegistry,
-			config.If(
-				config.Exists(
-					config.CompatibilityPolicies, conf.Plugin.CompatibilityPolicy,
-				),
-				config.CompatibilityPolicies[conf.Plugin.CompatibilityPolicy],
-				config.DefaultCompatibilityPolicy),
-			logger,
-			devMode,
+			plugin.Registry{
+				ActRegistry: actRegistry,
+				Compatibility: config.If(
+					config.Exists(
+						config.CompatibilityPolicies, conf.Plugin.CompatibilityPolicy,
+					),
+					config.CompatibilityPolicies[conf.Plugin.CompatibilityPolicy],
+					config.DefaultCompatibilityPolicy),
+				Logger:  logger,
+				DevMode: devMode,
+			},
 		)
 
 		// Load plugins and register their hooks.
@@ -329,7 +337,10 @@ var runCmd = &cobra.Command{
 		// Start the metrics merger if enabled.
 		var metricsMerger *metrics.Merger
 		if conf.Plugin.EnableMetricsMerger {
-			metricsMerger = metrics.NewMerger(runCtx, conf.Plugin.MetricsMergerPeriod, logger)
+			metricsMerger = metrics.NewMerger(runCtx, metrics.Merger{
+				MetricsMergerPeriod: conf.Plugin.MetricsMergerPeriod,
+				Logger:              logger,
+			})
 			pluginRegistry.ForEach(func(_ sdkPlugin.Identifier, plugin *plugin.Plugin) {
 				if metricsEnabled, err := strconv.ParseBool(plugin.Config["metricsEnabled"]); err == nil && metricsEnabled {
 					metricsMerger.Add(plugin.ID.Name, plugin.Config["metricsUnixDomainSocket"])
@@ -655,15 +666,17 @@ var runCmd = &cobra.Command{
 				client := network.NewClient(
 					runCtx, clientConfig, logger,
 					network.NewRetry(
-						clientConfig.Retries,
-						config.If(
-							clientConfig.Backoff > 0,
-							clientConfig.Backoff,
-							config.DefaultBackoff,
-						),
-						clientConfig.BackoffMultiplier,
-						clientConfig.DisableBackoffCaps,
-						loggers[name],
+						network.Retry{
+							Retries: clientConfig.Retries,
+							Backoff: config.If(
+								clientConfig.Backoff > 0,
+								clientConfig.Backoff,
+								config.DefaultBackoff,
+							),
+							BackoffMultiplier:  clientConfig.BackoffMultiplier,
+							DisableBackoffCaps: clientConfig.DisableBackoffCaps,
+							Logger:             loggers[name],
+						},
 					),
 				)
 
@@ -797,12 +810,14 @@ var runCmd = &cobra.Command{
 
 			proxies[name] = network.NewProxy(
 				runCtx,
-				pools[name],
-				pluginRegistry,
-				cfg.HealthCheckPeriod,
-				clientConfig,
-				logger,
-				conf.Plugin.Timeout,
+				network.Proxy{
+					AvailableConnections: pools[name],
+					PluginRegistry:       pluginRegistry,
+					HealthCheckPeriod:    cfg.HealthCheckPeriod,
+					ClientConfig:         clientConfig,
+					Logger:               logger,
+					PluginTimeout:        conf.Plugin.Timeout,
+				},
 			)
 
 			span.AddEvent("Create proxy", trace.WithAttributes(
@@ -834,25 +849,27 @@ var runCmd = &cobra.Command{
 			logger := loggers[name]
 			servers[name] = network.NewServer(
 				runCtx,
-				cfg.Network,
-				cfg.Address,
-				config.If(
-					cfg.TickInterval > 0,
-					cfg.TickInterval,
-					config.DefaultTickInterval,
-				),
-				network.Option{
-					// Can be used to send keepalive messages to the client.
-					EnableTicker: cfg.EnableTicker,
+				network.Server{
+					Network: cfg.Network,
+					Address: cfg.Address,
+					TickInterval: config.If(
+						cfg.TickInterval > 0,
+						cfg.TickInterval,
+						config.DefaultTickInterval,
+					),
+					Options: network.Option{
+						// Can be used to send keepalive messages to the client.
+						EnableTicker: cfg.EnableTicker,
+					},
+					Proxy:            proxies[name],
+					Logger:           logger,
+					PluginRegistry:   pluginRegistry,
+					PluginTimeout:    conf.Plugin.Timeout,
+					EnableTLS:        cfg.EnableTLS,
+					CertFile:         cfg.CertFile,
+					KeyFile:          cfg.KeyFile,
+					HandshakeTimeout: cfg.HandshakeTimeout,
 				},
-				proxies[name],
-				logger,
-				pluginRegistry,
-				conf.Plugin.Timeout,
-				cfg.EnableTLS,
-				cfg.CertFile,
-				cfg.KeyFile,
-				cfg.HandshakeTimeout,
 			)
 
 			span.AddEvent("Create server", trace.WithAttributes(
@@ -903,7 +920,10 @@ var runCmd = &cobra.Command{
 				Proxies:        proxies,
 				Servers:        servers,
 			}
-			grpcServer = api.NewGRPCServer(apiObj, &api.HealthChecker{Servers: servers})
+			grpcServer = api.NewGRPCServer(api.GRPCServer{
+				API:           apiObj,
+				HealthChecker: &api.HealthChecker{Servers: servers},
+			})
 			if grpcServer != nil {
 				go grpcServer.Start()
 				logger.Info().Str("address", apiOptions.HTTPAddress).Msg("Started the HTTP API")
