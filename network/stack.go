@@ -26,12 +26,7 @@ func (s *Stack) GetLastRequest() *Request {
 		return nil
 	}
 
-	//nolint:staticcheck
-	for i := len(s.items) - 1; i >= 0; i-- {
-		return s.items[i]
-	}
-
-	return nil
+	return s.items[len(s.items)-1]
 }
 
 func (s *Stack) PopLastRequest() *Request {
@@ -42,14 +37,10 @@ func (s *Stack) PopLastRequest() *Request {
 		return nil
 	}
 
-	//nolint:staticcheck
-	for i := len(s.items) - 1; i >= 0; i-- {
-		req := s.items[i]
-		s.items = append(s.items[:i], s.items[i+1:]...)
-		return req
-	}
-
-	return nil
+	lastItem := len(s.items) - 1
+	req := s.items[lastItem]
+	s.items = append(s.items[:lastItem], s.items[lastItem+1:]...)
+	return req
 }
 
 func (s *Stack) UpdateLastRequest(req *Request) {
@@ -60,11 +51,7 @@ func (s *Stack) UpdateLastRequest(req *Request) {
 		return
 	}
 
-	//nolint:staticcheck
-	for i := len(s.items) - 1; i >= 0; i-- {
-		s.items[i] = req
-		return
-	}
+	s.items[len(s.items)-1] = req
 }
 
 func (s *Stack) Clear() {
