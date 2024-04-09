@@ -37,3 +37,4 @@ cmd/test_*.yaml
 
 # docker-compose
 gatewayd-files/
+cmd/gatewayd-plugin-cache-linux-amd64-*

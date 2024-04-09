@@ -131,7 +131,7 @@ func (r *Registry) Apply(signals []sdkAct.Signal) []*sdkAct.Output {
 		}
 	}
 
-	var outputs []*sdkAct.Output
+	outputs := []*sdkAct.Output{}
 	evalErr := false
 	for _, signal := range signals {
 		// Ignore contradictory actions (forward vs. terminate) if one of the signals is terminal.

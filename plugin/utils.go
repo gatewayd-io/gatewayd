@@ -78,7 +78,7 @@ func getSignals(result map[string]any) []sdkAct.Signal {
 func applyPolicies(
 	hookName string, signals []sdkAct.Signal, logger zerolog.Logger, reg act.IRegistry,
 ) []*sdkAct.Output {
-	var signalNames []string
+	signalNames := []string{}
 	for _, signal := range signals {
 		signalNames = append(signalNames, signal.Name)
 	}
