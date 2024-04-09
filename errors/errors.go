@@ -48,7 +48,6 @@ const (
 	ErrCodeAsyncAction
 	ErrCodeEvalError
 	ErrCodeMsgEncodeError
-	ErrCodePathSlipError
 )
 
 var (
@@ -67,8 +66,6 @@ var (
 	ErrPoolExhausted = NewGatewayDError(
 		ErrCodePoolExhausted, "pool is exhausted", nil)
 
-	ErrPluginNotFound = NewGatewayDError(
-		ErrCodePluginNotFound, "plugin not found", nil)
 	ErrPluginNotReady = NewGatewayDError(
 		ErrCodePluginNotReady, "plugin is not ready", nil)
 	ErrFailedToStartPlugin = NewGatewayDError(
@@ -89,8 +86,6 @@ var (
 
 	ErrServerSendFailed = NewGatewayDError(
 		ErrCodeServerSendFailed, "couldn't send data to the client", nil)
-	ErrServerReceiveFailed = NewGatewayDError(
-		ErrCodeServerReceiveFailed, "couldn't receive data from the client", nil)
 	ErrServerListenFailed = NewGatewayDError(
 		ErrCodeServerListenFailed, "couldn't listen on the server", nil)
 	ErrSplitHostPortFailed = NewGatewayDError(
@@ -99,38 +94,20 @@ var (
 		ErrCodeAcceptFailed, "failed to accept connection", nil)
 	ErrGetTLSConfigFailed = NewGatewayDError(
 		ErrCodeGetTLSConfigFailed, "failed to get TLS config", nil)
-	ErrTLSDisabled = NewGatewayDError(
-		ErrCodeTLSDisabled, "TLS is disabled or handshake failed", nil)
 	ErrUpgradeToTLSFailed = NewGatewayDError(
 		ErrCodeUpgradeToTLSFailed, "failed to upgrade to TLS", nil)
 
 	ErrReadFailed = NewGatewayDError(
 		ErrCodeReadFailed, "failed to read from the client", nil)
 
-	ErrPutFailed = NewGatewayDError(
-		ErrCodePutFailed, "failed to put in pool", nil)
 	ErrNilPointer = NewGatewayDError(
 		ErrCodeNilPointer, "nil pointer", nil)
 
 	ErrCastFailed = NewGatewayDError(
 		ErrCodeCastFailed, "failed to cast", nil)
 
-	ErrHookReturnedError = NewGatewayDError(
-		ErrCodeHookReturnedError, "hook returned error", nil)
 	ErrHookTerminatedConnection = NewGatewayDError(
 		ErrCodeHookTerminatedConnection, "hook terminated connection", nil)
-
-	ErrFileNotFound = NewGatewayDError(
-		ErrCodeFileNotFound, "file not found", nil)
-	ErrFileOpenFailed = NewGatewayDError(
-		ErrCodeFileOpenFailed, "failed to open file", nil)
-	ErrFileReadFailed = NewGatewayDError(
-		ErrCodeFileReadFailed, "failed to read file", nil)
-
-	ErrDuplicateMetricsCollector = NewGatewayDError(
-		ErrCodeDuplicateMetricsCollector, "duplicate metrics collector", nil)
-	ErrInvalidMetricType = NewGatewayDError(
-		ErrCodeInvalidMetricType, "invalid metric type", nil)
 
 	ErrValidationFailed = NewGatewayDError(
 		ErrCodeValidationFailed, "validation failed", nil)
@@ -164,11 +141,9 @@ var (
 )
 
 const (
-	FailedToLoadPluginConfig  = 1
-	FailedToLoadGlobalConfig  = 2
-	FailedToCreateClient      = 3
-	FailedToInitializePool    = 4
-	FailedToStartServer       = 5
-	FailedToStartTracer       = 6
-	FailedToCreateActRegistry = 7
+	FailedToCreateClient      = 1
+	FailedToInitializePool    = 2
+	FailedToStartServer       = 3
+	FailedToStartTracer       = 4
+	FailedToCreateActRegistry = 5
 )

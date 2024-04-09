@@ -52,7 +52,7 @@ func castToPrimitiveTypes(args map[string]interface{}) map[string]interface{} {
 
 // getSignals decodes the signals from the result map and returns them as a list of Signal objects.
 func getSignals(result map[string]any) []sdkAct.Signal {
-	decodedSignals := []sdkAct.Signal{}
+	var decodedSignals []sdkAct.Signal
 
 	if signals, ok := result[sdkAct.Signals]; ok {
 		signals := cast.ToSlice(signals)

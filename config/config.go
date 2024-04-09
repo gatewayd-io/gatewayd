@@ -271,7 +271,7 @@ func loadEnvVars() *env.Env {
 	})
 }
 
-// LoadGlobalConfig loads the plugin configuration file.
+// LoadGlobalConfigFile loads the plugin configuration file.
 func (c *Config) LoadGlobalConfigFile(ctx context.Context) {
 	_, span := otel.Tracer(TracerName).Start(ctx, "Load global config file")
 
@@ -284,7 +284,7 @@ func (c *Config) LoadGlobalConfigFile(ctx context.Context) {
 	span.End()
 }
 
-// LoadPluginConfig loads the plugin configuration file.
+// LoadPluginConfigFile loads the plugin configuration file.
 func (c *Config) LoadPluginConfigFile(ctx context.Context) {
 	_, span := otel.Tracer(TracerName).Start(ctx, "Load plugin config file")
 
@@ -365,7 +365,7 @@ func (c *Config) ValidateGlobalConfig(ctx context.Context) {
 	var errors []*gerr.GatewayDError
 	configObjects := []string{"loggers", "metrics", "clients", "pools", "proxies", "servers"}
 	sort.Strings(configObjects)
-	seenConfigObjects := []string{}
+	var seenConfigObjects []string
 
 	for configGroup := range globalConfig.Loggers {
 		if globalConfig.Loggers[configGroup] == nil {

@@ -61,7 +61,6 @@ const (
 	DefaultMinPort                 = 50000
 	DefaultMaxPort                 = 60000
 	PluginPriorityStart            = 1000
-	LoggerName                     = "plugin"
 	DefaultPluginAddress           = "http://plugins/metrics"
 	DefaultMetricsMergerPeriod     = 5 * time.Second
 	DefaultPluginHealthCheckPeriod = 5 * time.Second
@@ -90,18 +89,13 @@ const (
 	DefaultHealthCheckPeriod = 60 * time.Second // This must match PostgreSQL authentication timeout.
 
 	// Server constants.
-	DefaultListenNetwork        = "tcp"
-	DefaultListenAddress        = "0.0.0.0:15432"
-	DefaultTickInterval         = 5 * time.Second
-	DefaultBufferSize           = 1 << 27 // 134217728 bytes
-	DefaultTCPKeepAliveDuration = 3 * time.Second
-	DefaultLoadBalancer         = "roundrobin"
-	DefaultTCPNoDelay           = true
-	DefaultHandshakeTimeout     = 5 * time.Second
+	DefaultListenNetwork    = "tcp"
+	DefaultListenAddress    = "0.0.0.0:15432"
+	DefaultTickInterval     = 5 * time.Second
+	DefaultHandshakeTimeout = 5 * time.Second
 
 	// Utility constants.
-	DefaultSeed        = 1000
-	ChecksumBufferSize = 65536
+	DefaultSeed = 1000
 
 	// Metrics constants.
 	DefaultMetricsAddress       = "localhost:9090"

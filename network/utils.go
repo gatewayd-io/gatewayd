@@ -4,9 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
-	"errors"
 	"fmt"
-	"io"
 	"net"
 
 	gerr "github.com/gatewayd-io/gatewayd/errors"
@@ -107,22 +105,6 @@ func extractFieldValue(result map[string]interface{}, fieldName string) ([]byte,
 		}
 	}
 	return data, err
-}
-
-// IsConnTimedOut returns true if the error is a timeout error.
-func IsConnTimedOut(err *gerr.GatewayDError) bool {
-	if err != nil && err.Unwrap() != nil {
-		var netErr net.Error
-		if ok := errors.As(err.Unwrap(), &netErr); ok && netErr.Timeout() {
-			return true
-		}
-	}
-	return false
-}
-
-// IsConnClosed returns true if the connection is closed.
-func IsConnClosed(received int, err *gerr.GatewayDError) bool {
-	return received == 0 && err != nil && err.Unwrap() != nil && errors.Is(err.Unwrap(), io.EOF)
 }
 
 // LocalAddr returns the local address of the connection.

@@ -250,7 +250,7 @@ func extractZip(filename, dest string) ([]string, *gerr.GatewayDError) {
 	}
 
 	// Extract the files.
-	filenames := []string{}
+	var filenames []string
 	for _, fileOrDir := range zipRc.File {
 		switch fileInfo := fileOrDir.FileInfo(); {
 		case fileInfo.IsDir():
@@ -337,7 +337,7 @@ func extractTarGz(filename, dest string) ([]string, *gerr.GatewayDError) {
 	}
 
 	tarReader := tar.NewReader(uncompressedStream)
-	filenames := []string{}
+	var filenames []string
 
 	for {
 		header, err := tarReader.Next()
@@ -497,7 +497,7 @@ func deleteFiles(toBeDeleted []string) {
 	}
 }
 
-// detectInstallLocation detects the install location based on the number of arguments.
+// detectInstallLocation detects the installation location based on the number of arguments.
 func detectInstallLocation(args []string) Location {
 	if len(args) == 0 {
 		return LocationConfig
@@ -533,7 +533,7 @@ func getFileExtension() Extension {
 func installPlugin(cmd *cobra.Command, pluginURL string) {
 	var (
 		// This is a list of files that will be deleted after the plugin is installed.
-		toBeDeleted = []string{}
+		toBeDeleted []string
 
 		// Source of the plugin: file or GitHub.
 		source = detectSource(pluginURL)
@@ -618,7 +618,7 @@ func installPlugin(cmd *cobra.Command, pluginURL string) {
 			release, _, err = client.Repositories.GetLatestRelease(
 				context.Background(), account, pluginName)
 		} else if strings.HasPrefix(pluginVersion, "v") {
-			// Get an specific release.
+			// Get a specific release.
 			release, _, err = client.Repositories.GetReleaseByTag(
 				context.Background(), account, pluginName, pluginVersion)
 		}
@@ -705,8 +705,8 @@ func installPlugin(cmd *cobra.Command, pluginURL string) {
 		checksumLines := strings.Split(string(checksums), "\n")
 		for _, line := range checksumLines {
 			if strings.Contains(line, pluginFilename) {
-				checksum := strings.Split(line, " ")[0]
-				if checksum != sum {
+				checksumPart := strings.Split(line, " ")[0]
+				if checksumPart != sum {
 					cmd.Println("Checksum verification failed")
 					return
 				}
@@ -736,7 +736,7 @@ func installPlugin(cmd *cobra.Command, pluginURL string) {
 	if _, err := os.Stat(pluginConfigFile); os.IsNotExist(err) {
 		generateConfig(cmd, Plugins, pluginConfigFile, false)
 	} else if !backupConfig && !noPrompt {
-		// If the config file exists, we should prompt the user to backup
+		// If the config file exists, we should prompt the user to back up
 		// the plugins configuration file.
 		cmd.Print("Do you want to backup the plugins configuration file? [Y/n] ")
 		var backupOption string
