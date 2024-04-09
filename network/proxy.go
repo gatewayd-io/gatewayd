@@ -78,7 +78,7 @@ func NewProxy(
 	if _, err := proxy.scheduler.Every(proxy.HealthCheckPeriod).SingletonMode().StartAt(startDelay).Do(
 		func() {
 			now := time.Now()
-			pxy.Logger.Trace().Msg("Running the client health check to recycle connection(s).")
+			proxy.Logger.Trace().Msg("Running the client health check to recycle connection(s).")
 			proxy.AvailableConnections.ForEach(func(_, value interface{}) bool {
 				if client, ok := value.(*Client); ok {
 					// Connection is probably dead by now.
@@ -113,7 +113,7 @@ func NewProxy(
 				}
 				return true
 			})
-			pxy.Logger.Trace().Str("duration", time.Since(now).String()).Msg(
+			proxy.Logger.Trace().Str("duration", time.Since(now).String()).Msg(
 				"Finished the client health check")
 			metrics.ProxyHealthChecks.Inc()
 		},
@@ -125,7 +125,7 @@ func NewProxy(
 
 	// Start the scheduler.
 	proxy.scheduler.StartAsync()
-	pxy.Logger.Info().Fields(
+	proxy.Logger.Info().Fields(
 		map[string]interface{}{
 			"startDelay":        startDelay.Format(time.RFC3339),
 			"healthCheckPeriod": proxy.HealthCheckPeriod.String(),
