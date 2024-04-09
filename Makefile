@@ -19,55 +19,29 @@ build-dev:
 create-build-dir:
 	@mkdir -p dist
 
-build-windows-amd64: tidy
-	@echo "Building gatewayd ${VERSION} for windows-amd64"
-	@mkdir -p dist/windows-amd64
-	@cp README.md LICENSE gatewayd.yaml gatewayd_plugins.yaml dist/windows-amd64/
-	@GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -tags embed_swagger,windows -trimpath -ldflags "-s -w ${EXTRA_LDFLAGS}" -o dist/windows-amd64/gatewayd.exe
-	@zip -r dist/gatewayd-windows-amd64-${VERSION}.zip -j ./dist/windows-amd64/
-	@sha256sum dist/gatewayd-windows-amd64-${VERSION}.zip | sed 's/dist\///g' >> dist/checksums.txt
+build-release: tidy create-build-dir
+	@echo "Building gatewayd ${VERSION} for release"
+	@$(MAKE) build-platform GOOS=linux GOARCH=amd64 OUTPUT_DIR=dist/linux-amd64
+	@$(MAKE) build-platform GOOS=linux GOARCH=arm64 OUTPUT_DIR=dist/linux-arm64
+	@$(MAKE) build-platform GOOS=darwin GOARCH=amd64 OUTPUT_DIR=dist/darwin-amd64
+	@$(MAKE) build-platform GOOS=darwin GOARCH=arm64 OUTPUT_DIR=dist/darwin-arm64
+	@$(MAKE) build-platform GOOS=windows GOARCH=amd64 OUTPUT_DIR=dist/windows-amd64
+	@$(MAKE) build-platform GOOS=windows GOARCH=arm64 OUTPUT_DIR=dist/windows-arm64
 
-build-windows-arm64: tidy
-	@echo "Building gatewayd ${VERSION} for windows-arm64"
-	@mkdir -p dist/windows-arm64
-	@cp README.md LICENSE gatewayd.yaml gatewayd_plugins.yaml dist/windows-arm64/
-	@GOOS=windows GOARCH=arm64 CGO_ENABLED=0 go build -tags embed_swagger,windows -trimpath -ldflags "-s -w ${EXTRA_LDFLAGS}" -o dist/windows-arm64/gatewayd.exe
-	@zip -r dist/gatewayd-windows-arm64-${VERSION}.zip -j ./dist/windows-arm64/
-	@sha256sum dist/gatewayd-windows-arm64-${VERSION}.zip | sed 's/dist\///g' >> dist/checksums.txt
-
-build-linux-amd64: tidy
-	@echo "Building gatewayd ${VERSION} for linux-amd64"
-	@mkdir -p dist/linux-amd64
-	@cp README.md LICENSE gatewayd.yaml gatewayd_plugins.yaml dist/linux-amd64/
-	@GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -tags embed_swagger -trimpath -ldflags "-s -w ${EXTRA_LDFLAGS}" -o dist/linux-amd64/gatewayd
-	@tar czf dist/gatewayd-linux-amd64-${VERSION}.tar.gz -C ./dist/linux-amd64/ ${FILES}
-	@sha256sum dist/gatewayd-linux-amd64-${VERSION}.tar.gz | sed 's/dist\///g' >> dist/checksums.txt
-
-build-linux-arm64: tidy
-	@echo "Building gatewayd ${VERSION} for linux-arm64"
-	@mkdir -p dist/linux-arm64
-	@cp README.md LICENSE gatewayd.yaml gatewayd_plugins.yaml dist/linux-arm64/
-	@GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -tags embed_swagger -trimpath -ldflags "-s -w ${EXTRA_LDFLAGS}" -o dist/linux-arm64/gatewayd
-	@tar czf dist/gatewayd-linux-arm64-${VERSION}.tar.gz -C ./dist/linux-arm64/ ${FILES}
-	@sha256sum dist/gatewayd-linux-arm64-${VERSION}.tar.gz | sed 's/dist\///g' >> dist/checksums.txt
-
-build-darwin-amd64: tidy
-	@echo "Building gatewayd ${VERSION} for darwin-amd64"
-	@mkdir -p dist/darwin-amd64
-	@cp README.md LICENSE gatewayd.yaml gatewayd_plugins.yaml dist/darwin-amd64/
-	@GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -tags embed_swagger -trimpath -ldflags "-s -w ${EXTRA_LDFLAGS}" -o dist/darwin-amd64/gatewayd
-	@tar czf dist/gatewayd-darwin-amd64-${VERSION}.tar.gz -C ./dist/darwin-amd64/ ${FILES}
-	@sha256sum dist/gatewayd-darwin-amd64-${VERSION}.tar.gz | sed 's/dist\///g' >> dist/checksums.txt
-
-build-darwin-arm64: tidy
-	@echo "Building gatewayd ${VERSION} for darwin-arm64"
-	@mkdir -p dist/darwin-arm64
-	@cp README.md LICENSE gatewayd.yaml gatewayd_plugins.yaml dist/darwin-arm64/
-	@GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -tags embed_swagger -trimpath -ldflags "-s -w ${EXTRA_LDFLAGS}" -o dist/darwin-arm64/gatewayd
-	@tar czf dist/gatewayd-darwin-arm64-${VERSION}.tar.gz -C ./dist/darwin-arm64/ ${FILES}
-	@sha256sum dist/gatewayd-darwin-arm64-${VERSION}.tar.gz | sed 's/dist\///g' >> dist/checksums.txt
-
-build-release: create-build-dir build-windows-amd64 build-windows-arm64 build-linux-amd64 build-linux-arm64 build-darwin-amd64 build-darwin-arm64
+build-platform: tidy
+	@echo "Building gatewayd ${VERSION} for $(GOOS)-$(GOARCH)"
+	@mkdir -p $(OUTPUT_DIR)
+	@cp README.md LICENSE gatewayd.yaml gatewayd_plugins.yaml $(OUTPUT_DIR)/
+	@if [ "$(GOOS)" = "windows" ]; then \
+		GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=0 go build -tags embed_swagger,windows -trimpath -ldflags "-s -w ${EXTRA_LDFLAGS}" -o $(OUTPUT_DIR)/gatewayd.exe; \
+		sha256sum $(OUTPUT_DIR)/gatewayd.exe | sed 's#$(OUTPUT_DIR)/##g' >> $(OUTPUT_DIR)/checksum.txt; \
+		zip -q -r dist/gatewayd-$(GOOS)-$(GOARCH)-${VERSION}.zip -j $(OUTPUT_DIR)/; \
+	else \
+		GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=0 go build -tags embed_swagger -trimpath -ldflags "-s -w ${EXTRA_LDFLAGS}" -o $(OUTPUT_DIR)/gatewayd; \
+		sha256sum $(OUTPUT_DIR)/gatewayd | sed 's#$(OUTPUT_DIR)/##g' >> $(OUTPUT_DIR)/checksum.txt; \
+		tar czf dist/gatewayd-$(GOOS)-$(GOARCH)-${VERSION}.tar.gz -C $(OUTPUT_DIR)/ ${FILES}; \
+	fi
+	@sha256sum dist/gatewayd-$(GOOS)-$(GOARCH)-${VERSION}.* | sed 's#dist/##g' >> dist/checksums.txt
 
 build-linux-packages:
 	@echo "Building gatewayd ${VERSION} for linux-amd64"
