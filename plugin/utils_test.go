@@ -44,7 +44,7 @@ func Test_castToPrimitiveTypes(t *testing.T) {
 		"int":      123,
 		"bool":     true,
 		"map":      map[string]interface{}{"test": "test"},
-		"duration": "123ns", // time.Duration is casted to string.
+		"duration": "123ns", // time.Duration is cast to string.
 		"array": []interface{}{
 			"test",
 			123,
@@ -52,7 +52,7 @@ func Test_castToPrimitiveTypes(t *testing.T) {
 			map[string]interface{}{
 				"test": "test",
 			},
-			"123ns", // time.Duration is casted to string.
+			"123ns", // time.Duration is cast to string.
 		},
 	}
 

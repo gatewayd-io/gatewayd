@@ -226,7 +226,7 @@ func (reg *Registry) Hooks() map[v1.HookName]map[sdkPlugin.Priority]sdkPlugin.Me
 	return reg.hooks
 }
 
-// Add adds a hook with a priority to the hooks map.
+// AddHook adds a hook with a priority to the hooks map.
 func (reg *Registry) AddHook(hookName v1.HookName, priority sdkPlugin.Priority, hookMethod sdkPlugin.Method) {
 	_, span := otel.Tracer(config.TracerName).Start(reg.ctx, "AddHook")
 	defer span.End()
@@ -296,7 +296,7 @@ func (reg *Registry) Run(
 
 	// Run hooks, passing the result of the previous hook to the next one.
 	returnVal := &v1.Struct{}
-	outputs := []*sdkAct.Output{}
+	var outputs []*sdkAct.Output
 	// The signature of parameters and args MUST be the same for this to work.
 	for idx, priority := range priorities {
 		var result *v1.Struct
@@ -359,7 +359,7 @@ func (reg *Registry) Apply(hookName string, result *v1.Struct) ([]*sdkAct.Output
 	// Get signals from the result.
 	signals := getSignals(result.AsMap())
 	// Apply policies to the signals.
-	// The outputs contains the verdicts of the policies and their metadata.
+	// The outputs contain the verdicts of the policies and their metadata.
 	// And using this list, the caller can take further actions.
 	outputs := applyPolicies(hookName, signals, reg.Logger, reg.ActRegistry)
 
@@ -504,7 +504,6 @@ func (reg *Registry) LoadPlugins(
 		span.AddEvent("Started plugin")
 
 		// Load metadata from the plugin.
-		var metadata *v1.Struct
 		pluginV1, err := plugin.Dispense()
 		if err != nil {
 			reg.Logger.Debug().Str("name", plugin.ID.Name).Err(err).Msg(
@@ -513,15 +512,13 @@ func (reg *Registry) LoadPlugins(
 			continue
 		}
 
-		meta, origErr := pluginV1.GetPluginConfig( //nolint:contextcheck
+		metadata, origErr := pluginV1.GetPluginConfig( //nolint:contextcheck
 			context.Background(), &v1.Struct{})
-		if err != nil || meta == nil {
+		if origErr != nil || metadata == nil {
 			reg.Logger.Debug().Str("name", plugin.ID.Name).Err(origErr).Msg(
 				"Failed to get plugin metadata")
 			continue
 		}
-
-		metadata = meta
 
 		span.AddEvent("Fetched plugin metadata")
 

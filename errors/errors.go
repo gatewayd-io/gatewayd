@@ -48,7 +48,6 @@ const (
 	ErrCodeAsyncAction
 	ErrCodeEvalError
 	ErrCodeMsgEncodeError
-	ErrCodePathSlipError
 )
 
 var (
@@ -74,9 +73,6 @@ var (
 		ErrCodePoolExhausted, "pool is exhausted", nil,
 	}
 
-	ErrPluginNotFound = &GatewayDError{
-		ErrCodePluginNotFound, "plugin not found", nil,
-	}
 	ErrPluginNotReady = &GatewayDError{
 		ErrCodePluginNotReady, "plugin is not ready", nil,
 	}
@@ -106,9 +102,6 @@ var (
 	ErrServerSendFailed = &GatewayDError{
 		ErrCodeServerSendFailed, "couldn't send data to the client", nil,
 	}
-	ErrServerReceiveFailed = &GatewayDError{
-		ErrCodeServerReceiveFailed, "couldn't receive data from the client", nil,
-	}
 	ErrServerListenFailed = &GatewayDError{
 		ErrCodeServerListenFailed, "couldn't listen on the server", nil,
 	}
@@ -121,9 +114,6 @@ var (
 	ErrGetTLSConfigFailed = &GatewayDError{
 		ErrCodeGetTLSConfigFailed, "failed to get TLS config", nil,
 	}
-	ErrTLSDisabled = &GatewayDError{
-		ErrCodeTLSDisabled, "TLS is disabled or handshake failed", nil,
-	}
 	ErrUpgradeToTLSFailed = &GatewayDError{
 		ErrCodeUpgradeToTLSFailed, "failed to upgrade to TLS", nil,
 	}
@@ -132,9 +122,6 @@ var (
 		ErrCodeReadFailed, "failed to read from the client", nil,
 	}
 
-	ErrPutFailed = &GatewayDError{
-		ErrCodePutFailed, "failed to put in pool", nil,
-	}
 	ErrNilPointer = &GatewayDError{
 		ErrCodeNilPointer, "nil pointer", nil,
 	}
@@ -143,28 +130,8 @@ var (
 		ErrCodeCastFailed, "failed to cast", nil,
 	}
 
-	ErrHookReturnedError = &GatewayDError{
-		ErrCodeHookReturnedError, "hook returned error", nil,
-	}
 	ErrHookTerminatedConnection = &GatewayDError{
 		ErrCodeHookTerminatedConnection, "hook terminated connection", nil,
-	}
-
-	ErrFileNotFound = &GatewayDError{
-		ErrCodeFileNotFound, "file not found", nil,
-	}
-	ErrFileOpenFailed = &GatewayDError{
-		ErrCodeFileOpenFailed, "failed to open file", nil,
-	}
-	ErrFileReadFailed = &GatewayDError{
-		ErrCodeFileReadFailed, "failed to read file", nil,
-	}
-
-	ErrDuplicateMetricsCollector = &GatewayDError{
-		ErrCodeDuplicateMetricsCollector, "duplicate metrics collector", nil,
-	}
-	ErrInvalidMetricType = &GatewayDError{
-		ErrCodeInvalidMetricType, "invalid metric type", nil,
 	}
 
 	ErrValidationFailed = &GatewayDError{
@@ -211,11 +178,9 @@ var (
 )
 
 const (
-	FailedToLoadPluginConfig  = 1
-	FailedToLoadGlobalConfig  = 2
-	FailedToCreateClient      = 3
-	FailedToInitializePool    = 4
-	FailedToStartServer       = 5
-	FailedToStartTracer       = 6
-	FailedToCreateActRegistry = 7
+	FailedToCreateClient      = 1
+	FailedToInitializePool    = 2
+	FailedToStartServer       = 3
+	FailedToStartTracer       = 4
+	FailedToCreateActRegistry = 5
 )

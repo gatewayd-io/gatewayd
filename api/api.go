@@ -135,7 +135,7 @@ func (a *API) GetPlugins(context.Context, *emptypb.Empty) (*v1.PluginConfigs, er
 	plugins := make([]*v1.PluginConfig, 0)
 	a.PluginRegistry.ForEach(
 		func(pluginID sdkPlugin.Identifier, plugIn *plugin.Plugin) {
-			requires := make(map[string]string, 0)
+			requires := make(map[string]string)
 			if plugIn.Requires != nil {
 				for _, r := range plugIn.Requires {
 					requires[r.Name] = r.Version
@@ -175,7 +175,7 @@ func (a *API) GetPlugins(context.Context, *emptypb.Empty) (*v1.PluginConfigs, er
 
 // GetPools returns the pool configuration of the GatewayD.
 func (a *API) GetPools(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
-	pools := make(map[string]interface{}, 0)
+	pools := make(map[string]interface{})
 	for name, p := range a.Pools {
 		pools[name] = map[string]interface{}{
 			"cap":  p.Cap(),
@@ -197,7 +197,7 @@ func (a *API) GetPools(context.Context, *emptypb.Empty) (*structpb.Struct, error
 
 // GetProxies returns the proxy configuration of the GatewayD.
 func (a *API) GetProxies(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
-	proxies := make(map[string]interface{}, 0)
+	proxies := make(map[string]interface{})
 	for name, proxy := range a.Proxies {
 		available := make([]interface{}, 0)
 		for _, c := range proxy.AvailableConnectionsString() {
@@ -230,7 +230,7 @@ func (a *API) GetProxies(context.Context, *emptypb.Empty) (*structpb.Struct, err
 
 // GetServers returns the server configuration of the GatewayD.
 func (a *API) GetServers(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
-	servers := make(map[string]interface{}, 0)
+	servers := make(map[string]interface{})
 	for name, server := range a.Servers {
 		servers[name] = map[string]interface{}{
 			"network":      server.Network,

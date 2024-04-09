@@ -115,8 +115,8 @@ func (r *Registry) Apply(signals []sdkAct.Signal) []*sdkAct.Output {
 	}
 
 	// Separate terminal and non-terminal signals to find contradictions.
-	terminal := []string{}
-	nonTerminal := []string{}
+	var terminal []string
+	var nonTerminal []string
 	for _, signal := range signals {
 		action, exists := r.Actions[signal.Name]
 		if exists && action.Sync && action.Terminal {

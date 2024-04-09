@@ -531,7 +531,7 @@ func (s *Server) Run() *gerr.GatewayDError {
 				if _, err := conn.Write(out); err != nil {
 					s.Logger.Error().Err(err).Msg("Failed to write to connection")
 				}
-				conn.Close()
+				_ = conn.Close()
 				if action == Shutdown {
 					s.OnShutdown()
 					return nil

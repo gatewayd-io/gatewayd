@@ -60,7 +60,7 @@ func TestNewLogger_File(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotEmpty(t, f)
 	assert.Contains(t, string(f), "This is an error")
-	os.Remove("gatewayd.log")
+	assert.NoError(t, os.Remove("gatewayd.log"))
 }
 
 // TestNewLogger_Stdout tests the creation of a new logger with the stdout output.
