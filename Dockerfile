@@ -12,7 +12,7 @@ COPY . /gatewayd
 
 RUN apk --no-cache add git make
 RUN mkdir -p dist
-RUN make build-${TARGETOS}-${TARGETARCH}
+RUN make build-platform GOOS=${TARGETOS} GOARCH=${TARGETARCH} OUTPUT_DIR=dist/${TARGETOS}-${TARGETARCH}
 
 # Use alpine to create a minimal image to run the gatewayd binary.
 FROM alpine:3.18 as runner
