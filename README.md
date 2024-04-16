@@ -17,9 +17,9 @@
     <a href="https://coveralls.io/github/gatewayd-io/gatewayd?branch=main"><img src="https://coveralls.io/repos/github/gatewayd-io/gatewayd/badge.svg?branch=main" alt="Coverage Status" /></a>
 </p>
 
-**GatewayD** is a free and open-source cloud-native database gateway and framework for building data-driven applications. It sits between your database servers and clients and proxies all their communication. It is like API gateways, for databases.
+**GatewayD** is a free and open-source cloud-native database gateway and framework for building data-driven applications. It is a middleware that sits between your database servers and clients and proxies all their communication. It is like API gateways in system design, but instead is used for proxying database traffic, rather than HTTP traffic.
 
-GatewayD is an L4 proxy for SQL databases and clients. You can either write your own plugins or make use of our built-in, community and enterprise plugins.
+GatewayD is an [L4](https://en.wikipedia.org/wiki/Transport_layer) proxy for SQL, and eventually NoSQL, databases and clients. The core is database-protocol-agnotic, and the plugins encode, decode and add value to the database traffic flow, hence it can technically support all databases. You can either write your own plugins or make use of our built-in, community and enterprise plugins.
 
 Using GatewayD, you can see through the queries and the data passing between your database server and clients, and take action. For example, you can cache the result of SQL SELECT queries or detect and prevent SQL injection attacks.
 
