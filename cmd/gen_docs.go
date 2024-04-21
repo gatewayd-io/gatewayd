@@ -15,7 +15,7 @@ var genDocs = &cobra.Command{
 	Hidden: true,
 	Run: func(cmd *cobra.Command, _ []string) {
 		// Create the output directory if it doesn't exist
-		if err := os.MkdirAll(docOutputDir, 0755); err != nil {
+		if err := os.MkdirAll(docOutputDir, 0o755); err != nil {
 			cmd.PrintErr(err)
 			return
 		}
