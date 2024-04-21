@@ -30,6 +30,37 @@ func TestNewConfig(t *testing.T) {
 func TestInitConfig(t *testing.T) {
 	ctx := context.Background()
 	config := NewConfig(ctx,
+		Config{
+			GlobalConfigFile: parentDir + "cmd/testdata/gatewayd.yaml",
+			PluginConfigFile: parentDir + PluginsConfigFilename,
+		},
+	)
+	config.InitConfig(ctx)
+	assert.NotNil(t, config.Global)
+	assert.NotEqual(t, GlobalConfig{}, config.Global)
+	assert.Contains(t, config.Global.Servers, Default)
+	assert.Contains(t, config.Global.Servers, "test") // Test the multi-tenant configuration.
+	assert.NotNil(t, config.Plugin)
+	assert.NotEqual(t, PluginConfig{}, config.Plugin)
+	assert.Len(t, config.Plugin.Plugins, 1)
+	assert.NotNil(t, config.GlobalKoanf)
+	assert.NotEqual(t, config.GlobalKoanf, koanf.New("."))
+	assert.Equal(t, DefaultLogLevel, config.GlobalKoanf.String("loggers.default.level"))
+	assert.NotNil(t, config.PluginKoanf)
+	assert.NotEqual(t, config.PluginKoanf, koanf.New("."))
+	assert.NotNil(t, config.globalDefaults)
+	assert.NotEqual(t, GlobalConfig{}, config.globalDefaults)
+	assert.Contains(t, config.globalDefaults.Servers, Default)
+	assert.Contains(t, config.globalDefaults.Servers, "test")
+	assert.NotNil(t, config.pluginDefaults)
+	assert.NotEqual(t, PluginConfig{}, config.pluginDefaults)
+	assert.Empty(t, config.pluginDefaults.Plugins)
+}
+
+// TestInitConfigMultiTenant tests the InitConfig function with a multi-tenant configuration.
+func TestInitConfigMultiTenant(t *testing.T) {
+	ctx := context.Background()
+	config := NewConfig(ctx,
 		Config{GlobalConfigFile: parentDir + GlobalConfigFilename, PluginConfigFile: parentDir + PluginsConfigFilename})
 	config.InitConfig(ctx)
 	assert.NotNil(t, config.Global)
