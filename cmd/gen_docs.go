@@ -7,6 +7,8 @@ import (
 	"github.com/spf13/cobra/doc"
 )
 
+const outputDirPermissions = 0o755
+
 var docOutputDir string
 
 var genDocs = &cobra.Command{
@@ -15,7 +17,7 @@ var genDocs = &cobra.Command{
 	Hidden: true,
 	Run: func(cmd *cobra.Command, _ []string) {
 		// Create the output directory if it doesn't exist
-		if err := os.MkdirAll(docOutputDir, 0o755); err != nil {
+		if err := os.MkdirAll(docOutputDir, outputDirPermissions); err != nil {
 			cmd.PrintErr(err)
 			return
 		}
