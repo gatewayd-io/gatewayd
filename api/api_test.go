@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	sdkPlugin "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin"
+	pluginV1 "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin/v1"
 	"github.com/gatewayd-io/gatewayd/act"
 	v1 "github.com/gatewayd-io/gatewayd/api/v1"
 	"github.com/gatewayd-io/gatewayd/config"
@@ -59,7 +60,11 @@ func TestGetGlobalConfigWithGroupName(t *testing.T) {
 	api := API{
 		Config: conf,
 	}
-	globalConfig, err := api.GetGlobalConfig(context.Background(), &v1.Group{GroupName: nil})
+	defaultGroup := config.Default
+	globalConfig, err := api.GetGlobalConfig(
+		context.Background(),
+		&v1.Group{GroupName: &defaultGroup},
+	)
 	require.NoError(t, err)
 	globalconf := globalConfig.AsMap()
 	assert.NotEmpty(t, globalconf)
@@ -71,7 +76,7 @@ func TestGetGlobalConfigWithGroupName(t *testing.T) {
 	assert.NotEmpty(t, globalconf["servers"])
 	assert.NotEmpty(t, globalconf["metrics"])
 	assert.NotEmpty(t, globalconf["api"])
-	if _, ok := globalconf["loggers"].(map[string]interface{})["default"]; !ok {
+	if _, ok := globalconf["loggers"].(map[string]interface{})[config.Default]; !ok {
 		t.Errorf("loggers.default is not found")
 	}
 }
@@ -136,6 +141,17 @@ func TestGetPlugins(t *testing.T) {
 			RemoteURL: "plugin-url",
 			Checksum:  "plugin-checksum",
 		},
+		Requires: []sdkPlugin.Identifier{
+			{
+				Name:      "plugin1-name",
+				Version:   "plugin1-version",
+				RemoteURL: "plugin1-url",
+				Checksum:  "plugin1-checksum",
+			},
+		},
+		Hooks: []pluginV1.HookName{
+			pluginV1.HookName_HOOK_NAME_ON_TRAFFIC_FROM_CLIENT,
+		},
 	})
 
 	api := API{
@@ -145,6 +161,11 @@ func TestGetPlugins(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEmpty(t, plugins)
 	assert.NotEmpty(t, plugins.GetConfigs())
+	assert.NotEmpty(t, plugins.GetConfigs()[0].GetRequires())
+	assert.Equal(
+		t,
+		int32(pluginV1.HookName_HOOK_NAME_ON_TRAFFIC_FROM_CLIENT),
+		plugins.GetConfigs()[0].GetHooks()[0])
 }
 
 func TestGetPluginsWithEmptyPluginRegistry(t *testing.T) {
