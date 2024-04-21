@@ -1,11 +1,11 @@
 package cmd
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/zenizh/go-capturer"
 )
 
 //nolint:lll
@@ -38,8 +38,9 @@ func Test_rootCmd(t *testing.T) {
 }
 
 func Test_Execute(t *testing.T) {
-	stdout := capturer.CaptureStdout(func() {
-		Execute()
-	})
-	assert.Equal(t, rootHelp, stdout, "Execute should print the correct output")
+	buf := new(bytes.Buffer)
+	rootCmd.SetOut(buf)
+	rootCmd.SetErr(buf)
+	Execute()
+	assert.Equal(t, rootHelp, buf.String(), "Execute should print the correct output")
 }
