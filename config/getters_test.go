@@ -14,6 +14,12 @@ func TestGetOutput(t *testing.T) {
 	assert.Equal(t, []LogOutput{Console}, logger.GetOutput())
 }
 
+// TestGetOutputWithMultipleLoggers tests the GetOutput function with multiple loggers.
+func TestGetOutputWithMultipleLoggers(t *testing.T) {
+	logger := Logger{Output: []string{"console", "file"}}
+	assert.Equal(t, []LogOutput{Console, File}, logger.GetOutput())
+}
+
 // TestGetPlugins tests the GetPlugins function.
 func TestGetPlugins(t *testing.T) {
 	plugin := Plugin{Name: "plugin1"}
@@ -44,4 +50,18 @@ func TestFilter(t *testing.T) {
 	assert.Contains(t, defaultGroup.Proxies, Default)
 	assert.Contains(t, defaultGroup.Metrics, Default)
 	assert.Contains(t, defaultGroup.Loggers, Default)
+}
+
+// TestFilterWithMissingGroupName tests the Filter function with a missing group name.
+func TestFilterWithMissingGroupName(t *testing.T) {
+	// Load config from the default config file.
+	conf := NewConfig(context.TODO(),
+		Config{GlobalConfigFile: "../gatewayd.yaml", PluginConfigFile: "../gatewayd_plugins.yaml"})
+	err := conf.InitConfig(context.TODO())
+	require.Nil(t, err)
+	assert.NotEmpty(t, conf.Global)
+
+	// Filter the config.
+	defaultGroup := conf.Global.Filter("missing")
+	assert.Empty(t, defaultGroup)
 }

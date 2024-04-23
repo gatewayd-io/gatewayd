@@ -85,6 +85,7 @@ func TestInitConfigMultiTenant(t *testing.T) {
 	assert.Empty(t, config.pluginDefaults.Plugins)
 }
 
+// TestInitConfigMissingFile tests the InitConfig function with a missing file.
 func TestInitConfigMissingKeys(t *testing.T) {
 	ctx := context.Background()
 	config := NewConfig(ctx,
@@ -99,6 +100,7 @@ func TestInitConfigMissingKeys(t *testing.T) {
 		"validation failed, OriginalError: failed to validate global configuration")
 }
 
+// TestInitConfigMissingFile tests the InitConfig function with a missing file.
 func TestInitConfigMissingFile(t *testing.T) {
 	ctx := context.Background()
 	config := NewConfig(ctx,
