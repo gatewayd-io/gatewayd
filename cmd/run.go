@@ -421,7 +421,9 @@ var runCmd = &cobra.Command{
 		if updatedGlobalConfig != nil {
 			// Merge the config with the one loaded from the file (in memory).
 			// The changes won't be persisted to disk.
-			conf.MergeGlobalConfig(runCtx, updatedGlobalConfig)
+			if err := conf.MergeGlobalConfig(runCtx, updatedGlobalConfig); err != nil {
+				log.Fatal(err)
+			}
 		}
 
 		// Start the metrics server if enabled.
