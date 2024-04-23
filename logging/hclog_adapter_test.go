@@ -149,6 +149,7 @@ func TestNewHcLogAdapter_GetLevel(t *testing.T) {
 
 		hcLogAdapter := NewHcLogAdapter(&logger, "test")
 		hcLogAdapter.SetLevel(hclogLevel)
+		hcLogAdapter.Log(hclogLevel, "This is a message", "key", "value")
 		assert.Equal(t, hclogLevel, hcLogAdapter.GetLevel())
 
 		hcLogAdapter.SetLevel(hclog.Debug)
