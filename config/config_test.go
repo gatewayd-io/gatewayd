@@ -99,6 +99,23 @@ func TestInitConfigMissingKeys(t *testing.T) {
 		"validation failed, OriginalError: failed to validate global configuration")
 }
 
+func TestInitConfigMissingFile(t *testing.T) {
+	ctx := context.Background()
+	config := NewConfig(ctx,
+		Config{
+			GlobalConfigFile: "./testdata/missing_file.yaml",
+			PluginConfigFile: parentDir + PluginsConfigFilename,
+		},
+	)
+	err := config.InitConfig(ctx)
+	assert.Error(t, err)
+	assert.Contains(
+		t,
+		err.Error(),
+		"error parsing config, OriginalError: failed to load global configuration: "+
+			"open testdata/missing_file.yaml: no such file or directory")
+}
+
 // TestMergeGlobalConfig tests the MergeGlobalConfig function.
 func TestMergeGlobalConfig(t *testing.T) {
 	ctx := context.Background()
