@@ -85,6 +85,20 @@ func TestInitConfigMultiTenant(t *testing.T) {
 	assert.Empty(t, config.pluginDefaults.Plugins)
 }
 
+func TestInitConfigMissingKeys(t *testing.T) {
+	ctx := context.Background()
+	config := NewConfig(ctx,
+		Config{
+			GlobalConfigFile: "./testdata/missing_keys.yaml",
+			PluginConfigFile: parentDir + PluginsConfigFilename,
+		},
+	)
+	err := config.InitConfig(ctx)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(),
+		"validation failed, OriginalError: failed to validate global configuration")
+}
+
 // TestMergeGlobalConfig tests the MergeGlobalConfig function.
 func TestMergeGlobalConfig(t *testing.T) {
 	ctx := context.Background()
