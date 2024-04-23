@@ -235,7 +235,9 @@ var runCmd = &cobra.Command{
 
 		// Load global and plugin configuration.
 		conf = config.NewConfig(runCtx, config.Config{GlobalConfigFile: globalConfigFile, PluginConfigFile: pluginConfigFile})
-		conf.InitConfig(runCtx)
+		if err := conf.InitConfig(runCtx); err != nil {
+			log.Fatal(err)
+		}
 
 		// Create and initialize loggers from the config.
 		// Use cobra command cmd instead of os.Stdout for the console output.

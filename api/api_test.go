@@ -31,7 +31,8 @@ func TestGetGlobalConfig(t *testing.T) {
 	// Load config from the default config file.
 	conf := config.NewConfig(context.TODO(),
 		config.Config{GlobalConfigFile: "../gatewayd.yaml", PluginConfigFile: "../gatewayd_plugins.yaml"})
-	conf.InitConfig(context.TODO())
+	gerr := conf.InitConfig(context.TODO())
+	require.Nil(t, gerr)
 	assert.NotEmpty(t, conf.Global)
 
 	api := API{
@@ -54,7 +55,8 @@ func TestGetGlobalConfigWithGroupName(t *testing.T) {
 	// Load config from the default config file.
 	conf := config.NewConfig(context.TODO(),
 		config.Config{GlobalConfigFile: "../gatewayd.yaml", PluginConfigFile: "../gatewayd_plugins.yaml"})
-	conf.InitConfig(context.TODO())
+	gerr := conf.InitConfig(context.TODO())
+	require.Nil(t, gerr)
 	assert.NotEmpty(t, conf.Global)
 
 	api := API{
@@ -85,7 +87,8 @@ func TestGetGlobalConfigWithNonExistingGroupName(t *testing.T) {
 	// Load config from the default config file.
 	conf := config.NewConfig(context.TODO(),
 		config.Config{GlobalConfigFile: "../gatewayd.yaml", PluginConfigFile: "../gatewayd_plugins.yaml"})
-	conf.InitConfig(context.TODO())
+	gerr := conf.InitConfig(context.TODO())
+	require.Nil(t, gerr)
 	assert.NotEmpty(t, conf.Global)
 
 	api := API{
@@ -101,7 +104,8 @@ func TestGetPluginConfig(t *testing.T) {
 	// Load config from the default config file.
 	conf := config.NewConfig(context.TODO(),
 		config.Config{GlobalConfigFile: "../gatewayd.yaml", PluginConfigFile: "../gatewayd_plugins.yaml"})
-	conf.InitConfig(context.TODO())
+	gerr := conf.InitConfig(context.TODO())
+	require.Nil(t, gerr)
 	assert.NotEmpty(t, conf.Global)
 
 	api := API{

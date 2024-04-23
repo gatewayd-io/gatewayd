@@ -23,13 +23,14 @@ import (
 )
 
 type IConfig interface {
-	InitConfig(ctx context.Context)
-	LoadDefaults(ctx context.Context)
-	LoadPluginEnvVars(ctx context.Context)
-	LoadGlobalEnvVars(ctx context.Context)
-	LoadGlobalConfigFile(ctx context.Context)
-	LoadPluginConfigFile(ctx context.Context)
-	MergeGlobalConfig(ctx context.Context, updatedGlobalConfig map[string]interface{})
+	InitConfig(ctx context.Context) *gerr.GatewayDError
+	LoadDefaults(ctx context.Context) *gerr.GatewayDError
+	LoadPluginEnvVars(ctx context.Context) *gerr.GatewayDError
+	LoadGlobalEnvVars(ctx context.Context) *gerr.GatewayDError
+	LoadGlobalConfigFile(ctx context.Context) *gerr.GatewayDError
+	LoadPluginConfigFile(ctx context.Context) *gerr.GatewayDError
+	MergeGlobalConfig(
+		ctx context.Context, updatedGlobalConfig map[string]interface{}) *gerr.GatewayDError
 }
 
 type Config struct {
@@ -64,24 +65,42 @@ func NewConfig(ctx context.Context, config Config) *Config {
 	}
 }
 
-func (c *Config) InitConfig(ctx context.Context) {
+func (c *Config) InitConfig(ctx context.Context) *gerr.GatewayDError {
 	newCtx, span := otel.Tracer(TracerName).Start(ctx, "Initialize config")
 	defer span.End()
 
-	c.LoadDefaults(newCtx)
+	if err := c.LoadDefaults(newCtx); err != nil {
+		return err
+	}
 
-	c.LoadPluginConfigFile(newCtx)
-	c.LoadPluginEnvVars(newCtx)
-	c.UnmarshalPluginConfig(newCtx)
+	if err := c.LoadPluginConfigFile(newCtx); err != nil {
+		return err
+	}
+	if err := c.LoadPluginEnvVars(newCtx); err != nil {
+		return err
+	}
+	if err := c.UnmarshalPluginConfig(newCtx); err != nil {
+		return err
+	}
 
-	c.LoadGlobalConfigFile(newCtx)
-	c.ValidateGlobalConfig(newCtx)
-	c.LoadGlobalEnvVars(newCtx)
-	c.UnmarshalGlobalConfig(newCtx)
+	if err := c.LoadGlobalConfigFile(newCtx); err != nil {
+		return err
+	}
+	if err := c.ValidateGlobalConfig(newCtx); err != nil {
+		return err
+	}
+	if err := c.LoadGlobalEnvVars(newCtx); err != nil {
+		return err
+	}
+	if err := c.UnmarshalGlobalConfig(newCtx); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // LoadDefaults loads the default configuration before loading the config files.
-func (c *Config) LoadDefaults(ctx context.Context) {
+func (c *Config) LoadDefaults(ctx context.Context) *gerr.GatewayDError {
 	_, span := otel.Tracer(TracerName).Start(ctx, "Load defaults")
 
 	defaultLogger := Logger{
@@ -164,7 +183,8 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 		if err != nil {
 			span.RecordError(err)
 			span.End()
-			log.Fatal(fmt.Errorf("failed to unmarshal global configuration: %w", err))
+			return gerr.ErrConfigParseError.Wrap(
+				fmt.Errorf("failed to unmarshal global configuration: %w", err))
 		}
 
 		for configObject, configMap := range gconf {
@@ -193,7 +213,7 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 						err := fmt.Errorf("unknown config object: %s", configObject)
 						span.RecordError(err)
 						span.End()
-						log.Fatal(err)
+						return gerr.ErrConfigParseError.Wrap(err)
 					}
 				}
 			}
@@ -201,7 +221,8 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 	} else if !os.IsNotExist(err) {
 		span.RecordError(err)
 		span.End()
-		log.Fatal(fmt.Errorf("failed to read global configuration file: %w", err))
+		return gerr.ErrConfigParseError.Wrap(
+			fmt.Errorf("failed to read global configuration file: %w", err))
 	}
 
 	c.pluginDefaults = PluginConfig{
@@ -222,7 +243,8 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 		if err := c.GlobalKoanf.Load(structs.Provider(c.globalDefaults, "json"), nil); err != nil {
 			span.RecordError(err)
 			span.End()
-			log.Fatal(fmt.Errorf("failed to load default global configuration: %w", err))
+			return gerr.ErrConfigParseError.Wrap(
+				fmt.Errorf("failed to load default global configuration: %w", err))
 		}
 	}
 
@@ -230,39 +252,48 @@ func (c *Config) LoadDefaults(ctx context.Context) {
 		if err := c.PluginKoanf.Load(structs.Provider(c.pluginDefaults, "json"), nil); err != nil {
 			span.RecordError(err)
 			span.End()
-			log.Fatal(fmt.Errorf("failed to load default plugin configuration: %w", err))
+			return gerr.ErrConfigParseError.Wrap(
+				fmt.Errorf("failed to load default plugin configuration: %w", err))
 		}
 	}
 
 	span.End()
+
+	return nil
 }
 
 // LoadGlobalEnvVars loads the environment variables into the global configuration with the
 // given prefix, "GATEWAYD_".
-func (c *Config) LoadGlobalEnvVars(ctx context.Context) {
+func (c *Config) LoadGlobalEnvVars(ctx context.Context) *gerr.GatewayDError {
 	_, span := otel.Tracer(TracerName).Start(ctx, "Load global environment variables")
 
 	if err := c.GlobalKoanf.Load(loadEnvVars(), nil); err != nil {
 		span.RecordError(err)
 		span.End()
-		log.Fatal(fmt.Errorf("failed to load environment variables: %w", err))
+		return gerr.ErrConfigParseError.Wrap(
+			fmt.Errorf("failed to load environment variables: %w", err))
 	}
 
 	span.End()
+
+	return nil
 }
 
 // LoadPluginEnvVars loads the environment variables into the plugins configuration with the
 // given prefix, "GATEWAYD_".
-func (c *Config) LoadPluginEnvVars(ctx context.Context) {
+func (c *Config) LoadPluginEnvVars(ctx context.Context) *gerr.GatewayDError {
 	_, span := otel.Tracer(TracerName).Start(ctx, "Load plugin environment variables")
 
 	if err := c.PluginKoanf.Load(loadEnvVars(), nil); err != nil {
 		span.RecordError(err)
 		span.End()
-		log.Fatal(fmt.Errorf("failed to load environment variables: %w", err))
+		return gerr.ErrConfigParseError.Wrap(
+			fmt.Errorf("failed to load environment variables: %w", err))
 	}
 
 	span.End()
+
+	return nil
 }
 
 func loadEnvVars() *env.Env {
@@ -272,33 +303,39 @@ func loadEnvVars() *env.Env {
 }
 
 // LoadGlobalConfigFile loads the plugin configuration file.
-func (c *Config) LoadGlobalConfigFile(ctx context.Context) {
+func (c *Config) LoadGlobalConfigFile(ctx context.Context) *gerr.GatewayDError {
 	_, span := otel.Tracer(TracerName).Start(ctx, "Load global config file")
 
 	if err := c.GlobalKoanf.Load(file.Provider(c.GlobalConfigFile), yaml.Parser()); err != nil {
 		span.RecordError(err)
 		span.End()
-		log.Fatal(fmt.Errorf("failed to load global configuration: %w", err))
+		return gerr.ErrConfigParseError.Wrap(
+			fmt.Errorf("failed to load global configuration: %w", err))
 	}
 
 	span.End()
+
+	return nil
 }
 
 // LoadPluginConfigFile loads the plugin configuration file.
-func (c *Config) LoadPluginConfigFile(ctx context.Context) {
+func (c *Config) LoadPluginConfigFile(ctx context.Context) *gerr.GatewayDError {
 	_, span := otel.Tracer(TracerName).Start(ctx, "Load plugin config file")
 
 	if err := c.PluginKoanf.Load(file.Provider(c.PluginConfigFile), yaml.Parser()); err != nil {
 		span.RecordError(err)
 		span.End()
-		log.Fatal(fmt.Errorf("failed to load plugin configuration: %w", err))
+		return gerr.ErrConfigParseError.Wrap(
+			fmt.Errorf("failed to load plugin configuration: %w", err))
 	}
 
 	span.End()
+
+	return nil
 }
 
 // UnmarshalGlobalConfig unmarshals the global configuration for easier access.
-func (c *Config) UnmarshalGlobalConfig(ctx context.Context) {
+func (c *Config) UnmarshalGlobalConfig(ctx context.Context) *gerr.GatewayDError {
 	_, span := otel.Tracer(TracerName).Start(ctx, "Unmarshal global config")
 
 	if err := c.GlobalKoanf.UnmarshalWithConf("", &c.Global, koanf.UnmarshalConf{
@@ -306,14 +343,17 @@ func (c *Config) UnmarshalGlobalConfig(ctx context.Context) {
 	}); err != nil {
 		span.RecordError(err)
 		span.End()
-		log.Fatal(fmt.Errorf("failed to unmarshal global configuration: %w", err))
+		return gerr.ErrConfigParseError.Wrap(
+			fmt.Errorf("failed to unmarshal global configuration: %w", err))
 	}
 
 	span.End()
+
+	return nil
 }
 
 // UnmarshalPluginConfig unmarshals the plugin configuration for easier access.
-func (c *Config) UnmarshalPluginConfig(ctx context.Context) {
+func (c *Config) UnmarshalPluginConfig(ctx context.Context) *gerr.GatewayDError {
 	_, span := otel.Tracer(TracerName).Start(ctx, "Unmarshal plugin config")
 
 	if err := c.PluginKoanf.UnmarshalWithConf("", &c.Plugin, koanf.UnmarshalConf{
@@ -321,21 +361,25 @@ func (c *Config) UnmarshalPluginConfig(ctx context.Context) {
 	}); err != nil {
 		span.RecordError(err)
 		span.End()
-		log.Fatal(fmt.Errorf("failed to unmarshal plugin configuration: %w", err))
+		return gerr.ErrConfigParseError.Wrap(
+			fmt.Errorf("failed to unmarshal plugin configuration: %w", err))
 	}
 
 	span.End()
+
+	return nil
 }
 
 func (c *Config) MergeGlobalConfig(
 	ctx context.Context, updatedGlobalConfig map[string]interface{},
-) {
+) *gerr.GatewayDError {
 	_, span := otel.Tracer(TracerName).Start(ctx, "Merge global config from plugins")
 
 	if err := c.GlobalKoanf.Load(confmap.Provider(updatedGlobalConfig, "."), nil); err != nil {
 		span.RecordError(err)
 		span.End()
-		log.Fatal(fmt.Errorf("failed to merge global configuration: %w", err))
+		return gerr.ErrConfigParseError.Wrap(
+			fmt.Errorf("failed to merge global configuration: %w", err))
 	}
 
 	if err := c.GlobalKoanf.UnmarshalWithConf("", &c.Global, koanf.UnmarshalConf{
@@ -343,23 +387,24 @@ func (c *Config) MergeGlobalConfig(
 	}); err != nil {
 		span.RecordError(err)
 		span.End()
-		log.Fatal(fmt.Errorf("failed to unmarshal global configuration: %w", err))
+		return gerr.ErrConfigParseError.Wrap(
+			fmt.Errorf("failed to unmarshal global configuration: %w", err))
 	}
 
 	span.End()
+
+	return nil
 }
 
-func (c *Config) ValidateGlobalConfig(ctx context.Context) {
+func (c *Config) ValidateGlobalConfig(ctx context.Context) *gerr.GatewayDError {
 	_, span := otel.Tracer(TracerName).Start(ctx, "Validate global config")
 
 	var globalConfig GlobalConfig
 	if err := c.GlobalKoanf.Unmarshal("", &globalConfig); err != nil {
 		span.RecordError(err)
 		span.End()
-		log.Fatal(
-			gerr.ErrValidationFailed.Wrap(
-				fmt.Errorf("failed to unmarshal global configuration: %w", err)),
-		)
+		return gerr.ErrValidationFailed.Wrap(
+			fmt.Errorf("failed to unmarshal global configuration: %w", err))
 	}
 
 	var errors []*gerr.GatewayDError
@@ -464,8 +509,13 @@ func (c *Config) ValidateGlobalConfig(ctx context.Context) {
 		for _, err := range errors {
 			log.Println(err)
 		}
-		span.RecordError(goerrors.New("failed to validate global configuration"))
+		err := goerrors.New("failed to validate global configuration")
+		span.RecordError(err)
 		span.End()
-		log.Fatal("failed to validate global configuration")
+		return gerr.ErrValidationFailed.Wrap(err)
 	}
+
+	span.End()
+
+	return nil
 }

@@ -48,6 +48,7 @@ const (
 	ErrCodeAsyncAction
 	ErrCodeEvalError
 	ErrCodeMsgEncodeError
+	ErrCodeConfigParseError
 )
 
 var (
@@ -171,6 +172,10 @@ var (
 	}
 	ErrMsgEncodeError = &GatewayDError{
 		ErrCodeMsgEncodeError, "error encoding message", nil,
+	}
+
+	ErrConfigParseError = &GatewayDError{
+		ErrCodeConfigParseError, "error parsing config", nil,
 	}
 
 	// Unwrapped errors.

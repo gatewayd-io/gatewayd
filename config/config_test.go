@@ -6,6 +6,7 @@ import (
 
 	"github.com/knadh/koanf"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var parentDir = "../"
@@ -35,7 +36,8 @@ func TestInitConfig(t *testing.T) {
 			PluginConfigFile: parentDir + PluginsConfigFilename,
 		},
 	)
-	config.InitConfig(ctx)
+	err := config.InitConfig(ctx)
+	require.Nil(t, err)
 	assert.NotNil(t, config.Global)
 	assert.NotEqual(t, GlobalConfig{}, config.Global)
 	assert.Contains(t, config.Global.Servers, Default)
@@ -62,7 +64,8 @@ func TestInitConfigMultiTenant(t *testing.T) {
 	ctx := context.Background()
 	config := NewConfig(ctx,
 		Config{GlobalConfigFile: parentDir + GlobalConfigFilename, PluginConfigFile: parentDir + PluginsConfigFilename})
-	config.InitConfig(ctx)
+	err := config.InitConfig(ctx)
+	require.Nil(t, err)
 	assert.NotNil(t, config.Global)
 	assert.NotEqual(t, GlobalConfig{}, config.Global)
 	assert.Contains(t, config.Global.Servers, Default)
@@ -87,7 +90,8 @@ func TestMergeGlobalConfig(t *testing.T) {
 	ctx := context.Background()
 	config := NewConfig(ctx,
 		Config{GlobalConfigFile: parentDir + GlobalConfigFilename, PluginConfigFile: parentDir + PluginsConfigFilename})
-	config.InitConfig(ctx)
+	err := config.InitConfig(ctx)
+	require.Nil(t, err)
 	// The default log level is info.
 	assert.Equal(t, DefaultLogLevel, config.Global.Loggers[Default].Level)
 

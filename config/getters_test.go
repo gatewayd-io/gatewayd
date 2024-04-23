@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestGetOutput tests the GetOutput function.
@@ -30,7 +31,8 @@ func TestFilter(t *testing.T) {
 	// Load config from the default config file.
 	conf := NewConfig(context.TODO(),
 		Config{GlobalConfigFile: "../gatewayd.yaml", PluginConfigFile: "../gatewayd_plugins.yaml"})
-	conf.InitConfig(context.TODO())
+	err := conf.InitConfig(context.TODO())
+	require.Nil(t, err)
 	assert.NotEmpty(t, conf.Global)
 
 	// Filter the config.
