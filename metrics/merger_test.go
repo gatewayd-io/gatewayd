@@ -53,4 +53,12 @@ func TestMerger(t *testing.T) {
 gatewayd_test_total{plugin="test"} 1`
 
 	assert.Contains(t, string(merger.OutputMetrics), want)
+
+	// Remove the plugin from the merger, thus stopping the metrics
+	// collection from the plugin.
+	merger.Remove("test")
+
+	// Test start/stop of the merger scheduler.
+	go merger.Start()
+	go merger.Stop()
 }

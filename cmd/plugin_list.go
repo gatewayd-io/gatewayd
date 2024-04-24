@@ -57,9 +57,18 @@ func init() {
 func listPlugins(cmd *cobra.Command, pluginConfigFile string, onlyEnabled bool) {
 	// Load the plugin config file.
 	conf := config.NewConfig(context.TODO(), config.Config{PluginConfigFile: pluginConfigFile})
-	conf.LoadDefaults(context.TODO())
-	conf.LoadPluginConfigFile(context.TODO())
-	conf.UnmarshalPluginConfig(context.TODO())
+	if err := conf.LoadDefaults(context.TODO()); err != nil {
+		cmd.PrintErr(err)
+		return
+	}
+	if err := conf.LoadPluginConfigFile(context.TODO()); err != nil {
+		cmd.PrintErr(err)
+		return
+	}
+	if err := conf.UnmarshalPluginConfig(context.TODO()); err != nil {
+		cmd.PrintErr(err)
+		return
+	}
 
 	if len(conf.Plugin.Plugins) != 0 {
 		cmd.Printf("Total plugins: %d\n", len(conf.Plugin.Plugins))

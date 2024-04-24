@@ -87,6 +87,7 @@ linters-settings:
           - "github.com/spf13/cobra"
           - "github.com/knadh/koanf"
           - "github.com/spf13/cast"
+          - "github.com/jackc/pgx/v5/pgproto3"
   tagalign:
     align: false
     sort: false

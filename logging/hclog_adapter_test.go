@@ -124,22 +124,37 @@ func TestNewHcLogAdapter_Log(t *testing.T) {
 }
 
 func TestNewHcLogAdapter_GetLevel(t *testing.T) {
-	logger := NewLogger(
-		context.Background(),
-		LoggerConfig{
-			Output:     []config.LogOutput{config.Console},
-			Level:      zerolog.TraceLevel,
-			TimeFormat: zerolog.TimeFormatUnix,
-			NoColor:    true,
-		},
-	)
+	levels := map[zerolog.Level]hclog.Level{
+		zerolog.NoLevel:    hclog.NoLevel,
+		zerolog.TraceLevel: hclog.Trace,
+		zerolog.DebugLevel: hclog.Debug,
+		zerolog.InfoLevel:  hclog.Info,
+		zerolog.WarnLevel:  hclog.Warn,
+		zerolog.ErrorLevel: hclog.Error,
+		zerolog.FatalLevel: hclog.Error,
+		zerolog.PanicLevel: hclog.Error,
+		zerolog.Disabled:   hclog.Off,
+	}
 
-	hcLogAdapter := NewHcLogAdapter(&logger, "test")
-	hcLogAdapter.SetLevel(hclog.Trace)
-	assert.Equal(t, hclog.Trace, hcLogAdapter.GetLevel())
+	for zerologLevel, hclogLevel := range levels {
+		logger := NewLogger(
+			context.Background(),
+			LoggerConfig{
+				Output:     []config.LogOutput{config.Console},
+				Level:      zerologLevel,
+				TimeFormat: zerolog.TimeFormatUnix,
+				NoColor:    true,
+			},
+		)
 
-	hcLogAdapter.SetLevel(hclog.Debug)
-	assert.Equal(t, hclog.Debug, hcLogAdapter.GetLevel())
-	assert.NotEqual(t, zerolog.DebugLevel, logger.GetLevel(),
-		"The logger should not be affected by the hclog adapter's loggerLevel")
+		hcLogAdapter := NewHcLogAdapter(&logger, "test")
+		hcLogAdapter.SetLevel(hclogLevel)
+		hcLogAdapter.Log(hclogLevel, "This is a message", "key", "value")
+		assert.Equal(t, hclogLevel, hcLogAdapter.GetLevel())
+
+		hcLogAdapter.SetLevel(hclog.Debug)
+		assert.Equal(t, hclog.Debug, hcLogAdapter.GetLevel())
+		assert.NotEqual(t, zerolog.DebugLevel, logger.GetLevel(),
+			"The logger should not be affected by the hclog adapter's loggerLevel")
+	}
 }

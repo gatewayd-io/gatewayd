@@ -27,7 +27,9 @@ func generateConfig(
 		GlobalKoanf: koanf.New("."),
 		PluginKoanf: koanf.New("."),
 	}
-	conf.LoadDefaults(context.TODO())
+	if err := conf.LoadDefaults(context.TODO()); err != nil {
+		logger.Fatal(err)
+	}
 
 	// Marshal the config file to YAML.
 	var konfig *koanf.Koanf
@@ -66,20 +68,32 @@ func generateConfig(
 }
 
 // lintConfig lints the given config file of the given type.
-func lintConfig(fileType configFileType, configFile string) error {
+func lintConfig(fileType configFileType, configFile string) *gerr.GatewayDError {
 	// Load the config file and check it for errors.
 	var conf *config.Config
 	switch fileType {
 	case Global:
 		conf = config.NewConfig(context.TODO(), config.Config{GlobalConfigFile: configFile})
-		conf.LoadDefaults(context.TODO())
-		conf.LoadGlobalConfigFile(context.TODO())
-		conf.UnmarshalGlobalConfig(context.TODO())
+		if err := conf.LoadDefaults(context.TODO()); err != nil {
+			return err
+		}
+		if err := conf.LoadGlobalConfigFile(context.TODO()); err != nil {
+			return err
+		}
+		if err := conf.UnmarshalGlobalConfig(context.TODO()); err != nil {
+			return err
+		}
 	case Plugins:
 		conf = config.NewConfig(context.TODO(), config.Config{PluginConfigFile: configFile})
-		conf.LoadDefaults(context.TODO())
-		conf.LoadPluginConfigFile(context.TODO())
-		conf.UnmarshalPluginConfig(context.TODO())
+		if err := conf.LoadDefaults(context.TODO()); err != nil {
+			return err
+		}
+		if err := conf.LoadPluginConfigFile(context.TODO()); err != nil {
+			return err
+		}
+		if err := conf.UnmarshalPluginConfig(context.TODO()); err != nil {
+			return err
+		}
 	default:
 		return gerr.ErrLintingFailed
 	}

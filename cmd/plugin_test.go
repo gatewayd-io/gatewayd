@@ -18,6 +18,7 @@ Usage:
   gatewayd plugin [command]
 
 Available Commands:
+  help        Help about any command
   init        Create or overwrite the GatewayD plugins config
   install     Install a plugin from a local archive or a GitHub repository
   lint        Lint the GatewayD plugins config
