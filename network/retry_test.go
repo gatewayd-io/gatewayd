@@ -37,7 +37,7 @@ func TestRetry(t *testing.T) {
 			assert.False(t, retry.DisableBackoffCaps)
 
 			conn, err := retry.Retry(func() (any, error) {
-				return net.Dial("tcp", "localhost:5432")
+				return net.Dial("tcp", "localhost:5432") //nolint:wrapcheck
 			})
 			assert.NoError(t, err)
 			assert.NotNil(t, conn)
@@ -64,7 +64,7 @@ func TestRetry(t *testing.T) {
 			assert.False(t, retry.DisableBackoffCaps)
 
 			conn, err := retry.Retry(func() (any, error) {
-				return net.DialTimeout("tcp", "localhost:5432", config.DefaultDialTimeout)
+				return net.DialTimeout("tcp", "localhost:5432", config.DefaultDialTimeout) //nolint:wrapcheck
 			})
 			assert.NoError(t, err)
 			assert.NotNil(t, conn)

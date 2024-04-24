@@ -38,14 +38,16 @@ func Test_ConnWrapper_NoTLS(t *testing.T) {
 
 	// Write and read data.
 	go func() {
-		serverWrapper.Write([]byte("Hello, World!"))
+		sent, err := serverWrapper.Write([]byte("Hello, World!"))
+		assert.Equal(t, 13, sent)
+		require.NoError(t, err)
 	}()
 
 	go func() {
 		greeting := make([]byte, 13)
-		n, err := clientWrapper.Read(greeting)
-		assert.Equal(t, 13, n)
-		assert.NoError(t, err)
+		read, err := clientWrapper.Read(greeting)
+		assert.Equal(t, 13, read)
+		require.NoError(t, err)
 		assert.Equal(t, "Hello, World!", string(greeting))
 	}()
 }
@@ -55,7 +57,7 @@ func Test_ConnWrapper_NoTLS(t *testing.T) {
 func Test_CreateTLSConfig(t *testing.T) {
 	tlsConfig, err := CreateTLSConfig(
 		"../cmd/testdata/localhost.crt", "../cmd/testdata/localhost.key")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, tlsConfig.ClientAuth, tls.VerifyClientCertIfGiven)
 	assert.NotEmpty(t, tlsConfig.Certificates[0].Certificate)
 	assert.NotEmpty(t, tlsConfig.Certificates[0].PrivateKey)

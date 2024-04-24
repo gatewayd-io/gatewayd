@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -12,16 +13,23 @@ import (
 
 func Test_HeaderBypassResponseWriter(t *testing.T) {
 	testServer := httptest.NewServer(
-		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			respWriter := HeaderBypassResponseWriter{w}
+		http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+			respWriter := HeaderBypassResponseWriter{writer}
 			respWriter.WriteHeader(http.StatusBadGateway) // This is a no-op.
-			respWriter.Write([]byte("Hello, World!"))
+			sent, err := respWriter.Write([]byte("Hello, World!"))
+			require.NoError(t, err)
+			assert.Equal(t, 13, sent)
 		}),
 	)
 	defer testServer.Close()
 
-	resp, err := http.Get(testServer.URL)
+	req, err := http.NewRequestWithContext(
+		context.Background(), http.MethodGet, testServer.URL, nil)
 	require.NoError(t, err)
+	assert.NotNil(t, req)
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	assert.NotNil(t, resp)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	// The WriteHeader method intentionally does nothing, to prevent a bug
 	// in the merging metrics that causes the headers to be written twice,
