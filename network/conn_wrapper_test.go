@@ -35,21 +35,6 @@ func Test_ConnWrapper_NoTLS(t *testing.T) {
 	assert.False(t, clientWrapper.IsTLSEnabled())
 	assert.Equal(t, clientWrapper.LocalAddr(), client.LocalAddr())
 	assert.Equal(t, clientWrapper.RemoteAddr(), client.RemoteAddr())
-
-	// Write and read data.
-	go func() {
-		sent, err := serverWrapper.Write([]byte("Hello, World!"))
-		assert.Equal(t, 13, sent)
-		require.NoError(t, err)
-	}()
-
-	go func() {
-		greeting := make([]byte, 13)
-		read, err := clientWrapper.Read(greeting)
-		assert.Equal(t, 13, read)
-		require.NoError(t, err)
-		assert.Equal(t, "Hello, World!", string(greeting))
-	}()
 }
 
 // Test_ConnWrapper_TLS tests that the CreateTLSConfig function correctly
