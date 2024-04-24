@@ -94,9 +94,9 @@ func NewClient(
 	// Create a new connection and retry a few times if needed.
 	if conn, err := client.retry.Retry(func() (any, error) {
 		if client.DialTimeout > 0 {
-			return net.DialTimeout(client.Network, client.Address, client.DialTimeout) //nolint:wrapcheck
+			return net.DialTimeout(client.Network, client.Address, client.DialTimeout)
 		} else {
-			return net.Dial(client.Network, client.Address) //nolint:wrapcheck
+			return net.Dial(client.Network, client.Address)
 		}
 	}); err != nil {
 		origErr = err
@@ -279,9 +279,9 @@ func (c *Client) Reconnect() error {
 	// Create a new connection and retry a few times if needed.
 	if conn, err := c.retry.Retry(func() (any, error) {
 		if c.DialTimeout > 0 {
-			return net.DialTimeout(c.Network, c.Address, c.DialTimeout) //nolint:wrapcheck
+			return net.DialTimeout(c.Network, c.Address, c.DialTimeout)
 		} else {
-			return net.Dial(c.Network, c.Address) //nolint:wrapcheck
+			return net.Dial(c.Network, c.Address)
 		}
 	}); err != nil {
 		origErr = err
