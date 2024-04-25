@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Test_HTTP_Server tests the HTTP to gRPC gateway.
 func Test_HTTP_Server(t *testing.T) {
 	api := getAPIConfig()
 	healthchecker := &HealthChecker{Servers: api.Servers}

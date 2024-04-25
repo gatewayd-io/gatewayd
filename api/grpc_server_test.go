@@ -12,6 +12,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
+// Test_GRPC_Server tests the gRPC server.
 func Test_GRPC_Server(t *testing.T) {
 	api := getAPIConfig()
 	healthchecker := &HealthChecker{Servers: api.Servers}

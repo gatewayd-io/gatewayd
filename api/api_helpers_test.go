@@ -11,6 +11,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// getAPIConfig returns a new API configuration with all the necessary components.
 func getAPIConfig() *API {
 	logger := zerolog.New(nil)
 	defaultPool := pool.NewPool(context.Background(), config.DefaultPoolSize)
