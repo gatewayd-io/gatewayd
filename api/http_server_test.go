@@ -30,7 +30,7 @@ func Test_HTTP_Server(t *testing.T) {
 
 	req, err := http.NewRequestWithContext(
 		context.Background(),
-		"GET",
+		http.MethodGet,
 		"http://localhost:18080/v1/GatewayDPluginService/Version",
 		nil,
 	)

@@ -32,8 +32,8 @@ func Test_GRPC_Server(t *testing.T) {
 	resp, err := client.Version(context.Background(), &emptypb.Empty{})
 	assert.Nil(t, err)
 	assert.NotNil(t, resp)
-	assert.Equal(t, config.Version, resp.Version)
-	assert.Equal(t, config.VersionInfo(), resp.VersionInfo)
+	assert.Equal(t, config.Version, resp.GetVersion())
+	assert.Equal(t, config.VersionInfo(), resp.GetVersionInfo())
 
 	grpcServer.Shutdown(context.Background())
 }
