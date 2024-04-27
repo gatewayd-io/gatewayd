@@ -53,7 +53,7 @@ func (a *API) Version(context.Context, *emptypb.Empty) (*v1.VersionResponse, err
 //
 //nolint:wrapcheck
 func (a *API) GetGlobalConfig(ctx context.Context, group *v1.Group) (*structpb.Struct, error) {
-	_, span := otel.Tracer(config.TracerName).Start(ctx, "Get Global Config")
+	_, span := otel.Tracer(config.TracerName).Start(ctx, "Getting Global Config")
 	defer span.End()
 	var (
 		jsonData []byte
