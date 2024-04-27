@@ -5,6 +5,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+
 	sdkPlugin "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin"
 	v1 "github.com/gatewayd-io/gatewayd/api/v1"
 	"github.com/gatewayd-io/gatewayd/config"
