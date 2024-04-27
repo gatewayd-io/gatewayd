@@ -5,7 +5,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-
 	sdkPlugin "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin"
 	v1 "github.com/gatewayd-io/gatewayd/api/v1"
 	"github.com/gatewayd-io/gatewayd/config"
@@ -14,6 +13,7 @@ import (
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
 	"github.com/rs/zerolog"
+	"go.opentelemetry.io/otel"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -52,7 +52,9 @@ func (a *API) Version(context.Context, *emptypb.Empty) (*v1.VersionResponse, err
 // GetGlobalConfig returns the global configuration of the GatewayD.
 //
 //nolint:wrapcheck
-func (a *API) GetGlobalConfig(_ context.Context, group *v1.Group) (*structpb.Struct, error) {
+func (a *API) GetGlobalConfig(ctx context.Context, group *v1.Group) (*structpb.Struct, error) {
+	_, span := otel.Tracer(config.TracerName).Start(ctx, "Getting Global Config")
+	defer span.End()
 	var (
 		jsonData []byte
 		global   map[string]interface{}
@@ -75,6 +77,8 @@ func (a *API) GetGlobalConfig(_ context.Context, group *v1.Group) (*structpb.Str
 		metrics.APIRequestsErrors.WithLabelValues(
 			"GET", "/v1/GatewayDPluginService/GetGlobalConfig", codes.Internal.String(),
 		).Inc()
+		a.Options.Logger.Err(err).Msg("GetGroupName is nil")
+		span.RecordError(err)
 		return nil, status.Errorf(codes.Internal, "failed to marshal global config: %v", err)
 	}
 
@@ -83,6 +87,8 @@ func (a *API) GetGlobalConfig(_ context.Context, group *v1.Group) (*structpb.Str
 		metrics.APIRequestsErrors.WithLabelValues(
 			"GET", "/v1/GatewayDPluginService/GetGlobalConfig", codes.Internal.String(),
 		).Inc()
+		a.Options.Logger.Err(err).Msg("Failed to marshal global config")
+		span.RecordError(err)
 		return nil, status.Errorf(codes.Internal, "failed to marshal global config: %v", err)
 	}
 
@@ -91,6 +97,8 @@ func (a *API) GetGlobalConfig(_ context.Context, group *v1.Group) (*structpb.Str
 		metrics.APIRequestsErrors.WithLabelValues(
 			"GET", "/v1/GatewayDPluginService/GetGlobalConfig", codes.Internal.String(),
 		).Inc()
+		a.Options.Logger.Err(err).Msg("Failed to marshal global config")
+		span.RecordError(err)
 		return nil, status.Errorf(codes.Internal, "failed to marshal global config: %v", err)
 	}
 
@@ -99,12 +107,16 @@ func (a *API) GetGlobalConfig(_ context.Context, group *v1.Group) (*structpb.Str
 }
 
 // GetPluginConfig returns the plugin configuration of the GatewayD.
-func (a *API) GetPluginConfig(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
+func (a *API) GetPluginConfig(ctx context.Context, _ *emptypb.Empty) (*structpb.Struct, error) {
+	_, span := otel.Tracer(config.TracerName).Start(ctx, "Get GetPlugin Config")
+	defer span.End()
 	jsonData, err := json.Marshal(a.Config.Plugin)
 	if err != nil {
 		metrics.APIRequestsErrors.WithLabelValues(
 			"GET", "/v1/GatewayDPluginService/GetPluginConfig", codes.Internal.String(),
 		).Inc()
+		a.Options.Logger.Err(err).Msg("Failed to marshal plugin config")
+		span.RecordError(err)
 		return nil, status.Errorf(codes.Internal, "failed to marshal plugin config: %v", err)
 	}
 
@@ -115,6 +127,8 @@ func (a *API) GetPluginConfig(context.Context, *emptypb.Empty) (*structpb.Struct
 		metrics.APIRequestsErrors.WithLabelValues(
 			"GET", "/v1/GatewayDPluginService/GetPluginConfig", codes.Internal.String(),
 		).Inc()
+		a.Options.Logger.Err(err).Msg("Failed to unmarshal plugin config")
+		span.RecordError(err)
 		return nil, status.Errorf(codes.Internal, "failed to unmarshal plugin config: %v", err)
 	}
 
@@ -123,6 +137,8 @@ func (a *API) GetPluginConfig(context.Context, *emptypb.Empty) (*structpb.Struct
 		metrics.APIRequestsErrors.WithLabelValues(
 			"GET", "/v1/GatewayDPluginService/GetPluginConfig", codes.Internal.String(),
 		).Inc()
+		a.Options.Logger.Err(err).Msg("Failed to marshal plugin config")
+		span.RecordError(err)
 		return nil, status.Errorf(codes.Internal, "failed to marshal plugin config: %v", err)
 	}
 
@@ -131,7 +147,9 @@ func (a *API) GetPluginConfig(context.Context, *emptypb.Empty) (*structpb.Struct
 }
 
 // GetPlugins returns the active plugin configuration of the GatewayD.
-func (a *API) GetPlugins(context.Context, *emptypb.Empty) (*v1.PluginConfigs, error) {
+func (a *API) GetPlugins(ctx context.Context, _ *emptypb.Empty) (*v1.PluginConfigs, error) {
+	_, span := otel.Tracer(config.TracerName).Start(ctx, "Get Plugins")
+	defer span.End()
 	plugins := make([]*v1.PluginConfig, 0)
 	a.PluginRegistry.ForEach(
 		func(pluginID sdkPlugin.Identifier, plugIn *plugin.Plugin) {
