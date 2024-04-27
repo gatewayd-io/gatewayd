@@ -5,6 +5,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+
 	sdkPlugin "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin"
 	v1 "github.com/gatewayd-io/gatewayd/api/v1"
 	"github.com/gatewayd-io/gatewayd/config"
@@ -107,7 +108,7 @@ func (a *API) GetGlobalConfig(ctx context.Context, group *v1.Group) (*structpb.S
 }
 
 // GetPluginConfig returns the plugin configuration of the GatewayD.
-func (a *API) GetPluginConfig(ctx context.Context, empty *emptypb.Empty) (*structpb.Struct, error) {
+func (a *API) GetPluginConfig(ctx context.Context, _ *emptypb.Empty) (*structpb.Struct, error) {
 	_, span := otel.Tracer(config.TracerName).Start(ctx, "Get GetPlugin Config")
 	defer span.End()
 	jsonData, err := json.Marshal(a.Config.Plugin)
@@ -147,7 +148,7 @@ func (a *API) GetPluginConfig(ctx context.Context, empty *emptypb.Empty) (*struc
 }
 
 // GetPlugins returns the active plugin configuration of the GatewayD.
-func (a *API) GetPlugins(ctx context.Context, empty *emptypb.Empty) (*v1.PluginConfigs, error) {
+func (a *API) GetPlugins(ctx context.Context, _ *emptypb.Empty) (*v1.PluginConfigs, error) {
 	_, span := otel.Tracer(config.TracerName).Start(ctx, "Get Plugins")
 	defer span.End()
 	plugins := make([]*v1.PluginConfig, 0)
