@@ -14,7 +14,7 @@ tidy:
 	@go mod tidy
 
 build-dev:
-	@go mod tidy && CGO_ENABLED=0 go build -tags embed_swagger -trimpath -ldflags "-s -w -X ${CONFIG_PACKAGE}.Version=${VERSION} -X ${CMD_PACKAGE}.UsageReportURL=localhost:59091"
+	@go mod tidy && CGO_ENABLED=0 go build -tags embed_plugin_template,embed_swagger -trimpath -ldflags "-s -w -X ${CONFIG_PACKAGE}.Version=${VERSION} -X ${CMD_PACKAGE}.UsageReportURL=localhost:59091"
 
 create-build-dir:
 	@mkdir -p dist
@@ -33,11 +33,11 @@ build-platform: tidy
 	@mkdir -p $(OUTPUT_DIR)
 	@cp README.md LICENSE gatewayd.yaml gatewayd_plugins.yaml $(OUTPUT_DIR)/
 	@if [ "$(GOOS)" = "windows" ]; then \
-		GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=0 go build -tags embed_swagger,windows -trimpath -ldflags "-s -w ${EXTRA_LDFLAGS}" -o $(OUTPUT_DIR)/gatewayd.exe; \
+		GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=0 go build -tags embed_plugin_template,embed_swagger,windows -trimpath -ldflags "-s -w ${EXTRA_LDFLAGS}" -o $(OUTPUT_DIR)/gatewayd.exe; \
 		sha256sum $(OUTPUT_DIR)/gatewayd.exe | sed 's#$(OUTPUT_DIR)/##g' >> $(OUTPUT_DIR)/checksum.txt; \
 		zip -q -r dist/gatewayd-$(GOOS)-$(GOARCH)-${VERSION}.zip -j $(OUTPUT_DIR)/; \
 	else \
-		GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=0 go build -tags embed_swagger -trimpath -ldflags "-s -w ${EXTRA_LDFLAGS}" -o $(OUTPUT_DIR)/gatewayd; \
+		GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=0 go build -tags embed_plugin_template,embed_swagger -trimpath -ldflags "-s -w ${EXTRA_LDFLAGS}" -o $(OUTPUT_DIR)/gatewayd; \
 		sha256sum $(OUTPUT_DIR)/gatewayd | sed 's#$(OUTPUT_DIR)/##g' >> $(OUTPUT_DIR)/checksum.txt; \
 		tar czf dist/gatewayd-$(GOOS)-$(GOARCH)-${VERSION}.tar.gz -C $(OUTPUT_DIR)/ ${FILES}; \
 	fi
@@ -69,13 +69,13 @@ build-linux-packages:
 	@sha256sum dist/gatewayd-$(VERSION:v%=%).aarch64.rpm | sed 's/dist\///g' >> dist/checksums.txt
 
 run: tidy
-	@go run -tags embed_swagger main.go run --dev
+	@go run -tags embed_plugin_template,embed_swagger main.go run --dev
 
 run-race: tidy
-	@go run -race -tags embed_swagger main.go run --dev
+	@go run -race -tags embed_plugin_template,embed_swagger main.go run --dev
 
 run-tracing: tidy
-	@go run -tags embed_swagger main.go run --tracing --dev
+	@go run -tags embed_plugin_template,embed_swagger main.go run --tracing --dev
 
 clean:
 	@go clean -testcache
