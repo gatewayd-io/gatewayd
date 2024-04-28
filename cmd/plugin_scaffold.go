@@ -10,11 +10,11 @@ var (
 	pluginScaffoldOutputDir string
 )
 
-// scaffoldCmd represents the scaffold command
+// pluginScaffoldCmd represents the scaffold command.
 var pluginScaffoldCmd = &cobra.Command{
 	Use:   "scaffold",
 	Short: "Scaffold a plugin and store the files into a directory",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		createdFiles, err := plugin.Scaffold(pluginScaffoldInputFile, pluginScaffoldOutputDir)
 		if err != nil {
 			cmd.Println("Scaffold failed: ", err)
