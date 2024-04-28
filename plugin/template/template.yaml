@@ -8,12 +8,10 @@ schema:
     remote_url:
       type: string
       format: uri
-      pattern: ^https?:\/\/[\w\.@\:\-~]+(\/[\w\.\-\_\/]+)$
+      pattern: ^https?:\/\/[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+\/?$
     plugin_name:
       type: string
     pascal_case_plugin_name:
-      type: string
-    output_dir:
       type: string
     version:
       type: ["string", "number"]
