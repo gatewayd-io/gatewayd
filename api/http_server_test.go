@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/stretchr/testify/assert"
@@ -28,6 +29,8 @@ func Test_HTTP_Server(t *testing.T) {
 	go func(httpServer *HTTPServer) {
 		httpServer.Start()
 	}(httpServer)
+
+	time.Sleep(1 * time.Second) // Wait for the servers to start.
 
 	// Check version via the gRPC server.
 	req, err := http.NewRequestWithContext(
