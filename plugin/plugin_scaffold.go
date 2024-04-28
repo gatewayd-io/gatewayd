@@ -11,7 +11,10 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-var templatePath = filepath.Join("plugin", "template")
+const (
+	FolderPermissions os.FileMode = 0o755
+	FilePermissions   os.FileMode = 0o644
+)
 
 // Scaffold generates a gatewayd plugin based on the provided input file
 // and stores the generated files in the specified output directory.
@@ -49,7 +52,7 @@ func Scaffold(inputFile string, outputDir string) ([]string, error) {
 		destPath := filepath.Join(tempDir, relativePath)
 
 		if d.IsDir() {
-			return os.MkdirAll(destPath, 0755)
+			return os.MkdirAll(destPath, FolderPermissions)
 		}
 
 		fileContent, err := pluginTemplate.ReadFile(path)
@@ -57,11 +60,11 @@ func Scaffold(inputFile string, outputDir string) ([]string, error) {
 			return err
 		}
 
-		if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(destPath), FolderPermissions); err != nil {
 			return err
 		}
 
-		return os.WriteFile(destPath, fileContent, 0644)
+		return os.WriteFile(destPath, fileContent, FilePermissions)
 	})
 
 	if err != nil {
@@ -94,7 +97,7 @@ func Scaffold(inputFile string, outputDir string) ([]string, error) {
 		return nil, err
 	}
 
-	err = os.WriteFile(filepath.Join(outputDir, ".metadata.yaml"), metadataYaml, 0644)
+	err = os.WriteFile(filepath.Join(outputDir, ".metadata.yaml"), metadataYaml, FilePermissions)
 	if err != nil {
 		return nil, err
 	}
