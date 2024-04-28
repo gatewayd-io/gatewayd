@@ -33,6 +33,7 @@ import (
 	usage "github.com/gatewayd-io/gatewayd/usagereport/v1"
 	"github.com/getsentry/sentry-go"
 	"github.com/go-co-op/gocron"
+	"github.com/golang-queue/queue"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
@@ -283,6 +284,20 @@ var runCmd = &cobra.Command{
 			logger.Warn().Msg(
 				"Running GatewayD in development mode (not recommended for production)")
 		}
+		worker := act.NewActWorker(
+			act.Worker{
+				Logger:               logger,
+				Actions:              act.BuiltinActions(),
+				DefaultActionTimeout: conf.Plugin.ActionTimeout,
+			},
+		)
+
+		workerQueue := queue.NewPool(1, queue.WithFn(worker.RunFunc()))
+
+		if workerQueue == nil {
+			logger.Error().Msg("Failed to create worker queue")
+			os.Exit(gerr.FailedToCreateWorkerQueue)
+		}
 
 		// Create a new act registry given the built-in signals, policies, and actions.
 		actRegistry = act.NewActRegistry(
@@ -294,6 +309,7 @@ var runCmd = &cobra.Command{
 				PolicyTimeout:        conf.Plugin.PolicyTimeout,
 				DefaultActionTimeout: conf.Plugin.ActionTimeout,
 				Logger:               logger,
+				ActionQueue:          workerQueue,
 			})
 
 		if actRegistry == nil {

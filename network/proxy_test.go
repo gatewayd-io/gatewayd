@@ -10,6 +10,7 @@ import (
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
+	"github.com/golang-queue/queue"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 )
@@ -54,6 +55,7 @@ func TestNewProxy(t *testing.T) {
 			PolicyTimeout:        config.DefaultPolicyTimeout,
 			DefaultActionTimeout: config.DefaultActionTimeout,
 			Logger:               logger,
+			ActionQueue:          &queue.Queue{},
 		})
 
 	// Create a proxy with a fixed buffer newPool
@@ -110,6 +112,7 @@ func BenchmarkNewProxy(b *testing.B) {
 			PolicyTimeout:        config.DefaultPolicyTimeout,
 			DefaultActionTimeout: config.DefaultActionTimeout,
 			Logger:               logger,
+			ActionQueue:          &queue.Queue{},
 		})
 
 	// Create a proxy with a fixed buffer newPool
@@ -169,6 +172,7 @@ func BenchmarkProxyConnectDisconnect(b *testing.B) {
 			PolicyTimeout:        config.DefaultPolicyTimeout,
 			DefaultActionTimeout: config.DefaultActionTimeout,
 			Logger:               logger,
+			ActionQueue:          &queue.Queue{},
 		})
 
 	// Create a proxy with a fixed buffer newPool
@@ -235,6 +239,7 @@ func BenchmarkProxyPassThrough(b *testing.B) {
 			PolicyTimeout:        config.DefaultPolicyTimeout,
 			DefaultActionTimeout: config.DefaultActionTimeout,
 			Logger:               logger,
+			ActionQueue:          &queue.Queue{},
 		})
 
 	// Create a proxy with a fixed buffer newPool
@@ -306,6 +311,7 @@ func BenchmarkProxyIsHealthyAndIsExhausted(b *testing.B) {
 			PolicyTimeout:        config.DefaultPolicyTimeout,
 			DefaultActionTimeout: config.DefaultActionTimeout,
 			Logger:               logger,
+			ActionQueue:          &queue.Queue{},
 		})
 
 	// Create a proxy with a fixed buffer newPool
@@ -375,6 +381,7 @@ func BenchmarkProxyAvailableAndBusyConnectionsString(b *testing.B) {
 			PolicyTimeout:        config.DefaultPolicyTimeout,
 			DefaultActionTimeout: config.DefaultActionTimeout,
 			Logger:               logger,
+			ActionQueue:          &queue.Queue{},
 		})
 
 	// Create a proxy with a fixed buffer newPool

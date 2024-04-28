@@ -13,6 +13,7 @@ import (
 	"github.com/gatewayd-io/gatewayd/network"
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
+	"github.com/golang-queue/queue"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -128,6 +129,7 @@ func TestGetPlugins(t *testing.T) {
 			PolicyTimeout:        config.DefaultPolicyTimeout,
 			DefaultActionTimeout: config.DefaultActionTimeout,
 			Logger:               zerolog.Logger{},
+			ActionQueue:          &queue.Queue{},
 		})
 	pluginRegistry := plugin.NewRegistry(
 		context.TODO(),
@@ -182,6 +184,7 @@ func TestGetPluginsWithEmptyPluginRegistry(t *testing.T) {
 			PolicyTimeout:        config.DefaultPolicyTimeout,
 			DefaultActionTimeout: config.DefaultActionTimeout,
 			Logger:               zerolog.Logger{},
+			ActionQueue:          &queue.Queue{},
 		})
 	pluginRegistry := plugin.NewRegistry(
 		context.TODO(),
@@ -303,6 +306,7 @@ func TestGetServers(t *testing.T) {
 			PolicyTimeout:        config.DefaultPolicyTimeout,
 			DefaultActionTimeout: config.DefaultActionTimeout,
 			Logger:               zerolog.Logger{},
+			ActionQueue:          &queue.Queue{},
 		})
 
 	pluginRegistry := plugin.NewRegistry(

@@ -49,6 +49,7 @@ const (
 	ErrCodeEvalError
 	ErrCodeMsgEncodeError
 	ErrCodeConfigParseError
+	ErrCodeAsyncQueueFailed
 )
 
 var (
@@ -178,6 +179,12 @@ var (
 		ErrCodeConfigParseError, "error parsing config", nil,
 	}
 
+	ErrAsyncQueueFailed = &GatewayDError{
+		ErrCodeAsyncQueueFailed, "async queue failed", nil,
+	}
+	ErrSyncActionInQueue = &GatewayDError{
+		ErrCodeRunError, "sync action in async queue", nil,
+	}
 	// Unwrapped errors.
 	ErrLoggerRequired = errors.New("terminate action requires a logger parameter")
 )
@@ -188,4 +195,5 @@ const (
 	FailedToStartServer       = 3
 	FailedToStartTracer       = 4
 	FailedToCreateActRegistry = 5
+	FailedToCreateWorkerQueue = 6
 )

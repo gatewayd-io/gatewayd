@@ -10,6 +10,7 @@ import (
 	"github.com/gatewayd-io/gatewayd/act"
 	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/gatewayd-io/gatewayd/logging"
+	"github.com/golang-queue/queue"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
@@ -35,6 +36,7 @@ func NewPluginRegistry(t *testing.T) *Registry {
 			PolicyTimeout:        config.DefaultPolicyTimeout,
 			DefaultActionTimeout: config.DefaultActionTimeout,
 			Logger:               logger,
+			ActionQueue:          &queue.Queue{},
 		})
 	reg := NewRegistry(
 		context.Background(),
@@ -152,6 +154,7 @@ func BenchmarkHookRun(b *testing.B) {
 			PolicyTimeout:        config.DefaultPolicyTimeout,
 			DefaultActionTimeout: config.DefaultActionTimeout,
 			Logger:               logger,
+			ActionQueue:          &queue.Queue{},
 		})
 
 	reg := NewRegistry(

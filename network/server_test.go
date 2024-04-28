@@ -16,6 +16,7 @@ import (
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
+	"github.com/golang-queue/queue"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
@@ -48,6 +49,7 @@ func TestRunServer(t *testing.T) {
 			PolicyTimeout:        config.DefaultPolicyTimeout,
 			DefaultActionTimeout: config.DefaultActionTimeout,
 			Logger:               logger,
+			ActionQueue:          &queue.Queue{},
 		})
 	pluginRegistry := plugin.NewRegistry(
 		context.Background(),

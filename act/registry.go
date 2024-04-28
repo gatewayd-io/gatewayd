@@ -2,6 +2,7 @@ package act
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"slices"
 	"time"
@@ -9,6 +10,7 @@ import (
 	sdkAct "github.com/gatewayd-io/gatewayd-plugin-sdk/act"
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
+	"github.com/golang-queue/queue"
 	"github.com/rs/zerolog"
 )
 
@@ -32,6 +34,20 @@ type Registry struct {
 	DefaultPolicyName string
 	DefaultPolicy     *sdkAct.Policy
 	DefaultSignal     *sdkAct.Signal
+	ActionQueue       *queue.Queue
+}
+
+type asyncActionMessage struct {
+	Output *sdkAct.Output
+	Params []sdkAct.Parameter
+}
+
+func (j *asyncActionMessage) Bytes() []byte {
+	b, err := json.Marshal(j)
+	if err != nil {
+		panic(err)
+	}
+	return b
 }
 
 var _ IRegistry = (*Registry)(nil)
@@ -79,6 +95,11 @@ func NewActRegistry(
 
 	registry.Logger.Debug().Str("name", registry.DefaultPolicyName).Msg("Using default policy")
 
+	if registry.ActionQueue == nil {
+		registry.Logger.Warn().Msg("ActionQueue is nil, not creating registry")
+		return nil
+	}
+
 	return &Registry{
 		Logger:               registry.Logger,
 		PolicyTimeout:        registry.PolicyTimeout,
@@ -88,6 +109,7 @@ func NewActRegistry(
 		Actions:              registry.Actions,
 		DefaultPolicy:        registry.Policies[registry.DefaultPolicyName],
 		DefaultSignal:        registry.Signals[registry.DefaultPolicyName],
+		ActionQueue:          registry.ActionQueue,
 	}
 }
 
@@ -225,32 +247,35 @@ func (r *Registry) Run(
 		return nil, gerr.ErrActionNotExist
 	}
 
-	// Prepend the logger to the parameters.
-	params = append([]sdkAct.Parameter{WithLogger(r.Logger)}, params...)
-
 	timeout := r.DefaultActionTimeout
 	if action.Timeout > 0 {
 		timeout = time.Duration(action.Timeout) * time.Second
 	}
-	var ctx context.Context
-	var cancel context.CancelFunc
-	// if timeout is zero, then the context should not have timeout
-	if timeout > 0 {
-		ctx, cancel = context.WithTimeout(context.Background(), timeout)
-	} else {
-		ctx, cancel = context.WithCancel(context.Background())
-	}
+
 	// If the action is synchronous, run it and return the result immediately.
 	if action.Sync {
+		// Prepend the logger to the parameters.
+		params = append([]sdkAct.Parameter{WithLogger(r.Logger)}, params...)
+
+		var ctx context.Context
+		var cancel context.CancelFunc
+		// if timeout is zero, then the context should not have timeout
+		if timeout > 0 {
+			ctx, cancel = context.WithTimeout(context.Background(), timeout)
+		} else {
+			ctx, cancel = context.WithCancel(context.Background())
+		}
 		defer cancel()
 		return runActionWithTimeout(ctx, action, output, params, r.Logger)
 	}
 
-	// Run the action asynchronously.
-	go func() {
-		defer cancel()
-		_, _ = runActionWithTimeout(ctx, action, output, params, r.Logger)
-	}()
+	if err := r.ActionQueue.Queue(&asyncActionMessage{
+		Output: output,
+		Params: params,
+	}); err != nil {
+		return nil, gerr.ErrAsyncQueueFailed
+	}
+
 	return nil, gerr.ErrAsyncAction
 }
 
@@ -261,6 +286,12 @@ func runActionWithTimeout(
 	params []sdkAct.Parameter,
 	logger zerolog.Logger,
 ) (any, *gerr.GatewayDError) {
+	defer func() {
+		// recover from panic if one occurred. Set err to nil otherwise.
+		if recover() != nil {
+			logger.Error().Str("action", action.Name).Msg("Action panicked")
+		}
+	}()
 	execMode := "sync"
 	if !action.Sync {
 		execMode = "async"

@@ -70,6 +70,7 @@ linters-settings:
           - "gopkg.in/natefinch/lumberjack.v2"
           - "github.com/expr-lang/expr"
           - "github.com/jackc/pgx/v5/pgproto3"
+          - "github.com/golang-queue/queue"
       test:
         files:
           - $test
@@ -88,6 +89,7 @@ linters-settings:
           - "github.com/knadh/koanf"
           - "github.com/spf13/cast"
           - "github.com/jackc/pgx/v5/pgproto3"
+          - "github.com/golang-queue/queue"
   tagalign:
     align: false
     sort: false

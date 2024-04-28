@@ -7,6 +7,7 @@ import (
 	sdkAct "github.com/gatewayd-io/gatewayd-plugin-sdk/act"
 	"github.com/gatewayd-io/gatewayd/act"
 	"github.com/gatewayd-io/gatewayd/config"
+	"github.com/golang-queue/queue"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cast"
 	"github.com/stretchr/testify/assert"
@@ -99,6 +100,7 @@ func Test_applyPolicies(t *testing.T) {
 			PolicyTimeout:        config.DefaultPolicyTimeout,
 			DefaultActionTimeout: config.DefaultActionTimeout,
 			Logger:               logger,
+			ActionQueue:          &queue.Queue{},
 		})
 
 	output := applyPolicies(
