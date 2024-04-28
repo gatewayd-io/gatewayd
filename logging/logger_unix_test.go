@@ -19,6 +19,8 @@ func TestSyslogAndRsyslog(t *testing.T) {
 		testServer("tcp", "127.0.0.1:1514")
 	}()
 
+	time.Sleep(1 * time.Second) // wait for the test server to start
+
 	logger := NewLogger(
 		context.Background(),
 		LoggerConfig{
