@@ -1,0 +1,35 @@
+# Plugin configuration file for GatewayD
+
+compatibilityPolicy: "strict"
+enableMetricsMerger: True
+metricsMergerPeriod: 5s
+healthCheckPeriod: 5s
+reloadOnCrash: True
+timeout: 30s
+
+plugins:
+  # Plugin {{ plugin_name }}
+  - name: {{ plugin_name }}
+    # whether to enable or disable the plugin on the next run
+    enabled: True
+    # path to the plugin's binary file
+    localPath: ../{{ plugin_name }}/{{ plugin_name }}
+    # url for downloading the plugin, must be a GitHub URL
+    # The `plugin install` command will look for this url to download and install the plugin
+    # The version is either "latest" or a tagged version of the plugin, like "v0.2.9"
+    url: "{{ remote_url|split:'https://'|join:''|split:'http://'|join:''  }}@latest"
+    # Pass cmdline args to the plugin
+    args: ["--log-level", "info"]
+    # Pass environment variables to the plugin
+    # System-wide environment variables are passed to the plugin normally
+    # and they can be accessed via os.Environ().
+    # Defining any environment variables below will override system-wide environment variables.
+    env:
+      # The below environment variables are used by the plugin loader to verify the plugin's identity.
+      - MAGIC_COOKIE_KEY=GATEWAYD_PLUGIN
+      - MAGIC_COOKIE_VALUE=5712b87aa5d7e9f9e9ab643e6603181c5b796015cb1c09d6f5ada882bf2a1872
+      - METRICS_ENABLED=True
+      - METRICS_UNIX_DOMAIN_SOCKET=/tmp/{{ plugin_name }}.sock
+      - METRICS_PATH=/metrics
+    # Checksum hash to verify the binary before loading
+    checksum: dee4aa014a722e1865d91744a4fd310772152467d9c6ab4ba17fd9dd40d3f724

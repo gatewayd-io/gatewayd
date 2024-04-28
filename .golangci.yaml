@@ -70,6 +70,10 @@ linters-settings:
           - "gopkg.in/natefinch/lumberjack.v2"
           - "github.com/expr-lang/expr"
           - "github.com/jackc/pgx/v5/pgproto3"
+          - "github.com/cybercyst/go-scaffold/pkg/scaffold"
+          - "golang.org/x/text/cases"
+          - "golang.org/x/text/language"
+          - "gopkg.in/yaml.v2"
       test:
         files:
           - $test

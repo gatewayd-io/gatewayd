@@ -1,0 +1,6 @@
+remote_url: https://github.com/gatewayd/test-gatewayd-plugin
+version: 0.1
+description: This is test plugin
+license: MIT
+authors:
+  - GatewayD Team

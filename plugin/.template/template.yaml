@@ -1,0 +1,31 @@
+title: Plugin Template
+version: 0.1.0
+schema:
+  name: Plugin Template Config Schema
+  $schema: http://json-schema.org/draft-07/schema#
+  type: object
+  properties:
+    remote_url:
+      type: string
+      format: uri
+      pattern: ^https?:\/\/[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+\/?$
+    plugin_name:
+      type: string
+    pascal_case_plugin_name:
+      type: string
+    version:
+      type: ["string", "number"]
+      pattern: "^(\\d+)(\\.\\d+)*(\\.\\d+)?$"
+    description:
+      type: string
+    license:
+      type: string
+    authors:
+      type: array
+      items:
+        type: string
+  required:
+    - remote_url
+    - version
+    - license
+    - authors
