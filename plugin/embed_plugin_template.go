@@ -5,10 +5,8 @@ package plugin
 import "embed"
 
 //go:embed .template/* .template/project/*/.*
-var (
-	pluginTemplate        embed.FS
-	pluginTemplateRootDir = ".template"
-)
+var pluginTemplate embed.FS
+var pluginTemplateRootDir = ".template"
 
 func IsPluginTemplateEmbedded() bool {
 	return true
