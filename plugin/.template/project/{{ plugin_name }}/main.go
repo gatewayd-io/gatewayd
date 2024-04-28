@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"os"
-
 	"{{ remote_url|split:'https://'|join:''|split:'http://'|join:''  }}/plugin"
 
 	sdkConfig "github.com/gatewayd-io/gatewayd-plugin-sdk/config"

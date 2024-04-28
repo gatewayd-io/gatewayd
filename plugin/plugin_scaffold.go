@@ -8,6 +8,9 @@ import (
 	"unicode"
 
 	"github.com/cybercyst/go-scaffold/pkg/scaffold"
+	gerr "github.com/gatewayd-io/gatewayd/errors"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"gopkg.in/yaml.v2"
 )
 
@@ -27,12 +30,10 @@ const (
 // license: MIT
 // authors:
 //   - GatewayD Team
-//
-// ```
 func Scaffold(inputFile string, outputDir string) ([]string, error) {
 	tempDir, err := os.MkdirTemp("", "gatewayd-plugin-template")
 	if err != nil {
-		return nil, err
+		return nil, gerr.ErrFailedToScaffoldPlugin.Wrap(err)
 	}
 
 	defer func() {
@@ -40,42 +41,50 @@ func Scaffold(inputFile string, outputDir string) ([]string, error) {
 	}()
 
 	// Copy the embedded directory and its contents as "go-scaffold" library only accepts files on os filesystem
-	err = fs.WalkDir(pluginTemplate, pluginTemplateRootDir, func(path string, d fs.DirEntry, err error) error {
+	err = fs.WalkDir(pluginTemplate, pluginTemplateRootDir, func(path string, dir fs.DirEntry, err error) error {
 		if err != nil {
-			return err
+			return gerr.ErrFailedToCopyEmbeddedFiles.Wrap(err)
 		}
 
 		relativePath, err := filepath.Rel(pluginTemplateRootDir, path)
 		if err != nil {
-			return err
+			return gerr.ErrFailedToCopyEmbeddedFiles.Wrap(err)
 		}
 		destPath := filepath.Join(tempDir, relativePath)
 
-		if d.IsDir() {
+		if dir.IsDir() {
 			return os.MkdirAll(destPath, FolderPermissions)
 		}
 
 		fileContent, err := pluginTemplate.ReadFile(path)
 		if err != nil {
-			return err
+			return gerr.ErrFailedToCopyEmbeddedFiles.Wrap(err)
 		}
 
 		if err := os.MkdirAll(filepath.Dir(destPath), FolderPermissions); err != nil {
-			return err
+			return gerr.ErrFailedToCopyEmbeddedFiles.Wrap(err)
 		}
 
 		return os.WriteFile(destPath, fileContent, FilePermissions)
 	})
-
 	if err != nil {
-		return nil, err
+		return nil, gerr.ErrFailedToScaffoldPlugin.Wrap(err)
 	}
 
-	input, err := readTemplateInput(inputFile)
+	input, err := readScaffoldInputFile(inputFile)
 	if err != nil {
-		return nil, err
+		return nil, gerr.ErrFailedToScaffoldPlugin.Wrap(err)
 	}
-	pluginName := getLastSegment(input["remote_url"].(string))
+
+	var pluginName string
+	if url, ok := input["remote_url"].(string); ok {
+		// Type assertion succeeded, url is now a string
+		pluginName = getLastSegment(url)
+		// Now you can use pluginName
+	} else {
+		return nil, gerr.ErrFailedToScaffoldPlugin.Wrap(err)
+	}
+
 	input["plugin_name"] = pluginName
 	input["pascal_case_plugin_name"] = toPascalCase(pluginName)
 	// set go_mod as template variable because the go.mod file is not embedable.
@@ -84,44 +93,44 @@ func Scaffold(inputFile string, outputDir string) ([]string, error) {
 
 	template, err := scaffold.Download(tempDir)
 	if err != nil {
-		return nil, err
+		return nil, gerr.ErrFailedToScaffoldPlugin.Wrap(err)
 	}
 
 	metadata, err := scaffold.Generate(template, &input, outputDir)
 	if err != nil {
-		return nil, err
+		return nil, gerr.ErrFailedToScaffoldPlugin.Wrap(err)
 	}
 
 	metadataYaml, err := yaml.Marshal(metadata)
 	if err != nil {
-		return nil, err
+		return nil, gerr.ErrFailedToScaffoldPlugin.Wrap(err)
 	}
 
 	err = os.WriteFile(filepath.Join(outputDir, ".metadata.yaml"), metadataYaml, FilePermissions)
 	if err != nil {
-		return nil, err
+		return nil, gerr.ErrFailedToScaffoldPlugin.Wrap(err)
 	}
 
-	return *metadata.CreatedFiles, err
+	return *metadata.CreatedFiles, nil
 }
 
-// Reads the template input file in YAML format and returns a map containing the parsed data.
+// readScaffoldInputFile reads the template input file in YAML format and returns a map containing the parsed data.
 //
 // This function opens the provided input file path, reads its contents, and unmarshals
 // the YAML data into a Go map[string]interface{}. It returns the parsed map and any encountered error.
-func readTemplateInput(inputFilePath string) (map[string]interface{}, error) {
+func readScaffoldInputFile(inputFilePath string) (map[string]interface{}, error) {
 	inputBytes, err := os.ReadFile(inputFilePath)
 	if err != nil {
-		return nil, err
+		return nil, gerr.ErrFailedToReadPluginScaffoldInputFile.Wrap(err)
 	}
 
-	inputJson := make(map[string]interface{})
-	err = yaml.Unmarshal(inputBytes, &inputJson)
+	inputJSON := make(map[string]interface{})
+	err = yaml.Unmarshal(inputBytes, &inputJSON)
 	if err != nil {
-		return nil, err
+		return nil, gerr.ErrFailedToReadPluginScaffoldInputFile.Wrap(err)
 	}
 
-	return inputJson, nil
+	return inputJSON, nil
 }
 
 // toPascalCase converts a string to PascalCase format, suitable for use as a plugin class name in templates.
@@ -132,7 +141,8 @@ func toPascalCase(input string) string {
 	})
 	var pascalCase string
 	for _, word := range words {
-		pascalCase += strings.Title(word)
+		caser := cases.Title(language.English)
+		pascalCase += caser.String(word)
 	}
 
 	// Remove any non-alphanumeric characters except underscores

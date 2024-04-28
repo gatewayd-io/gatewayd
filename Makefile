@@ -105,3 +105,6 @@ update:
 
 gen-docs:
 	@go run main.go gen-docs
+
+golint:
+	@golangci-lint run --show-stats

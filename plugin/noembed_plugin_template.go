@@ -6,8 +6,10 @@ import (
 	"embed"
 )
 
-var pluginTemplate embed.FS
-var pluginTemplateRootDir = ".template"
+var (
+	pluginTemplate        embed.FS
+	pluginTemplateRootDir = ".template"
+)
 
 func IsPluginTemplateEmbedded() bool {
 	return false

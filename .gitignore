@@ -22,8 +22,10 @@ __pycache__/
 dist/
 
 # Editor files
-.vscode
-.idea
+.idea/*
+.history
+.vscode/*
+.vsix
 
 # Logs
 *.log
