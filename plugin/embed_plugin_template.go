@@ -4,9 +4,9 @@ package plugin
 
 import "embed"
 
-//go:embed template/* template/project/*/.*
+//go:embed .template/* .template/project/*/.*
 var pluginTemplate embed.FS
-var pluginTemplateRootDir = "template"
+var pluginTemplateRootDir = ".template"
 
 func IsPluginTemplateEmbedded() bool {
 	return true
