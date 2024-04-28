@@ -37,6 +37,6 @@ func init() {
 		"Plugin scaffold input file")
 	pluginScaffoldCmd.Flags().StringVarP(
 		&pluginScaffoldOutputDir,
-		"output-dir", "o", "./scaffolds",
+		"output-dir", "o", "./plugins",
 		"Output directory for the scaffold")
 }

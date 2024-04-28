@@ -40,7 +40,8 @@ func Scaffold(inputFile string, outputDir string) ([]string, error) {
 		os.RemoveAll(tempDir)
 	}()
 
-	// Copy the embedded directory and its contents as "go-scaffold" library only accepts files on os filesystem
+	// Copy the embedded directory and its contents as "go-scaffold" library
+	// only accepts files on os filesystem
 	err = fs.WalkDir(pluginTemplate, pluginTemplateRootDir, func(path string, dir fs.DirEntry, err error) error {
 		if err != nil {
 			return gerr.ErrFailedToCopyEmbeddedFiles.Wrap(err)
@@ -78,9 +79,7 @@ func Scaffold(inputFile string, outputDir string) ([]string, error) {
 
 	var pluginName string
 	if url, ok := input["remote_url"].(string); ok {
-		// Type assertion succeeded, url is now a string
 		pluginName = getLastSegment(url)
-		// Now you can use pluginName
 	} else {
 		return nil, gerr.ErrFailedToScaffoldPlugin.Wrap(err)
 	}
@@ -114,7 +113,8 @@ func Scaffold(inputFile string, outputDir string) ([]string, error) {
 	return *metadata.CreatedFiles, nil
 }
 
-// readScaffoldInputFile reads the template input file in YAML format and returns a map containing the parsed data.
+// readScaffoldInputFile reads the template input file in YAML format and
+// returns a map containing the parsed data.
 //
 // This function opens the provided input file path, reads its contents, and unmarshals
 // the YAML data into a Go map[string]interface{}. It returns the parsed map and any encountered error.
