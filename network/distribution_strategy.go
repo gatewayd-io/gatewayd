@@ -1,6 +1,9 @@
 package network
 
-import gerr "github.com/gatewayd-io/gatewayd/errors"
+import (
+	"context"
+	gerr "github.com/gatewayd-io/gatewayd/errors"
+)
 
 type IDistributionStrategy interface {
 	Distribute(*ConnWrapper) (IProxy, error)
@@ -18,18 +21,18 @@ func (ds DistributionStrategy) Distribute(wrapper *ConnWrapper) (IProxy, error) 
 
 var _ IDistributionStrategy = DistributionStrategy{}
 
-func NewDistributionStrategy(ds string, s *Server) (IDistributionStrategy, *gerr.GatewayDError) {
+func NewDistributionStrategy(ctx context.Context, ds string, server *Server) (IDistributionStrategy, *gerr.GatewayDError) {
 	switch ds {
 	case "ab-testing":
-		return &ABTestingStrategy{DistributionStrategy{s}}, nil
+		return &ABTestingStrategy{DistributionStrategy{server}}, nil
 	case "canary":
-		return &CanaryStrategy{DistributionStrategy{s}}, nil
+		return &CanaryStrategy{DistributionStrategy{server}}, nil
 	case "write-read-split":
-		return &WriteReadSplitStrategy{DistributionStrategy{s}}, nil
+		return &WriteReadSplitStrategy{DistributionStrategy{server}}, nil
 	case "round-robin":
-		return &RoundRobinStrategy{DistributionStrategy{s}}, nil
+		return NewRoundRobin(ctx, server), nil
 	case "murmur-hash":
-		return &MurMurHashStrategy{DistributionStrategy{s}}, nil
+		return &MurMurHashStrategy{DistributionStrategy{server}}, nil
 	default:
 		return nil, gerr.ErrDistributionStrategyNotFound
 	}
@@ -44,10 +47,6 @@ type WriteReadSplitStrategy struct {
 }
 
 type CanaryStrategy struct {
-	DistributionStrategy
-}
-
-type RoundRobinStrategy struct {
 	DistributionStrategy
 }
 

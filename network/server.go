@@ -726,7 +726,7 @@ func NewServer(
 	}
 
 	// Get distribution strategy
-	ds, err := NewDistributionStrategy(srv.DistributionStrategyName, &server)
+	ds, err := NewDistributionStrategy(ctx, srv.DistributionStrategyName, &server)
 	if err != nil {
 		srv.Logger.Error().Msg("Failed to create distribution strategy")
 	}
