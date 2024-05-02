@@ -90,15 +90,15 @@ func CollectAndComparePrometheusMetrics(t *testing.T) {
 		# TYPE gatewayd_plugin_hooks_registered_total counter
 		# HELP gatewayd_plugins_loaded_total Number of plugins loaded
 		# TYPE gatewayd_plugins_loaded_total counter
-		# HELP gatewayd_proxied_connections Number of proxy connects
+		# HELP gatewayd_proxied_connections Number of proxies connects
 		# TYPE gatewayd_proxied_connections gauge
-		# HELP gatewayd_proxy_health_checks_total Number of proxy health checks
+		# HELP gatewayd_proxy_health_checks_total Number of proxies health checks
 		# TYPE gatewayd_proxy_health_checks_total counter
-		# HELP gatewayd_proxy_passthrough_terminations_total Number of proxy passthrough terminations by plugins
+		# HELP gatewayd_proxy_passthrough_terminations_total Number of proxies passthrough terminations by plugins
 		# TYPE gatewayd_proxy_passthrough_terminations_total counter
-		# HELP gatewayd_proxy_passthroughs_to_client_total Number of successful proxy passthroughs
+		# HELP gatewayd_proxy_passthroughs_to_client_total Number of successful proxies passthroughs
 		# TYPE gatewayd_proxy_passthroughs_to_client_total counter
-		# HELP gatewayd_proxy_passthroughs_to_server_total Number of successful proxy passthroughs
+		# HELP gatewayd_proxy_passthroughs_to_server_total Number of successful proxies passthroughs
 		# TYPE gatewayd_proxy_passthroughs_to_server_total counter
 		# HELP gatewayd_server_connections Number of server connections
 		# TYPE gatewayd_server_connections gauge

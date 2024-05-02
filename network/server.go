@@ -48,7 +48,7 @@ type IServer interface {
 }
 
 type Server struct {
-	Proxy          IProxy
+	Proxies        []IProxy
 	Logger         zerolog.Logger
 	PluginRegistry *plugin.Registry
 	ctx            context.Context //nolint:containedctx
@@ -67,12 +67,15 @@ type Server struct {
 	KeyFile          string
 	HandshakeTimeout time.Duration
 
-	listener    net.Listener
-	host        string
-	port        int
-	connections uint32
-	running     *atomic.Bool
-	stopServer  chan struct{}
+	listener                 net.Listener
+	host                     string
+	port                     int
+	connections              uint32
+	running                  *atomic.Bool
+	stopServer               chan struct{}
+	DistributionStrategyName string
+	DistributionStrategy     IDistributionStrategy
+	SplitStrategy            map[string]uint
 }
 
 var _ IServer = (*Server)(nil)
@@ -149,10 +152,18 @@ func (s *Server) OnOpen(conn *ConnWrapper) ([]byte, Action) {
 	}
 	span.AddEvent("Ran the OnOpening hooks")
 
+	// Get the proxy by the server distribution strategy
+	proxy, err := s.GetProxyToConnect(conn)
+	if err != nil {
+		s.Logger.Error().Err(err).Msg("Failed to run OnOpening hook")
+		span.RecordError(err)
+		return nil, Close
+	}
+
 	// Use the proxy to connect to the backend. Close the connection if the pool is exhausted.
 	// This effectively get a connection from the pool and puts both the incoming and the server
 	// connections in the pool of the busy connections.
-	if err := s.Proxy.Connect(conn); err != nil {
+	if err := proxy.Connect(conn); err != nil {
 		if errors.Is(err, gerr.ErrPoolExhausted) {
 			span.RecordError(err)
 			return nil, Close
@@ -225,10 +236,16 @@ func (s *Server) OnClose(conn *ConnWrapper, err error) Action {
 		span.AddEvent("Shutting down the server")
 		return Shutdown
 	}
+	// Get proxy to this connect
+	proxy, err := s.GetBusyConnectionProxy(conn)
+	if err != nil {
+		span.AddEvent("Server connection deos not exists in any of proxies!")
+		return Close
+	}
 	// Disconnect the connection from the proxy. This effectively removes the mapping between
 	// the incoming and the server connections in the pool of the busy connections and either
 	// recycles or disconnects the connections.
-	if err := s.Proxy.Disconnect(conn); err != nil {
+	if err := proxy.Disconnect(conn); err != nil {
 		s.Logger.Error().Err(err).Msg("Failed to disconnect the server connection")
 		span.RecordError(err)
 		return Close
@@ -303,7 +320,15 @@ func (s *Server) OnTraffic(conn *ConnWrapper, stopConnection chan struct{}) Acti
 	go func(server *Server, conn *ConnWrapper, stopConnection chan struct{}, stack *Stack) {
 		for {
 			server.Logger.Trace().Msg("Passing through traffic from client to server")
-			if err := server.Proxy.PassThroughToServer(conn, stack); err != nil {
+			proxy, err := server.GetBusyConnectionProxy(conn)
+			if err != nil {
+				server.Logger.Trace().Err(err).Msg("Failed to find connection's proxy")
+				span.RecordError(err)
+				stopConnection <- struct{}{}
+				break
+			}
+
+			if err = proxy.PassThroughToServer(conn, stack); err != nil {
 				server.Logger.Trace().Err(err).Msg("Failed to pass through traffic")
 				span.RecordError(err)
 				stopConnection <- struct{}{}
@@ -316,8 +341,15 @@ func (s *Server) OnTraffic(conn *ConnWrapper, stopConnection chan struct{}) Acti
 	// If there is an error, log it and close the connection.
 	go func(server *Server, conn *ConnWrapper, stopConnection chan struct{}, stack *Stack) {
 		for {
+			proxy, err := server.GetBusyConnectionProxy(conn)
+			if err != nil {
+				server.Logger.Trace().Err(err).Msg("Failed to find connection's proxy")
+				span.RecordError(err)
+				stopConnection <- struct{}{}
+				break
+			}
 			server.Logger.Trace().Msg("Passing through traffic from server to client")
-			if err := server.Proxy.PassThroughToClient(conn, stack); err != nil {
+			if err = proxy.PassThroughToClient(conn, stack); err != nil {
 				server.Logger.Trace().Err(err).Msg("Failed to pass through traffic")
 				span.RecordError(err)
 				stopConnection <- struct{}{}
@@ -352,8 +384,10 @@ func (s *Server) OnShutdown() {
 	}
 	span.AddEvent("Ran the OnShutdown hooks")
 
-	// Shutdown the proxy.
-	s.Proxy.Shutdown()
+	// Shutdown the proxies.
+	for _, proxy := range s.Proxies {
+		proxy.Shutdown()
+	}
 
 	// Set the server status to stopped. This is used to shutdown the server gracefully in OnClose.
 	s.mu.Lock()
@@ -573,8 +607,10 @@ func (s *Server) Shutdown() {
 	_, span := otel.Tracer("gatewayd").Start(s.ctx, "Shutdown")
 	defer span.End()
 
-	// Shutdown the proxy.
-	s.Proxy.Shutdown()
+	// Shutdown the proxies.
+	for _, proxy := range s.Proxies {
+		proxy.Shutdown()
+	}
 
 	// Set the server status to stopped. This is used to shutdown the server gracefully in OnClose.
 	s.mu.Lock()
@@ -627,24 +663,26 @@ func NewServer(
 
 	// Create the server.
 	server := Server{
-		ctx:              serverCtx,
-		Network:          srv.Network,
-		Address:          srv.Address,
-		Options:          srv.Options,
-		TickInterval:     srv.TickInterval,
-		Status:           config.Stopped,
-		EnableTLS:        srv.EnableTLS,
-		CertFile:         srv.CertFile,
-		KeyFile:          srv.KeyFile,
-		HandshakeTimeout: srv.HandshakeTimeout,
-		Proxy:            srv.Proxy,
-		Logger:           srv.Logger,
-		PluginRegistry:   srv.PluginRegistry,
-		PluginTimeout:    srv.PluginTimeout,
-		mu:               &sync.RWMutex{},
-		connections:      0,
-		running:          &atomic.Bool{},
-		stopServer:       make(chan struct{}),
+		ctx:                      serverCtx,
+		Network:                  srv.Network,
+		Address:                  srv.Address,
+		Options:                  srv.Options,
+		TickInterval:             srv.TickInterval,
+		Status:                   config.Stopped,
+		EnableTLS:                srv.EnableTLS,
+		CertFile:                 srv.CertFile,
+		KeyFile:                  srv.KeyFile,
+		HandshakeTimeout:         srv.HandshakeTimeout,
+		Proxies:                  srv.Proxies,
+		Logger:                   srv.Logger,
+		PluginRegistry:           srv.PluginRegistry,
+		PluginTimeout:            srv.PluginTimeout,
+		mu:                       &sync.RWMutex{},
+		connections:              0,
+		running:                  &atomic.Bool{},
+		stopServer:               make(chan struct{}),
+		DistributionStrategyName: srv.DistributionStrategyName,
+		SplitStrategy:            srv.SplitStrategy,
 	}
 
 	// Try to resolve the address and log an error if it can't be resolved.
@@ -664,6 +702,13 @@ func NewServer(
 			"GatewayD is listening on an unresolved address")
 	}
 
+	// Get distribution strategy
+	ds, err := NewDistributionStrategy(srv.DistributionStrategyName, &server)
+	if err != nil {
+		srv.Logger.Error().Msg("Failed to create distribution strategy")
+	}
+	server.DistributionStrategy = ds
+
 	return &server
 }
 
@@ -672,4 +717,24 @@ func (s *Server) CountConnections() int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return int(s.connections)
+}
+
+// Select from proxies by distribution strategy and split strategy
+func (s *Server) GetProxyToConnect(conn *ConnWrapper) (IProxy, *gerr.GatewayDError) {
+	proxy, err := s.DistributionStrategy.Distribute(conn)
+	if err != nil {
+		return nil, gerr.ErrCanNotGetProxyToConnect
+	}
+	return proxy, nil
+}
+
+// find the proxy that the given connection belongs to
+func (s *Server) GetBusyConnectionProxy(conn *ConnWrapper) (IProxy, error) {
+	// TODO: may be a better data structure and algorithm to find connection proxy
+	for _, proxy := range s.Proxies {
+		if proxy.ExistsInBusyConnections(conn) {
+			return proxy, nil
+		}
+	}
+	return nil, errors.New("connection does not exists in any of proxies")
 }

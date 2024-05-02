@@ -35,6 +35,7 @@ type IProxy interface {
 	Shutdown()
 	AvailableConnectionsString() []string
 	BusyConnectionsString() []string
+	ExistsInBusyConnections(conn *ConnWrapper) bool
 }
 
 type Proxy struct {
@@ -681,6 +682,18 @@ func (pr *Proxy) BusyConnectionsString() []string {
 		return true
 	})
 	return connections
+}
+
+// Check that connection exists in busy connections or not?
+func (pr *Proxy) ExistsInBusyConnections(conn *ConnWrapper) bool {
+	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "ExistsInBusyConnections")
+	defer span.End()
+
+	if pr.busyConnections.Get(conn) == nil {
+		span.RecordError(gerr.ErrClientNotFound)
+		return false
+	}
+	return true
 }
 
 // receiveTrafficFromClient is a function that waits to receive data from the client.

@@ -90,14 +90,16 @@ type Proxy struct {
 }
 
 type Server struct {
-	EnableTicker     bool          `json:"enableTicker"`
-	TickInterval     time.Duration `json:"tickInterval" jsonschema:"oneof_type=string;integer"`
-	Network          string        `json:"network" jsonschema:"enum=tcp,enum=udp,enum=unix"`
-	Address          string        `json:"address"`
-	EnableTLS        bool          `json:"enableTLS"` //nolint:tagliatelle
-	CertFile         string        `json:"certFile"`
-	KeyFile          string        `json:"keyFile"`
-	HandshakeTimeout time.Duration `json:"handshakeTimeout" jsonschema:"oneof_type=string;integer"`
+	EnableTicker         bool            `json:"enableTicker"`
+	TickInterval         time.Duration   `json:"tickInterval" jsonschema:"oneof_type=string;integer"`
+	Network              string          `json:"network" jsonschema:"enum=tcp,enum=udp,enum=unix"`
+	Address              string          `json:"address"`
+	EnableTLS            bool            `json:"enableTLS"` //nolint:tagliatelle
+	CertFile             string          `json:"certFile"`
+	KeyFile              string          `json:"keyFile"`
+	HandshakeTimeout     time.Duration   `json:"handshakeTimeout" jsonschema:"oneof_type=string;integer"`
+	DistributionStrategy string          `json:"distributionStrategy"`
+	SplitStrategy        map[string]uint `json:"splitStrategy"`
 }
 
 type API struct {

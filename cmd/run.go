@@ -847,6 +847,10 @@ var runCmd = &cobra.Command{
 		// Create and initialize servers.
 		for name, cfg := range conf.Global.Servers {
 			logger := loggers[name]
+			var groupProxies []network.IProxy
+			for groupName := range conf.Global.Servers[name].SplitStrategy {
+				groupProxies = append(groupProxies, proxies[groupName])
+			}
 			servers[name] = network.NewServer(
 				runCtx,
 				network.Server{
@@ -861,14 +865,16 @@ var runCmd = &cobra.Command{
 						// Can be used to send keepalive messages to the client.
 						EnableTicker: cfg.EnableTicker,
 					},
-					Proxy:            proxies[name],
-					Logger:           logger,
-					PluginRegistry:   pluginRegistry,
-					PluginTimeout:    conf.Plugin.Timeout,
-					EnableTLS:        cfg.EnableTLS,
-					CertFile:         cfg.CertFile,
-					KeyFile:          cfg.KeyFile,
-					HandshakeTimeout: cfg.HandshakeTimeout,
+					Proxies:              groupProxies,
+					Logger:               logger,
+					PluginRegistry:       pluginRegistry,
+					PluginTimeout:        conf.Plugin.Timeout,
+					EnableTLS:            cfg.EnableTLS,
+					CertFile:             cfg.CertFile,
+					KeyFile:              cfg.KeyFile,
+					HandshakeTimeout:     cfg.HandshakeTimeout,
+					DistributionStrategy: cfg.DistributionStrategy,
+					SplitStrategy:        cfg.SplitStrategy,
 				},
 			)
 

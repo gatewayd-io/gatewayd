@@ -48,6 +48,9 @@ const (
 	ErrCodeAsyncAction
 	ErrCodeEvalError
 	ErrCodeMsgEncodeError
+	ErrCodePathSlipError
+	ErrCodeErrCanNotGetProxyToConnect
+	ErrorCodeErrDistributionStrategyNotFound
 )
 
 var (
@@ -171,6 +174,12 @@ var (
 	}
 	ErrMsgEncodeError = &GatewayDError{
 		ErrCodeMsgEncodeError, "error encoding message", nil,
+	}
+	ErrCanNotGetProxyToConnect = &GatewayDError{
+		ErrCodeErrCanNotGetProxyToConnect, "can't get the proxy to add connection to it", nil,
+	}
+	ErrDistributionStrategyNotFound = &GatewayDError{
+		ErrorCodeErrDistributionStrategyNotFound, "given strategy does not exists!", nil,
 	}
 
 	// Unwrapped errors.
