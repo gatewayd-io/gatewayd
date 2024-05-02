@@ -54,6 +54,9 @@ const (
 	ErrCodeErrCanNotGetProxyToConnect
 	ErrorCodeErrDistributionStrategyNotFound
 	ErrCodeConfigParseError
+	ErrCodePathSlipError
+	ErrCodeErrCanNotGetProxyToConnect
+	ErrorCodeErrDistributionStrategyNotFound
 )
 
 var (

@@ -49,13 +49,12 @@ type IServer interface {
 }
 
 type Server struct {
-	Proxies              []IProxy
-	busyConnectionsProxy pool.IPool
-	Logger               zerolog.Logger
-	PluginRegistry       *plugin.Registry
-	ctx                  context.Context //nolint:containedctx
-	PluginTimeout        time.Duration
-	mu                   *sync.RWMutex
+	Proxy          IProxy
+	Logger         zerolog.Logger
+	PluginRegistry *plugin.Registry
+	ctx            context.Context //nolint:containedctx
+	PluginTimeout  time.Duration
+	mu             *sync.RWMutex
 
 	Network      string // tcp/udp/unix
 	Address      string
@@ -69,15 +68,12 @@ type Server struct {
 	KeyFile          string
 	HandshakeTimeout time.Duration
 
-	listener                 net.Listener
-	host                     string
-	port                     int
-	connections              uint32
-	running                  *atomic.Bool
-	stopServer               chan struct{}
-	DistributionStrategyName string
-	distributionStrategy     IDistributionStrategy
-	SplitStrategy            map[string]uint
+	listener    net.Listener
+	host        string
+	port        int
+	connections uint32
+	running     *atomic.Bool
+	stopServer  chan struct{}
 }
 
 var _ IServer = (*Server)(nil)
@@ -245,16 +241,6 @@ func (s *Server) OnClose(conn *ConnWrapper, err error) Action {
 		span.AddEvent("Shutting down the server")
 		return Shutdown
 	}
-
-	// Check connection's proxy exists
-	if s.busyConnectionsProxy.Get(conn) == nil {
-		span.RecordError(gerr.ErrCanNotGetProxyToConnect)
-		return Close
-	}
-
-	// Get connection's proxy
-	proxy := s.busyConnectionsProxy.Get(conn).(*Proxy)
-
 	// Disconnect the connection from the proxy. This effectively removes the mapping between
 	// the incoming and the server connections in the pool of the busy connections and either
 	// recycles or disconnects the connections.
@@ -333,19 +319,7 @@ func (s *Server) OnTraffic(conn *ConnWrapper, stopConnection chan struct{}) Acti
 	go func(server *Server, conn *ConnWrapper, stopConnection chan struct{}, stack *Stack) {
 		for {
 			server.Logger.Trace().Msg("Passing through traffic from client to server")
-
-			// Check connection's proxy exists
-			if server.busyConnectionsProxy.Get(conn) == nil {
-				server.Logger.Trace().Err(err).Msg("Failed to find connection's proxy")
-				span.RecordError(err)
-				stopConnection <- struct{}{}
-				break
-			}
-
-			// Get connection's proxy
-			proxy := server.busyConnectionsProxy.Get(conn).(*Proxy)
-
-			if err = proxy.PassThroughToServer(conn, stack); err != nil {
+			if err := server.Proxy.PassThroughToServer(conn, stack); err != nil {
 				server.Logger.Trace().Err(err).Msg("Failed to pass through traffic")
 				span.RecordError(err)
 				stopConnection <- struct{}{}
@@ -358,18 +332,6 @@ func (s *Server) OnTraffic(conn *ConnWrapper, stopConnection chan struct{}) Acti
 	// If there is an error, log it and close the connection.
 	go func(server *Server, conn *ConnWrapper, stopConnection chan struct{}, stack *Stack) {
 		for {
-
-			// Check connection's proxy exists
-			if server.busyConnectionsProxy.Get(conn) == nil {
-				server.Logger.Trace().Err(err).Msg("Failed to find connection's proxy")
-				span.RecordError(err)
-				stopConnection <- struct{}{}
-				break
-			}
-
-			// Get connection's proxy
-			proxy := server.busyConnectionsProxy.Get(conn).(*Proxy)
-
 			server.Logger.Trace().Msg("Passing through traffic from server to client")
 			if err = proxy.PassThroughToClient(conn, stack); err != nil {
 				server.Logger.Trace().Err(err).Msg("Failed to pass through traffic")
@@ -685,27 +647,24 @@ func NewServer(
 
 	// Create the server.
 	server := Server{
-		ctx:                      serverCtx,
-		Network:                  srv.Network,
-		Address:                  srv.Address,
-		Options:                  srv.Options,
-		TickInterval:             srv.TickInterval,
-		Status:                   config.Stopped,
-		EnableTLS:                srv.EnableTLS,
-		CertFile:                 srv.CertFile,
-		KeyFile:                  srv.KeyFile,
-		HandshakeTimeout:         srv.HandshakeTimeout,
-		Proxies:                  srv.Proxies,
-		Logger:                   srv.Logger,
-		PluginRegistry:           srv.PluginRegistry,
-		PluginTimeout:            srv.PluginTimeout,
-		mu:                       &sync.RWMutex{},
-		connections:              0,
-		running:                  &atomic.Bool{},
-		stopServer:               make(chan struct{}),
-		DistributionStrategyName: srv.DistributionStrategyName,
-		SplitStrategy:            srv.SplitStrategy,
-		busyConnectionsProxy:     pool.NewPool(serverCtx, config.EmptyPoolCapacity),
+		ctx:              serverCtx,
+		Network:          srv.Network,
+		Address:          srv.Address,
+		Options:          srv.Options,
+		TickInterval:     srv.TickInterval,
+		Status:           config.Stopped,
+		EnableTLS:        srv.EnableTLS,
+		CertFile:         srv.CertFile,
+		KeyFile:          srv.KeyFile,
+		HandshakeTimeout: srv.HandshakeTimeout,
+		Proxy:            srv.Proxy,
+		Logger:           srv.Logger,
+		PluginRegistry:   srv.PluginRegistry,
+		PluginTimeout:    srv.PluginTimeout,
+		mu:               &sync.RWMutex{},
+		connections:      0,
+		running:          &atomic.Bool{},
+		stopServer:       make(chan struct{}),
 	}
 
 	// Try to resolve the address and log an error if it can't be resolved.
@@ -725,13 +684,6 @@ func NewServer(
 			"GatewayD is listening on an unresolved address")
 	}
 
-	// Get distribution strategy
-	ds, err := NewDistributionStrategy(ctx, srv.DistributionStrategyName, &server)
-	if err != nil {
-		srv.Logger.Error().Msg("Failed to create distribution strategy")
-	}
-	server.distributionStrategy = ds
-
 	return &server
 }
 
@@ -740,13 +692,4 @@ func (s *Server) CountConnections() int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return int(s.connections)
-}
-
-// Select from proxies by distribution strategy and split strategy
-func (s *Server) GetProxyToConnect(conn *ConnWrapper) (IProxy, *gerr.GatewayDError) {
-	proxy, err := s.distributionStrategy.Distribute(conn)
-	if err != nil {
-		return nil, gerr.ErrCanNotGetProxyToConnect
-	}
-	return proxy, nil
 }
