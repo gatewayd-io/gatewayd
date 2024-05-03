@@ -1,18 +1,15 @@
 package cmd
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func Test_rootCmd(t *testing.T) {
-	output, err := executeCommandC(rootCmd)
-	require.NoError(t, err, "rootCmd should not return an error")
-	//nolint:lll
-	assert.Equal(t,
-		`GatewayD is a cloud-native database gateway and framework for building data-driven applications. It sits between your database servers and clients and proxies all their communication.
+//nolint:lll
+const rootHelp string = `GatewayD is a cloud-native database gateway and framework for building data-driven applications. It sits between your database servers and clients and proxies all their communication.
 
 Usage:
   gatewayd [command]
@@ -29,7 +26,21 @@ Flags:
   -h, --help   help for gatewayd
 
 Use "gatewayd [command] --help" for more information about a command.
-`,
+`
+
+func Test_rootCmd(t *testing.T) {
+	output, err := executeCommandC(rootCmd)
+	require.NoError(t, err, "rootCmd should not return an error")
+	assert.Equal(t,
+		rootHelp,
 		output,
 		"rootCmd should print the correct output")
+}
+
+func Test_Execute(t *testing.T) {
+	buf := new(bytes.Buffer)
+	rootCmd.SetOut(buf)
+	rootCmd.SetErr(buf)
+	Execute()
+	assert.Equal(t, rootHelp, buf.String(), "Execute should print the correct output")
 }

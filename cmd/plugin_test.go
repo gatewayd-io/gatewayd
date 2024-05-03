@@ -18,10 +18,12 @@ Usage:
   gatewayd plugin [command]
 
 Available Commands:
+  help        Help about any command
   init        Create or overwrite the GatewayD plugins config
   install     Install a plugin from a local archive or a GitHub repository
   lint        Lint the GatewayD plugins config
   list        List the GatewayD plugins
+  scaffold    Scaffold a plugin and store the files into a directory
 
 Flags:
   -h, --help   help for plugin

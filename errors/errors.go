@@ -18,6 +18,9 @@ const (
 	ErrCodeDispensePluginFailed
 	ErrCodePluginMetricsMergeFailed
 	ErrCodePluginPingFailed
+	ErrCodePluginScaffoldFailed
+	ErrCopyEmbeddedFilesFailed
+	ErrCodePluginScaffoldInputFileReadFailed
 	ErrCodeClientReceiveFailed
 	ErrCodeClientSendFailed
 	ErrCodeServerReceiveFailed
@@ -48,9 +51,9 @@ const (
 	ErrCodeAsyncAction
 	ErrCodeEvalError
 	ErrCodeMsgEncodeError
-	ErrCodePathSlipError
 	ErrCodeErrCanNotGetProxyToConnect
 	ErrorCodeErrDistributionStrategyNotFound
+	ErrCodeConfigParseError
 )
 
 var (
@@ -93,6 +96,15 @@ var (
 	}
 	ErrFailedToPingPlugin = &GatewayDError{
 		ErrCodePluginPingFailed, "failed to ping plugin", nil,
+	}
+	ErrFailedToScaffoldPlugin = &GatewayDError{
+		ErrCodePluginScaffoldFailed, "failed to scaffold plugin", nil,
+	}
+	ErrFailedToCopyEmbeddedFiles = &GatewayDError{
+		ErrCopyEmbeddedFilesFailed, "failed to copy embedded files", nil,
+	}
+	ErrFailedToReadPluginScaffoldInputFile = &GatewayDError{
+		ErrCodePluginScaffoldInputFileReadFailed, "failed to read plugin scaffold input file", nil,
 	}
 
 	ErrClientReceiveFailed = &GatewayDError{
@@ -180,6 +192,10 @@ var (
 	}
 	ErrDistributionStrategyNotFound = &GatewayDError{
 		ErrorCodeErrDistributionStrategyNotFound, "given strategy does not exists!", nil,
+	}
+
+	ErrConfigParseError = &GatewayDError{
+		ErrCodeConfigParseError, "error parsing config", nil,
 	}
 
 	// Unwrapped errors.

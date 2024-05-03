@@ -1,0 +1,40 @@
+name: Build and release {{ plugin_name }}
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Set up Go 1.22
+        uses: actions/setup-go@v3
+        with:
+          go-version: "1.22"
+          cache: true
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+      - name: Build and release binaries
+        run: |
+          make build-release
+      - name: Create release and add artifacts
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dist/*.tar.gz
+            dist/checksums.txt
+            dist/*.zip
+          draft: false
+          prerelease: false
+          tag_name: ${{ "{{ github.ref_name }}" }}
+          name: ${{ "{{ github.ref_name }}" }}
+          generate_release_notes: true

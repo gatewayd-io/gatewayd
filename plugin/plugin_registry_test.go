@@ -68,6 +68,14 @@ func TestPluginRegistry(t *testing.T) {
 	instance := reg.Get(ident)
 	assert.Equal(t, instance, impl)
 
+	assert.Equal(t, reg.Size(), 1)
+	assert.True(t, reg.Exists(ident.Name, ident.Version, ident.RemoteURL))
+
+	reg.ForEach(func(i sdkPlugin.Identifier, p *Plugin) {
+		assert.Equal(t, i, ident)
+		assert.Equal(t, p, impl)
+	})
+
 	reg.Remove(ident)
 	assert.Empty(t, reg.List())
 

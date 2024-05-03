@@ -22,8 +22,10 @@ __pycache__/
 dist/
 
 # Editor files
-.vscode
-.idea
+.idea/*
+.history
+.vscode/*
+.vsix
 
 # Logs
 *.log
@@ -34,7 +36,9 @@ libtensorflow*
 # Test generated files
 cmd/test_*.yaml.bak
 cmd/test_*.yaml
+cmd/docs/*
 
 # docker-compose
 gatewayd-files/
 cmd/gatewayd-plugin-cache-linux-amd64-*
+

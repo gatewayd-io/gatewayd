@@ -1,9 +1,13 @@
 package cmd
 
 import (
+	"os"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
 )
+
+const outputDirPermissions = 0o755
 
 var docOutputDir string
 
@@ -12,6 +16,12 @@ var genDocs = &cobra.Command{
 	Short:  "Generate markdown documentation",
 	Hidden: true,
 	Run: func(cmd *cobra.Command, _ []string) {
+		// Create the output directory if it doesn't exist
+		if err := os.MkdirAll(docOutputDir, outputDirPermissions); err != nil {
+			cmd.PrintErr(err)
+			return
+		}
+		// Generate the markdown files
 		err := doc.GenMarkdownTree(rootCmd, docOutputDir)
 		if err != nil {
 			cmd.PrintErr(err)
