@@ -1,4 +1,3 @@
-version: "3.8"
 services:
   install_plugins:
     # This intermediate service is used to install the plugins
@@ -33,7 +32,7 @@ services:
       timeout: 5s
       retries: 5
   gatewayd:
-    image: gatewaydio/gatewayd:latest
+    image: gatewaydio/gatewayd:v0.8.8
     command: [
       "run",
       "--config", "/gatewayd-files/gatewayd.yaml",
@@ -66,7 +65,3 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_healthy
-      install_plugins:
-        condition: service_completed_successfully

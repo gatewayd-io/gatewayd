@@ -1,0 +1,33 @@
+auth_enabled: false
+
+server:
+  http_listen_port: 3200
+
+distributor:
+  receivers:
+    jaeger:
+    zipkin:
+    otlp:
+      protocols:
+        http:
+        grpc:
+
+ingester:
+  trace_idle_period: 10s
+  traces_per_block: 10000
+
+compactor:
+  compaction:
+    compaction_window: 1h
+    block_retention: 1h
+    compacted_block_retention: 10m
+
+storage:
+  trace:
+    backend: local
+    wal:
+      path: /tmp/tempo/wal
+      bloom_filter_false_positive: 0.05
+      index_downsample: 10
+    local:
+      path: /tmp/tempo/traces
