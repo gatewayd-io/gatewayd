@@ -32,8 +32,10 @@ type Options struct {
 type API struct {
 	v1.GatewayDAdminAPIServiceServer
 
-	Options *Options
+	// Tracer context.
+	ctx context.Context
 
+	Options        *Options
 	Config         *config.Config
 	PluginRegistry *plugin.Registry
 	Pools          map[string]*pool.Pool
@@ -43,6 +45,9 @@ type API struct {
 
 // Version returns the version information of the GatewayD.
 func (a *API) Version(context.Context, *emptypb.Empty) (*v1.VersionResponse, error) {
+	_, span := otel.Tracer(config.TracerName).Start(a.ctx, "Get Version")
+	defer span.End()
+
 	metrics.APIRequests.WithLabelValues("GET", "/v1/GatewayDPluginService/Version").Inc()
 	return &v1.VersionResponse{
 		Version:     config.Version,
@@ -54,8 +59,9 @@ func (a *API) Version(context.Context, *emptypb.Empty) (*v1.VersionResponse, err
 //
 //nolint:wrapcheck
 func (a *API) GetGlobalConfig(ctx context.Context, group *v1.Group) (*structpb.Struct, error) {
-	_, span := otel.Tracer(config.TracerName).Start(ctx, "Getting Global Config")
+	_, span := otel.Tracer(config.TracerName).Start(a.ctx, "Getting Global Config")
 	defer span.End()
+
 	var (
 		jsonData []byte
 		global   map[string]interface{}
@@ -108,9 +114,10 @@ func (a *API) GetGlobalConfig(ctx context.Context, group *v1.Group) (*structpb.S
 }
 
 // GetPluginConfig returns the plugin configuration of the GatewayD.
-func (a *API) GetPluginConfig(ctx context.Context, _ *emptypb.Empty) (*structpb.Struct, error) {
-	_, span := otel.Tracer(config.TracerName).Start(ctx, "Get GetPlugin Config")
+func (a *API) GetPluginConfig(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
+	_, span := otel.Tracer(config.TracerName).Start(a.ctx, "Get GetPlugin Config")
 	defer span.End()
+
 	jsonData, err := json.Marshal(a.Config.Plugin)
 	if err != nil {
 		metrics.APIRequestsErrors.WithLabelValues(
@@ -148,9 +155,10 @@ func (a *API) GetPluginConfig(ctx context.Context, _ *emptypb.Empty) (*structpb.
 }
 
 // GetPlugins returns the active plugin configuration of the GatewayD.
-func (a *API) GetPlugins(ctx context.Context, _ *emptypb.Empty) (*v1.PluginConfigs, error) {
-	_, span := otel.Tracer(config.TracerName).Start(ctx, "Get Plugins")
+func (a *API) GetPlugins(context.Context, *emptypb.Empty) (*v1.PluginConfigs, error) {
+	_, span := otel.Tracer(config.TracerName).Start(a.ctx, "Get Plugins")
 	defer span.End()
+
 	plugins := make([]*v1.PluginConfig, 0)
 	a.PluginRegistry.ForEach(
 		func(pluginID sdkPlugin.Identifier, plugIn *plugin.Plugin) {
@@ -193,9 +201,10 @@ func (a *API) GetPlugins(ctx context.Context, _ *emptypb.Empty) (*v1.PluginConfi
 }
 
 // GetPools returns the pool configuration of the GatewayD.
-func (a *API) GetPools(ctx context.Context, _ *emptypb.Empty) (*structpb.Struct, error) {
-	_, span := otel.Tracer(config.TracerName).Start(ctx, "Get Pools")
+func (a *API) GetPools(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
+	_, span := otel.Tracer(config.TracerName).Start(a.ctx, "Get Pools")
 	defer span.End()
+
 	pools := make(map[string]interface{})
 	for name, p := range a.Pools {
 		pools[name] = map[string]interface{}{
@@ -218,9 +227,10 @@ func (a *API) GetPools(ctx context.Context, _ *emptypb.Empty) (*structpb.Struct,
 }
 
 // GetProxies returns the proxy configuration of the GatewayD.
-func (a *API) GetProxies(ctx context.Context, _ *emptypb.Empty) (*structpb.Struct, error) {
-	_, span := otel.Tracer(config.TracerName).Start(ctx, "Get Proxies")
+func (a *API) GetProxies(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
+	_, span := otel.Tracer(config.TracerName).Start(a.ctx, "Get Proxies")
 	defer span.End()
+
 	proxies := make(map[string]interface{})
 	for name, proxy := range a.Proxies {
 		available := make([]interface{}, 0)
@@ -254,9 +264,10 @@ func (a *API) GetProxies(ctx context.Context, _ *emptypb.Empty) (*structpb.Struc
 }
 
 // GetServers returns the server configuration of the GatewayD.
-func (a *API) GetServers(ctx context.Context, _ *emptypb.Empty) (*structpb.Struct, error) {
-	_, span := otel.Tracer(config.TracerName).Start(ctx, "Get Servers")
+func (a *API) GetServers(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
+	_, span := otel.Tracer(config.TracerName).Start(a.ctx, "Get Servers")
 	defer span.End()
+
 	servers := make(map[string]interface{})
 	for name, server := range a.Servers {
 		servers[name] = map[string]interface{}{

@@ -17,7 +17,8 @@ import (
 func Test_HTTP_Server(t *testing.T) {
 	api := getAPIConfig()
 	healthchecker := &HealthChecker{Servers: api.Servers}
-	grpcServer := NewGRPCServer(GRPCServer{API: api, HealthChecker: healthchecker})
+	grpcServer := NewGRPCServer(
+		context.Background(), GRPCServer{API: api, HealthChecker: healthchecker})
 	assert.NotNil(t, grpcServer)
 	httpServer := NewHTTPServer(api.Options)
 	assert.NotNil(t, httpServer)
