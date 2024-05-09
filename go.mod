@@ -8,7 +8,7 @@ require (
 	github.com/codingsince1985/checksum v1.3.0
 	github.com/cybercyst/go-scaffold v0.0.0-20240404115540-744e601147cd
 	github.com/envoyproxy/protoc-gen-validate v1.0.4
-	github.com/gatewayd-io/gatewayd-plugin-sdk v0.2.11
+	github.com/gatewayd-io/gatewayd-plugin-sdk v0.2.12
 	github.com/getsentry/sentry-go v0.27.0
 	github.com/go-co-op/gocron v1.37.0
 	github.com/google/go-github/v53 v53.2.0
@@ -34,10 +34,10 @@ require (
 	go.opentelemetry.io/otel/sdk v1.26.0
 	go.opentelemetry.io/otel/trace v1.26.0
 	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f
-	golang.org/x/text v0.14.0
+	golang.org/x/text v0.15.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20240415180920-8c6c420018be
 	google.golang.org/grpc v1.63.2
-	google.golang.org/protobuf v1.33.0
+	google.golang.org/protobuf v1.34.1
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
