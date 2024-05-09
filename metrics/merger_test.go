@@ -36,7 +36,7 @@ func TestMerger(t *testing.T) {
 	// We need to give the merger some time to read the metrics.
 	// TODO: Find a better way to do this.
 	// Note: httptest.NewServer only creates a TCP server.
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(time.Second)
 
 	metrics, err := merger.ReadMetrics()
 	assert.Nil(t, err)
