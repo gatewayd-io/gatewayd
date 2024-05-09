@@ -16,7 +16,8 @@ import (
 func Test_GRPC_Server(t *testing.T) {
 	api := getAPIConfig()
 	healthchecker := &HealthChecker{Servers: api.Servers}
-	grpcServer := NewGRPCServer(GRPCServer{API: api, HealthChecker: healthchecker})
+	grpcServer := NewGRPCServer(
+		context.Background(), GRPCServer{API: api, HealthChecker: healthchecker})
 	assert.NotNil(t, grpcServer)
 
 	go func(grpcServer *GRPCServer) {
