@@ -193,7 +193,9 @@ func (a *API) GetPlugins(ctx context.Context, _ *emptypb.Empty) (*v1.PluginConfi
 }
 
 // GetPools returns the pool configuration of the GatewayD.
-func (a *API) GetPools(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
+func (a *API) GetPools(ctx context.Context, _ *emptypb.Empty) (*structpb.Struct, error) {
+	_, span := otel.Tracer(config.TracerName).Start(ctx, "Get Pools")
+	defer span.End()
 	pools := make(map[string]interface{})
 	for name, p := range a.Pools {
 		pools[name] = map[string]interface{}{
@@ -207,6 +209,7 @@ func (a *API) GetPools(context.Context, *emptypb.Empty) (*structpb.Struct, error
 		metrics.APIRequestsErrors.WithLabelValues(
 			"GET", "/v1/GatewayDPluginService/GetPools", codes.Internal.String(),
 		).Inc()
+		a.Options.Logger.Err(err).Msg("Failed to marshal pools config")
 		return nil, status.Errorf(codes.Internal, "failed to marshal pools config: %v", err)
 	}
 
@@ -215,7 +218,9 @@ func (a *API) GetPools(context.Context, *emptypb.Empty) (*structpb.Struct, error
 }
 
 // GetProxies returns the proxy configuration of the GatewayD.
-func (a *API) GetProxies(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
+func (a *API) GetProxies(ctx context.Context, _ *emptypb.Empty) (*structpb.Struct, error) {
+	_, span := otel.Tracer(config.TracerName).Start(ctx, "Get Proxies")
+	defer span.End()
 	proxies := make(map[string]interface{})
 	for name, proxy := range a.Proxies {
 		available := make([]interface{}, 0)
@@ -240,6 +245,7 @@ func (a *API) GetProxies(context.Context, *emptypb.Empty) (*structpb.Struct, err
 		metrics.APIRequestsErrors.WithLabelValues(
 			"GET", "/v1/GatewayDPluginService/GetProxies", codes.Internal.String(),
 		).Inc()
+		a.Options.Logger.Err(err).Msg("Failed to marshal proxies config")
 		return nil, status.Errorf(codes.Internal, "failed to marshal proxies config: %v", err)
 	}
 
@@ -248,7 +254,9 @@ func (a *API) GetProxies(context.Context, *emptypb.Empty) (*structpb.Struct, err
 }
 
 // GetServers returns the server configuration of the GatewayD.
-func (a *API) GetServers(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
+func (a *API) GetServers(ctx context.Context, _ *emptypb.Empty) (*structpb.Struct, error) {
+	_, span := otel.Tracer(config.TracerName).Start(ctx, "Get Servers")
+	defer span.End()
 	servers := make(map[string]interface{})
 	for name, server := range a.Servers {
 		servers[name] = map[string]interface{}{
@@ -264,6 +272,7 @@ func (a *API) GetServers(context.Context, *emptypb.Empty) (*structpb.Struct, err
 		metrics.APIRequestsErrors.WithLabelValues(
 			"GET", "/v1/GatewayDPluginService/GetServers", codes.Internal.String(),
 		).Inc()
+		a.Options.Logger.Err(err).Msg("Failed to marshal servers config")
 		return nil, status.Errorf(codes.Internal, "failed to marshal servers config: %v", err)
 	}
 
