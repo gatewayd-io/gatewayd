@@ -20,7 +20,7 @@ import (
 )
 
 func TestGetVersion(t *testing.T) {
-	api := API{}
+	api := API{ctx: context.Background()}
 	version, err := api.Version(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.Regexp(t, regexp.MustCompile(`^\d+\.\d+\.\d+$`), version.GetVersion())
@@ -37,6 +37,7 @@ func TestGetGlobalConfig(t *testing.T) {
 
 	api := API{
 		Config: conf,
+		ctx:    context.Background(),
 	}
 	globalConfig, err := api.GetGlobalConfig(context.Background(), &v1.Group{GroupName: nil})
 	require.NoError(t, err)
@@ -61,6 +62,7 @@ func TestGetGlobalConfigWithGroupName(t *testing.T) {
 
 	api := API{
 		Config: conf,
+		ctx:    context.Background(),
 	}
 	defaultGroup := config.Default
 	globalConfig, err := api.GetGlobalConfig(
@@ -93,6 +95,7 @@ func TestGetGlobalConfigWithNonExistingGroupName(t *testing.T) {
 
 	api := API{
 		Config: conf,
+		ctx:    context.Background(),
 	}
 	nonExistingGroupName := "non-existing-group"
 	_, err := api.GetGlobalConfig(context.Background(), &v1.Group{GroupName: &nonExistingGroupName})
@@ -110,6 +113,7 @@ func TestGetPluginConfig(t *testing.T) {
 
 	api := API{
 		Config: conf,
+		ctx:    context.Background(),
 	}
 	pluginConfig, err := api.GetPluginConfig(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
@@ -160,6 +164,7 @@ func TestGetPlugins(t *testing.T) {
 
 	api := API{
 		PluginRegistry: pluginRegistry,
+		ctx:            context.Background(),
 	}
 	plugins, err := api.GetPlugins(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
@@ -195,6 +200,7 @@ func TestGetPluginsWithEmptyPluginRegistry(t *testing.T) {
 
 	api := API{
 		PluginRegistry: pluginRegistry,
+		ctx:            context.Background(),
 	}
 	plugins, err := api.GetPlugins(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
@@ -207,6 +213,7 @@ func TestPools(t *testing.T) {
 		Pools: map[string]*pool.Pool{
 			config.Default: pool.NewPool(context.TODO(), config.EmptyPoolCapacity),
 		},
+		ctx: context.Background(),
 	}
 	pools, err := api.GetPools(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
@@ -218,6 +225,7 @@ func TestPools(t *testing.T) {
 func TestPoolsWithEmptyPools(t *testing.T) {
 	api := API{
 		Pools: map[string]*pool.Pool{},
+		ctx:   context.Background(),
 	}
 	pools, err := api.GetPools(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
@@ -253,6 +261,7 @@ func TestGetProxies(t *testing.T) {
 		Proxies: map[string]*network.Proxy{
 			config.Default: proxy,
 		},
+		ctx: context.Background(),
 	}
 	proxies, err := api.GetProxies(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
@@ -342,6 +351,7 @@ func TestGetServers(t *testing.T) {
 		Servers: map[string]*network.Server{
 			config.Default: server,
 		},
+		ctx: context.Background(),
 	}
 	servers, err := api.GetServers(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
