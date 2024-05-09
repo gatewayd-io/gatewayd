@@ -33,7 +33,7 @@ type API struct {
 	v1.GatewayDAdminAPIServiceServer
 
 	// Tracer context.
-	ctx context.Context
+	ctx context.Context //nolint:containedctx
 
 	Options        *Options
 	Config         *config.Config
@@ -58,7 +58,7 @@ func (a *API) Version(context.Context, *emptypb.Empty) (*v1.VersionResponse, err
 // GetGlobalConfig returns the global configuration of the GatewayD.
 //
 //nolint:wrapcheck
-func (a *API) GetGlobalConfig(ctx context.Context, group *v1.Group) (*structpb.Struct, error) {
+func (a *API) GetGlobalConfig(_ context.Context, group *v1.Group) (*structpb.Struct, error) {
 	_, span := otel.Tracer(config.TracerName).Start(a.ctx, "Getting Global Config")
 	defer span.End()
 
