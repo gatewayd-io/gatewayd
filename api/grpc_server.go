@@ -25,7 +25,12 @@ func NewGRPCServer(ctx context.Context, server GRPCServer) *GRPCServer {
 		return nil
 	}
 
-	server.API.ctx = ctx
+	if ctx != nil {
+		server.API.ctx = ctx
+	} else {
+		server.API.ctx = context.Background()
+	}
+
 	return &GRPCServer{
 		API:           server.API,
 		grpcServer:    grpcServer,
