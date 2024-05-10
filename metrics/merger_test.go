@@ -60,5 +60,6 @@ gatewayd_test_total{plugin="test"} 1`
 
 	// Test start/stop of the merger scheduler.
 	go merger.Start()
+	time.Sleep(time.Second)
 	go merger.Stop()
 }
