@@ -36,6 +36,8 @@ func Test_pluginScaffoldCmd(t *testing.T) {
 	err = yamlv3.Unmarshal(pluginsConfig, &localPluginsConfig)
 	require.NoError(t, err, "unmarshalling yaml file should not return error")
 
+	// TODO: build the plugin binary and check that it is valid.
+
 	_, err = os.ReadFile(filepath.Join("plugins", "test-gatewayd-plugin", "test-gatewayd-plugin"))
 	require.NoError(t, err, "reading plugin binary file should not return an error")
 
