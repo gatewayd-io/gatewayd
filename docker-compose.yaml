@@ -1,4 +1,3 @@
-version: "3.8"
 services:
   install_plugins:
     # This intermediate service is used to install the plugins
