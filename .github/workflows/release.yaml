@@ -45,17 +45,24 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            gatewaydio/gatewayd:${{ github.ref_name }}
+            gatewaydio/gatewayd:latest
+            ghcr.io/gatewayd-io/gatewayd:${{ github.ref_name }}
+            ghcr.io/gatewayd-io/gatewayd:latest
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: |
-            gatewaydio/gatewayd:${{ github.ref_name }}
-            gatewaydio/gatewayd:latest
-            ghcr.io/gatewayd-io/gatewayd:${{ github.ref_name }}
-            ghcr.io/gatewayd-io/gatewayd:latest
+          provenance: mode=max
+          sbom: true
+          tags: ${{ steps.meta.outputs.tags }}
       - name: Scan Docker image with Syft and generate SBOM
         uses: anchore/sbom-action@v0
         with:
