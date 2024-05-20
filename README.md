@@ -14,6 +14,7 @@
     <a href="https://github.com/gatewayd-io/gatewayd/actions/workflows/release.yaml"><img src="https://img.shields.io/github/actions/workflow/status/gatewayd-io/gatewayd/release.yaml" alt="Release Worflow Status" /></a>
     <a href="https://goreportcard.com/report/github.com/gatewayd-io/gatewayd"><img src="https://goreportcard.com/badge/github.com/gatewayd-io/gatewayd" alt="Go Report Card" /></a>
     <a href="https://docs.gatewayd.io/"><img src="https://img.shields.io/badge/read-docs-brightgreen" alt="Documentation"></a>
+    <a href="https://pkg.go.dev/github.com/gatewayd-io/gatewayd"><img src="https://pkg.go.dev/badge/github.com/gatewayd-io/gatewayd.svg" alt="Go Reference"></a>
     <a href="https://coveralls.io/github/gatewayd-io/gatewayd?branch=main"><img src="https://coveralls.io/repos/github/gatewayd-io/gatewayd/badge.svg?branch=main" alt="Coverage Status" /></a>
 </p>
 
