@@ -13,7 +13,11 @@ services:
       # If you want to install a specific version of GatewayD, you can set the
       # GATEWAYD_VERSION environment variable to the desired version. Otherwise,
       # the latest version will be installed.
-      # - GATEWAYD_VERSION=v0.9.2
+      # - GATEWAYD_VERSION=v0.9.5
+      # The architecture of the GatewayD and plugins to install.
+      # Default: amd64
+      # Possible values: amd64 or arm64
+      - ARCH=amd64
   postgres:
     image: postgres:latest
     environment:
@@ -33,11 +37,14 @@ services:
       retries: 5
   gatewayd:
     image: gatewaydio/gatewayd:latest
-    command: [
-      "run",
-      "--config", "/gatewayd-files/gatewayd.yaml",
-      "--plugin-config", "/gatewayd-files/gatewayd_plugins.yaml"
-    ]
+    command:
+      [
+        "run",
+        "--config",
+        "/gatewayd-files/gatewayd.yaml",
+        "--plugin-config",
+        "/gatewayd-files/gatewayd_plugins.yaml",
+      ]
     environment:
       # For more information about the environment variables, see:
       # https://docs.gatewayd.io/using-gatewayd/configuration#environment-variables
@@ -45,13 +52,13 @@ services:
       # - GATEWAYD_LOGGERS_DEFAULT_LEVEL=debug
     ports:
       - "15432:15432" # GatewayD server for PostgreSQL clients to connect to
-      - "9090:9090"   # Prometheus metrics:
-                      #   http://localhost:9090/metrics
+      - "9090:9090" # Prometheus metrics:
+        #   http://localhost:9090/metrics
       - "18080:18080" # GatewayD HTTP gateway:
-                      #   http://localhost:18080/swagger-ui/ for the API documentation
-                      #   http://localhost:18080/healthz for the health check
+        #   http://localhost:18080/swagger-ui/ for the API documentation
+        #   http://localhost:18080/healthz for the health check
       - "19090:19090" # GatewayD gRPC API with reflection enabled:
-                      #   You can use grpcurl or grpc-client-cli to interact with it
+        #   You can use grpcurl or grpc-client-cli to interact with it
     volumes:
       - ./gatewayd-files:/gatewayd-files:ro
     links:

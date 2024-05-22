@@ -3,6 +3,10 @@
 # This script is used to install the required packages and download
 # the latest version of GatewayD from GitHub and install the plugins.
 
+# Set the architecture to amd64 if it is not set
+[ -z "${ARCH}" ] && ARCH="amd64" && export ARCH
+echo "Using architecture: ${ARCH}"
+
 # Install the required packages
 apk add --no-cache curl git
 
@@ -28,8 +32,8 @@ echo "Installing GatewayD ${GATEWAYD_VERSION}"
 cd "${GATEWAYD_FILES}" || exit 127
 
 # Download the GatewayD archive if it doesn't exist
-[ -f "${GATEWAYD_FILES}"/gatewayd-linux-amd64-"${GATEWAYD_VERSION}".tar.gz ] || curl -L https://github.com/gatewayd-io/gatewayd/releases/download/"${GATEWAYD_VERSION}"/gatewayd-linux-amd64-"${GATEWAYD_VERSION}".tar.gz -o gatewayd-linux-amd64-"${GATEWAYD_VERSION}".tar.gz
-if [ -f "${GATEWAYD_FILES}"/gatewayd-linux-amd64-"${GATEWAYD_VERSION}".tar.gz ]; then
+[ -f "${GATEWAYD_FILES}"/gatewayd-linux-"${ARCH}"-"${GATEWAYD_VERSION}".tar.gz ] || curl -L https://github.com/gatewayd-io/gatewayd/releases/download/"${GATEWAYD_VERSION}"/gatewayd-linux-"${ARCH}"-"${GATEWAYD_VERSION}".tar.gz -o gatewayd-linux-"${ARCH}"-"${GATEWAYD_VERSION}".tar.gz
+if [ -f "${GATEWAYD_FILES}"/gatewayd-linux-"${ARCH}"-"${GATEWAYD_VERSION}".tar.gz ]; then
     echo "GatewayD archive downloaded successfully."
 else
     echo "GatewayD archive download failed."
@@ -38,7 +42,7 @@ fi
 
 # Extract the GatewayD archive
 echo "Extracting GatewayD archive..."
-tar zxvf gatewayd-linux-amd64-"${GATEWAYD_VERSION}".tar.gz -C "${GATEWAYD_FILES}"
+tar zxvf gatewayd-linux-"${ARCH}"-"${GATEWAYD_VERSION}".tar.gz -C "${GATEWAYD_FILES}"
 
 # Set execute permission for the GatewayD binary
 echo "Setting execute permission for the GatewayD binary..."
