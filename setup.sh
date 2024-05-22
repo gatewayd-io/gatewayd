@@ -3,26 +3,53 @@
 # This script is used to install the required packages and download
 # the latest version of GatewayD from GitHub and install the plugins.
 
+# Install the required packages
+apk add --no-cache curl git
+
 # Get the latest released version of GatewayD from GitHub
 [ -z "${GATEWAYD_VERSION}" ] && GATEWAYD_VERSION=$(git ls-remote --tags --sort=v:refname "https://github.com/gatewayd-io/gatewayd" | cut -d/ -f3- | tail -n1) && export GATEWAYD_VERSION
+
+# Check if the GatewayD version is set
+if [ -z "${GATEWAYD_VERSION}" ]; then
+    echo "Failed to set GatewayD version. Consider setting the GATEWAYD_VERSION environment variable manually."
+    exit 126
+fi
+
+echo "Installing GatewayD ${GATEWAYD_VERSION}"
 
 # Set the environment variables if they are not set
 [ -z "${GATEWAYD_FILES}" ] && GATEWAYD_FILES=/gatewayd-files && export GATEWAYD_FILES
 
-# Install the required packages
-apk add --no-cache curl git
-
 # Create the directory to store the gatewayd files
 [ -d "${GATEWAYD_FILES}" ] || mkdir "${GATEWAYD_FILES}"
 
-cd "${GATEWAYD_FILES}" || exit 1
+# Change the directory to the gatewayd-files directory to download the GatewayD archive
+# and install the plugins. This will fail exit code 127 (file or directory not found).
+cd "${GATEWAYD_FILES}" || exit 127
 
 # Download the GatewayD archive if it doesn't exist
-[ -f "${GATEWAYD_FILES}"/gatewayd-linux-amd64-"${GATEWAYD_VERSION}".tar.gz ] || curl -L https://github.com/gatewayd-io/gatewayd/releases/download/"${GATEWAYD_VERSION}"/gatewayd-linux-amd64-"${GATEWAYD_VERSION}".tar.gz | tar zxvf -
+[ -f "${GATEWAYD_FILES}"/gatewayd-linux-amd64-"${GATEWAYD_VERSION}".tar.gz ] || curl -L https://github.com/gatewayd-io/gatewayd/releases/download/"${GATEWAYD_VERSION}"/gatewayd-linux-amd64-"${GATEWAYD_VERSION}".tar.gz -o gatewayd-linux-amd64-"${GATEWAYD_VERSION}".tar.gz
+if [ -f "${GATEWAYD_FILES}"/gatewayd-linux-amd64-"${GATEWAYD_VERSION}".tar.gz ]; then
+    echo "GatewayD archive downloaded successfully."
+else
+    echo "GatewayD archive download failed."
+    exit 1
+fi
+
+# Extract the GatewayD archive
+echo "Extracting GatewayD archive..."
+tar zxvf gatewayd-linux-amd64-"${GATEWAYD_VERSION}".tar.gz -C "${GATEWAYD_FILES}"
+
+# Set execute permission for the GatewayD binary
+echo "Setting execute permission for the GatewayD binary..."
 chmod +x gatewayd
 
 # Install the GatewayD plugins
-"${GATEWAYD_FILES}"/gatewayd plugin install --skip-path-slip-verification --output-dir "${GATEWAYD_FILES}" --plugin-config "${GATEWAYD_FILES}"/gatewayd_plugins.yaml --cleanup=false --update --overwrite-config
+# If the installation fails, the script will exit with exit code 126 (command invoke error).
+echo "Installing GatewayD plugins..."
+"${GATEWAYD_FILES}"/gatewayd plugin install --skip-path-slip-verification --output-dir "${GATEWAYD_FILES}" --plugin-config "${GATEWAYD_FILES}"/gatewayd_plugins.yaml --cleanup=false --update --overwrite-config || exit 126
 
-# Replace the default Redis URL
+# Replace the default Redis URL with the Redis container URL
 sed -i 's/redis:\/\/localhost:6379/redis:\/\/redis:6379/' "${GATEWAYD_FILES}"/gatewayd_plugins.yaml
+
+echo "GatewayD ${GATEWAYD_VERSION} and plugins installed successfully. Exiting..."
