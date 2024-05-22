@@ -51,14 +51,18 @@ services:
       - GATEWAYD_CLIENTS_DEFAULT_ADDRESS=postgres:5432
       # - GATEWAYD_LOGGERS_DEFAULT_LEVEL=debug
     ports:
-      - "15432:15432" # GatewayD server for PostgreSQL clients to connect to
-      - "9090:9090" # Prometheus metrics:
-        #   http://localhost:9090/metrics
-      - "18080:18080" # GatewayD HTTP gateway:
-        #   http://localhost:18080/swagger-ui/ for the API documentation
-        #   http://localhost:18080/healthz for the health check
-      - "19090:19090" # GatewayD gRPC API with reflection enabled:
-        #   You can use grpcurl or grpc-client-cli to interact with it
+      # GatewayD server for PostgreSQL clients to connect to
+      - "15432:15432"
+      # Prometheus metrics:
+      #   http://localhost:9090/metrics
+      - "9090:9090"
+      # GatewayD HTTP gateway:
+      #   http://localhost:18080/swagger-ui/ for the API documentation
+      #   http://localhost:18080/healthz for the health check
+      - "18080:18080"
+      # GatewayD gRPC API with reflection enabled:
+      #   You can use grpcurl or grpc-client-cli to interact with it
+      - "19090:19090"
     volumes:
       - ./gatewayd-files:/gatewayd-files:ro
     links:
