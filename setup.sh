@@ -4,7 +4,16 @@
 # the latest version of GatewayD from GitHub and install the plugins.
 
 # Set the architecture to amd64 if it is not set
-[ -z "${ARCH}" ] && ARCH="amd64" && export ARCH
+if [ -z "${ARCH}" ]; then
+    architecture=$(uname -m)
+    if [[ "${architecture}" = "x86_64" ]]; then
+        echo "Setting architecture to amd64"
+        ARCH=amd64 && export ARCH
+    elif [[ "${architecture}" = "aarch64" ]] || [[ "${architecture}" = "arm64" ]]; then
+        echo "Setting architecture to arm64"
+        ARCH=arm64 && export ARCH
+    fi
+fi
 echo "Using architecture: ${ARCH}"
 
 # Install the required packages
