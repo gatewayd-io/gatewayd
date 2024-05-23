@@ -373,7 +373,7 @@ func (reg *Registry) Apply(hookName string, result *v1.Struct) ([]*sdkAct.Output
 	// Check if any of the policies have a terminal action.
 	var terminal bool
 	for _, output := range outputs {
-		if output.Verdict != nil && output.Terminal {
+		if output.Verdict != nil && cast.ToBool(output.Verdict) && output.Terminal {
 			terminal = true
 			break
 		}
