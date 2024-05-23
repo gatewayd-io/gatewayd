@@ -18,6 +18,7 @@ services:
       # Default: amd64
       # Possible values: amd64 or arm64
       - ARCH=amd64
+      - REDIS_URL=redis://redis:6379/0
   postgres:
     image: postgres:latest
     environment:

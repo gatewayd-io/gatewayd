@@ -63,6 +63,8 @@ echo "Installing GatewayD plugins..."
 "${GATEWAYD_FILES}"/gatewayd plugin install --skip-path-slip-verification --output-dir "${GATEWAYD_FILES}" --plugin-config "${GATEWAYD_FILES}"/gatewayd_plugins.yaml --cleanup=false --update --overwrite-config || exit 126
 
 # Replace the default Redis URL with the Redis container URL
-sed -i 's/redis:\/\/localhost:6379/redis:\/\/redis:6379/' "${GATEWAYD_FILES}"/gatewayd_plugins.yaml
+[ -z "${REDIS_URL}" ] && REDIS_URL="redis://redis:6379/0" && export REDIS_URL
+echo "Setting Redis URL to ${REDIS_URL}"
+sed -i "s#redis://localhost:6379/0#${REDIS_URL}#" "${GATEWAYD_FILES}"/gatewayd_plugins.yaml
 
 echo "GatewayD ${GATEWAYD_VERSION} and plugins installed successfully. Exiting..."
