@@ -14,7 +14,7 @@ import (
 
 type IRegistry interface {
 	Add(policy *sdkAct.Policy)
-	Apply(signals []sdkAct.Signal) []*sdkAct.Output
+	Apply(signals []sdkAct.Signal, hook sdkAct.Hook) []*sdkAct.Output
 	Run(output *sdkAct.Output, params ...sdkAct.Parameter) (any, *gerr.GatewayDError)
 }
 
@@ -107,11 +107,11 @@ func (r *Registry) Add(policy *sdkAct.Policy) {
 }
 
 // Apply applies the signals to the registry and returns the outputs.
-func (r *Registry) Apply(signals []sdkAct.Signal) []*sdkAct.Output {
+func (r *Registry) Apply(signals []sdkAct.Signal, hook sdkAct.Hook) []*sdkAct.Output {
 	// If there are no signals, apply the default policy.
 	if len(signals) == 0 {
 		r.Logger.Debug().Msg("No signals provided, applying default signal")
-		return r.Apply([]sdkAct.Signal{*r.DefaultSignal})
+		return r.Apply([]sdkAct.Signal{*r.DefaultSignal}, hook)
 	}
 
 	// Separate terminal and non-terminal signals to find contradictions.
@@ -139,7 +139,7 @@ func (r *Registry) Apply(signals []sdkAct.Signal) []*sdkAct.Output {
 		}
 
 		// Apply the signal and append the output to the list of outputs.
-		output, err := r.apply(signal)
+		output, err := r.apply(signal, hook)
 		if err != nil {
 			r.Logger.Error().Err(err).Str("name", signal.Name).Msg("Error applying signal")
 			// If there is an error evaluating the policy, continue to the next signal.
@@ -155,14 +155,16 @@ func (r *Registry) Apply(signals []sdkAct.Signal) []*sdkAct.Output {
 	}
 
 	if len(outputs) == 0 && !evalErr {
-		return r.Apply([]sdkAct.Signal{*r.DefaultSignal})
+		return r.Apply([]sdkAct.Signal{*r.DefaultSignal}, hook)
 	}
 
 	return outputs
 }
 
 // apply applies the signal to the registry and returns the output.
-func (r *Registry) apply(signal sdkAct.Signal) (*sdkAct.Output, *gerr.GatewayDError) {
+func (r *Registry) apply(
+	signal sdkAct.Signal, hook sdkAct.Hook,
+) (*sdkAct.Output, *gerr.GatewayDError) {
 	action, exists := r.Actions[signal.Name]
 	if !exists {
 		return nil, gerr.ErrActionNotMatched
@@ -178,12 +180,12 @@ func (r *Registry) apply(signal sdkAct.Signal) (*sdkAct.Output, *gerr.GatewayDEr
 	defer cancel()
 
 	// Evaluate the policy.
-	// TODO: Policy should be able to receive other parameters like server and client IPs, etc.
 	verdict, err := policy.Eval(
 		ctx, sdkAct.Input{
 			Name:   signal.Name,
 			Policy: policy.Metadata,
 			Signal: signal.Metadata,
+			Hook:   hook,
 			// Action dictates the sync mode, not the signal.
 			Sync: action.Sync,
 		},
