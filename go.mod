@@ -8,7 +8,7 @@ require (
 	github.com/codingsince1985/checksum v1.3.0
 	github.com/cybercyst/go-scaffold v0.0.0-20240404115540-744e601147cd
 	github.com/envoyproxy/protoc-gen-validate v1.0.4
-	github.com/gatewayd-io/gatewayd-plugin-sdk v0.2.13
+	github.com/gatewayd-io/gatewayd-plugin-sdk v0.2.14
 	github.com/getsentry/sentry-go v0.27.0
 	github.com/go-co-op/gocron v1.37.0
 	github.com/google/go-github/v53 v53.2.0
