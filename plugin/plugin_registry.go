@@ -20,6 +20,7 @@ import (
 	goplugin "github.com/hashicorp/go-plugin"
 	"github.com/mitchellh/mapstructure"
 	"github.com/rs/zerolog"
+	"github.com/spf13/cast"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"google.golang.org/grpc"
@@ -49,7 +50,7 @@ type IRegistry interface {
 	Shutdown()
 	LoadPlugins(ctx context.Context, plugins []config.Plugin, startTimeout time.Duration)
 	RegisterHooks(ctx context.Context, pluginID sdkPlugin.Identifier)
-	Apply(hookName string, result *v1.Struct) ([]*sdkAct.Output, bool)
+	Apply(hook sdkAct.Hook) ([]*sdkAct.Output, bool)
 
 	// Hook management
 	IHook
@@ -329,7 +330,14 @@ func (reg *Registry) Run(
 			continue
 		}
 
-		out, terminal := reg.Apply(hookName.String(), result)
+		out, terminal := reg.Apply(
+			sdkAct.Hook{
+				Name:     hookName.String(),
+				Priority: uint(priority),
+				Params:   params.AsMap(),
+				Result:   result.AsMap(),
+			},
+		)
 		outputs = append(outputs, out...)
 
 		if terminal {
@@ -352,16 +360,16 @@ func (reg *Registry) Run(
 }
 
 // Apply applies policies to the result.
-func (reg *Registry) Apply(hookName string, result *v1.Struct) ([]*sdkAct.Output, bool) {
+func (reg *Registry) Apply(hook sdkAct.Hook) ([]*sdkAct.Output, bool) {
 	_, span := otel.Tracer(config.TracerName).Start(reg.ctx, "Apply")
 	defer span.End()
 
 	// Get signals from the result.
-	signals := getSignals(result.AsMap())
+	signals := getSignals(hook.Result)
 	// Apply policies to the signals.
 	// The outputs contain the verdicts of the policies and their metadata.
 	// And using this list, the caller can take further actions.
-	outputs := applyPolicies(hookName, signals, reg.Logger, reg.ActRegistry)
+	outputs := applyPolicies(hook, signals, reg.Logger, reg.ActRegistry)
 
 	// If no policies are found, return a default output.
 	// Note: this should never happen, as the default policy is always loaded.
