@@ -196,9 +196,17 @@ func Test_Apply(t *testing.T) {
 		})
 	assert.NotNil(t, actRegistry)
 
-	outputs := actRegistry.Apply([]sdkAct.Signal{
-		*sdkAct.Passthrough(),
-	})
+	outputs := actRegistry.Apply(
+		[]sdkAct.Signal{
+			*sdkAct.Passthrough(),
+		},
+		sdkAct.Hook{
+			Name:     "HOOK_NAME_ON_TRAFFIC_FROM_CLIENT",
+			Priority: 1000,
+			Params:   map[string]any{},
+			Result:   map[string]any{},
+		},
+	)
 	assert.NotNil(t, outputs)
 	assert.Len(t, outputs, 1)
 	assert.Equal(t, "passthrough", outputs[0].MatchedPolicy)
@@ -225,7 +233,15 @@ func Test_Apply_NoSignals(t *testing.T) {
 		})
 	assert.NotNil(t, actRegistry)
 
-	outputs := actRegistry.Apply([]sdkAct.Signal{})
+	outputs := actRegistry.Apply(
+		[]sdkAct.Signal{},
+		sdkAct.Hook{
+			Name:     "HOOK_NAME_ON_TRAFFIC_FROM_CLIENT",
+			Priority: 1000,
+			Params:   map[string]any{},
+			Result:   map[string]any{},
+		},
+	)
 	assert.NotNil(t, outputs)
 	assert.Len(t, outputs, 1)
 	assert.Equal(t, "passthrough", outputs[0].MatchedPolicy)
@@ -272,7 +288,12 @@ func Test_Apply_ContradictorySignals(t *testing.T) {
 	assert.NotNil(t, actRegistry)
 
 	for _, s := range signals {
-		outputs := actRegistry.Apply(s)
+		outputs := actRegistry.Apply(s, sdkAct.Hook{
+			Name:     "HOOK_NAME_ON_TRAFFIC_FROM_CLIENT",
+			Priority: 1000,
+			Params:   map[string]any{},
+			Result:   map[string]any{},
+		})
 		assert.NotNil(t, outputs)
 		assert.Len(t, outputs, 2)
 		assert.Equal(t, "terminate", outputs[0].MatchedPolicy)
@@ -318,6 +339,11 @@ func Test_Apply_ActionNotMatched(t *testing.T) {
 
 	outputs := actRegistry.Apply([]sdkAct.Signal{
 		{Name: "non-existent"},
+	}, sdkAct.Hook{
+		Name:     "HOOK_NAME_ON_TRAFFIC_FROM_CLIENT",
+		Priority: 1000,
+		Params:   map[string]any{},
+		Result:   map[string]any{},
 	})
 	assert.NotNil(t, outputs)
 	assert.Len(t, outputs, 1)
@@ -351,6 +377,11 @@ func Test_Apply_PolicyNotMatched(t *testing.T) {
 
 	outputs := actRegistry.Apply([]sdkAct.Signal{
 		*sdkAct.Terminate(),
+	}, sdkAct.Hook{
+		Name:     "HOOK_NAME_ON_TRAFFIC_FROM_CLIENT",
+		Priority: 1000,
+		Params:   map[string]any{},
+		Result:   map[string]any{},
 	})
 	assert.NotNil(t, outputs)
 	assert.Len(t, outputs, 1)
@@ -399,6 +430,11 @@ func Test_Apply_NonBoolPolicy(t *testing.T) {
 
 		outputs := actRegistry.Apply([]sdkAct.Signal{
 			*sdkAct.Passthrough(),
+		}, sdkAct.Hook{
+			Name:     "HOOK_NAME_ON_TRAFFIC_FROM_CLIENT",
+			Priority: 1000,
+			Params:   map[string]any{},
+			Result:   map[string]any{},
 		})
 		assert.NotNil(t, outputs)
 		assert.Len(t, outputs, 1)
@@ -464,6 +500,11 @@ func Test_Run(t *testing.T) {
 
 	outputs := actRegistry.Apply([]sdkAct.Signal{
 		*sdkAct.Passthrough(),
+	}, sdkAct.Hook{
+		Name:     "HOOK_NAME_ON_TRAFFIC_FROM_CLIENT",
+		Priority: 1000,
+		Params:   map[string]any{},
+		Result:   map[string]any{},
 	})
 	assert.NotNil(t, outputs)
 
@@ -489,6 +530,11 @@ func Test_Run_Terminate(t *testing.T) {
 
 	outputs := actRegistry.Apply([]sdkAct.Signal{
 		*sdkAct.Terminate(),
+	}, sdkAct.Hook{
+		Name:     "HOOK_NAME_ON_TRAFFIC_FROM_CLIENT",
+		Priority: 1000,
+		Params:   map[string]any{},
+		Result:   map[string]any{},
 	})
 	assert.NotNil(t, outputs)
 	assert.Equal(t, "terminate", outputs[0].MatchedPolicy)
@@ -522,6 +568,11 @@ func Test_Run_Async(t *testing.T) {
 
 	outputs := actRegistry.Apply([]sdkAct.Signal{
 		*sdkAct.Log("info", "test", map[string]any{"async": true}),
+	}, sdkAct.Hook{
+		Name:     "HOOK_NAME_ON_TRAFFIC_FROM_CLIENT",
+		Priority: 1000,
+		Params:   map[string]any{},
+		Result:   map[string]any{},
 	})
 	assert.NotNil(t, outputs)
 	assert.Equal(t, "log", outputs[0].MatchedPolicy)
@@ -647,7 +698,15 @@ func Test_Run_Timeout(t *testing.T) {
 				})
 			assert.NotNil(t, actRegistry)
 
-			outputs := actRegistry.Apply([]sdkAct.Signal{*signals[name]})
+			outputs := actRegistry.Apply(
+				[]sdkAct.Signal{*signals[name]},
+				sdkAct.Hook{
+					Name:     "HOOK_NAME_ON_TRAFFIC_FROM_CLIENT",
+					Priority: 1000,
+					Params:   map[string]any{},
+					Result:   map[string]any{},
+				},
+			)
 			assert.NotNil(t, outputs)
 			assert.Equal(t, name, outputs[0].MatchedPolicy)
 			assert.Equal(t,

@@ -102,7 +102,16 @@ func Test_applyPolicies(t *testing.T) {
 		})
 
 	output := applyPolicies(
-		"onTrafficFromClient", []sdkAct.Signal{*sdkAct.Passthrough()}, logger, actRegistry)
+		sdkAct.Hook{
+			Name:     "HOOK_NAME_ON_TRAFFIC_FROM_CLIENT",
+			Priority: 1000,
+			Params:   map[string]any{},
+			Result:   map[string]any{},
+		},
+		[]sdkAct.Signal{*sdkAct.Passthrough()},
+		logger,
+		actRegistry,
+	)
 	assert.Len(t, output, 1)
 	assert.Equal(t, "passthrough", output[0].MatchedPolicy)
 	assert.Nil(t, output[0].Metadata)
