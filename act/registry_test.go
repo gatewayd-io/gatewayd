@@ -196,9 +196,17 @@ func Test_Apply(t *testing.T) {
 		})
 	assert.NotNil(t, actRegistry)
 
-	outputs := actRegistry.Apply([]sdkAct.Signal{
-		*sdkAct.Passthrough(),
-	})
+	outputs := actRegistry.Apply(
+		[]sdkAct.Signal{
+			*sdkAct.Passthrough(),
+		},
+		sdkAct.Hook{
+			Name:     "HOOK_NAME_ON_TRAFFIC_FROM_CLIENT",
+			Priority: 1000,
+			Params:   map[string]any{},
+			Result:   map[string]any{},
+		},
+	)
 	assert.NotNil(t, outputs)
 	assert.Len(t, outputs, 1)
 	assert.Equal(t, "passthrough", outputs[0].MatchedPolicy)
@@ -225,7 +233,15 @@ func Test_Apply_NoSignals(t *testing.T) {
 		})
 	assert.NotNil(t, actRegistry)
 
-	outputs := actRegistry.Apply([]sdkAct.Signal{})
+	outputs := actRegistry.Apply(
+		[]sdkAct.Signal{},
+		sdkAct.Hook{
+			Name:     "HOOK_NAME_ON_TRAFFIC_FROM_CLIENT",
+			Priority: 1000,
+			Params:   map[string]any{},
+			Result:   map[string]any{},
+		},
+	)
 	assert.NotNil(t, outputs)
 	assert.Len(t, outputs, 1)
 	assert.Equal(t, "passthrough", outputs[0].MatchedPolicy)
@@ -272,7 +288,12 @@ func Test_Apply_ContradictorySignals(t *testing.T) {
 	assert.NotNil(t, actRegistry)
 
 	for _, s := range signals {
-		outputs := actRegistry.Apply(s)
+		outputs := actRegistry.Apply(s, sdkAct.Hook{
+			Name:     "HOOK_NAME_ON_TRAFFIC_FROM_CLIENT",
+			Priority: 1000,
+			Params:   map[string]any{},
+			Result:   map[string]any{},
+		})
 		assert.NotNil(t, outputs)
 		assert.Len(t, outputs, 2)
 		assert.Equal(t, "terminate", outputs[0].MatchedPolicy)
@@ -318,6 +339,11 @@ func Test_Apply_ActionNotMatched(t *testing.T) {
 
 	outputs := actRegistry.Apply([]sdkAct.Signal{
 		{Name: "non-existent"},
+	}, sdkAct.Hook{
+		Name:     "HOOK_NAME_ON_TRAFFIC_FROM_CLIENT",
+		Priority: 1000,
+		Params:   map[string]any{},
+		Result:   map[string]any{},
 	})
 	assert.NotNil(t, outputs)
 	assert.Len(t, outputs, 1)
@@ -351,6 +377,11 @@ func Test_Apply_PolicyNotMatched(t *testing.T) {
 
 	outputs := actRegistry.Apply([]sdkAct.Signal{
 		*sdkAct.Terminate(),
+	}, sdkAct.Hook{
+		Name:     "HOOK_NAME_ON_TRAFFIC_FROM_CLIENT",
+		Priority: 1000,
+		Params:   map[string]any{},
+		Result:   map[string]any{},
 	})
 	assert.NotNil(t, outputs)
 	assert.Len(t, outputs, 1)
@@ -399,6 +430,11 @@ func Test_Apply_NonBoolPolicy(t *testing.T) {
 
 		outputs := actRegistry.Apply([]sdkAct.Signal{
 			*sdkAct.Passthrough(),
+		}, sdkAct.Hook{
+			Name:     "HOOK_NAME_ON_TRAFFIC_FROM_CLIENT",
+			Priority: 1000,
+			Params:   map[string]any{},
+			Result:   map[string]any{},
 		})
 		assert.NotNil(t, outputs)
 		assert.Len(t, outputs, 1)
@@ -447,6 +483,110 @@ func Test_Apply_BadPolicy(t *testing.T) {
 	}
 }
 
+// Test_Apply_Hook tests the Apply function of the act registry with a policy that
+// has the hook info and makes use of it.
+func Test_Apply_Hook(t *testing.T) {
+	buf := bytes.Buffer{}
+	logger := zerolog.New(&buf)
+
+	// Custom policy leveraging the hook info.
+	policies := map[string]*sdkAct.Policy{
+		"passthrough": sdkAct.MustNewPolicy(
+			"passthrough",
+			"true",
+			nil,
+		),
+		"log": sdkAct.MustNewPolicy(
+			"log",
+			`Signal.log == true && Policy.log == "enabled" &&
+			split(Hook.Params.client.remote, ":")[0] == "192.168.0.1"`,
+			map[string]any{
+				"log": "enabled",
+			},
+		),
+	}
+
+	actRegistry := NewActRegistry(
+		Registry{
+			Signals:              BuiltinSignals(),
+			Policies:             policies,
+			Actions:              BuiltinActions(),
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               logger,
+		})
+	assert.NotNil(t, actRegistry)
+
+	hook := sdkAct.Hook{
+		Name:     "HOOK_NAME_ON_TRAFFIC_FROM_CLIENT",
+		Priority: 1000,
+		// Input parameters for the hook.
+		Params: map[string]any{
+			"field": "value",
+			"server": map[string]any{
+				"local":  "value",
+				"remote": "value",
+			},
+			"client": map[string]any{
+				"local":  "value",
+				"remote": "192.168.0.1:15432",
+			},
+			"request": "Base64EncodedRequest",
+			"error":   "",
+		},
+		// Output parameters for the hook.
+		Result: map[string]any{
+			"field": "value",
+			"server": map[string]any{
+				"local":  "value",
+				"remote": "value",
+			},
+			"client": map[string]any{
+				"local":  "value",
+				"remote": "value",
+			},
+			"request": "Base64EncodedRequest",
+			"error":   "",
+			sdkAct.Signals: []any{
+				sdkAct.Log("error", "error message", map[string]any{"key": "value"}).ToMap(),
+			},
+			"response": "Base64EncodedResponse",
+		},
+	}
+
+	outputs := actRegistry.Apply(
+		[]sdkAct.Signal{
+			*sdkAct.Log(
+				"error",
+				"policy matched from incoming address 192.168.0.1, so we are seeing this error message",
+				map[string]any{"key": "value"},
+			),
+		},
+		hook,
+	)
+	assert.NotNil(t, outputs)
+	assert.Len(t, outputs, 1)
+	assert.Equal(t, "log", outputs[0].MatchedPolicy)
+	assert.Equal(t, outputs[0].Metadata, map[string]any{
+		"key":     "value",
+		"level":   "error",
+		"log":     true,
+		"message": "policy matched from incoming address 192.168.0.1, so we are seeing this error message",
+	})
+	assert.False(t, outputs[0].Sync) // Asynchronous action.
+	assert.True(t, cast.ToBool(outputs[0].Verdict))
+	assert.False(t, outputs[0].Terminal)
+
+	result, err := actRegistry.Run(outputs[0], WithResult(hook.Result))
+	assert.Equal(t, err, gerr.ErrAsyncAction, "expected async action sentinel error")
+	assert.Nil(t, result, "expected nil result")
+
+	time.Sleep(time.Millisecond) // wait for async action to complete
+
+	assert.Contains(t, buf.String(), `{"level":"error","key":"value","message":"policy matched from incoming address 192.168.0.1, so we are seeing this error message"}`) //nolint:lll
+}
+
 // Test_Run tests the Run function of the act registry with a non-terminal action.
 func Test_Run(t *testing.T) {
 	logger := zerolog.Logger{}
@@ -464,6 +604,11 @@ func Test_Run(t *testing.T) {
 
 	outputs := actRegistry.Apply([]sdkAct.Signal{
 		*sdkAct.Passthrough(),
+	}, sdkAct.Hook{
+		Name:     "HOOK_NAME_ON_TRAFFIC_FROM_CLIENT",
+		Priority: 1000,
+		Params:   map[string]any{},
+		Result:   map[string]any{},
 	})
 	assert.NotNil(t, outputs)
 
@@ -489,6 +634,11 @@ func Test_Run_Terminate(t *testing.T) {
 
 	outputs := actRegistry.Apply([]sdkAct.Signal{
 		*sdkAct.Terminate(),
+	}, sdkAct.Hook{
+		Name:     "HOOK_NAME_ON_TRAFFIC_FROM_CLIENT",
+		Priority: 1000,
+		Params:   map[string]any{},
+		Result:   map[string]any{},
 	})
 	assert.NotNil(t, outputs)
 	assert.Equal(t, "terminate", outputs[0].MatchedPolicy)
@@ -522,6 +672,11 @@ func Test_Run_Async(t *testing.T) {
 
 	outputs := actRegistry.Apply([]sdkAct.Signal{
 		*sdkAct.Log("info", "test", map[string]any{"async": true}),
+	}, sdkAct.Hook{
+		Name:     "HOOK_NAME_ON_TRAFFIC_FROM_CLIENT",
+		Priority: 1000,
+		Params:   map[string]any{},
+		Result:   map[string]any{},
 	})
 	assert.NotNil(t, outputs)
 	assert.Equal(t, "log", outputs[0].MatchedPolicy)
@@ -647,7 +802,15 @@ func Test_Run_Timeout(t *testing.T) {
 				})
 			assert.NotNil(t, actRegistry)
 
-			outputs := actRegistry.Apply([]sdkAct.Signal{*signals[name]})
+			outputs := actRegistry.Apply(
+				[]sdkAct.Signal{*signals[name]},
+				sdkAct.Hook{
+					Name:     "HOOK_NAME_ON_TRAFFIC_FROM_CLIENT",
+					Priority: 1000,
+					Params:   map[string]any{},
+					Result:   map[string]any{},
+				},
+			)
 			assert.NotNil(t, outputs)
 			assert.Equal(t, name, outputs[0].MatchedPolicy)
 			assert.Equal(t,

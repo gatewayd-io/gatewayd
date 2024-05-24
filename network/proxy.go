@@ -856,31 +856,35 @@ func (pr *Proxy) shouldTerminate(result map[string]interface{}) (bool, map[strin
 	// The Terminal field is only present if the action wants to terminate the request,
 	// that is the `__terminal__` field is set in one of the outputs.
 	keys := maps.Keys(result)
-	if slices.Contains(keys, sdkAct.Terminal) {
-		var actionResult map[string]interface{}
-		for _, output := range outputs {
-			actRes, err := pr.PluginRegistry.ActRegistry.Run(
-				output, act.WithResult(result))
-			// If the action is async and we received a sentinel error,
-			// don't log the error.
-			if err != nil && !errors.Is(err, gerr.ErrAsyncAction) {
-				pr.Logger.Error().Err(err).Msg("Error running policy")
-			}
-			// The terminate action should return a map.
-			if v, ok := actRes.(map[string]interface{}); ok {
-				actionResult = v
-			}
+	terminate := slices.Contains(keys, sdkAct.Terminal) && cast.ToBool(result[sdkAct.Terminal])
+	actionResult := make(map[string]interface{})
+	for _, output := range outputs {
+		if !cast.ToBool(output.Verdict) {
+			pr.Logger.Debug().Msg(
+				"Skipping the action, because the verdict of the policy execution is false")
+			continue
 		}
+		actRes, err := pr.PluginRegistry.ActRegistry.Run(
+			output, act.WithResult(result))
+		// If the action is async and we received a sentinel error,
+		// don't log the error.
+		if err != nil && !errors.Is(err, gerr.ErrAsyncAction) {
+			pr.Logger.Error().Err(err).Msg("Error running policy")
+		}
+		// The terminate action should return a map.
+		if v, ok := actRes.(map[string]interface{}); ok {
+			actionResult = v
+		}
+	}
+	if terminate {
 		pr.Logger.Debug().Fields(
 			map[string]interface{}{
 				"function": "proxy.passthrough",
 				"reason":   "terminate",
 			},
 		).Msg("Terminating request")
-		return cast.ToBool(result[sdkAct.Terminal]), actionResult
 	}
-
-	return false, result
+	return terminate, actionResult
 }
 
 // getPluginModifiedRequest is a function that retrieves the modified request
