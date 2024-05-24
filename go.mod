@@ -12,7 +12,7 @@ require (
 	github.com/getsentry/sentry-go v0.27.0
 	github.com/go-co-op/gocron v1.37.0
 	github.com/google/go-github/v53 v53.2.0
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.1
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.20.0
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-plugin v1.6.1
 	github.com/invopop/jsonschema v0.12.0
@@ -35,7 +35,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.26.0
 	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f
 	golang.org/x/text v0.15.0
-	google.golang.org/genproto/googleapis/api v0.0.0-20240415180920-8c6c420018be
+	google.golang.org/genproto/googleapis/api v0.0.0-20240513163218-0867130af1f8
 	google.golang.org/grpc v1.64.0
 	google.golang.org/protobuf v1.34.1
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
@@ -117,7 +117,7 @@ require (
 	golang.org/x/crypto v0.23.0 // indirect
 	golang.org/x/mod v0.17.0 // indirect
 	golang.org/x/net v0.25.0 // indirect
-	golang.org/x/oauth2 v0.19.0 // indirect
+	golang.org/x/oauth2 v0.20.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
 	golang.org/x/sys v0.20.0 // indirect
 	golang.org/x/tools v0.20.0 // indirect
