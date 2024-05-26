@@ -76,6 +76,11 @@ jobs:
       - name: Lint BASH script with shellcheck 🚨
         uses: ludeeus/action-shellcheck@master
 
+      - name: Lint Dockerfile with hadolint 🚨
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+
       - name: Run Go tests 🔬
         run: go test -p 1 -cover -covermode atomic -coverprofile=profile.cov -v ./...
         env:
