@@ -10,7 +10,7 @@ ARG TARGETPLATFORM
 WORKDIR /gatewayd
 COPY . /gatewayd
 
-RUN apk --no-cache add git make && \
+RUN apk --no-cache add git=2.45.1-r0 make=4.4.1-r2 && \
     mkdir -p dist && \
     make build-platform GOOS=${TARGETOS} GOARCH=${TARGETARCH} OUTPUT_DIR=dist/${TARGETOS}-${TARGETARCH}
 
