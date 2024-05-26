@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # Use the official golang image to build the binary.
-FROM golang:1.22-alpine3.19 as builder
+FROM golang:1.22-alpine3.20 as builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -15,7 +15,7 @@ RUN mkdir -p dist
 RUN make build-platform GOOS=${TARGETOS} GOARCH=${TARGETARCH} OUTPUT_DIR=dist/${TARGETOS}-${TARGETARCH}
 
 # Use alpine to create a minimal image to run the gatewayd binary.
-FROM alpine:3.19 as runner
+FROM alpine:3.20 as runner
 
 ARG TARGETOS
 ARG TARGETARCH
