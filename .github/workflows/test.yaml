@@ -66,14 +66,14 @@ jobs:
         with:
           go-version: "1.22"
 
-      - name: Lint code issues 🚨
+      - name: Lint code with golangci-lint 🚨
         uses: golangci/golangci-lint-action@v4
         with:
           version: "v1.57"
           skip-pkg-cache: true
           install-mode: "goinstall"
 
-      - name: Lint BASH script with shellcheck 🚨
+      - name: Lint Bash script with shellcheck 🚨
         uses: ludeeus/action-shellcheck@master
 
       - name: Lint Dockerfile with hadolint 🚨
