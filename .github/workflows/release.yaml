@@ -50,10 +50,8 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            gatewaydio/gatewayd:${{ github.ref_name }}
-            gatewaydio/gatewayd:latest
-            ghcr.io/gatewayd-io/gatewayd:${{ github.ref_name }}
-            ghcr.io/gatewayd-io/gatewayd:latest
+            gatewaydio/gatewayd
+            ghcr.io/gatewayd-io/gatewayd
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
