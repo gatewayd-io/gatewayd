@@ -30,7 +30,7 @@ type Registry struct {
 
 	// TaskPublisher is the publisher for async actions.
 	// if not given, will invoke simple goroutine to run async actions
-	TaskPublisher IPublisher
+	TaskPublisher *Publisher
 
 	Signals           map[string]*sdkAct.Signal
 	Policies          map[string]*sdkAct.Policy

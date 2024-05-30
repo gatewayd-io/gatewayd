@@ -286,7 +286,7 @@ var runCmd = &cobra.Command{
 		}
 
 		// Create a new act registry given the built-in signals, policies, and actions.
-		var publisher *act.Publisher = nil
+		var publisher *act.Publisher
 		if conf.Plugin.ActionRedis.Enabled {
 			rdb := redis.NewClient(&redis.Options{
 				Addr: conf.Plugin.ActionRedis.Address,
@@ -301,6 +301,7 @@ var runCmd = &cobra.Command{
 				logger.Error().Err(err).Msg("Failed to create publisher for act registry")
 				os.Exit(gerr.FailedToCreateActRegistry)
 			}
+			logger.Info().Msg("Created Redis publisher for Act registry")
 		}
 
 		actRegistry = act.NewActRegistry(
