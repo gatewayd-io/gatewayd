@@ -35,6 +35,7 @@ import (
 	"github.com/go-co-op/gocron"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	"go.opentelemetry.io/otel"
@@ -285,6 +286,23 @@ var runCmd = &cobra.Command{
 		}
 
 		// Create a new act registry given the built-in signals, policies, and actions.
+		var publisher *act.Publisher = nil
+		if conf.Plugin.ActionRedis.Enabled {
+			rdb := redis.NewClient(&redis.Options{
+				Addr: conf.Plugin.ActionRedis.Address,
+			})
+			var err error
+			publisher, err = act.NewPublisher(act.Publisher{
+				Logger:      logger,
+				RedisDB:     rdb,
+				ChannelName: conf.Plugin.ActionRedis.Channel,
+			})
+			if err != nil {
+				logger.Error().Err(err).Msg("Failed to create publisher for act registry")
+				os.Exit(gerr.FailedToCreateActRegistry)
+			}
+		}
+
 		actRegistry = act.NewActRegistry(
 			act.Registry{
 				Signals:              act.BuiltinSignals(),
@@ -293,6 +311,7 @@ var runCmd = &cobra.Command{
 				DefaultPolicyName:    conf.Plugin.DefaultPolicy,
 				PolicyTimeout:        conf.Plugin.PolicyTimeout,
 				DefaultActionTimeout: conf.Plugin.ActionTimeout,
+				TaskPublisher:        publisher,
 				Logger:               logger,
 			})
 

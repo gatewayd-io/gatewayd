@@ -22,18 +22,25 @@ type Policy struct {
 }
 
 type PluginConfig struct {
-	CompatibilityPolicy string        `json:"compatibilityPolicy" jsonschema:"enum=strict,enum=loose"`
-	EnableMetricsMerger bool          `json:"enableMetricsMerger"`
-	MetricsMergerPeriod time.Duration `json:"metricsMergerPeriod" jsonschema:"oneof_type=string;integer"`
-	HealthCheckPeriod   time.Duration `json:"healthCheckPeriod" jsonschema:"oneof_type=string;integer"`
-	ReloadOnCrash       bool          `json:"reloadOnCrash"`
-	Timeout             time.Duration `json:"timeout" jsonschema:"oneof_type=string;integer"`
-	StartTimeout        time.Duration `json:"startTimeout" jsonschema:"oneof_type=string;integer"`
-	Plugins             []Plugin      `json:"plugins"`
-	DefaultPolicy       string        `json:"defaultPolicy" jsonschema:"enum=passthrough,enum=terminate"` // TODO: Add more policies.
-	PolicyTimeout       time.Duration `json:"policyTimeout" jsonschema:"oneof_type=string;integer"`
-	ActionTimeout       time.Duration `json:"actionTimeout" jsonschema:"oneof_type=string;integer"`
-	Policies            []Policy      `json:"policies"`
+	CompatibilityPolicy string            `json:"compatibilityPolicy" jsonschema:"enum=strict,enum=loose"`
+	EnableMetricsMerger bool              `json:"enableMetricsMerger"`
+	MetricsMergerPeriod time.Duration     `json:"metricsMergerPeriod" jsonschema:"oneof_type=string;integer"`
+	HealthCheckPeriod   time.Duration     `json:"healthCheckPeriod" jsonschema:"oneof_type=string;integer"`
+	ReloadOnCrash       bool              `json:"reloadOnCrash"`
+	Timeout             time.Duration     `json:"timeout" jsonschema:"oneof_type=string;integer"`
+	StartTimeout        time.Duration     `json:"startTimeout" jsonschema:"oneof_type=string;integer"`
+	Plugins             []Plugin          `json:"plugins"`
+	DefaultPolicy       string            `json:"defaultPolicy" jsonschema:"enum=passthrough,enum=terminate"` // TODO: Add more policies.
+	PolicyTimeout       time.Duration     `json:"policyTimeout" jsonschema:"oneof_type=string;integer"`
+	ActionTimeout       time.Duration     `json:"actionTimeout" jsonschema:"oneof_type=string;integer"`
+	ActionRedis         ActionRedisConfig `json:"actionRedis"`
+	Policies            []Policy          `json:"policies"`
+}
+
+type ActionRedisConfig struct {
+	Enabled bool   `json:"enabled"`
+	Address string `json:"address"`
+	Channel string `json:"channel"`
 }
 
 type Client struct {

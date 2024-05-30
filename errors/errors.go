@@ -52,6 +52,7 @@ const (
 	ErrCodeEvalError
 	ErrCodeMsgEncodeError
 	ErrCodeConfigParseError
+	ErrCodePublishAsyncAction
 )
 
 var (
@@ -188,6 +189,9 @@ var (
 
 	ErrConfigParseError = &GatewayDError{
 		ErrCodeConfigParseError, "error parsing config", nil,
+	}
+	ErrPublishingAsyncAction = &GatewayDError{
+		ErrCodePublishAsyncAction, "error publishing async action", nil,
 	}
 
 	// Unwrapped errors.
