@@ -117,7 +117,10 @@ const (
 	DefaultCompatibilityPolicy = Strict
 
 	// Act.
-	DefaultPolicy        = "passthrough"
-	DefaultPolicyTimeout = 30 * time.Second
-	DefaultActionTimeout = 30 * time.Second
+	DefaultPolicy             = "passthrough"
+	DefaultPolicyTimeout      = 30 * time.Second
+	DefaultActionTimeout      = 30 * time.Second
+	DefaultActionRedisEnabled = false
+	DefaultRedisAddress       = "localhost:6379"
+	DefaultRedisChannel       = "gatewayd-actions"
 )

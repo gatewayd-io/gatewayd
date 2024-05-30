@@ -2,12 +2,16 @@ package act
 
 import (
 	"bytes"
+	"context"
+	"sync"
 	"testing"
 	"time"
 
 	sdkAct "github.com/gatewayd-io/gatewayd-plugin-sdk/act"
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
+	"github.com/hashicorp/go-hclog"
+	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cast"
 	"github.com/stretchr/testify/assert"
@@ -703,6 +707,88 @@ func Test_Run_Async(t *testing.T) {
 	assert.Contains(t, out.String(), "{\"level\":\"debug\",\"action\":\"log\",\"executionMode\":\"async\",\"message\":\"Running action\"}") //nolint:lll
 	// The following is the expected log output from the run function of the async action.
 	assert.Contains(t, out.String(), "{\"level\":\"info\",\"async\":true,\"message\":\"test\"}")
+}
+
+// Test_Run_Async tests the Run function of the act registry with an asynchronous action.
+func Test_Run_Async_Redis(t *testing.T) {
+	out := bytes.Buffer{}
+	logger := zerolog.New(&out)
+	hclogger := hclog.New(&hclog.LoggerOptions{
+		Output:     &out,
+		Level:      hclog.Debug,
+		JSONFormat: true,
+	})
+
+	rdbAddr := createTestRedis(t)
+	rdb := redis.NewClient(&redis.Options{
+		Addr: rdbAddr,
+	})
+	publisher, err := NewPublisher(Publisher{
+		Logger:      logger,
+		RedisDB:     rdb,
+		ChannelName: "test-async-chan",
+	})
+	require.NoError(t, err)
+
+	var waitGroup sync.WaitGroup
+	actRegistry := NewActRegistry(
+		Registry{
+			Signals:              BuiltinSignals(),
+			Policies:             BuiltinPolicies(),
+			Actions:              BuiltinActions(),
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               logger,
+			TaskPublisher:        publisher,
+		})
+	assert.NotNil(t, actRegistry)
+
+	consumer, err := sdkAct.NewConsumer(hclogger, rdb, 5, "test-async-chan")
+	require.NoError(t, err)
+
+	require.NoError(t, consumer.Subscribe(context.Background(), func(ctx context.Context, task []byte) error {
+		err := actRegistry.runAsyncActionFn(ctx, task)
+		waitGroup.Done()
+		return err
+	}))
+
+	outputs := actRegistry.Apply([]sdkAct.Signal{
+		*sdkAct.Log("info", "test", map[string]any{"async": true}),
+	}, sdkAct.Hook{
+		Name:     "HOOK_NAME_ON_TRAFFIC_FROM_CLIENT",
+		Priority: 1000,
+		Params:   map[string]any{},
+		Result:   map[string]any{},
+	})
+	assert.NotNil(t, outputs)
+	assert.Equal(t, "log", outputs[0].MatchedPolicy)
+	assert.Equal(t,
+		map[string]interface{}{
+			"async":   true,
+			"level":   "info",
+			"log":     true,
+			"message": "test",
+		},
+		outputs[0].Metadata,
+	)
+	assert.False(t, outputs[0].Sync)
+	assert.True(t, cast.ToBool(outputs[0].Verdict))
+	assert.False(t, outputs[0].Terminal)
+	waitGroup.Add(1)
+	result, err := actRegistry.Run(outputs[0], WithResult(map[string]any{"key": "value"}))
+	waitGroup.Wait()
+	assert.Equal(t, err, gerr.ErrAsyncAction, "expected async action sentinel error")
+	assert.Nil(t, result, "expected nil result")
+
+	time.Sleep(time.Millisecond) // wait for async action to complete
+
+	// The following is the expected log output from running the async action.
+	assert.Contains(t, out.String(), "{\"level\":\"debug\",\"action\":\"log\",\"executionMode\":\"async\",\"message\":\"Running action\"}") //nolint:lll
+	// The following is the expected log output from the run function of the async action.
+	assert.Contains(t, out.String(), "{\"level\":\"info\",\"async\":true,\"message\":\"test\"}")
+	// The following is expected log from consumer in hclog format
+	assert.Contains(t, out.String(), "\"@level\":\"debug\",\"@message\":\"async redis task processed successfully\"")
 }
 
 // Test_Run_NilRegistry tests the Run function of the action with a nil output object.

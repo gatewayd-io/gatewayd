@@ -237,6 +237,11 @@ func (c *Config) LoadDefaults(ctx context.Context) *gerr.GatewayDError {
 		PolicyTimeout:       DefaultPolicyTimeout,
 		ActionTimeout:       DefaultActionTimeout,
 		Policies:            []Policy{},
+		ActionRedis: ActionRedisConfig{
+			Enabled: DefaultActionRedisEnabled,
+			Address: DefaultRedisAddress,
+			Channel: DefaultRedisChannel,
+		},
 	}
 
 	if c.GlobalKoanf != nil {

@@ -2,7 +2,9 @@ package act
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"slices"
 	"time"
 
@@ -26,12 +28,37 @@ type Registry struct {
 	// Default timeout for running actions
 	DefaultActionTimeout time.Duration
 
+	// TaskPublisher is the publisher for async actions.
+	// if not given, will invoke simple goroutine to run async actions
+	TaskPublisher *Publisher
+
 	Signals           map[string]*sdkAct.Signal
 	Policies          map[string]*sdkAct.Policy
 	Actions           map[string]*sdkAct.Action
 	DefaultPolicyName string
 	DefaultPolicy     *sdkAct.Policy
 	DefaultSignal     *sdkAct.Signal
+}
+
+type AsyncActionMessage struct {
+	Output *sdkAct.Output
+	Params []sdkAct.Parameter
+}
+
+// Encode marshals the AsyncActionMessage struct to JSON bytes.
+func (msg *AsyncActionMessage) Encode() ([]byte, error) {
+	marshaled, err := json.Marshal(msg)
+	if err != nil {
+		return nil, fmt.Errorf("error encoding JSON: %w", err)
+	}
+	return marshaled, nil
+}
+
+func (msg *AsyncActionMessage) Decode(data []byte) error {
+	if err := json.Unmarshal(data, msg); err != nil {
+		return fmt.Errorf("error decoding JSON: %w", err)
+	}
+	return nil
 }
 
 var _ IRegistry = (*Registry)(nil)
@@ -88,6 +115,7 @@ func NewActRegistry(
 		Actions:              registry.Actions,
 		DefaultPolicy:        registry.Policies[registry.DefaultPolicyName],
 		DefaultSignal:        registry.Signals[registry.DefaultPolicyName],
+		TaskPublisher:        registry.TaskPublisher,
 	}
 }
 
@@ -234,6 +262,18 @@ func (r *Registry) Run(
 	if action.Timeout > 0 {
 		timeout = time.Duration(action.Timeout) * time.Second
 	}
+
+	// if task is async and publisher is configured, publish it and do not run it
+	if r.TaskPublisher != nil && !action.Sync {
+		err := r.publishTask(output, params)
+		if err != nil {
+			r.Logger.Error().Err(err).Msg("Error publishing async action")
+			return nil, gerr.ErrPublishingAsyncAction
+		}
+		return nil, gerr.ErrAsyncAction
+	}
+
+	// no publisher, or sync action. run the action
 	var ctx context.Context
 	var cancel context.CancelFunc
 	// if timeout is zero, then the context should not have timeout
@@ -248,12 +288,81 @@ func (r *Registry) Run(
 		return runActionWithTimeout(ctx, action, output, params, r.Logger)
 	}
 
-	// Run the action asynchronously.
+	// If the action is asynchronous, run it in a goroutine and return the sentinel error.
 	go func() {
 		defer cancel()
 		_, _ = runActionWithTimeout(ctx, action, output, params, r.Logger)
 	}()
+
 	return nil, gerr.ErrAsyncAction
+}
+
+func (r *Registry) publishTask(output *sdkAct.Output, params []sdkAct.Parameter) error {
+	r.Logger.Debug().Msg("Publishing async action")
+	task := AsyncActionMessage{
+		Output: output,
+		Params: params,
+	}
+	payload, err := task.Encode()
+	if err != nil {
+		return err
+	}
+	if err := r.TaskPublisher.Publish(context.Background(), payload); err != nil {
+		return fmt.Errorf("error publishing task: %w", err)
+	}
+	return nil
+}
+
+func (r *Registry) runAsyncActionFn(ctx context.Context, message []byte) error {
+	msg := &AsyncActionMessage{}
+	if err := msg.Decode(message); err != nil {
+		r.Logger.Error().Err(err).Msg("Error decoding message")
+		return err
+	}
+	output := msg.Output
+	params := msg.Params
+
+	// In certain cases, the output may be nil, for example, if the policy
+	// evaluation fails. In this case, the run is aborted.
+	if output == nil {
+		// This should never happen, since the output is always set by the registry
+		// to be the default policy if no signals are provided.
+		r.Logger.Debug().Msg("Output is nil, run aborted")
+		return gerr.ErrNilPointer
+	}
+
+	action, ok := r.Actions[output.MatchedPolicy]
+	if !ok {
+		r.Logger.Warn().Str("matchedPolicy", output.MatchedPolicy).Msg(
+			"Action does not exist, run aborted")
+		return gerr.ErrActionNotExist
+	}
+
+	// Prepend the logger to the parameters if needed.
+	if len(params) == 0 || params[0].Key != LoggerKey {
+		params = append([]sdkAct.Parameter{WithLogger(r.Logger)}, params...)
+	} else {
+		params[0] = WithLogger(r.Logger)
+	}
+
+	timeout := r.DefaultActionTimeout
+	if action.Timeout > 0 {
+		timeout = time.Duration(action.Timeout) * time.Second
+	}
+	var ctxWithTimeout context.Context
+	var cancel context.CancelFunc
+	// if timeout is zero, then the context should not have timeout
+	if timeout > 0 {
+		ctxWithTimeout, cancel = context.WithTimeout(ctx, timeout)
+	} else {
+		ctxWithTimeout, cancel = context.WithCancel(ctx)
+	}
+	// If the action is synchronous, run it and return the result immediately.
+	defer cancel()
+	if _, err := runActionWithTimeout(ctxWithTimeout, action, output, params, r.Logger); err != nil {
+		return err
+	}
+	return nil
 }
 
 func runActionWithTimeout(
@@ -293,7 +402,7 @@ func runActionWithTimeout(
 	}
 }
 
-// WithLogger returns a parameter with the logger to be used by the action.
+// WithLogger returns a parameter with the Logger to be used by the action.
 // This is automatically prepended to the parameters when running an action.
 func WithLogger(logger zerolog.Logger) sdkAct.Parameter {
 	return sdkAct.Parameter{
