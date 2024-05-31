@@ -23,7 +23,7 @@ loggers:
 metrics:
   default:
     enabled: True
-    address: localhost:9090
+    address: 0.0.0.0:9090
     path: /metrics
     readHeaderTimeout: 10s # duration, prevents Slowloris attacks
     timeout: 10s # duration
@@ -68,6 +68,6 @@ servers:
 
 api:
   enabled: True
-  httpAddress: localhost:18080
+  httpAddress: 0.0.0.0:18080
   grpcNetwork: tcp
-  grpcAddress: localhost:19090
+  grpcAddress: 0.0.0.0:19090
