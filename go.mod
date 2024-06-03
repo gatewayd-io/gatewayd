@@ -9,7 +9,7 @@ require (
 	github.com/cybercyst/go-scaffold v0.0.0-20240404115540-744e601147cd
 	github.com/envoyproxy/protoc-gen-validate v1.0.4
 	github.com/gatewayd-io/gatewayd-plugin-sdk v0.2.15
-	github.com/getsentry/sentry-go v0.27.0
+	github.com/getsentry/sentry-go v0.28.0
 	github.com/go-co-op/gocron v1.37.0
 	github.com/google/go-github/v53 v53.2.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.20.0
@@ -94,7 +94,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/kevinburke/ssh_config v1.2.0 // indirect
-	github.com/klauspost/compress v1.16.0 // indirect
+	github.com/klauspost/compress v1.17.7 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
