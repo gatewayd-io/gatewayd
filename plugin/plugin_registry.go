@@ -503,7 +503,7 @@ func (reg *Registry) LoadPlugins(
 
 		reg.Logger.Debug().Str("name", plugin.ID.Name).Msg("Plugin loaded")
 		if _, err := plugin.Start(); err != nil {
-			reg.Logger.Debug().Str("name", plugin.ID.Name).Err(err).Msg(
+			reg.Logger.Error().Str("name", plugin.ID.Name).Err(err).Msg(
 				"Failed to start plugin")
 			plugin.Client.Kill()
 			continue
