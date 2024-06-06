@@ -17,7 +17,7 @@ services:
       # The architecture of the GatewayD and plugins to install.
       # Default: amd64
       # Possible values: amd64 or arm64
-      - ARCH=amd64
+      # - ARCH=amd64
       - REDIS_URL=redis://redis:6379/0
   postgres:
     image: postgres:latest
@@ -38,14 +38,7 @@ services:
       retries: 5
   gatewayd:
     image: gatewaydio/gatewayd:latest
-    command:
-      [
-        "run",
-        "--config",
-        "/gatewayd-files/gatewayd.yaml",
-        "--plugin-config",
-        "/gatewayd-files/gatewayd_plugins.yaml",
-      ]
+    command: ["run", "--config", "/gatewayd-files/gatewayd.yaml", "--plugin-config", "/gatewayd-files/gatewayd_plugins.yaml"]
     environment:
       # For more information about the environment variables, see:
       # https://docs.gatewayd.io/using-gatewayd/configuration#environment-variables
