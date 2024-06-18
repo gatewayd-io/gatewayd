@@ -41,4 +41,5 @@ cmd/docs/*
 # docker-compose
 gatewayd-files/
 cmd/gatewayd-plugin-cache-linux-amd64-*
+tempo-data
 
