@@ -68,19 +68,20 @@ const (
 	DefaultPluginStartTimeout      = 1 * time.Minute
 
 	// Client constants.
-	DefaultNetwork            = "tcp"
-	DefaultAddress            = "localhost:5432"
-	DefaultChunkSize          = 8192
-	DefaultReceiveDeadline    = 0 // 0 means no deadline (timeout)
-	DefaultSendDeadline       = 0
-	DefaultTCPKeepAlivePeriod = 30 * time.Second
-	DefaultTCPKeepAlive       = false
-	DefaultReceiveTimeout     = 0
-	DefaultDialTimeout        = 60 * time.Second
-	DefaultRetries            = 3
-	DefaultBackoff            = 1 * time.Second
-	DefaultBackoffMultiplier  = 2.0
-	DefaultDisableBackoffCaps = false
+	DefaultNetwork              = "tcp"
+	DefaultAddress              = "localhost:5432"
+	DefaultChunkSize            = 8192
+	DefaultReceiveDeadline      = 0 // 0 means no deadline (timeout)
+	DefaultSendDeadline         = 0
+	DefaultTCPKeepAlivePeriod   = 30 * time.Second
+	DefaultTCPKeepAlive         = false
+	DefaultReceiveTimeout       = 0
+	DefaultDialTimeout          = 60 * time.Second
+	DefaultRetries              = 3
+	DefaultBackoff              = 1 * time.Second
+	DefaultBackoffMultiplier    = 2.0
+	DefaultDisableBackoffCaps   = false
+	DefaultDistributionStrategy = "round-robin"
 
 	// Pool constants.
 	EmptyPoolCapacity        = 0

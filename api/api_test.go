@@ -333,7 +333,7 @@ func TestGetServers(t *testing.T) {
 			Options: network.Option{
 				EnableTicker: false,
 			},
-			Proxy:            proxy,
+			Proxies:          []network.IProxy{proxy},
 			Logger:           zerolog.Logger{},
 			PluginRegistry:   pluginRegistry,
 			PluginTimeout:    config.DefaultPluginTimeout,

@@ -91,7 +91,7 @@ func TestRunServer(t *testing.T) {
 	err = newPool.Put(client3.ID, client3)
 	assert.Nil(t, err)
 
-	// Create a proxy with a fixed buffer newPool.
+	// Create a proxies with a fixed buffer newPool.
 	proxy := NewProxy(
 		context.Background(),
 		Proxy{
@@ -114,11 +114,13 @@ func TestRunServer(t *testing.T) {
 			Options: Option{
 				EnableTicker: true,
 			},
-			Proxy:            proxy,
-			Logger:           logger,
-			PluginRegistry:   pluginRegistry,
-			PluginTimeout:    config.DefaultPluginTimeout,
-			HandshakeTimeout: config.DefaultHandshakeTimeout,
+			Proxies:                  []IProxy{proxy},
+			Logger:                   logger,
+			PluginRegistry:           pluginRegistry,
+			PluginTimeout:            config.DefaultPluginTimeout,
+			HandshakeTimeout:         config.DefaultHandshakeTimeout,
+			DistributionStrategyName: config.DefaultDistributionStrategy,
+			SplitStrategy:            map[string]uint{"server a": 30, "server b": 70},
 		},
 	)
 	assert.NotNil(t, server)
