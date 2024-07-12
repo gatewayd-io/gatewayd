@@ -73,7 +73,6 @@ linters-settings:
           - "github.com/cybercyst/go-scaffold/pkg/scaffold"
           - "golang.org/x/text/cases"
           - "golang.org/x/text/language"
-          - "gopkg.in/yaml.v2"
           - "github.com/redis/go-redis/v9"
       test:
         files:

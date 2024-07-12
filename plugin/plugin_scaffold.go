@@ -11,7 +11,7 @@ import (
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 const (
