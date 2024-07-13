@@ -96,6 +96,10 @@ type Proxy struct {
 	HealthCheckPeriod time.Duration `json:"healthCheckPeriod" jsonschema:"oneof_type=string;integer"`
 }
 
+type LoadBalancer struct {
+	Strategy string `json:"strategy"`
+}
+
 type Server struct {
 	EnableTicker     bool          `json:"enableTicker"`
 	TickInterval     time.Duration `json:"tickInterval" jsonschema:"oneof_type=string;integer"`
@@ -105,6 +109,8 @@ type Server struct {
 	CertFile         string        `json:"certFile"`
 	KeyFile          string        `json:"keyFile"`
 	HandshakeTimeout time.Duration `json:"handshakeTimeout" jsonschema:"oneof_type=string;integer"`
+	Proxies          []string      `json:"proxies"`
+	LoadBalancer     LoadBalancer  `json:"loadBalancer"`
 }
 
 type API struct {

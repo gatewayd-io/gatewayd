@@ -160,6 +160,8 @@ func (c *Config) LoadDefaults(ctx context.Context) *gerr.GatewayDError {
 		CertFile:         "",
 		KeyFile:          "",
 		HandshakeTimeout: DefaultHandshakeTimeout,
+		Proxies:          []string{Default},
+		LoadBalancer:     LoadBalancer{Strategy: DefaultLoadBalancerStrategy},
 	}
 
 	c.globalDefaults = GlobalConfig{
@@ -413,7 +415,7 @@ func (c *Config) ValidateGlobalConfig(ctx context.Context) *gerr.GatewayDError {
 	}
 
 	var errors []*gerr.GatewayDError
-	configObjects := []string{"loggers", "metrics", "clients", "pools", "proxies", "servers"}
+	configObjects := []string{"loggers", "metrics", "servers"}
 	sort.Strings(configObjects)
 	var seenConfigObjects []string
 
@@ -441,16 +443,14 @@ func (c *Config) ValidateGlobalConfig(ctx context.Context) *gerr.GatewayDError {
 		seenConfigObjects = append(seenConfigObjects, "metrics")
 	}
 
+	clientConfigGroups := make(map[string]bool)
 	for configGroup := range globalConfig.Clients {
+		clientConfigGroups[configGroup] = true
 		if globalConfig.Clients[configGroup] == nil {
 			err := fmt.Errorf("\"clients.%s\" is nil or empty", configGroup)
 			span.RecordError(err)
 			errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
 		}
-	}
-
-	if len(globalConfig.Clients) > 1 {
-		seenConfigObjects = append(seenConfigObjects, "clients")
 	}
 
 	for configGroup := range globalConfig.Pools {
@@ -461,20 +461,12 @@ func (c *Config) ValidateGlobalConfig(ctx context.Context) *gerr.GatewayDError {
 		}
 	}
 
-	if len(globalConfig.Pools) > 1 {
-		seenConfigObjects = append(seenConfigObjects, "pools")
-	}
-
 	for configGroup := range globalConfig.Proxies {
 		if globalConfig.Proxies[configGroup] == nil {
 			err := fmt.Errorf("\"proxies.%s\" is nil or empty", configGroup)
 			span.RecordError(err)
 			errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
 		}
-	}
-
-	if len(globalConfig.Proxies) > 1 {
-		seenConfigObjects = append(seenConfigObjects, "proxies")
 	}
 
 	for configGroup := range globalConfig.Servers {
@@ -487,6 +479,50 @@ func (c *Config) ValidateGlobalConfig(ctx context.Context) *gerr.GatewayDError {
 
 	if len(globalConfig.Servers) > 1 {
 		seenConfigObjects = append(seenConfigObjects, "servers")
+	}
+
+	// ValidateClientsPoolsProxies checks if all configGroups in globalConfig.Pools and globalConfig.Proxies
+	// are referenced in globalConfig.Clients.
+	if len(globalConfig.Clients) != len(globalConfig.Pools) || len(globalConfig.Clients) != len(globalConfig.Proxies) {
+		err := goerrors.New("clients, pools, and proxies do not have the same number of objects")
+		span.RecordError(err)
+		errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
+	}
+
+	// Check if all proxies are referenced in client configuration
+	for configGroup := range globalConfig.Proxies {
+		if !clientConfigGroups[configGroup] {
+			err := fmt.Errorf(`"proxies.%s" not referenced in client configuration`, configGroup)
+			span.RecordError(err)
+			errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
+		}
+	}
+
+	// Check if all pools are referenced in client configuration
+	for configGroup := range globalConfig.Pools {
+		if !clientConfigGroups[configGroup] {
+			err := fmt.Errorf(`"pools.%s" not referenced in client configuration`, configGroup)
+			span.RecordError(err)
+			errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
+		}
+	}
+
+	// Each server configuration should have at least one proxy defined.
+	// Each proxy in the server configuration should be referenced in proxies configuration.
+	for serverName, server := range globalConfig.Servers {
+		if len(server.Proxies) == 0 {
+			err := fmt.Errorf(`"servers.%s" has no proxies defined`, serverName)
+			span.RecordError(err)
+			errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
+			continue
+		}
+		for _, proxyName := range server.Proxies {
+			if _, exists := c.globalDefaults.Proxies[proxyName]; !exists {
+				err := fmt.Errorf(`"servers.%s" references a non-existent proxy "%s"`, serverName, proxyName)
+				span.RecordError(err)
+				errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
+			}
+		}
 	}
 
 	sort.Strings(seenConfigObjects)

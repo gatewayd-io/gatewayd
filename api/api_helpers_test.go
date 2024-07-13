@@ -49,7 +49,7 @@ func getAPIConfig() *API {
 			context.Background(),
 			network.Server{
 				Logger:         logger,
-				Proxy:          defaultProxy,
+				Proxies:        []network.IProxy{defaultProxy},
 				PluginRegistry: pluginReg,
 				PluginTimeout:  config.DefaultPluginTimeout,
 				Network:        "tcp",

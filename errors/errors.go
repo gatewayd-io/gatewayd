@@ -53,6 +53,8 @@ const (
 	ErrCodeMsgEncodeError
 	ErrCodeConfigParseError
 	ErrCodePublishAsyncAction
+	ErrCodeLoadBalancerStrategyNotFound
+	ErrCodeNoProxiesAvailable
 )
 
 var (
@@ -192,6 +194,14 @@ var (
 	}
 	ErrPublishingAsyncAction = &GatewayDError{
 		ErrCodePublishAsyncAction, "error publishing async action", nil,
+	}
+
+	ErrLoadBalancerStrategyNotFound = &GatewayDError{
+		ErrCodeLoadBalancerStrategyNotFound, "The specified load balancer strategy does not exist.", nil,
+	}
+
+	ErrNoProxiesAvailable = &GatewayDError{
+		ErrCodeNoProxiesAvailable, "No proxies available to select.", nil,
 	}
 
 	// Unwrapped errors.

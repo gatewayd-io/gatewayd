@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/require"
@@ -14,6 +15,11 @@ type WriteBuffer struct {
 	Bytes []byte
 
 	msgStart int
+}
+
+// MockProxy implements the IProxy interface for testing purposes.
+type MockProxy struct {
+	name string
 }
 
 // writeStartupMsg writes a PostgreSQL startup message to the buffer.
@@ -153,4 +159,52 @@ func CollectAndComparePrometheusMetrics(t *testing.T) {
 	)
 	require.NoError(t,
 		testutil.GatherAndCompare(prometheus.DefaultGatherer, strings.NewReader(want), metrics...))
+}
+
+// Connect is a mock implementation of the Connect method in the IProxy interface.
+func (m MockProxy) Connect(_ *ConnWrapper) *gerr.GatewayDError {
+	return nil
+}
+
+// Disconnect is a mock implementation of the Disconnect method in the IProxy interface.
+func (m MockProxy) Disconnect(_ *ConnWrapper) *gerr.GatewayDError {
+	return nil
+}
+
+// PassThroughToServer is a mock implementation of the PassThroughToServer method in the IProxy interface.
+func (m MockProxy) PassThroughToServer(_ *ConnWrapper, _ *Stack) *gerr.GatewayDError {
+	return nil
+}
+
+// PassThroughToClient is a mock implementation of the PassThroughToClient method in the IProxy interface.
+func (m MockProxy) PassThroughToClient(_ *ConnWrapper, _ *Stack) *gerr.GatewayDError {
+	return nil
+}
+
+// IsHealthy is a mock implementation of the IsHealthy method in the IProxy interface.
+func (m MockProxy) IsHealthy(_ *Client) (*Client, *gerr.GatewayDError) {
+	return nil, nil
+}
+
+// IsExhausted is a mock implementation of the IsExhausted method in the IProxy interface.
+func (m MockProxy) IsExhausted() bool {
+	return false
+}
+
+// Shutdown is a mock implementation of the Shutdown method in the IProxy interface.
+func (m MockProxy) Shutdown() {}
+
+// AvailableConnectionsString is a mock implementation of the AvailableConnectionsString method in the IProxy interface.
+func (m MockProxy) AvailableConnectionsString() []string {
+	return nil
+}
+
+// BusyConnectionsString is a mock implementation of the BusyConnectionsString method in the IProxy interface.
+func (m MockProxy) BusyConnectionsString() []string {
+	return nil
+}
+
+// GetName returns the name of the MockProxy.
+func (m MockProxy) GetName() string {
+	return m.name
 }

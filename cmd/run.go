@@ -871,6 +871,18 @@ var runCmd = &cobra.Command{
 		// Create and initialize servers.
 		for name, cfg := range conf.Global.Servers {
 			logger := loggers[name]
+
+			var serverProxies []network.IProxy
+			for _, proxyName := range cfg.Proxies {
+				proxy, exists := proxies[proxyName]
+				if !exists {
+					// This may occur if a proxy referenced in the server configuration does not exist.
+					logger.Error().Str("proxyName", proxyName).Msg("failed to find proxy configuration")
+					return
+				}
+				serverProxies = append(serverProxies, proxy)
+			}
+
 			servers[name] = network.NewServer(
 				runCtx,
 				network.Server{
@@ -885,14 +897,15 @@ var runCmd = &cobra.Command{
 						// Can be used to send keepalive messages to the client.
 						EnableTicker: cfg.EnableTicker,
 					},
-					Proxy:            proxies[name],
-					Logger:           logger,
-					PluginRegistry:   pluginRegistry,
-					PluginTimeout:    conf.Plugin.Timeout,
-					EnableTLS:        cfg.EnableTLS,
-					CertFile:         cfg.CertFile,
-					KeyFile:          cfg.KeyFile,
-					HandshakeTimeout: cfg.HandshakeTimeout,
+					Proxies:                  serverProxies,
+					Logger:                   logger,
+					PluginRegistry:           pluginRegistry,
+					PluginTimeout:            conf.Plugin.Timeout,
+					EnableTLS:                cfg.EnableTLS,
+					CertFile:                 cfg.CertFile,
+					KeyFile:                  cfg.KeyFile,
+					HandshakeTimeout:         cfg.HandshakeTimeout,
+					LoadbalancerStrategyName: cfg.LoadBalancer.Strategy,
 				},
 			)
 
