@@ -42,6 +42,11 @@ func castToPrimitiveTypes(args map[string]interface{}) map[string]interface{} {
 				}
 			}
 			args[key] = array
+		case map[string]map[string]interface{}:
+			for _, valuemap := range value {
+				// Recursively cast nested maps.
+				args[key] = castToPrimitiveTypes(valuemap)
+			}
 		// TODO: Add more types here as needed.
 		default:
 			args[key] = value

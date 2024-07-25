@@ -210,8 +210,8 @@ func TestGetPluginsWithEmptyPluginRegistry(t *testing.T) {
 
 func TestPools(t *testing.T) {
 	api := API{
-		Pools: map[string]*pool.Pool{
-			config.Default: pool.NewPool(context.TODO(), config.EmptyPoolCapacity),
+		Pools: map[string]map[string]*pool.Pool{
+			config.Default: {config.DefaultPool: pool.NewPool(context.TODO(), config.EmptyPoolCapacity)},
 		},
 		ctx: context.Background(),
 	}
@@ -224,7 +224,7 @@ func TestPools(t *testing.T) {
 
 func TestPoolsWithEmptyPools(t *testing.T) {
 	api := API{
-		Pools: map[string]*pool.Pool{},
+		Pools: map[string]map[string]*pool.Pool{},
 		ctx:   context.Background(),
 	}
 	pools, err := api.GetPools(context.Background(), &emptypb.Empty{})
@@ -258,8 +258,8 @@ func TestGetProxies(t *testing.T) {
 	)
 
 	api := API{
-		Proxies: map[string]*network.Proxy{
-			config.Default: proxy,
+		Proxies: map[string]map[string]*network.Proxy{
+			config.Default: {config.DefaultProxy: proxy},
 		},
 		ctx: context.Background(),
 	}
@@ -342,11 +342,11 @@ func TestGetServers(t *testing.T) {
 	)
 
 	api := API{
-		Pools: map[string]*pool.Pool{
-			config.Default: newPool,
+		Pools: map[string]map[string]*pool.Pool{
+			config.Default: {config.DefaultPool: newPool},
 		},
-		Proxies: map[string]*network.Proxy{
-			config.Default: proxy,
+		Proxies: map[string]map[string]*network.Proxy{
+			config.Default: {config.DefaultProxy: proxy},
 		},
 		Servers: map[string]*network.Server{
 			config.Default: server,

@@ -109,7 +109,6 @@ type Server struct {
 	CertFile         string        `json:"certFile"`
 	KeyFile          string        `json:"keyFile"`
 	HandshakeTimeout time.Duration `json:"handshakeTimeout" jsonschema:"oneof_type=string;integer"`
-	Proxies          []string      `json:"proxies"`
 	LoadBalancer     LoadBalancer  `json:"loadBalancer"`
 }
 
@@ -121,11 +120,11 @@ type API struct {
 }
 
 type GlobalConfig struct {
-	API     API                 `json:"api"`
-	Loggers map[string]*Logger  `json:"loggers"`
-	Clients map[string]*Client  `json:"clients"`
-	Pools   map[string]*Pool    `json:"pools"`
-	Proxies map[string]*Proxy   `json:"proxies"`
-	Servers map[string]*Server  `json:"servers"`
-	Metrics map[string]*Metrics `json:"metrics"`
+	API     API                           `json:"api"`
+	Loggers map[string]*Logger            `json:"loggers"`
+	Clients map[string]map[string]*Client `json:"clients"`
+	Pools   map[string]map[string]*Pool   `json:"pools"`
+	Proxies map[string]map[string]*Proxy  `json:"proxies"`
+	Servers map[string]*Server            `json:"servers"`
+	Metrics map[string]*Metrics           `json:"metrics"`
 }

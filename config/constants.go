@@ -35,6 +35,9 @@ const (
 const (
 	// Config constants.
 	Default               = "default"
+	DefaultClient         = "client"
+	DefaultPool           = "pool"
+	DefaultProxy          = "proxy"
 	EnvPrefix             = "GATEWAYD_"
 	TracerName            = "gatewayd"
 	GlobalConfigFilename  = "gatewayd.yaml"

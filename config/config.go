@@ -160,16 +160,15 @@ func (c *Config) LoadDefaults(ctx context.Context) *gerr.GatewayDError {
 		CertFile:         "",
 		KeyFile:          "",
 		HandshakeTimeout: DefaultHandshakeTimeout,
-		Proxies:          []string{Default},
 		LoadBalancer:     LoadBalancer{Strategy: DefaultLoadBalancerStrategy},
 	}
 
 	c.globalDefaults = GlobalConfig{
 		Loggers: map[string]*Logger{Default: &defaultLogger},
 		Metrics: map[string]*Metrics{Default: &defaultMetric},
-		Clients: map[string]*Client{Default: &defaultClient},
-		Pools:   map[string]*Pool{Default: &defaultPool},
-		Proxies: map[string]*Proxy{Default: &defaultProxy},
+		Clients: map[string]map[string]*Client{Default: {DefaultClient: &defaultClient}},
+		Pools:   map[string]map[string]*Pool{Default: {DefaultPool: &defaultPool}},
+		Proxies: map[string]map[string]*Proxy{Default: {DefaultProxy: &defaultProxy}},
 		Servers: map[string]*Server{Default: &defaultServer},
 		API: API{
 			Enabled:     true,
@@ -202,11 +201,11 @@ func (c *Config) LoadDefaults(ctx context.Context) *gerr.GatewayDError {
 					case "metrics":
 						c.globalDefaults.Metrics[configGroupKey] = &defaultMetric
 					case "clients":
-						c.globalDefaults.Clients[configGroupKey] = &defaultClient
+						c.globalDefaults.Clients[configGroupKey][DefaultClient] = &defaultClient
 					case "pools":
-						c.globalDefaults.Pools[configGroupKey] = &defaultPool
+						c.globalDefaults.Pools[configGroupKey][DefaultPool] = &defaultPool
 					case "proxies":
-						c.globalDefaults.Proxies[configGroupKey] = &defaultProxy
+						c.globalDefaults.Proxies[configGroupKey][DefaultProxy] = &defaultProxy
 					case "servers":
 						c.globalDefaults.Servers[configGroupKey] = &defaultServer
 					case "api":
@@ -509,21 +508,21 @@ func (c *Config) ValidateGlobalConfig(ctx context.Context) *gerr.GatewayDError {
 
 	// Each server configuration should have at least one proxy defined.
 	// Each proxy in the server configuration should be referenced in proxies configuration.
-	for serverName, server := range globalConfig.Servers {
-		if len(server.Proxies) == 0 {
-			err := fmt.Errorf(`"servers.%s" has no proxies defined`, serverName)
-			span.RecordError(err)
-			errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
-			continue
-		}
-		for _, proxyName := range server.Proxies {
-			if _, exists := c.globalDefaults.Proxies[proxyName]; !exists {
-				err := fmt.Errorf(`"servers.%s" references a non-existent proxy "%s"`, serverName, proxyName)
-				span.RecordError(err)
-				errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
-			}
-		}
-	}
+	// for serverName, server := range globalConfig.Servers {
+	// 	if len(server.Proxies) == 0 {
+	// 		err := fmt.Errorf(`"servers.%s" has no proxies defined`, serverName)
+	// 		span.RecordError(err)
+	// 		errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
+	// 		continue
+	// 	}
+	// 	for _, proxyName := range server.Proxies {
+	// 		if _, exists := c.globalDefaults.Proxies[proxyName]; !exists {
+	// 			err := fmt.Errorf(`"servers.%s" references a non-existent proxy "%s"`, serverName, proxyName)
+	// 			span.RecordError(err)
+	// 			errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
+	// 		}
+	// 	}
+	// }
 
 	sort.Strings(seenConfigObjects)
 
