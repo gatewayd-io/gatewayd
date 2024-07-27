@@ -12,15 +12,30 @@ metrics:
 
 clients:
   default:
-    address: localhost:5432
+    active-writes:
+      address: localhost:5432
+      network: tcp
+      tcpKeepAlive: False
+      tcpKeepAlivePeriod: 30s
+      receiveChunkSize: 8192
+      receiveDeadline: 0s
+      receiveTimeout: 0s
+      sendDeadline: 0s
+      dialTimeout: 60s
+      retries: 3
+      backoff: 1s
+      backoffMultiplier: 2.0
+      disableBackoffCaps: false
 
 pools:
   default:
-    size: 10
+    active-writes:
+      size: 10
 
 proxies:
   default:
-    healthCheckPeriod: 60s # duration
+    active-writes:
+      healthCheckPeriod: 60s # duration
 
 servers:
   default:
