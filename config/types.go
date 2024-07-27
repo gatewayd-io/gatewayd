@@ -44,19 +44,19 @@ type ActionRedisConfig struct {
 }
 
 type Client struct {
-	Network            string        `json:"network" jsonschema:"enum=tcp,enum=udp,enum=unix"`
-	Address            string        `json:"address"`
-	TCPKeepAlive       bool          `json:"tcpKeepAlive"`
-	TCPKeepAlivePeriod time.Duration `json:"tcpKeepAlivePeriod" jsonschema:"oneof_type=string;integer"`
-	ReceiveChunkSize   int           `json:"receiveChunkSize"`
-	ReceiveDeadline    time.Duration `json:"receiveDeadline" jsonschema:"oneof_type=string;integer"`
-	ReceiveTimeout     time.Duration `json:"receiveTimeout" jsonschema:"oneof_type=string;integer"`
-	SendDeadline       time.Duration `json:"sendDeadline" jsonschema:"oneof_type=string;integer"`
-	DialTimeout        time.Duration `json:"dialTimeout" jsonschema:"oneof_type=string;integer"`
-	Retries            int           `json:"retries"`
-	Backoff            time.Duration `json:"backoff" jsonschema:"oneof_type=string;integer"`
-	BackoffMultiplier  float64       `json:"backoffMultiplier"`
-	DisableBackoffCaps bool          `json:"disableBackoffCaps"`
+	Network            string        `json:"network" jsonschema:"enum=tcp,enum=udp,enum=unix" yaml:"network"`
+	Address            string        `json:"address" yaml:"address"`
+	TCPKeepAlive       bool          `json:"tcpKeepAlive" yaml:"tcpKeepAlive"`
+	TCPKeepAlivePeriod time.Duration `json:"tcpKeepAlivePeriod" jsonschema:"oneof_type=string;integer" yaml:"tcpKeepAlivePeriod"`
+	ReceiveChunkSize   int           `json:"receiveChunkSize" yaml:"receiveChunkSize"`
+	ReceiveDeadline    time.Duration `json:"receiveDeadline" jsonschema:"oneof_type=string;integer" yaml:"receiveDeadline"`
+	ReceiveTimeout     time.Duration `json:"receiveTimeout" jsonschema:"oneof_type=string;integer" yaml:"receiveTimeout"`
+	SendDeadline       time.Duration `json:"sendDeadline" jsonschema:"oneof_type=string;integer" yaml:"sendDeadline"`
+	DialTimeout        time.Duration `json:"dialTimeout" jsonschema:"oneof_type=string;integer" yaml:"dialTimeout"`
+	Retries            int           `json:"retries" yaml:"retries"`
+	Backoff            time.Duration `json:"backoff" jsonschema:"oneof_type=string;integer" yaml:"backoff"`
+	BackoffMultiplier  float64       `json:"backoffMultiplier" yaml:"backoffMultiplier"`
+	DisableBackoffCaps bool          `json:"disableBackoffCaps" yaml:"disableBackoffCaps"`
 }
 
 type Logger struct {
@@ -89,11 +89,11 @@ type Metrics struct {
 }
 
 type Pool struct {
-	Size int `json:"size"`
+	Size int `json:"size" yaml:"size"`
 }
 
 type Proxy struct {
-	HealthCheckPeriod time.Duration `json:"healthCheckPeriod" jsonschema:"oneof_type=string;integer"`
+	HealthCheckPeriod time.Duration `json:"healthCheckPeriod" jsonschema:"oneof_type=string;integer" yaml:"healthCheckPeriod"`
 }
 
 type LoadBalancer struct {
