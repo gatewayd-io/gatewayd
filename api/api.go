@@ -207,9 +207,9 @@ func (a *API) GetPools(ctx context.Context, _ *emptypb.Empty) (*structpb.Struct,
 
 	pools := make(map[string]any)
 
-	for configGroupName, configurationGroupPools := range a.Pools {
+	for configGroupName, configGroupPools := range a.Pools {
 		groupPools := make(map[string]any)
-		for name, p := range configurationGroupPools {
+		for name, p := range configGroupPools {
 			groupPools[name] = map[string]any{
 				"cap":  p.Cap(),
 				"size": p.Size(),

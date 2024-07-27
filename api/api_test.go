@@ -211,7 +211,7 @@ func TestGetPluginsWithEmptyPluginRegistry(t *testing.T) {
 func TestPools(t *testing.T) {
 	api := API{
 		Pools: map[string]map[string]*pool.Pool{
-			config.Default: {config.DefaultPool: pool.NewPool(context.TODO(), config.EmptyPoolCapacity)},
+			config.Default: {config.DefaultConfigurationBlock: pool.NewPool(context.TODO(), config.EmptyPoolCapacity)},
 		},
 		ctx: context.Background(),
 	}
@@ -219,7 +219,12 @@ func TestPools(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEmpty(t, pools)
 	assert.NotEmpty(t, pools.AsMap())
-	assert.Equal(t, pools.AsMap()[config.Default], map[string]interface{}{"cap": 0.0, "size": 0.0})
+
+	assert.Equal(t,
+		map[string]interface{}{
+			config.DefaultConfigurationBlock: map[string]interface{}{"cap": 0.0, "size": 0.0},
+		},
+		pools.AsMap()[config.Default])
 }
 
 func TestPoolsWithEmptyPools(t *testing.T) {
@@ -259,7 +264,7 @@ func TestGetProxies(t *testing.T) {
 
 	api := API{
 		Proxies: map[string]map[string]*network.Proxy{
-			config.Default: {config.DefaultProxy: proxy},
+			config.Default: {config.DefaultConfigurationBlock: proxy},
 		},
 		ctx: context.Background(),
 	}
@@ -268,10 +273,14 @@ func TestGetProxies(t *testing.T) {
 	assert.NotEmpty(t, proxies)
 	assert.NotEmpty(t, proxies.AsMap())
 
-	if defaultProxy, ok := proxies.AsMap()[config.Default].(map[string]interface{}); ok {
-		assert.Equal(t, 1.0, defaultProxy["total"])
-		assert.NotEmpty(t, defaultProxy["available"])
-		assert.Empty(t, defaultProxy["busy"])
+	if defaultProxies, ok := proxies.AsMap()[config.Default].(map[string]interface{}); ok {
+		if defaultProxy, ok := defaultProxies[config.DefaultConfigurationBlock].(map[string]interface{}); ok {
+			assert.Equal(t, 1.0, defaultProxy["total"])
+			assert.NotEmpty(t, defaultProxy["available"])
+			assert.Empty(t, defaultProxy["busy"])
+		} else {
+			t.Errorf("proxies.default.%s is not found or not a map", config.DefaultConfigurationBlock)
+		}
 	} else {
 		t.Errorf("proxies.default is not found or not a map")
 	}
@@ -343,10 +352,10 @@ func TestGetServers(t *testing.T) {
 
 	api := API{
 		Pools: map[string]map[string]*pool.Pool{
-			config.Default: {config.DefaultPool: newPool},
+			config.Default: {config.DefaultConfigurationBlock: newPool},
 		},
 		Proxies: map[string]map[string]*network.Proxy{
-			config.Default: {config.DefaultProxy: proxy},
+			config.Default: {config.DefaultConfigurationBlock: proxy},
 		},
 		Servers: map[string]*network.Server{
 			config.Default: server,

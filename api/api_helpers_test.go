@@ -74,10 +74,10 @@ func getAPIConfig() *API {
 		),
 		PluginRegistry: pluginReg,
 		Pools: map[string]map[string]*pool.Pool{
-			config.Default: {config.DefaultPool: defaultPool},
+			config.Default: {config.DefaultConfigurationBlock: defaultPool},
 		},
 		Proxies: map[string]map[string]*network.Proxy{
-			config.Default: {config.DefaultProxy: defaultProxy},
+			config.Default: {config.DefaultConfigurationBlock: defaultProxy},
 		},
 		Servers: servers,
 	}

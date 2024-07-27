@@ -34,14 +34,12 @@ const (
 
 const (
 	// Config constants.
-	Default               = "default"
-	DefaultClient         = "client"
-	DefaultPool           = "pool"
-	DefaultProxy          = "proxy"
-	EnvPrefix             = "GATEWAYD_"
-	TracerName            = "gatewayd"
-	GlobalConfigFilename  = "gatewayd.yaml"
-	PluginsConfigFilename = "gatewayd_plugins.yaml"
+	Default                   = "default"
+	DefaultConfigurationBlock = "active-writes"
+	EnvPrefix                 = "GATEWAYD_"
+	TracerName                = "gatewayd"
+	GlobalConfigFilename      = "gatewayd.yaml"
+	PluginsConfigFilename     = "gatewayd_plugins.yaml"
 
 	// Logger constants.
 	DefaultLogOutput         = "console"

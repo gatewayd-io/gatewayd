@@ -622,8 +622,8 @@ var runCmd = &cobra.Command{
 
 		_, span = otel.Tracer(config.TracerName).Start(runCtx, "Create pools and clients")
 		// Create and initialize pools of connections.
-		for configGroupName, group := range conf.Global.Pools {
-			for name, cfg := range group {
+		for configGroupName, configGroup := range conf.Global.Pools {
+			for configBlockName, cfg := range configGroup {
 				logger := loggers[configGroupName]
 				// Check if the pool size is greater than zero.
 				currentPoolSize := config.If(
@@ -640,10 +640,10 @@ var runCmd = &cobra.Command{
 				if _, ok := pools[configGroupName]; !ok {
 					pools[configGroupName] = make(map[string]*pool.Pool)
 				}
-				pools[configGroupName][name] = pool.NewPool(runCtx, currentPoolSize)
+				pools[configGroupName][configBlockName] = pool.NewPool(runCtx, currentPoolSize)
 
 				span.AddEvent("Create pool", trace.WithAttributes(
-					attribute.String("name", name),
+					attribute.String("name", configBlockName),
 					attribute.Int("size", currentPoolSize),
 				))
 
@@ -652,50 +652,50 @@ var runCmd = &cobra.Command{
 				}
 
 				// Get client config from the config file.
-				if clientConfig, ok := conf.Global.Clients[configGroupName][name]; !ok {
+				if clientConfig, ok := conf.Global.Clients[configGroupName][configBlockName]; !ok {
 					// This ensures that the default client config is used if the pool name is not
 					// found in the clients section.
-					clients[configGroupName][name] = conf.Global.Clients[config.Default][config.DefaultClient]
+					clients[configGroupName][configBlockName] = conf.Global.Clients[config.Default][config.DefaultConfigurationBlock]
 				} else {
 					// Merge the default client config with the one from the pool.
-					clients[configGroupName][name] = clientConfig
+					clients[configGroupName][configBlockName] = clientConfig
 				}
 
 				// Fill the missing and zero values with the default ones.
-				clients[configGroupName][name].TCPKeepAlivePeriod = config.If(
-					clients[configGroupName][name].TCPKeepAlivePeriod > 0,
-					clients[configGroupName][name].TCPKeepAlivePeriod,
+				clients[configGroupName][configBlockName].TCPKeepAlivePeriod = config.If(
+					clients[configGroupName][configBlockName].TCPKeepAlivePeriod > 0,
+					clients[configGroupName][configBlockName].TCPKeepAlivePeriod,
 					config.DefaultTCPKeepAlivePeriod,
 				)
-				clients[configGroupName][name].ReceiveDeadline = config.If(
-					clients[configGroupName][name].ReceiveDeadline > 0,
-					clients[configGroupName][name].ReceiveDeadline,
+				clients[configGroupName][configBlockName].ReceiveDeadline = config.If(
+					clients[configGroupName][configBlockName].ReceiveDeadline > 0,
+					clients[configGroupName][configBlockName].ReceiveDeadline,
 					config.DefaultReceiveDeadline,
 				)
-				clients[configGroupName][name].ReceiveTimeout = config.If(
-					clients[configGroupName][name].ReceiveTimeout > 0,
-					clients[configGroupName][name].ReceiveTimeout,
+				clients[configGroupName][configBlockName].ReceiveTimeout = config.If(
+					clients[configGroupName][configBlockName].ReceiveTimeout > 0,
+					clients[configGroupName][configBlockName].ReceiveTimeout,
 					config.DefaultReceiveTimeout,
 				)
-				clients[configGroupName][name].SendDeadline = config.If(
-					clients[configGroupName][name].SendDeadline > 0,
-					clients[configGroupName][name].SendDeadline,
+				clients[configGroupName][configBlockName].SendDeadline = config.If(
+					clients[configGroupName][configBlockName].SendDeadline > 0,
+					clients[configGroupName][configBlockName].SendDeadline,
 					config.DefaultSendDeadline,
 				)
-				clients[configGroupName][name].ReceiveChunkSize = config.If(
-					clients[configGroupName][name].ReceiveChunkSize > 0,
-					clients[configGroupName][name].ReceiveChunkSize,
+				clients[configGroupName][configBlockName].ReceiveChunkSize = config.If(
+					clients[configGroupName][configBlockName].ReceiveChunkSize > 0,
+					clients[configGroupName][configBlockName].ReceiveChunkSize,
 					config.DefaultChunkSize,
 				)
-				clients[configGroupName][name].DialTimeout = config.If(
-					clients[configGroupName][name].DialTimeout > 0,
-					clients[configGroupName][name].DialTimeout,
+				clients[configGroupName][configBlockName].DialTimeout = config.If(
+					clients[configGroupName][configBlockName].DialTimeout > 0,
+					clients[configGroupName][configBlockName].DialTimeout,
 					config.DefaultDialTimeout,
 				)
 
 				// Add clients to the pool.
 				for range currentPoolSize {
-					clientConfig := clients[configGroupName][name]
+					clientConfig := clients[configGroupName][configBlockName]
 					client := network.NewClient(
 						runCtx, clientConfig, logger,
 						network.NewRetry(
@@ -708,14 +708,14 @@ var runCmd = &cobra.Command{
 								),
 								BackoffMultiplier:  clientConfig.BackoffMultiplier,
 								DisableBackoffCaps: clientConfig.DisableBackoffCaps,
-								Logger:             loggers[name],
+								Logger:             loggers[configBlockName],
 							},
 						),
 					)
 
 					if client != nil {
 						eventOptions := trace.WithAttributes(
-							attribute.String("name", name),
+							attribute.String("name", configBlockName),
 							attribute.String("network", client.Network),
 							attribute.String("address", client.Address),
 							attribute.Int("receiveChunkSize", client.ReceiveChunkSize),
@@ -769,7 +769,7 @@ var runCmd = &cobra.Command{
 							span.RecordError(err)
 						}
 
-						err = pools[configGroupName][name].Put(client.ID, client)
+						err = pools[configGroupName][configBlockName].Put(client.ID, client)
 						if err != nil {
 							logger.Error().Err(err).Msg("Failed to add client to the pool")
 							span.RecordError(err)
@@ -800,11 +800,11 @@ var runCmd = &cobra.Command{
 
 				// Verify that the pool is properly populated.
 				logger.Info().Fields(map[string]interface{}{
-					"name":  name,
-					"count": strconv.Itoa(pools[configGroupName][name].Size()),
+					"name":  configBlockName,
+					"count": strconv.Itoa(pools[configGroupName][configBlockName].Size()),
 				}).Msg("There are clients available in the pool")
 
-				if pools[configGroupName][name].Size() != currentPoolSize {
+				if pools[configGroupName][configBlockName].Size() != currentPoolSize {
 					logger.Error().Msg(
 						"The pool size is incorrect, either because " +
 							"the clients cannot connect due to no network connectivity " +
@@ -819,24 +819,23 @@ var runCmd = &cobra.Command{
 
 				_, err = pluginRegistry.Run(
 					pluginTimeoutCtx,
-					map[string]interface{}{"name": name, "size": currentPoolSize},
+					map[string]interface{}{"name": configBlockName, "size": currentPoolSize},
 					v1.HookName_HOOK_NAME_ON_NEW_POOL)
 				if err != nil {
 					logger.Error().Err(err).Msg("Failed to run OnNewPool hooks")
 					span.RecordError(err)
 				}
 			}
-
 		}
 
 		span.End()
 
 		_, span = otel.Tracer(config.TracerName).Start(runCtx, "Create proxies")
 		// Create and initialize prefork proxies with each pool of clients.
-		for configGroupName, group := range conf.Global.Proxies {
-			for name, cfg := range group {
+		for configGroupName, configGroup := range conf.Global.Proxies {
+			for configBlcokName, cfg := range configGroup {
 				logger := loggers[configGroupName]
-				clientConfig := clients[configGroupName][name]
+				clientConfig := clients[configGroupName][configBlcokName]
 
 				// Fill the missing and zero value with the default one.
 				cfg.HealthCheckPeriod = config.If(
@@ -849,10 +848,10 @@ var runCmd = &cobra.Command{
 					proxies[configGroupName] = make(map[string]*network.Proxy)
 				}
 
-				proxies[configGroupName][name] = network.NewProxy(
+				proxies[configGroupName][configBlcokName] = network.NewProxy(
 					runCtx,
 					network.Proxy{
-						AvailableConnections: pools[configGroupName][name],
+						AvailableConnections: pools[configGroupName][configBlcokName],
 						PluginRegistry:       pluginRegistry,
 						HealthCheckPeriod:    cfg.HealthCheckPeriod,
 						ClientConfig:         clientConfig,
@@ -862,7 +861,7 @@ var runCmd = &cobra.Command{
 				)
 
 				span.AddEvent("Create proxy", trace.WithAttributes(
-					attribute.String("name", name),
+					attribute.String("name", configBlcokName),
 					attribute.String("healthCheckPeriod", cfg.HealthCheckPeriod.String()),
 				))
 
