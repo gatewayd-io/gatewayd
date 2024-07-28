@@ -833,9 +833,9 @@ var runCmd = &cobra.Command{
 		_, span = otel.Tracer(config.TracerName).Start(runCtx, "Create proxies")
 		// Create and initialize prefork proxies with each pool of clients.
 		for configGroupName, configGroup := range conf.Global.Proxies {
-			for configBlcokName, cfg := range configGroup {
+			for configBlockName, cfg := range configGroup {
 				logger := loggers[configGroupName]
-				clientConfig := clients[configGroupName][configBlcokName]
+				clientConfig := clients[configGroupName][configBlockName]
 
 				// Fill the missing and zero value with the default one.
 				cfg.HealthCheckPeriod = config.If(
@@ -848,10 +848,10 @@ var runCmd = &cobra.Command{
 					proxies[configGroupName] = make(map[string]*network.Proxy)
 				}
 
-				proxies[configGroupName][configBlcokName] = network.NewProxy(
+				proxies[configGroupName][configBlockName] = network.NewProxy(
 					runCtx,
 					network.Proxy{
-						AvailableConnections: pools[configGroupName][configBlcokName],
+						AvailableConnections: pools[configGroupName][configBlockName],
 						PluginRegistry:       pluginRegistry,
 						HealthCheckPeriod:    cfg.HealthCheckPeriod,
 						ClientConfig:         clientConfig,
@@ -861,7 +861,7 @@ var runCmd = &cobra.Command{
 				)
 
 				span.AddEvent("Create proxy", trace.WithAttributes(
-					attribute.String("name", configBlcokName),
+					attribute.String("name", configBlockName),
 					attribute.String("healthCheckPeriod", cfg.HealthCheckPeriod.String()),
 				))
 
