@@ -201,7 +201,7 @@ func (a *API) GetPlugins(context.Context, *emptypb.Empty) (*v1.PluginConfigs, er
 }
 
 // GetPools returns the pool configuration of the GatewayD.
-func (a *API) GetPools(context.Context, _ *emptypb.Empty) (*structpb.Struct, error) {
+func (a *API) GetPools(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
 	_, span := otel.Tracer(config.TracerName).Start(a.ctx, "Get Pools")
 	defer span.End()
 
