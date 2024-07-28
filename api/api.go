@@ -281,13 +281,14 @@ func (a *API) GetServers(context.Context, *emptypb.Empty) (*structpb.Struct, err
 	_, span := otel.Tracer(config.TracerName).Start(a.ctx, "Get Servers")
 	defer span.End()
 
-	servers := make(map[string]interface{})
+	servers := make(map[string]any)
 	for name, server := range a.Servers {
-		servers[name] = map[string]interface{}{
+		servers[name] = map[string]any{
 			"network":      server.Network,
 			"address":      server.Address,
 			"status":       uint(server.Status),
 			"tickInterval": server.TickInterval.Nanoseconds(),
+			"loadBalancer": map[string]any{"strategy": server.LoadbalancerStrategyName},
 		}
 	}
 

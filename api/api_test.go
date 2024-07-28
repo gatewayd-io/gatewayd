@@ -342,11 +342,12 @@ func TestGetServers(t *testing.T) {
 			Options: network.Option{
 				EnableTicker: false,
 			},
-			Proxies:          []network.IProxy{proxy},
-			Logger:           zerolog.Logger{},
-			PluginRegistry:   pluginRegistry,
-			PluginTimeout:    config.DefaultPluginTimeout,
-			HandshakeTimeout: config.DefaultHandshakeTimeout,
+			Proxies:                  []network.IProxy{proxy},
+			Logger:                   zerolog.Logger{},
+			PluginRegistry:           pluginRegistry,
+			PluginTimeout:            config.DefaultPluginTimeout,
+			HandshakeTimeout:         config.DefaultHandshakeTimeout,
+			LoadbalancerStrategyName: config.DefaultLoadBalancerStrategy,
 		},
 	)
 
@@ -376,6 +377,9 @@ func TestGetServers(t *testing.T) {
 		tickInterval, ok := defaultServer["tickInterval"].(float64)
 		assert.True(t, ok)
 		assert.Equal(t, config.DefaultTickInterval.Nanoseconds(), int64(tickInterval))
+		loadBalancer, ok := defaultServer["loadBalancer"].(map[string]interface{})
+		assert.True(t, ok)
+		assert.Equal(t, config.DefaultLoadBalancerStrategy, loadBalancer["strategy"])
 	} else {
 		t.Errorf("servers.default is not found or not a map")
 	}
