@@ -160,14 +160,15 @@ func (c *Config) LoadDefaults(ctx context.Context) *gerr.GatewayDError {
 		CertFile:         "",
 		KeyFile:          "",
 		HandshakeTimeout: DefaultHandshakeTimeout,
+		LoadBalancer:     LoadBalancer{Strategy: DefaultLoadBalancerStrategy},
 	}
 
 	c.globalDefaults = GlobalConfig{
 		Loggers: map[string]*Logger{Default: &defaultLogger},
 		Metrics: map[string]*Metrics{Default: &defaultMetric},
-		Clients: map[string]*Client{Default: &defaultClient},
-		Pools:   map[string]*Pool{Default: &defaultPool},
-		Proxies: map[string]*Proxy{Default: &defaultProxy},
+		Clients: map[string]map[string]*Client{Default: {DefaultConfigurationBlock: &defaultClient}},
+		Pools:   map[string]map[string]*Pool{Default: {DefaultConfigurationBlock: &defaultPool}},
+		Proxies: map[string]map[string]*Proxy{Default: {DefaultConfigurationBlock: &defaultProxy}},
 		Servers: map[string]*Server{Default: &defaultServer},
 		API: API{
 			Enabled:     true,
@@ -188,27 +189,59 @@ func (c *Config) LoadDefaults(ctx context.Context) *gerr.GatewayDError {
 		}
 
 		for configObject, configMap := range gconf {
-			if configGroup, ok := configMap.(map[string]interface{}); ok {
-				for configGroupKey := range configGroup {
-					if configGroupKey == Default {
+			configGroup, ok := configMap.(map[string]any)
+			if !ok {
+				err := fmt.Errorf("invalid config structure for %s", configObject)
+				span.RecordError(err)
+				span.End()
+				return gerr.ErrConfigParseError.Wrap(err)
+			}
+
+			if configObject == "api" {
+				// Handle API configuration separately
+				// TODO: Add support for multiple API config groups.
+				continue
+			}
+
+			for configGroupKey, configBlocksInterface := range configGroup {
+				if configGroupKey == Default {
+					continue
+				}
+
+				configBlocks, ok := configBlocksInterface.(map[string]any)
+				if !ok {
+					err := fmt.Errorf("invalid config blocks structure for %s.%s", configObject, configGroupKey)
+					span.RecordError(err)
+					span.End()
+					return gerr.ErrConfigParseError.Wrap(err)
+				}
+
+				for configBlockKey := range configBlocks {
+					if configBlockKey == DefaultConfigurationBlock {
 						continue
 					}
-
 					switch configObject {
 					case "loggers":
 						c.globalDefaults.Loggers[configGroupKey] = &defaultLogger
 					case "metrics":
 						c.globalDefaults.Metrics[configGroupKey] = &defaultMetric
 					case "clients":
-						c.globalDefaults.Clients[configGroupKey] = &defaultClient
+						if c.globalDefaults.Clients[configGroupKey] == nil {
+							c.globalDefaults.Clients[configGroupKey] = make(map[string]*Client)
+						}
+						c.globalDefaults.Clients[configGroupKey][configBlockKey] = &defaultClient
 					case "pools":
-						c.globalDefaults.Pools[configGroupKey] = &defaultPool
+						if c.globalDefaults.Pools[configGroupKey] == nil {
+							c.globalDefaults.Pools[configGroupKey] = make(map[string]*Pool)
+						}
+						c.globalDefaults.Pools[configGroupKey][configBlockKey] = &defaultPool
 					case "proxies":
-						c.globalDefaults.Proxies[configGroupKey] = &defaultProxy
+						if c.globalDefaults.Proxies[configGroupKey] == nil {
+							c.globalDefaults.Proxies[configGroupKey] = make(map[string]*Proxy)
+						}
+						c.globalDefaults.Proxies[configGroupKey][configBlockKey] = &defaultProxy
 					case "servers":
 						c.globalDefaults.Servers[configGroupKey] = &defaultServer
-					case "api":
-						// TODO: Add support for multiple API config groups.
 					default:
 						err := fmt.Errorf("unknown config object: %s", configObject)
 						span.RecordError(err)
@@ -441,11 +474,18 @@ func (c *Config) ValidateGlobalConfig(ctx context.Context) *gerr.GatewayDError {
 		seenConfigObjects = append(seenConfigObjects, "metrics")
 	}
 
-	for configGroup := range globalConfig.Clients {
-		if globalConfig.Clients[configGroup] == nil {
-			err := fmt.Errorf("\"clients.%s\" is nil or empty", configGroup)
-			span.RecordError(err)
-			errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
+	clientConfigGroups := make(map[string]map[string]bool)
+	for configGroupName, configGroups := range globalConfig.Clients {
+		if _, ok := clientConfigGroups[configGroupName]; !ok {
+			clientConfigGroups[configGroupName] = make(map[string]bool)
+		}
+		for configGroup := range configGroups {
+			clientConfigGroups[configGroupName][configGroup] = true
+			if globalConfig.Clients[configGroupName][configGroup] == nil {
+				err := fmt.Errorf("\"clients.%s\" is nil or empty", configGroup)
+				span.RecordError(err)
+				errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
+			}
 		}
 	}
 
@@ -467,7 +507,7 @@ func (c *Config) ValidateGlobalConfig(ctx context.Context) *gerr.GatewayDError {
 
 	for configGroup := range globalConfig.Proxies {
 		if globalConfig.Proxies[configGroup] == nil {
-			err := fmt.Errorf("\"proxies.%s\" is nil or empty", configGroup)
+			err := fmt.Errorf(`"proxies.%s" is nil or empty`, configGroup)
 			span.RecordError(err)
 			errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
 		}
@@ -487,6 +527,36 @@ func (c *Config) ValidateGlobalConfig(ctx context.Context) *gerr.GatewayDError {
 
 	if len(globalConfig.Servers) > 1 {
 		seenConfigObjects = append(seenConfigObjects, "servers")
+	}
+
+	// ValidateClientsPoolsProxies checks if all configGroups in globalConfig.Pools and globalConfig.Proxies
+	// are referenced in globalConfig.Clients.
+	if len(globalConfig.Clients) != len(globalConfig.Pools) || len(globalConfig.Clients) != len(globalConfig.Proxies) {
+		err := goerrors.New("clients, pools, and proxies do not have the same number of objects")
+		span.RecordError(err)
+		errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
+	}
+
+	// Check if all proxies are referenced in client configuration
+	for configGroupName, configGroups := range globalConfig.Proxies {
+		for configGroup := range configGroups {
+			if !clientConfigGroups[configGroupName][configGroup] {
+				err := fmt.Errorf(`"proxies.%s" not referenced in client configuration`, configGroup)
+				span.RecordError(err)
+				errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
+			}
+		}
+	}
+
+	// Check if all pools are referenced in client configuration
+	for configGroupName, configGroups := range globalConfig.Pools {
+		for configGroup := range configGroups {
+			if !clientConfigGroups[configGroupName][configGroup] {
+				err := fmt.Errorf(`"pools.%s" not referenced in client configuration`, configGroup)
+				span.RecordError(err)
+				errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
+			}
+		}
 	}
 
 	sort.Strings(seenConfigObjects)

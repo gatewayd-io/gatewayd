@@ -114,9 +114,9 @@ func (gc GlobalConfig) Filter(groupName string) *GlobalConfig {
 	}
 	return &GlobalConfig{
 		Loggers: map[string]*Logger{groupName: gc.Loggers[groupName]},
-		Clients: map[string]*Client{groupName: gc.Clients[groupName]},
-		Pools:   map[string]*Pool{groupName: gc.Pools[groupName]},
-		Proxies: map[string]*Proxy{groupName: gc.Proxies[groupName]},
+		Clients: map[string]map[string]*Client{groupName: gc.Clients[groupName]},
+		Pools:   map[string]map[string]*Pool{groupName: gc.Pools[groupName]},
+		Proxies: map[string]map[string]*Proxy{groupName: gc.Proxies[groupName]},
 		Servers: map[string]*Server{groupName: gc.Servers[groupName]},
 		Metrics: map[string]*Metrics{groupName: gc.Metrics[groupName]},
 		API:     gc.API,

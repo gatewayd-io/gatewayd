@@ -38,8 +38,8 @@ type API struct {
 	Options        *Options
 	Config         *config.Config
 	PluginRegistry *plugin.Registry
-	Pools          map[string]*pool.Pool
-	Proxies        map[string]*network.Proxy
+	Pools          map[string]map[string]*pool.Pool
+	Proxies        map[string]map[string]*network.Proxy
 	Servers        map[string]*network.Server
 }
 
@@ -205,12 +205,17 @@ func (a *API) GetPools(context.Context, *emptypb.Empty) (*structpb.Struct, error
 	_, span := otel.Tracer(config.TracerName).Start(a.ctx, "Get Pools")
 	defer span.End()
 
-	pools := make(map[string]interface{})
-	for name, p := range a.Pools {
-		pools[name] = map[string]interface{}{
-			"cap":  p.Cap(),
-			"size": p.Size(),
+	pools := make(map[string]any)
+
+	for configGroupName, configGroupPools := range a.Pools {
+		groupPools := make(map[string]any)
+		for name, p := range configGroupPools {
+			groupPools[name] = map[string]any{
+				"cap":  p.Cap(),
+				"size": p.Size(),
+			}
 		}
+		pools[configGroupName] = groupPools
 	}
 
 	poolsConfig, err := structpb.NewStruct(pools)
@@ -231,23 +236,31 @@ func (a *API) GetProxies(context.Context, *emptypb.Empty) (*structpb.Struct, err
 	_, span := otel.Tracer(config.TracerName).Start(a.ctx, "Get Proxies")
 	defer span.End()
 
-	proxies := make(map[string]interface{})
-	for name, proxy := range a.Proxies {
-		available := make([]interface{}, 0)
-		for _, c := range proxy.AvailableConnectionsString() {
-			available = append(available, c)
+	// Create a new map to hold the flattened proxies data
+	proxies := make(map[string]any)
+
+	for configGroupName, configGroupProxies := range a.Proxies {
+		// Create a map for each configuration group
+		groupProxies := make(map[string]any)
+		for name, proxy := range configGroupProxies {
+			available := make([]any, 0)
+			for _, c := range proxy.AvailableConnectionsString() {
+				available = append(available, c)
+			}
+
+			busy := make([]any, 0)
+			for _, conn := range proxy.BusyConnectionsString() {
+				busy = append(busy, conn)
+			}
+
+			groupProxies[name] = map[string]any{
+				"available": available,
+				"busy":      busy,
+				"total":     len(available) + len(busy),
+			}
 		}
 
-		busy := make([]interface{}, 0)
-		for _, conn := range proxy.BusyConnectionsString() {
-			busy = append(busy, conn)
-		}
-
-		proxies[name] = map[string]interface{}{
-			"available": available,
-			"busy":      busy,
-			"total":     len(available) + len(busy),
-		}
+		proxies[configGroupName] = groupProxies
 	}
 
 	proxiesConfig, err := structpb.NewStruct(proxies)
@@ -268,13 +281,14 @@ func (a *API) GetServers(context.Context, *emptypb.Empty) (*structpb.Struct, err
 	_, span := otel.Tracer(config.TracerName).Start(a.ctx, "Get Servers")
 	defer span.End()
 
-	servers := make(map[string]interface{})
+	servers := make(map[string]any)
 	for name, server := range a.Servers {
-		servers[name] = map[string]interface{}{
+		servers[name] = map[string]any{
 			"network":      server.Network,
 			"address":      server.Address,
 			"status":       uint(server.Status),
 			"tickInterval": server.TickInterval.Nanoseconds(),
+			"loadBalancer": map[string]any{"strategy": server.LoadbalancerStrategyName},
 		}
 	}
 

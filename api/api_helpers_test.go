@@ -49,7 +49,7 @@ func getAPIConfig() *API {
 			context.Background(),
 			network.Server{
 				Logger:         logger,
-				Proxy:          defaultProxy,
+				Proxies:        []network.IProxy{defaultProxy},
 				PluginRegistry: pluginReg,
 				PluginTimeout:  config.DefaultPluginTimeout,
 				Network:        "tcp",
@@ -73,11 +73,11 @@ func getAPIConfig() *API {
 			},
 		),
 		PluginRegistry: pluginReg,
-		Pools: map[string]*pool.Pool{
-			config.Default: defaultPool,
+		Pools: map[string]map[string]*pool.Pool{
+			config.Default: {config.DefaultConfigurationBlock: defaultPool},
 		},
-		Proxies: map[string]*network.Proxy{
-			config.Default: defaultProxy,
+		Proxies: map[string]map[string]*network.Proxy{
+			config.Default: {config.DefaultConfigurationBlock: defaultProxy},
 		},
 		Servers: servers,
 	}

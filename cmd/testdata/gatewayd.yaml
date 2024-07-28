@@ -18,21 +18,52 @@ metrics:
 
 clients:
   default:
-    address: localhost:5432
+    activeWrites:
+      address: localhost:5432
+      network: tcp
+      tcpKeepAlive: False
+      tcpKeepAlivePeriod: 30s # duration
+      receiveChunkSize: 8192
+      receiveDeadline: 0s # duration, 0ms/0s means no deadline
+      receiveTimeout: 0s # duration, 0ms/0s means no timeout
+      sendDeadline: 0s # duration, 0ms/0s means no deadline
+      dialTimeout: 60s # duration
+      # Retry configuration
+      retries: 3 # 0 means no retry and fail immediately on the first attempt
+      backoff: 1s # duration
+      backoffMultiplier: 2.0 # 0 means no backoff
+      disableBackoffCaps: false
   test:
-    address: localhost:5433
+    write:
+      address: localhost:5433
+      network: tcp
+      tcpKeepAlive: False
+      tcpKeepAlivePeriod: 30s # duration
+      receiveChunkSize: 8192
+      receiveDeadline: 0s # duration, 0ms/0s means no deadline
+      receiveTimeout: 0s # duration, 0ms/0s means no timeout
+      sendDeadline: 0s # duration, 0ms/0s means no deadline
+      dialTimeout: 60s # duration
+      retries: 3 # 0 means no retry and fail immediately on the first attempt
+      backoff: 1s # duration
+      backoffMultiplier: 2.0 # 0 means no backoff
+      disableBackoffCaps: false
 
 pools:
   default:
-    size: 10
+    activeWrites:
+      size: 10
   test:
-    size: 10
+    write:
+      size: 10
 
 proxies:
   default:
-    healthCheckPeriod: 60s # duration
+    activeWrites:
+      healthCheckPeriod: 60s # duration
   test:
-    healthCheckPeriod: 60s # duration
+    write:
+      healthCheckPeriod: 60s # duration
 
 servers:
   default:

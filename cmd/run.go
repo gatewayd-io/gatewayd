@@ -76,9 +76,9 @@ var (
 	UsageReportURL = "localhost:59091"
 
 	loggers              = make(map[string]zerolog.Logger)
-	pools                = make(map[string]*pool.Pool)
-	clients              = make(map[string]*config.Client)
-	proxies              = make(map[string]*network.Proxy)
+	pools                = make(map[string]map[string]*pool.Pool)
+	clients              = make(map[string]map[string]*config.Client)
+	proxies              = make(map[string]map[string]*network.Proxy)
 	servers              = make(map[string]*network.Server)
 	healthCheckScheduler = gocron.NewScheduler(time.UTC)
 
@@ -622,199 +622,209 @@ var runCmd = &cobra.Command{
 
 		_, span = otel.Tracer(config.TracerName).Start(runCtx, "Create pools and clients")
 		// Create and initialize pools of connections.
-		for name, cfg := range conf.Global.Pools {
-			logger := loggers[name]
-			// Check if the pool size is greater than zero.
-			currentPoolSize := config.If(
-				cfg.Size > 0,
-				// Check if the pool size is greater than the minimum pool size.
-				config.If(
-					cfg.Size > config.MinimumPoolSize,
-					cfg.Size,
-					config.MinimumPoolSize,
-				),
-				config.DefaultPoolSize,
-			)
-			pools[name] = pool.NewPool(runCtx, currentPoolSize)
-
-			span.AddEvent("Create pool", trace.WithAttributes(
-				attribute.String("name", name),
-				attribute.Int("size", currentPoolSize),
-			))
-
-			// Get client config from the config file.
-			if clientConfig, ok := conf.Global.Clients[name]; !ok {
-				// This ensures that the default client config is used if the pool name is not
-				// found in the clients section.
-				clients[name] = conf.Global.Clients[config.Default]
-			} else {
-				// Merge the default client config with the one from the pool.
-				clients[name] = clientConfig
-			}
-
-			// Fill the missing and zero values with the default ones.
-			clients[name].TCPKeepAlivePeriod = config.If(
-				clients[name].TCPKeepAlivePeriod > 0,
-				clients[name].TCPKeepAlivePeriod,
-				config.DefaultTCPKeepAlivePeriod,
-			)
-			clients[name].ReceiveDeadline = config.If(
-				clients[name].ReceiveDeadline > 0,
-				clients[name].ReceiveDeadline,
-				config.DefaultReceiveDeadline,
-			)
-			clients[name].ReceiveTimeout = config.If(
-				clients[name].ReceiveTimeout > 0,
-				clients[name].ReceiveTimeout,
-				config.DefaultReceiveTimeout,
-			)
-			clients[name].SendDeadline = config.If(
-				clients[name].SendDeadline > 0,
-				clients[name].SendDeadline,
-				config.DefaultSendDeadline,
-			)
-			clients[name].ReceiveChunkSize = config.If(
-				clients[name].ReceiveChunkSize > 0,
-				clients[name].ReceiveChunkSize,
-				config.DefaultChunkSize,
-			)
-			clients[name].DialTimeout = config.If(
-				clients[name].DialTimeout > 0,
-				clients[name].DialTimeout,
-				config.DefaultDialTimeout,
-			)
-
-			// Add clients to the pool.
-			for range currentPoolSize {
-				clientConfig := clients[name]
-				client := network.NewClient(
-					runCtx, clientConfig, logger,
-					network.NewRetry(
-						network.Retry{
-							Retries: clientConfig.Retries,
-							Backoff: config.If(
-								clientConfig.Backoff > 0,
-								clientConfig.Backoff,
-								config.DefaultBackoff,
-							),
-							BackoffMultiplier:  clientConfig.BackoffMultiplier,
-							DisableBackoffCaps: clientConfig.DisableBackoffCaps,
-							Logger:             loggers[name],
-						},
+		for configGroupName, configGroup := range conf.Global.Pools {
+			for configBlockName, cfg := range configGroup {
+				logger := loggers[configGroupName]
+				// Check if the pool size is greater than zero.
+				currentPoolSize := config.If(
+					cfg.Size > 0,
+					// Check if the pool size is greater than the minimum pool size.
+					config.If(
+						cfg.Size > config.MinimumPoolSize,
+						cfg.Size,
+						config.MinimumPoolSize,
 					),
+					config.DefaultPoolSize,
 				)
 
-				if client != nil {
-					eventOptions := trace.WithAttributes(
-						attribute.String("name", name),
-						attribute.String("network", client.Network),
-						attribute.String("address", client.Address),
-						attribute.Int("receiveChunkSize", client.ReceiveChunkSize),
-						attribute.String("receiveDeadline", client.ReceiveDeadline.String()),
-						attribute.String("receiveTimeout", client.ReceiveTimeout.String()),
-						attribute.String("sendDeadline", client.SendDeadline.String()),
-						attribute.String("dialTimeout", client.DialTimeout.String()),
-						attribute.Bool("tcpKeepAlive", client.TCPKeepAlive),
-						attribute.String("tcpKeepAlivePeriod", client.TCPKeepAlivePeriod.String()),
-						attribute.String("localAddress", client.LocalAddr()),
-						attribute.String("remoteAddress", client.RemoteAddr()),
-						attribute.Int("retries", clientConfig.Retries),
-						attribute.String("backoff", client.Retry().Backoff.String()),
-						attribute.Float64("backoffMultiplier", clientConfig.BackoffMultiplier),
-						attribute.Bool("disableBackoffCaps", clientConfig.DisableBackoffCaps),
+				if _, ok := pools[configGroupName]; !ok {
+					pools[configGroupName] = make(map[string]*pool.Pool)
+				}
+				pools[configGroupName][configBlockName] = pool.NewPool(runCtx, currentPoolSize)
+
+				span.AddEvent("Create pool", trace.WithAttributes(
+					attribute.String("name", configBlockName),
+					attribute.Int("size", currentPoolSize),
+				))
+
+				if _, ok := clients[configGroupName]; !ok {
+					clients[configGroupName] = make(map[string]*config.Client)
+				}
+
+				// Get client config from the config file.
+				if clientConfig, ok := conf.Global.Clients[configGroupName][configBlockName]; !ok {
+					// This ensures that the default client config is used if the pool name is not
+					// found in the clients section.
+					clients[configGroupName][configBlockName] = conf.Global.Clients[config.Default][config.DefaultConfigurationBlock]
+				} else {
+					// Merge the default client config with the one from the pool.
+					clients[configGroupName][configBlockName] = clientConfig
+				}
+
+				// Fill the missing and zero values with the default ones.
+				clients[configGroupName][configBlockName].TCPKeepAlivePeriod = config.If(
+					clients[configGroupName][configBlockName].TCPKeepAlivePeriod > 0,
+					clients[configGroupName][configBlockName].TCPKeepAlivePeriod,
+					config.DefaultTCPKeepAlivePeriod,
+				)
+				clients[configGroupName][configBlockName].ReceiveDeadline = config.If(
+					clients[configGroupName][configBlockName].ReceiveDeadline > 0,
+					clients[configGroupName][configBlockName].ReceiveDeadline,
+					config.DefaultReceiveDeadline,
+				)
+				clients[configGroupName][configBlockName].ReceiveTimeout = config.If(
+					clients[configGroupName][configBlockName].ReceiveTimeout > 0,
+					clients[configGroupName][configBlockName].ReceiveTimeout,
+					config.DefaultReceiveTimeout,
+				)
+				clients[configGroupName][configBlockName].SendDeadline = config.If(
+					clients[configGroupName][configBlockName].SendDeadline > 0,
+					clients[configGroupName][configBlockName].SendDeadline,
+					config.DefaultSendDeadline,
+				)
+				clients[configGroupName][configBlockName].ReceiveChunkSize = config.If(
+					clients[configGroupName][configBlockName].ReceiveChunkSize > 0,
+					clients[configGroupName][configBlockName].ReceiveChunkSize,
+					config.DefaultChunkSize,
+				)
+				clients[configGroupName][configBlockName].DialTimeout = config.If(
+					clients[configGroupName][configBlockName].DialTimeout > 0,
+					clients[configGroupName][configBlockName].DialTimeout,
+					config.DefaultDialTimeout,
+				)
+
+				// Add clients to the pool.
+				for range currentPoolSize {
+					clientConfig := clients[configGroupName][configBlockName]
+					client := network.NewClient(
+						runCtx, clientConfig, logger,
+						network.NewRetry(
+							network.Retry{
+								Retries: clientConfig.Retries,
+								Backoff: config.If(
+									clientConfig.Backoff > 0,
+									clientConfig.Backoff,
+									config.DefaultBackoff,
+								),
+								BackoffMultiplier:  clientConfig.BackoffMultiplier,
+								DisableBackoffCaps: clientConfig.DisableBackoffCaps,
+								Logger:             loggers[configBlockName],
+							},
+						),
 					)
-					if client.ID != "" {
-						eventOptions = trace.WithAttributes(
-							attribute.String("id", client.ID),
+
+					if client != nil {
+						eventOptions := trace.WithAttributes(
+							attribute.String("name", configBlockName),
+							attribute.String("network", client.Network),
+							attribute.String("address", client.Address),
+							attribute.Int("receiveChunkSize", client.ReceiveChunkSize),
+							attribute.String("receiveDeadline", client.ReceiveDeadline.String()),
+							attribute.String("receiveTimeout", client.ReceiveTimeout.String()),
+							attribute.String("sendDeadline", client.SendDeadline.String()),
+							attribute.String("dialTimeout", client.DialTimeout.String()),
+							attribute.Bool("tcpKeepAlive", client.TCPKeepAlive),
+							attribute.String("tcpKeepAlivePeriod", client.TCPKeepAlivePeriod.String()),
+							attribute.String("localAddress", client.LocalAddr()),
+							attribute.String("remoteAddress", client.RemoteAddr()),
+							attribute.Int("retries", clientConfig.Retries),
+							attribute.String("backoff", client.Retry().Backoff.String()),
+							attribute.Float64("backoffMultiplier", clientConfig.BackoffMultiplier),
+							attribute.Bool("disableBackoffCaps", clientConfig.DisableBackoffCaps),
+						)
+						if client.ID != "" {
+							eventOptions = trace.WithAttributes(
+								attribute.String("id", client.ID),
+							)
+						}
+
+						span.AddEvent("Create client", eventOptions)
+
+						pluginTimeoutCtx, cancel = context.WithTimeout(
+							context.Background(), conf.Plugin.Timeout)
+						defer cancel()
+
+						clientCfg := map[string]interface{}{
+							"id":                 client.ID,
+							"network":            client.Network,
+							"address":            client.Address,
+							"receiveChunkSize":   client.ReceiveChunkSize,
+							"receiveDeadline":    client.ReceiveDeadline.String(),
+							"receiveTimeout":     client.ReceiveTimeout.String(),
+							"sendDeadline":       client.SendDeadline.String(),
+							"dialTimeout":        client.DialTimeout.String(),
+							"tcpKeepAlive":       client.TCPKeepAlive,
+							"tcpKeepAlivePeriod": client.TCPKeepAlivePeriod.String(),
+							"localAddress":       client.LocalAddr(),
+							"remoteAddress":      client.RemoteAddr(),
+							"retries":            clientConfig.Retries,
+							"backoff":            client.Retry().Backoff.String(),
+							"backoffMultiplier":  clientConfig.BackoffMultiplier,
+							"disableBackoffCaps": clientConfig.DisableBackoffCaps,
+						}
+						_, err := pluginRegistry.Run(
+							pluginTimeoutCtx, clientCfg, v1.HookName_HOOK_NAME_ON_NEW_CLIENT)
+						if err != nil {
+							logger.Error().Err(err).Msg("Failed to run OnNewClient hooks")
+							span.RecordError(err)
+						}
+
+						err = pools[configGroupName][configBlockName].Put(client.ID, client)
+						if err != nil {
+							logger.Error().Err(err).Msg("Failed to add client to the pool")
+							span.RecordError(err)
+						}
+					} else {
+						logger.Error().Msg("Failed to create client, please check the configuration")
+						go func() {
+							// Wait for the stop signal to exit gracefully.
+							// This prevents the program from waiting indefinitely
+							// after the StopGracefully function is called.
+							<-stopChan
+							os.Exit(gerr.FailedToCreateClient)
+						}()
+						StopGracefully(
+							runCtx,
+							nil,
+							metricsMerger,
+							metricsServer,
+							pluginRegistry,
+							logger,
+							servers,
+							stopChan,
+							httpServer,
+							grpcServer,
 						)
 					}
-
-					span.AddEvent("Create client", eventOptions)
-
-					pluginTimeoutCtx, cancel = context.WithTimeout(
-						context.Background(), conf.Plugin.Timeout)
-					defer cancel()
-
-					clientCfg := map[string]interface{}{
-						"id":                 client.ID,
-						"network":            client.Network,
-						"address":            client.Address,
-						"receiveChunkSize":   client.ReceiveChunkSize,
-						"receiveDeadline":    client.ReceiveDeadline.String(),
-						"receiveTimeout":     client.ReceiveTimeout.String(),
-						"sendDeadline":       client.SendDeadline.String(),
-						"dialTimeout":        client.DialTimeout.String(),
-						"tcpKeepAlive":       client.TCPKeepAlive,
-						"tcpKeepAlivePeriod": client.TCPKeepAlivePeriod.String(),
-						"localAddress":       client.LocalAddr(),
-						"remoteAddress":      client.RemoteAddr(),
-						"retries":            clientConfig.Retries,
-						"backoff":            client.Retry().Backoff.String(),
-						"backoffMultiplier":  clientConfig.BackoffMultiplier,
-						"disableBackoffCaps": clientConfig.DisableBackoffCaps,
-					}
-					_, err := pluginRegistry.Run(
-						pluginTimeoutCtx, clientCfg, v1.HookName_HOOK_NAME_ON_NEW_CLIENT)
-					if err != nil {
-						logger.Error().Err(err).Msg("Failed to run OnNewClient hooks")
-						span.RecordError(err)
-					}
-
-					err = pools[name].Put(client.ID, client)
-					if err != nil {
-						logger.Error().Err(err).Msg("Failed to add client to the pool")
-						span.RecordError(err)
-					}
-				} else {
-					logger.Error().Msg("Failed to create client, please check the configuration")
-					go func() {
-						// Wait for the stop signal to exit gracefully.
-						// This prevents the program from waiting indefinitely
-						// after the StopGracefully function is called.
-						<-stopChan
-						os.Exit(gerr.FailedToCreateClient)
-					}()
-					StopGracefully(
-						runCtx,
-						nil,
-						metricsMerger,
-						metricsServer,
-						pluginRegistry,
-						logger,
-						servers,
-						stopChan,
-						httpServer,
-						grpcServer,
-					)
 				}
-			}
 
-			// Verify that the pool is properly populated.
-			logger.Info().Fields(map[string]interface{}{
-				"name":  name,
-				"count": strconv.Itoa(pools[name].Size()),
-			}).Msg("There are clients available in the pool")
+				// Verify that the pool is properly populated.
+				logger.Info().Fields(map[string]interface{}{
+					"name":  configBlockName,
+					"count": strconv.Itoa(pools[configGroupName][configBlockName].Size()),
+				}).Msg("There are clients available in the pool")
 
-			if pools[name].Size() != currentPoolSize {
-				logger.Error().Msg(
-					"The pool size is incorrect, either because " +
-						"the clients cannot connect due to no network connectivity " +
-						"or the server is not running. exiting...")
-				pluginRegistry.Shutdown()
-				os.Exit(gerr.FailedToInitializePool)
-			}
+				if pools[configGroupName][configBlockName].Size() != currentPoolSize {
+					logger.Error().Msg(
+						"The pool size is incorrect, either because " +
+							"the clients cannot connect due to no network connectivity " +
+							"or the server is not running. exiting...")
+					pluginRegistry.Shutdown()
+					os.Exit(gerr.FailedToInitializePool)
+				}
 
-			pluginTimeoutCtx, cancel = context.WithTimeout(
-				context.Background(), conf.Plugin.Timeout)
-			defer cancel()
+				pluginTimeoutCtx, cancel = context.WithTimeout(
+					context.Background(), conf.Plugin.Timeout)
+				defer cancel()
 
-			_, err = pluginRegistry.Run(
-				pluginTimeoutCtx,
-				map[string]interface{}{"name": name, "size": currentPoolSize},
-				v1.HookName_HOOK_NAME_ON_NEW_POOL)
-			if err != nil {
-				logger.Error().Err(err).Msg("Failed to run OnNewPool hooks")
-				span.RecordError(err)
+				_, err = pluginRegistry.Run(
+					pluginTimeoutCtx,
+					map[string]interface{}{"name": configBlockName, "size": currentPoolSize},
+					v1.HookName_HOOK_NAME_ON_NEW_POOL)
+				if err != nil {
+					logger.Error().Err(err).Msg("Failed to run OnNewPool hooks")
+					span.RecordError(err)
+				}
 			}
 		}
 
@@ -822,46 +832,54 @@ var runCmd = &cobra.Command{
 
 		_, span = otel.Tracer(config.TracerName).Start(runCtx, "Create proxies")
 		// Create and initialize prefork proxies with each pool of clients.
-		for name, cfg := range conf.Global.Proxies {
-			logger := loggers[name]
-			clientConfig := clients[name]
-			// Fill the missing and zero value with the default one.
-			cfg.HealthCheckPeriod = config.If(
-				cfg.HealthCheckPeriod > 0,
-				cfg.HealthCheckPeriod,
-				config.DefaultHealthCheckPeriod,
-			)
+		for configGroupName, configGroup := range conf.Global.Proxies {
+			for configBlockName, cfg := range configGroup {
+				logger := loggers[configGroupName]
+				clientConfig := clients[configGroupName][configBlockName]
 
-			proxies[name] = network.NewProxy(
-				runCtx,
-				network.Proxy{
-					AvailableConnections: pools[name],
-					PluginRegistry:       pluginRegistry,
-					HealthCheckPeriod:    cfg.HealthCheckPeriod,
-					ClientConfig:         clientConfig,
-					Logger:               logger,
-					PluginTimeout:        conf.Plugin.Timeout,
-				},
-			)
+				// Fill the missing and zero value with the default one.
+				cfg.HealthCheckPeriod = config.If(
+					cfg.HealthCheckPeriod > 0,
+					cfg.HealthCheckPeriod,
+					config.DefaultHealthCheckPeriod,
+				)
 
-			span.AddEvent("Create proxy", trace.WithAttributes(
-				attribute.String("name", name),
-				attribute.String("healthCheckPeriod", cfg.HealthCheckPeriod.String()),
-			))
-
-			pluginTimeoutCtx, cancel = context.WithTimeout(
-				context.Background(), conf.Plugin.Timeout)
-			defer cancel()
-
-			if data, ok := conf.GlobalKoanf.Get("proxies").(map[string]interface{}); ok {
-				_, err = pluginRegistry.Run(
-					pluginTimeoutCtx, data, v1.HookName_HOOK_NAME_ON_NEW_PROXY)
-				if err != nil {
-					logger.Error().Err(err).Msg("Failed to run OnNewProxy hooks")
-					span.RecordError(err)
+				if _, ok := proxies[configGroupName]; !ok {
+					proxies[configGroupName] = make(map[string]*network.Proxy)
 				}
-			} else {
-				logger.Error().Msg("Failed to get proxy from config")
+
+				proxies[configGroupName][configBlockName] = network.NewProxy(
+					runCtx,
+					network.Proxy{
+						AvailableConnections: pools[configGroupName][configBlockName],
+						PluginRegistry:       pluginRegistry,
+						HealthCheckPeriod:    cfg.HealthCheckPeriod,
+						ClientConfig:         clientConfig,
+						Logger:               logger,
+						PluginTimeout:        conf.Plugin.Timeout,
+					},
+				)
+
+				span.AddEvent("Create proxy", trace.WithAttributes(
+					attribute.String("name", configBlockName),
+					attribute.String("healthCheckPeriod", cfg.HealthCheckPeriod.String()),
+				))
+
+				pluginTimeoutCtx, cancel = context.WithTimeout(
+					context.Background(), conf.Plugin.Timeout)
+				defer cancel()
+
+				if data, ok := conf.GlobalKoanf.Get("proxies").(map[string]interface{}); ok {
+					_, err = pluginRegistry.Run(
+						pluginTimeoutCtx, data, v1.HookName_HOOK_NAME_ON_NEW_PROXY)
+					if err != nil {
+						logger.Error().Err(err).Msg("Failed to run OnNewProxy hooks")
+						span.RecordError(err)
+					}
+				} else {
+					logger.Error().Msg("Failed to get proxy from config")
+				}
+
 			}
 		}
 
@@ -871,6 +889,12 @@ var runCmd = &cobra.Command{
 		// Create and initialize servers.
 		for name, cfg := range conf.Global.Servers {
 			logger := loggers[name]
+
+			var serverProxies []network.IProxy
+			for _, proxy := range proxies[name] {
+				serverProxies = append(serverProxies, proxy)
+			}
+
 			servers[name] = network.NewServer(
 				runCtx,
 				network.Server{
@@ -885,14 +909,15 @@ var runCmd = &cobra.Command{
 						// Can be used to send keepalive messages to the client.
 						EnableTicker: cfg.EnableTicker,
 					},
-					Proxy:            proxies[name],
-					Logger:           logger,
-					PluginRegistry:   pluginRegistry,
-					PluginTimeout:    conf.Plugin.Timeout,
-					EnableTLS:        cfg.EnableTLS,
-					CertFile:         cfg.CertFile,
-					KeyFile:          cfg.KeyFile,
-					HandshakeTimeout: cfg.HandshakeTimeout,
+					Proxies:                  serverProxies,
+					Logger:                   logger,
+					PluginRegistry:           pluginRegistry,
+					PluginTimeout:            conf.Plugin.Timeout,
+					EnableTLS:                cfg.EnableTLS,
+					CertFile:                 cfg.CertFile,
+					KeyFile:                  cfg.KeyFile,
+					HandshakeTimeout:         cfg.HandshakeTimeout,
+					LoadbalancerStrategyName: cfg.LoadBalancer.Strategy,
 				},
 			)
 

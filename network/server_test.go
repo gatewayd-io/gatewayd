@@ -114,11 +114,12 @@ func TestRunServer(t *testing.T) {
 			Options: Option{
 				EnableTicker: true,
 			},
-			Proxy:            proxy,
-			Logger:           logger,
-			PluginRegistry:   pluginRegistry,
-			PluginTimeout:    config.DefaultPluginTimeout,
-			HandshakeTimeout: config.DefaultHandshakeTimeout,
+			Proxies:                  []IProxy{proxy},
+			Logger:                   logger,
+			PluginRegistry:           pluginRegistry,
+			PluginTimeout:            config.DefaultPluginTimeout,
+			HandshakeTimeout:         config.DefaultHandshakeTimeout,
+			LoadbalancerStrategyName: config.RoundRobinStrategy,
 		},
 	)
 	assert.NotNil(t, server)
