@@ -221,8 +221,8 @@ func TestPools(t *testing.T) {
 	assert.NotEmpty(t, pools.AsMap())
 
 	assert.Equal(t,
-		map[string]interface{}{
-			config.DefaultConfigurationBlock: map[string]interface{}{"cap": 0.0, "size": 0.0},
+		map[string]any{
+			config.DefaultConfigurationBlock: map[string]any{"cap": 0.0, "size": 0.0},
 		},
 		pools.AsMap()[config.Default])
 }
@@ -273,8 +273,8 @@ func TestGetProxies(t *testing.T) {
 	assert.NotEmpty(t, proxies)
 	assert.NotEmpty(t, proxies.AsMap())
 
-	if defaultProxies, ok := proxies.AsMap()[config.Default].(map[string]interface{}); ok {
-		if defaultProxy, ok := defaultProxies[config.DefaultConfigurationBlock].(map[string]interface{}); ok {
+	if defaultProxies, ok := proxies.AsMap()[config.Default].(map[string]any); ok {
+		if defaultProxy, ok := defaultProxies[config.DefaultConfigurationBlock].(map[string]any); ok {
 			assert.Equal(t, 1.0, defaultProxy["total"])
 			assert.NotEmpty(t, defaultProxy["available"])
 			assert.Empty(t, defaultProxy["busy"])

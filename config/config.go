@@ -189,7 +189,7 @@ func (c *Config) LoadDefaults(ctx context.Context) *gerr.GatewayDError {
 		}
 
 		for configObject, configMap := range gconf {
-			configGroup, ok := configMap.(map[string]interface{})
+			configGroup, ok := configMap.(map[string]any)
 			if !ok {
 				err := fmt.Errorf("invalid config structure for %s", configObject)
 				span.RecordError(err)
@@ -208,7 +208,7 @@ func (c *Config) LoadDefaults(ctx context.Context) *gerr.GatewayDError {
 					continue
 				}
 
-				configBlocks, ok := configBlocksInterface.(map[string]interface{})
+				configBlocks, ok := configBlocksInterface.(map[string]any)
 				if !ok {
 					err := fmt.Errorf("invalid config blocks structure for %s.%s", configObject, configGroupKey)
 					span.RecordError(err)
