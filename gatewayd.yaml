@@ -82,6 +82,7 @@ servers:
     network: tcp
     address: 0.0.0.0:15432
     loadBalancer:
+      # Load balancer strategies can be found in config/constants.go
       strategy: ROUND_ROBIN
     enableTicker: False
     tickInterval: 5s # duration
