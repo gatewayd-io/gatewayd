@@ -32,7 +32,7 @@ metrics:
 
 clients:
   default:
-    active-writes:
+    activeWrites:
       network: tcp
       address: localhost:5432
       tcpKeepAlive: False
@@ -47,7 +47,7 @@ clients:
       backoff: 1s # duration
       backoffMultiplier: 2.0 # 0 means no backoff
       disableBackoffCaps: false
-    standby-reads:
+    standbyReads:
       network: tcp
       address: localhost:5433
       tcpKeepAlive: False
@@ -65,16 +65,16 @@ clients:
 
 pools:
   default:
-    active-writes:
+    activeWrites:
       size: 10
-    standby-reads:
+    standbyReads:
       size: 10
 
 proxies:
   default:
-    active-writes:
+    activeWrites:
       healthCheckPeriod: 60s # duration
-    standby-reads:
+    standbyReads:
       healthCheckPeriod: 60s # duration
 
 servers:
