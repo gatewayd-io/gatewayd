@@ -28,7 +28,7 @@ metrics:
     readHeaderTimeout: 10s # duration, prevents Slowloris attacks
     timeout: 10s # duration
     certFile: "" # Certificate file in PEM format
-    keyFile: "" # Private key file in PEM format   
+    keyFile: "" # Private key file in PEM format
 
 clients:
   default:
