@@ -653,7 +653,8 @@ func (pr *Proxy) Shutdown() {
 	pr.Logger.Debug().Msg("All busy connections have been closed")
 }
 
-// AvailableConnectionsString returns a list of available connections.
+// AvailableConnectionsString returns a list of available connections. This list enumerates
+// the local addresses of the outgoing connections to the server.
 func (pr *Proxy) AvailableConnectionsString() []string {
 	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "AvailableConnections")
 	defer span.End()
@@ -668,15 +669,16 @@ func (pr *Proxy) AvailableConnectionsString() []string {
 	return connections
 }
 
-// BusyConnectionsString returns a list of busy connections.
+// BusyConnectionsString returns a list of busy connections. This list enumerates
+// the remote addresses of the incoming connections from a database client like psql.
 func (pr *Proxy) BusyConnectionsString() []string {
 	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "BusyConnectionsString")
 	defer span.End()
 
 	connections := make([]string, 0)
 	pr.busyConnections.ForEach(func(key, _ interface{}) bool {
-		if conn, ok := key.(net.Conn); ok {
-			connections = append(connections, RemoteAddr(conn))
+		if conn, ok := key.(*ConnWrapper); ok {
+			connections = append(connections, RemoteAddr(conn.Conn()))
 		}
 		return true
 	})
