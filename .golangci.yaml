@@ -20,6 +20,7 @@ linters:
     - musttag
     - err113
     - testifylint
+    - fatcontext
 linters-settings:
   depguard:
     rules:
