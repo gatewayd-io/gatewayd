@@ -45,26 +45,6 @@ func TestResolve(t *testing.T) {
 	assert.Equal(t, "127.0.0.1:53", address)
 }
 
-// TestIsPostgresSSLRequest tests the IsPostgresSSLRequest function.
-// It checks the entire SSL request including the length.
-func TestIsPostgresSSLRequest(t *testing.T) {
-	// Test a valid SSL request.
-	sslRequest := []byte{0x00, 0x00, 0x00, 0x8, 0x04, 0xd2, 0x16, 0x2f}
-	assert.True(t, IsPostgresSSLRequest(sslRequest))
-
-	// Test an invalid SSL request.
-	invalidSSLRequest := []byte{0x00, 0x00, 0x00, 0x9, 0x04, 0xd2, 0x16, 0x2e}
-	assert.False(t, IsPostgresSSLRequest(invalidSSLRequest))
-
-	// Test an invalid SSL request.
-	invalidSSLRequest = []byte{0x04, 0xd2, 0x16}
-	assert.False(t, IsPostgresSSLRequest(invalidSSLRequest))
-
-	// Test an invalid SSL request.
-	invalidSSLRequest = []byte{0x00, 0x00, 0x00, 0x00, 0x04, 0xd2, 0x16, 0x2f, 0x00}
-	assert.False(t, IsPostgresSSLRequest(invalidSSLRequest))
-}
-
 var seedValues = []int{1000, 10000, 100000, 1000000, 10000000}
 
 func BenchmarkGetID(b *testing.B) {
@@ -190,11 +170,5 @@ func BenchmarkExtractFieldValue(b *testing.B) {
 			},
 			"test",
 		)
-	}
-}
-
-func BenchmarkIsPostgresSSLRequest(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		IsPostgresSSLRequest([]byte{0x00, 0x00, 0x00, 0x8, 0x04, 0xd2, 0x16, 0x2f})
 	}
 }
