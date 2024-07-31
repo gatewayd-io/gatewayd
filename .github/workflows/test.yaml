@@ -69,7 +69,7 @@ jobs:
       - name: Lint code with golangci-lint 🚨
         uses: golangci/golangci-lint-action@v4
         with:
-          version: "v1.57"
+          version: "v1.59.1"
           skip-pkg-cache: true
           install-mode: "goinstall"
 
