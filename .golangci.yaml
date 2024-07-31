@@ -11,25 +11,16 @@ linters:
     - nlreturn
     - testpackage
     - paralleltest
-    - exhaustivestruct
     - exhaustruct
     - gocognit
     - gochecknoinits
     - gocyclo
-    - maligned
     - funlen
     - maintidx
     - musttag
-    - nosnakecase
-    - goerr113
-    - ifshort
-    - deadcode
-    - interfacer
-    - scopelint
-    - structcheck
-    - varcheck
-    - golint
+    - err113
     - testifylint
+    - fatcontext
 linters-settings:
   depguard:
     rules:
