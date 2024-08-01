@@ -35,7 +35,7 @@ const (
 const (
 	// Config constants.
 	Default                   = "default"
-	DefaultConfigurationBlock = "activeWrites"
+	DefaultConfigurationBlock = "active-writes"
 	EnvPrefix                 = "GATEWAYD_"
 	TracerName                = "gatewayd"
 	GlobalConfigFilename      = "gatewayd.yaml"
