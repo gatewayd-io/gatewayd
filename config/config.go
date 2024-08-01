@@ -553,15 +553,18 @@ func (c *Config) ConvertKeysToLowercase(ctx context.Context) *gerr.GatewayDError
 	return nil
 }
 
-// Helper function to convert a struct to a map[string]interface{}
+// structToMap converts a given struct to a map[string]interface{}.
 func structToMap(v interface{}) (map[string]interface{}, error) {
 	var result map[string]interface{}
 	data, err := json.Marshal(v)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to marshal struct: %w", err)
 	}
 	err = json.Unmarshal(data, &result)
-	return result, err
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal data into map: %w", err)
+	}
+	return result, nil
 }
 
 func (c *Config) ValidateGlobalConfig(ctx context.Context) *gerr.GatewayDError {
