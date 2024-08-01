@@ -564,10 +564,6 @@ func structToMap(v interface{}) (map[string]interface{}, error) {
 	return result, err
 }
 
-
-	return nil
-}
-
 func (c *Config) ValidateGlobalConfig(ctx context.Context) *gerr.GatewayDError {
 	_, span := otel.Tracer(TracerName).Start(ctx, "Validate global config")
 
@@ -590,6 +586,11 @@ func (c *Config) ValidateGlobalConfig(ctx context.Context) *gerr.GatewayDError {
 			span.RecordError(err)
 			errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
 		}
+		if configGroup != strings.ToLower(configGroup) {
+			err := fmt.Errorf(`"logger.%s" is not lowercase`, configGroup)
+			span.RecordError(err)
+			errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
+		}
 	}
 
 	if len(globalConfig.Loggers) > 1 {
@@ -599,6 +600,11 @@ func (c *Config) ValidateGlobalConfig(ctx context.Context) *gerr.GatewayDError {
 	for configGroup := range globalConfig.Metrics {
 		if globalConfig.Metrics[configGroup] == nil {
 			err := fmt.Errorf("\"metrics.%s\" is nil or empty", configGroup)
+			span.RecordError(err)
+			errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
+		}
+		if configGroup != strings.ToLower(configGroup) {
+			err := fmt.Errorf(`"metrics.%s" is not lowercase`, configGroup)
 			span.RecordError(err)
 			errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
 		}
@@ -613,10 +619,20 @@ func (c *Config) ValidateGlobalConfig(ctx context.Context) *gerr.GatewayDError {
 		if _, ok := clientConfigGroups[configGroupName]; !ok {
 			clientConfigGroups[configGroupName] = make(map[string]bool)
 		}
-		for configGroup := range configGroups {
-			clientConfigGroups[configGroupName][configGroup] = true
-			if globalConfig.Clients[configGroupName][configGroup] == nil {
-				err := fmt.Errorf("\"clients.%s\" is nil or empty", configGroup)
+		if configGroupName != strings.ToLower(configGroupName) {
+			err := fmt.Errorf(`"clients.%s" is not lowercase`, configGroupName)
+			span.RecordError(err)
+			errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
+		}
+		for configBlockName := range configGroups {
+			clientConfigGroups[configGroupName][configBlockName] = true
+			if globalConfig.Clients[configGroupName][configBlockName] == nil {
+				err := fmt.Errorf("\"clients.%s\" is nil or empty", configBlockName)
+				span.RecordError(err)
+				errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
+			}
+			if configBlockName != strings.ToLower(configBlockName) {
+				err := fmt.Errorf(`"clients.%s.%s" is not lowercase`, configGroupName, configBlockName)
 				span.RecordError(err)
 				errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
 			}
@@ -633,6 +649,11 @@ func (c *Config) ValidateGlobalConfig(ctx context.Context) *gerr.GatewayDError {
 			span.RecordError(err)
 			errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
 		}
+		if configGroup != strings.ToLower(configGroup) {
+			err := fmt.Errorf(`"pools.%s" is not lowercase`, configGroup)
+			span.RecordError(err)
+			errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
+		}
 	}
 
 	if len(globalConfig.Pools) > 1 {
@@ -645,6 +666,11 @@ func (c *Config) ValidateGlobalConfig(ctx context.Context) *gerr.GatewayDError {
 			span.RecordError(err)
 			errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
 		}
+		if configGroup != strings.ToLower(configGroup) {
+			err := fmt.Errorf(`"proxies.%s" is not lowercase`, configGroup)
+			span.RecordError(err)
+			errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
+		}
 	}
 
 	if len(globalConfig.Proxies) > 1 {
@@ -654,6 +680,11 @@ func (c *Config) ValidateGlobalConfig(ctx context.Context) *gerr.GatewayDError {
 	for configGroup := range globalConfig.Servers {
 		if globalConfig.Servers[configGroup] == nil {
 			err := fmt.Errorf("\"servers.%s\" is nil or empty", configGroup)
+			span.RecordError(err)
+			errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
+		}
+		if configGroup != strings.ToLower(configGroup) {
+			err := fmt.Errorf(`"servers.%s" is not lowercase`, configGroup)
 			span.RecordError(err)
 			errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
 		}
@@ -673,9 +704,14 @@ func (c *Config) ValidateGlobalConfig(ctx context.Context) *gerr.GatewayDError {
 
 	// Check if all proxies are referenced in client configuration
 	for configGroupName, configGroups := range globalConfig.Proxies {
-		for configGroup := range configGroups {
-			if !clientConfigGroups[configGroupName][configGroup] {
-				err := fmt.Errorf(`"proxies.%s" not referenced in client configuration`, configGroup)
+		for configBlockName := range configGroups {
+			if !clientConfigGroups[configGroupName][configBlockName] {
+				err := fmt.Errorf(`"proxies.%s.%s" not referenced in client configuration`, configGroupName, configBlockName)
+				span.RecordError(err)
+				errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
+			}
+			if configBlockName != strings.ToLower(configBlockName) {
+				err := fmt.Errorf(`"proxies.%s.%s" is not lowercase`, configGroupName, configBlockName)
 				span.RecordError(err)
 				errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
 			}
@@ -684,9 +720,14 @@ func (c *Config) ValidateGlobalConfig(ctx context.Context) *gerr.GatewayDError {
 
 	// Check if all pools are referenced in client configuration
 	for configGroupName, configGroups := range globalConfig.Pools {
-		for configGroup := range configGroups {
-			if !clientConfigGroups[configGroupName][configGroup] {
-				err := fmt.Errorf(`"pools.%s" not referenced in client configuration`, configGroup)
+		for configBlockName := range configGroups {
+			if !clientConfigGroups[configGroupName][configBlockName] {
+				err := fmt.Errorf(`"pools.%s.%s" not referenced in client configuration`, configGroupName, configBlockName)
+				span.RecordError(err)
+				errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
+			}
+			if configBlockName != strings.ToLower(configBlockName) {
+				err := fmt.Errorf(`"pools.%s.%s" is not lowercase`, configGroupName, configBlockName)
 				span.RecordError(err)
 				errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
 			}
