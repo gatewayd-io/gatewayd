@@ -80,6 +80,9 @@ func lintConfig(fileType configFileType, configFile string) *gerr.GatewayDError 
 		if err := conf.LoadGlobalConfigFile(context.TODO()); err != nil {
 			return err
 		}
+		if err := conf.ConvertKeysToLowercase(context.TODO()); err != nil {
+			return err
+		}
 		if err := conf.UnmarshalGlobalConfig(context.TODO()); err != nil {
 			return err
 		}

@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"encoding/json"
 	goerrors "errors"
 	"fmt"
 	"log"
@@ -82,8 +83,10 @@ func (c *Config) InitConfig(ctx context.Context) *gerr.GatewayDError {
 	if err := c.UnmarshalPluginConfig(newCtx); err != nil {
 		return err
 	}
-
 	if err := c.LoadGlobalConfigFile(newCtx); err != nil {
+		return err
+	}
+	if err := c.ConvertKeysToLowercase(newCtx); err != nil {
 		return err
 	}
 	if err := c.ValidateGlobalConfig(newCtx); err != nil {
@@ -461,6 +464,106 @@ func (c *Config) MergeGlobalConfig(
 	}
 
 	span.End()
+
+	return nil
+}
+
+// convertMapKeysToLowercase converts all keys in a map to lowercase.
+//
+// Parameters:
+//   - m: A map with string keys to be converted.
+//
+// Returns:
+//   - map[string]*T: A new map with lowercase keys.
+func convertMapKeysToLowercase[T any](m map[string]*T) map[string]*T {
+	newMap := make(map[string]*T)
+	for k, v := range m {
+		lowerKey := strings.ToLower(k)
+		newMap[lowerKey] = v
+	}
+	return newMap
+}
+
+// convertNestedMapKeysToLowercase converts all keys in a nested map structure to lowercase.
+//
+// Parameters:
+//   - m: A nested map with string keys to be converted.
+//
+// Returns:
+//   - map[string]map[string]*T: A new nested map with lowercase keys.
+func convertNestedMapKeysToLowercase[T any](m map[string]map[string]*T) map[string]map[string]*T {
+	newMap := make(map[string]map[string]*T)
+	for k, v := range m {
+		lowerKey := strings.ToLower(k)
+		newMap[lowerKey] = convertMapKeysToLowercase(v)
+	}
+	return newMap
+}
+
+// ConvertKeysToLowercase converts all keys in the global configuration to lowercase.
+// It unmarshals the configuration data into a GlobalConfig struct, then recursively converts
+// all map keys to lowercase.
+//
+// Parameters:
+//   - ctx (context.Context): The context for tracing and cancellation, used for monitoring
+//     and propagating execution state.
+//
+// Returns:
+//   - *gerr.GatewayDError: An error if unmarshalling fails, otherwise nil.
+func (c *Config) ConvertKeysToLowercase(ctx context.Context) *gerr.GatewayDError {
+	_, span := otel.Tracer(TracerName).Start(ctx, "Validate global config")
+
+	defer span.End()
+
+	var globalConfig GlobalConfig
+	if err := c.GlobalKoanf.Unmarshal("", &globalConfig); err != nil {
+		span.RecordError(err)
+		return gerr.ErrValidationFailed.Wrap(
+			fmt.Errorf("failed to unmarshal global configuration: %w", err))
+	}
+
+	globalConfig.Loggers = convertMapKeysToLowercase(globalConfig.Loggers)
+	globalConfig.Clients = convertNestedMapKeysToLowercase(globalConfig.Clients)
+	globalConfig.Pools = convertNestedMapKeysToLowercase(globalConfig.Pools)
+	globalConfig.Proxies = convertNestedMapKeysToLowercase(globalConfig.Proxies)
+	globalConfig.Servers = convertMapKeysToLowercase(globalConfig.Servers)
+	globalConfig.Metrics = convertMapKeysToLowercase(globalConfig.Metrics)
+
+	// Convert the globalConfig back to a map[string]interface{}
+	configMap, err := structToMap(globalConfig)
+	if err != nil {
+		span.RecordError(err)
+		return gerr.ErrValidationFailed.Wrap(
+			fmt.Errorf("failed to convert global configuration to map: %w", err))
+	}
+
+	// Create a new koanf instance and load the updated map
+	newKoanf := koanf.New(".")
+	if err := newKoanf.Load(confmap.Provider(configMap, "."), nil); err != nil {
+		span.RecordError(err)
+		return gerr.ErrValidationFailed.Wrap(
+			fmt.Errorf("failed to load updated configuration into koanf: %w", err))
+	}
+
+	// Update the GlobalKoanf with the new instance
+	c.GlobalKoanf = newKoanf
+	// Update the Global with the new instance
+	c.Global = globalConfig
+
+	return nil
+}
+
+// Helper function to convert a struct to a map[string]interface{}
+func structToMap(v interface{}) (map[string]interface{}, error) {
+	var result map[string]interface{}
+	data, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(data, &result)
+	return result, err
+}
+
 
 	return nil
 }
