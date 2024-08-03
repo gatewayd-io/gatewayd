@@ -478,8 +478,8 @@ func (c *Config) MergeGlobalConfig(
 func convertMapKeysToLowercase[T any](m map[string]*T) map[string]*T {
 	newMap := make(map[string]*T)
 	for k, v := range m {
-		lowerKey := strings.ToLower(k)
-		newMap[lowerKey] = v
+		lowercaseKey := strings.ToLower(k)
+		newMap[lowercaseKey] = v
 	}
 	return newMap
 }
@@ -494,8 +494,8 @@ func convertMapKeysToLowercase[T any](m map[string]*T) map[string]*T {
 func convertNestedMapKeysToLowercase[T any](m map[string]map[string]*T) map[string]map[string]*T {
 	newMap := make(map[string]map[string]*T)
 	for k, v := range m {
-		lowerKey := strings.ToLower(k)
-		newMap[lowerKey] = convertMapKeysToLowercase(v)
+		lowercaseKey := strings.ToLower(k)
+		newMap[lowercaseKey] = convertMapKeysToLowercase(v)
 	}
 	return newMap
 }
