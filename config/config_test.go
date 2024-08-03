@@ -194,11 +194,11 @@ func clientNetworkOverwrite(t *testing.T) {
 	t.Helper()
 	ctx := context.Background()
 	// Convert to uppercase
-	upperDefaultConfigurationGroup := strings.ToUpper(Default)
-	upperDefaultConfigurationBlock := strings.ToUpper(DefaultConfigurationBlock)
+	upperDefaultGroup := strings.ToUpper(Default)
+	upperDefaultBlock := strings.ToUpper(DefaultConfigurationBlock)
 
 	// Format environment variable name
-	envVarName := fmt.Sprintf("GATEWAYD_CLIENTS_%s_%s_NETWORK", upperDefaultConfigurationGroup, upperDefaultConfigurationBlock)
+	envVarName := fmt.Sprintf("GATEWAYD_CLIENTS_%s_%s_NETWORK", upperDefaultGroup, upperDefaultBlock)
 
 	// Set the environment variable
 	t.Setenv(envVarName, "udp")
@@ -212,10 +212,10 @@ func serverNetworkOverwrite(t *testing.T) {
 	t.Helper()
 	ctx := context.Background()
 	// Convert to uppercase
-	upperDefaultConfigurationGroup := strings.ToUpper(Default)
+	upperDefaultGroup := strings.ToUpper(Default)
 
 	// Format environment variable name
-	envVarName := fmt.Sprintf("GATEWAYD_SERVERS_%s_NETWORK", upperDefaultConfigurationGroup)
+	envVarName := fmt.Sprintf("GATEWAYD_SERVERS_%s_NETWORK", upperDefaultGroup)
 
 	// Set the environment variable
 	t.Setenv(envVarName, "udp")
