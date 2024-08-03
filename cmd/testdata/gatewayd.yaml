@@ -18,7 +18,7 @@ metrics:
 
 clients:
   default:
-    active-writes:
+    writes:
       address: localhost:5432
       network: tcp
       tcpKeepAlive: False
@@ -51,7 +51,7 @@ clients:
 
 pools:
   default:
-    active-writes:
+    writes:
       size: 10
   test:
     write:
@@ -59,7 +59,7 @@ pools:
 
 proxies:
   default:
-    active-writes:
+    writes:
       healthCheckPeriod: 60s # duration
   test:
     write:
