@@ -193,8 +193,15 @@ func pluginDefaultPolicyOverwrite(t *testing.T) {
 func clientNetworkOverwrite(t *testing.T) {
 	t.Helper()
 	ctx := context.Background()
+	// Convert to uppercase
+	upperDefaultConfigurationGroup := strings.ToUpper(Default)
+	upperDefaultConfigurationBlock := strings.ToUpper(DefaultConfigurationBlock)
 
-	t.Setenv("GATEWAYD_CLIENTS_DEFAULT_ACTIVE-WRITES_NETWORK", "udp")
+	// Format environment variable name
+	envVarName := fmt.Sprintf("GATEWAYD_CLIENTS_%s_%s_NETWORK", upperDefaultConfigurationGroup, upperDefaultConfigurationBlock)
+
+	// Set the environment variable
+	t.Setenv(envVarName, "udp")
 	config := initializeConfig(ctx, t)
 	assert.Equal(t, "udp", config.Global.Clients[Default][DefaultConfigurationBlock].Network)
 }
@@ -204,8 +211,14 @@ func clientNetworkOverwrite(t *testing.T) {
 func serverNetworkOverwrite(t *testing.T) {
 	t.Helper()
 	ctx := context.Background()
+	// Convert to uppercase
+	upperDefaultConfigurationGroup := strings.ToUpper(Default)
 
-	t.Setenv("GATEWAYD_SERVERS_DEFAULT_NETWORK", "udp")
+	// Format environment variable name
+	envVarName := fmt.Sprintf("GATEWAYD_SERVERS_%s_NETWORK", upperDefaultConfigurationGroup)
+
+	// Set the environment variable
+	t.Setenv(envVarName, "udp")
 	config := initializeConfig(ctx, t)
 	assert.Equal(t, "udp", config.Global.Servers[Default].Network)
 }
