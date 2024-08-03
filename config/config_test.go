@@ -227,3 +227,20 @@ func TestLoadEnvVariables(t *testing.T) {
 		})
 	}
 }
+
+// TestConvertKeysToLowercaseSuccess verifies that after calling ConvertKeysToLowercase,
+// all keys in the config.Global.Clients map are converted to lowercase.
+func TestConvertKeysToLowercaseSuccess(t *testing.T) {
+	ctx := context.Background()
+	config := NewConfig(ctx,
+		Config{GlobalConfigFile: parentDir + GlobalConfigFilename, PluginConfigFile: parentDir + PluginsConfigFilename})
+
+	err := config.ConvertKeysToLowercase(ctx)
+	require.Nil(t, err)
+	for configurationGroupName, configurationGroup := range config.Global.Clients {
+		assert.Equal(t, configurationGroupName, strings.ToLower(configurationGroupName))
+		for configuraionBlockName := range configurationGroup {
+			assert.Equal(t, configuraionBlockName, strings.ToLower(configuraionBlockName))
+		}
+	}
+}
