@@ -630,7 +630,7 @@ func (c *Config) ValidateGlobalConfig(ctx context.Context) *gerr.GatewayDError {
 		for configBlockName := range configGroups {
 			clientConfigGroups[configGroupName][configBlockName] = true
 			if globalConfig.Clients[configGroupName][configBlockName] == nil {
-				err := fmt.Errorf("\"clients.%s\" is nil or empty", configBlockName)
+				err := fmt.Errorf(`"clients.%s" is nil or empty`, configBlockName)
 				span.RecordError(err)
 				errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
 			}
