@@ -626,7 +626,7 @@ func (c *Config) ValidateGlobalConfig(ctx context.Context) *gerr.GatewayDError {
 	return nil
 }
 
-// generateTagMapping generates a map of JSON tags to lower json tags.
+// generateTagMapping generates a map of JSON tags to lower case json tags.
 func generateTagMapping(structs []interface{}, tagMapping map[string]string) {
 	for _, s := range structs {
 		structValue := reflect.ValueOf(s).Elem()
