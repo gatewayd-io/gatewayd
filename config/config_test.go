@@ -188,6 +188,41 @@ func pluginDefaultPolicyOverwrite(t *testing.T) {
 	assert.Equal(t, "test", config.Plugin.DefaultPolicy)
 }
 
+// clientNetworkOverwrite sets the environment variable for client network configuration
+// and verifies that the configuration is correctly loaded with the expected value.
+func clientNetworkOverwrite(t *testing.T) {
+	t.Helper()
+	ctx := context.Background()
+	// Convert to uppercase
+	upperDefaultGroup := strings.ToUpper(Default)
+	upperDefaultBlock := strings.ToUpper(DefaultConfigurationBlock)
+
+	// Format environment variable name
+	envVarName := fmt.Sprintf("GATEWAYD_CLIENTS_%s_%s_NETWORK", upperDefaultGroup, upperDefaultBlock)
+
+	// Set the environment variable
+	t.Setenv(envVarName, "udp")
+	config := initializeConfig(ctx, t)
+	assert.Equal(t, "udp", config.Global.Clients[Default][DefaultConfigurationBlock].Network)
+}
+
+// serverNetworkOverwrite sets the environment variable for server network configuration
+// and verifies that the configuration is correctly loaded with the expected value.
+func serverNetworkOverwrite(t *testing.T) {
+	t.Helper()
+	ctx := context.Background()
+	// Convert to uppercase
+	upperDefaultGroup := strings.ToUpper(Default)
+
+	// Format environment variable name
+	envVarName := fmt.Sprintf("GATEWAYD_SERVERS_%s_NETWORK", upperDefaultGroup)
+
+	// Set the environment variable
+	t.Setenv(envVarName, "udp")
+	config := initializeConfig(ctx, t)
+	assert.Equal(t, "udp", config.Global.Servers[Default].Network)
+}
+
 // TestLoadEnvVariables runs a suite of tests to verify that environment variables are correctly
 // loaded into the configuration. Each test scenario sets a specific environment variable and
 // checks if the configuration reflects the expected value.
@@ -195,11 +230,30 @@ func TestLoadEnvVariables(t *testing.T) {
 	scenarios := map[string]func(t *testing.T){
 		"serverLoadBalancerStrategyOverwrite": ServerLoadBalancerStrategyOverwrite,
 		"pluginLocalPathOverwrite":            pluginDefaultPolicyOverwrite,
+		"ClientNetworkOverwrite":              clientNetworkOverwrite,
+		"ServerNetworkOverwrite":              serverNetworkOverwrite,
 	}
 
 	for scenario, fn := range scenarios {
 		t.Run(scenario, func(t *testing.T) {
 			fn(t)
 		})
+	}
+}
+
+// TestConvertKeysToLowercaseSuccess verifies that after calling ConvertKeysToLowercase,
+// all keys in the config.Global.Clients map are converted to lowercase.
+func TestConvertKeysToLowercaseSuccess(t *testing.T) {
+	ctx := context.Background()
+	config := NewConfig(ctx,
+		Config{GlobalConfigFile: parentDir + GlobalConfigFilename, PluginConfigFile: parentDir + PluginsConfigFilename})
+
+	err := config.ConvertKeysToLowercase(ctx)
+	require.Nil(t, err)
+	for configurationGroupName, configurationGroup := range config.Global.Clients {
+		assert.Equal(t, configurationGroupName, strings.ToLower(configurationGroupName))
+		for configuraionBlockName := range configurationGroup {
+			assert.Equal(t, configuraionBlockName, strings.ToLower(configuraionBlockName))
+		}
 	}
 }

@@ -20,8 +20,11 @@ func (e *GatewayDError) Error() string {
 
 // Wrap wraps the original error.
 func (e *GatewayDError) Wrap(err error) *GatewayDError {
-	e.OriginalError = err
-	return e
+	return &GatewayDError{
+		Code:          e.Code,
+		Message:       e.Message,
+		OriginalError: err,
+	}
 }
 
 // Unwrap returns the original error.
