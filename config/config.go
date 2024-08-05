@@ -335,9 +335,40 @@ func (c *Config) LoadPluginEnvVars(ctx context.Context) *gerr.GatewayDError {
 }
 
 func loadEnvVars() *env.Env {
-	return env.Provider(EnvPrefix, ".", func(env string) string {
-		return strings.ReplaceAll(strings.ToLower(strings.TrimPrefix(env, EnvPrefix)), "_", ".")
-	})
+	return env.Provider(EnvPrefix, ".", transformEnvVariable)
+}
+
+// transformEnvVariable transforms the environment variable name to a format based on JSON tags.
+func transformEnvVariable(envVar string) string {
+	structs := []interface{}{
+		&API{},
+		&Logger{},
+		&Pool{},
+		&Proxy{},
+		&Server{},
+		&Metrics{},
+		&PluginConfig{},
+	}
+	tagMapping := make(map[string]string)
+	generateTagMapping(structs, tagMapping)
+
+	lowerEnvVar := strings.ToLower(strings.TrimPrefix(envVar, EnvPrefix))
+	parts := strings.Split(lowerEnvVar, "_")
+
+	var transformedParts strings.Builder
+
+	for i, part := range parts {
+		if i > 0 {
+			transformedParts.WriteString(".")
+		}
+		if mappedValue, exists := tagMapping[part]; exists {
+			transformedParts.WriteString(mappedValue)
+		} else {
+			transformedParts.WriteString(part)
+		}
+	}
+
+	return transformedParts.String()
 }
 
 // LoadGlobalConfigFile loads the plugin configuration file.
@@ -593,4 +624,29 @@ func (c *Config) ValidateGlobalConfig(ctx context.Context) *gerr.GatewayDError {
 	span.End()
 
 	return nil
+}
+
+// generateTagMapping generates a map of JSON tags to lower case json tags.
+func generateTagMapping(structs []interface{}, tagMapping map[string]string) {
+	for _, s := range structs {
+		structValue := reflect.ValueOf(s).Elem()
+		structType := structValue.Type()
+
+		for i := range structValue.NumField() {
+			field := structType.Field(i)
+			fieldValue := structValue.Field(i)
+
+			// Handle nested structs
+			if field.Type.Kind() == reflect.Struct {
+				generateTagMapping([]interface{}{fieldValue.Addr().Interface()}, tagMapping)
+			}
+
+			jsonTag := field.Tag.Get("json")
+			if jsonTag != "" {
+				tagMapping[strings.ToLower(jsonTag)] = jsonTag
+			} else {
+				tagMapping[strings.ToLower(field.Name)] = strings.ToLower(field.Name)
+			}
+		}
+	}
 }
