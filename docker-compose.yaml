@@ -19,7 +19,17 @@ services:
       # Possible values: amd64 or arm64
       # - ARCH=amd64
       - REDIS_URL=redis://redis:6379/0
-  postgres:
+  write-postgres:
+    image: postgres:latest
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  read-postgres:
     image: postgres:latest
     environment:
       - POSTGRES_USER=postgres
@@ -42,7 +52,8 @@ services:
     environment:
       # For more information about the environment variables, see:
       # https://docs.gatewayd.io/using-gatewayd/configuration#environment-variables
-      - GATEWAYD_CLIENTS_DEFAULT_ADDRESS=postgres:5432
+      - GATEWAYD_CLIENTS_DEFAULT_WRITES_ADDRESS=write-postgres:5432
+      - GATEWAYD_CLIENTS_DEFAULT_READS_ADDRESS=read-postgres:5432
       # - GATEWAYD_LOGGERS_DEFAULT_LEVEL=debug
     ports:
       # GatewayD server for PostgreSQL clients to connect to
@@ -60,7 +71,8 @@ services:
     volumes:
       - ./gatewayd-files:/gatewayd-files:ro
     links:
-      - postgres
+      - write-postgres
+      - read-postgres
       - redis
     healthcheck:
       test: ["CMD", "curl", "-f", "http://gatewayd:18080/healthz"]
@@ -68,7 +80,9 @@ services:
       timeout: 5s
       retries: 5
     depends_on:
-      postgres:
+      write-postgres:
+        condition: service_healthy
+      read-postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
