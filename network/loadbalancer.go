@@ -13,6 +13,8 @@ func NewLoadBalancerStrategy(server *Server) (LoadBalancerStrategy, *gerr.Gatewa
 	switch server.LoadbalancerStrategyName {
 	case config.RoundRobinStrategy:
 		return NewRoundRobin(server), nil
+	case config.RANDOMStrategy:
+		return NewRandom(server), nil
 	default:
 		return nil, gerr.ErrLoadBalancerStrategyNotFound
 	}
