@@ -130,4 +130,5 @@ const (
 // Load balancing strategies.
 const (
 	RoundRobinStrategy = "ROUND_ROBIN"
+	RANDOMStrategy     = "RANDOM"
 )
