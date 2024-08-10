@@ -6,6 +6,7 @@ import (
 	goerrors "errors"
 	"fmt"
 	"log"
+	"math"
 	"os"
 	"reflect"
 	"sort"
@@ -681,13 +682,23 @@ func (c *Config) ValidateGlobalConfig(ctx context.Context) *gerr.GatewayDError {
 	}
 
 	for configGroup := range globalConfig.Servers {
-		if globalConfig.Servers[configGroup] == nil {
+		serverConfig := globalConfig.Servers[configGroup]
+
+		if serverConfig == nil {
 			err := fmt.Errorf("\"servers.%s\" is nil or empty", configGroup)
 			span.RecordError(err)
 			errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
+			continue
 		}
 		if configGroup != strings.ToLower(configGroup) {
 			err := fmt.Errorf(`"servers.%s" is not lowercase`, configGroup)
+			span.RecordError(err)
+			errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
+		}
+
+		// Validate Load Balancing Rules
+		validatelBRulesErrors := ValidateLoadBalancingRules(serverConfig, configGroup, clientConfigGroups)
+		for _, err := range validatelBRulesErrors {
 			span.RecordError(err)
 			errors = append(errors, gerr.ErrValidationFailed.Wrap(err))
 		}
@@ -796,4 +807,114 @@ func generateTagMapping(structs []interface{}, tagMapping map[string]string) {
 			}
 		}
 	}
+}
+
+// ValidateLoadBalancingRules validates the load balancing rules in the server configuration.
+func ValidateLoadBalancingRules(
+	serverConfig *Server,
+	configGroup string,
+	clientConfigGroups map[string]map[string]bool,
+) []error {
+	var errors []error
+
+	// Return early if there are no load balancing rules
+	if serverConfig.LoadBalancer.LoadBalancingRules == nil {
+		return errors
+	}
+
+	// Validate each load balancing rule
+	for _, rule := range serverConfig.LoadBalancer.LoadBalancingRules {
+		// Validate the condition of the rule
+		if err := validateRuleCondition(rule.Condition, configGroup); err != nil {
+			errors = append(errors, err)
+		}
+
+		// Validate the distribution of the rule
+		if err := validateDistribution(
+			rule.Distribution,
+			configGroup,
+			rule.Condition,
+			clientConfigGroups,
+		); err != nil {
+			errors = append(errors, err)
+		}
+	}
+
+	return errors
+}
+
+// validateRuleCondition checks if the rule condition is empty for LoadBalancingRules.
+func validateRuleCondition(condition string, configGroup string) error {
+	if condition == "" {
+		err := fmt.Errorf(`"servers.%s.loadBalancer.loadBalancingRules.condition" is nil or empty`, configGroup)
+		return err
+	}
+	return nil
+}
+
+// validateDistribution checks if the distribution list is valid for LoadBalancingRules.
+func validateDistribution(
+	distributionList []Distribution,
+	configGroup string,
+	condition string,
+	clientConfigGroups map[string]map[string]bool,
+) error {
+	// Check if the distribution list is empty
+	if len(distributionList) == 0 {
+		return fmt.Errorf(
+			`"servers.%s.loadBalancer.loadBalancingRules.distribution" is empty`,
+			configGroup,
+		)
+	}
+
+	var totalWeight int
+	for _, distribution := range distributionList {
+		// Validate each distribution entry
+		if err := validateDistributionEntry(distribution, configGroup, condition, clientConfigGroups); err != nil {
+			return err
+		}
+
+		// Check if adding the weight would exceed the maximum integer value
+		if totalWeight > math.MaxInt-distribution.Weight {
+			return fmt.Errorf(
+				`"servers.%s.loadBalancer.loadBalancingRules.%s" total weight exceeds maximum int value`,
+				configGroup,
+				condition,
+			)
+		}
+
+		totalWeight += distribution.Weight
+	}
+
+	return nil
+}
+
+// validateDistributionEntry validates a single distribution entry for LoadBalancingRules.
+func validateDistributionEntry(
+	distribution Distribution,
+	configGroup string,
+	condition string,
+	clientConfigGroups map[string]map[string]bool,
+) error {
+	// Check if the distribution.ProxyName is referenced in the proxy configuration
+	if !clientConfigGroups[configGroup][distribution.ProxyName] {
+		return fmt.Errorf(
+			`"servers.%s.loadBalancer.loadBalancingRules.%s.%s" not referenced in proxy configuration`,
+			configGroup,
+			condition,
+			distribution.ProxyName,
+		)
+	}
+
+	// Ensure that the distribution weight is positive
+	if distribution.Weight <= 0 {
+		return fmt.Errorf(
+			`"servers.%s.loadBalancer.loadBalancingRules.%s.%s.weight" must be positive`,
+			configGroup,
+			condition,
+			distribution.ProxyName,
+		)
+	}
+
+	return nil
 }

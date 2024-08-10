@@ -851,6 +851,7 @@ var runCmd = &cobra.Command{
 				proxies[configGroupName][configBlockName] = network.NewProxy(
 					runCtx,
 					network.Proxy{
+						Name:                 configBlockName,
 						AvailableConnections: pools[configGroupName][configBlockName],
 						PluginRegistry:       pluginRegistry,
 						HealthCheckPeriod:    cfg.HealthCheckPeriod,
@@ -918,6 +919,7 @@ var runCmd = &cobra.Command{
 					KeyFile:                  cfg.KeyFile,
 					HandshakeTimeout:         cfg.HandshakeTimeout,
 					LoadbalancerStrategyName: cfg.LoadBalancer.Strategy,
+					LoadbalancerRules:        cfg.LoadBalancer.LoadBalancingRules,
 				},
 			)
 

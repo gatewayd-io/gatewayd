@@ -77,6 +77,7 @@ type Server struct {
 	// loadbalancer
 	loadbalancerStrategy     LoadBalancerStrategy
 	LoadbalancerStrategyName string
+	LoadbalancerRules        []config.LoadBalancingRule
 	connectionToProxyMap     map[*ConnWrapper]IProxy
 }
 
@@ -696,6 +697,7 @@ func NewServer(
 		stopServer:               make(chan struct{}),
 		connectionToProxyMap:     make(map[*ConnWrapper]IProxy),
 		LoadbalancerStrategyName: srv.LoadbalancerStrategyName,
+		LoadbalancerRules:        srv.LoadbalancerRules,
 	}
 
 	// Try to resolve the address and log an error if it can't be resolved.

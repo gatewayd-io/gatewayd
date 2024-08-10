@@ -36,9 +36,11 @@ type IProxy interface {
 	Shutdown()
 	AvailableConnectionsString() []string
 	BusyConnectionsString() []string
+	GetName() string
 }
 
 type Proxy struct {
+	Name                 string
 	AvailableConnections pool.IPool
 	busyConnections      pool.IPool
 	Logger               zerolog.Logger
@@ -134,6 +136,10 @@ func NewProxy(
 	).Msg("Started the client health check scheduler")
 
 	return &proxy
+}
+
+func (pr *Proxy) GetName() string {
+	return pr.Name
 }
 
 // Connect maps a server connection from the available connection pool to a incoming connection.

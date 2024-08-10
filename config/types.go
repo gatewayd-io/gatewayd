@@ -96,8 +96,19 @@ type Proxy struct {
 	HealthCheckPeriod time.Duration `json:"healthCheckPeriod" jsonschema:"oneof_type=string;integer" yaml:"healthCheckPeriod"`
 }
 
+type Distribution struct {
+	ProxyName string `json:"proxyName"`
+	Weight    int    `json:"weight"`
+}
+
+type LoadBalancingRule struct {
+	Condition    string         `json:"condition"`
+	Distribution []Distribution `json:"distribution"`
+}
+
 type LoadBalancer struct {
-	Strategy string `json:"strategy"`
+	Strategy           string              `json:"strategy"`
+	LoadBalancingRules []LoadBalancingRule `json:"loadBalancingRules"`
 }
 
 type Server struct {
