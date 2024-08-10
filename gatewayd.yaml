@@ -83,14 +83,15 @@ servers:
     address: 0.0.0.0:15432
     loadBalancer:
       # Load balancer strategies can be found in config/constants.go
-      strategy: WEIGHTED_ROUND_ROBIN # ROUND_ROBIN, RANDOM, WEIGHTED_ROUND_ROBIN
-      loadBalancingRules:
-        - condition: "DEFAULT"
-          distribution:
-            - proxyName: "writes"
-              weight: 70
-            - proxyName: "reads"
-              weight: 30
+      strategy: ROUND_ROBIN # ROUND_ROBIN, RANDOM, WEIGHTED_ROUND_ROBIN
+      # Optional configuration for strategies that support rules (e.g., WEIGHTED_ROUND_ROBIN)
+      # loadBalancingRules:
+      #   - condition: "DEFAULT" # Currently, only the "DEFAULT" condition is supported
+      #     distribution:
+      #       - proxyName: "writes"
+      #         weight: 70
+      #       - proxyName: "reads"
+      #         weight: 30
     enableTicker: False
     tickInterval: 5s # duration
     enableTLS: False

@@ -10,7 +10,6 @@ import (
 
 type weightedProxy struct {
 	proxy           IProxy
-	weight          int
 	currentWeight   int
 	effectiveWeight int
 }
@@ -21,6 +20,8 @@ type WeightedRoundRobin struct {
 	mu          sync.Mutex
 }
 
+// NewWeightedRoundRobin creates a new WeightedRoundRobin load balancer.
+// It initializes the weighted proxies based on the distribution rules defined in the load balancer configuration.
 func NewWeightedRoundRobin(server *Server, loadbalancerRule config.LoadBalancingRule) *WeightedRoundRobin {
 	var proxies []*weightedProxy
 	totalWeight := 0
@@ -32,7 +33,6 @@ func NewWeightedRoundRobin(server *Server, loadbalancerRule config.LoadBalancing
 			totalWeight += weight
 			proxies = append(proxies, &weightedProxy{
 				proxy:           proxy,
-				weight:          weight,
 				effectiveWeight: weight,
 				currentWeight:   0,
 			})
@@ -46,6 +46,10 @@ func NewWeightedRoundRobin(server *Server, loadbalancerRule config.LoadBalancing
 }
 
 // NextProxy selects the next proxy based on the weighted round-robin algorithm.
+//
+// It adjusts the current weight of each proxy based on its effective weight and selects
+// the proxy with the highest current weight. The selected proxy's current weight is then
+// decreased by the total weight of all proxies to ensure balanced distribution over time.
 func (r *WeightedRoundRobin) NextProxy() (IProxy, *gerr.GatewayDError) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -73,7 +77,7 @@ func (r *WeightedRoundRobin) NextProxy() (IProxy, *gerr.GatewayDError) {
 	return nil, gerr.ErrNoProxiesAvailable.Wrap(errors.New("no proxy selected"))
 }
 
-// findProxyByName finds a proxy by name from the list of proxies.
+// findProxyByName locates a proxy by its name in the provided list of proxies.
 func findProxyByName(name string, proxies []IProxy) IProxy {
 	for _, proxy := range proxies {
 		if proxy.GetName() == name {
