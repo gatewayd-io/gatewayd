@@ -2,6 +2,7 @@ package network
 
 import (
 	"errors"
+	"sync"
 
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
@@ -17,6 +18,7 @@ type weightedProxy struct {
 type WeightedRoundRobin struct {
 	proxies     []*weightedProxy
 	totalWeight int
+	mu          sync.Mutex
 }
 
 func NewWeightedRoundRobin(server *Server, loadbalancerRule config.LoadBalancingRule) *WeightedRoundRobin {
@@ -45,6 +47,8 @@ func NewWeightedRoundRobin(server *Server, loadbalancerRule config.LoadBalancing
 
 // NextProxy selects the next proxy based on the weighted round-robin algorithm.
 func (r *WeightedRoundRobin) NextProxy() (IProxy, *gerr.GatewayDError) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 
 	if len(r.proxies) == 0 {
 		return nil, gerr.ErrNoProxiesAvailable.Wrap(errors.New("proxy list is empty"))
