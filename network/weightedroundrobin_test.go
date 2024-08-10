@@ -1,6 +1,7 @@
 package network
 
 import (
+	"sync"
 	"testing"
 
 	"github.com/gatewayd-io/gatewayd/config"
@@ -166,5 +167,69 @@ func TestWeightedRoundRobinNextProxy(t *testing.T) {
 		// Allow a small margin of error
 		assert.InDeltaf(t, expectedCount, actualCount, 5,
 			"proxy %s: expected approximately %d, but got %d", proxyName, expectedCount, actualCount)
+	}
+}
+
+func TestWeightedRoundRobinConcurrentAccess(t *testing.T) {
+	proxies := []IProxy{
+		MockProxy{name: "proxy1"},
+		MockProxy{name: "proxy2"},
+		MockProxy{name: "proxy3"},
+	}
+	loadBalancingRule := config.LoadBalancingRule{
+		Condition: config.DefaultLoadBalancerCondition,
+		Distribution: []config.Distribution{
+			{
+				ProxyName: "proxy1",
+				Weight:    3,
+			},
+			{
+				ProxyName: "proxy2",
+				Weight:    2,
+			},
+			{
+				ProxyName: "proxy3",
+				Weight:    1,
+			},
+		},
+	}
+	server := &Server{Proxies: proxies}
+	weightedRR := NewWeightedRoundRobin(server, loadBalancingRule)
+
+	// Use a wait group to wait for all goroutines to finish
+	var wg sync.WaitGroup
+	numGoroutines := 100
+	proxySelection := make(map[string]int)
+	var mux sync.Mutex
+
+	// Run multiple goroutines to simulate concurrent access
+	for i := 0; i < numGoroutines; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			proxy, err := weightedRR.NextProxy()
+			if assert.Nil(t, err, "No error expected when getting a proxy") {
+				mux.Lock()
+				proxySelection[proxy.GetName()]++
+				mux.Unlock()
+			}
+		}()
+	}
+
+	// Wait for all goroutines to complete
+	wg.Wait()
+
+	// Verify that the proxies were selected as expected
+	expectedSelections := map[string]int{
+		"proxy1": 50, // proxy1 should be selected 50 times (3/6 of 100)
+		"proxy2": 33, // proxy2 should be selected 33 times (2/6 of 100)
+		"proxy3": 17, // proxy3 should be selected 17 times (1/6 of 100)
+	}
+
+	for name, expectedCount := range expectedSelections {
+		actualCount, exists := proxySelection[name]
+		assert.True(t, exists, "Expected proxy %s to be selected", name)
+		assert.InDelta(t, expectedCount, actualCount, 5, "Proxy %s selection count should be within expected range", name)
 	}
 }
