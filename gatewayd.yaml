@@ -83,7 +83,14 @@ servers:
     address: 0.0.0.0:15432
     loadBalancer:
       # Load balancer strategies can be found in config/constants.go
-      strategy: RANDOM # ROUND_ROBIN, RANDOM
+      strategy: WEIGHTED_ROUND_ROBIN # ROUND_ROBIN, RANDOM, WEIGHTED_ROUND_ROBIN
+      loadBalancingRules:
+        - condition: "DEFAULT"
+          distribution:
+            - proxy: "writes"
+              weight: 70
+            - proxy: "reads"
+              weight: 30
     enableTicker: False
     tickInterval: 5s # duration
     enableTLS: False

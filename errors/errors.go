@@ -55,6 +55,7 @@ const (
 	ErrCodePublishAsyncAction
 	ErrCodeLoadBalancerStrategyNotFound
 	ErrCodeNoProxiesAvailable
+	ErrCodeNoLoadBalancerRules
 )
 
 var (
@@ -202,6 +203,10 @@ var (
 
 	ErrNoProxiesAvailable = &GatewayDError{
 		ErrCodeNoProxiesAvailable, "No proxies available to select.", nil,
+	}
+
+	ErrNoLoadBalancerRules = &GatewayDError{
+		ErrCodeNoLoadBalancerRules, "No load balancer rules provided.", nil,
 	}
 
 	// Unwrapped errors.

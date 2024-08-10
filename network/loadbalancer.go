@@ -15,7 +15,23 @@ func NewLoadBalancerStrategy(server *Server) (LoadBalancerStrategy, *gerr.Gatewa
 		return NewRoundRobin(server), nil
 	case config.RANDOMStrategy:
 		return NewRandom(server), nil
+	case config.WeightedRoundRobinStrategy:
+		if server.LoadbalancerRules == nil {
+			return nil, gerr.ErrNoLoadBalancerRules
+		}
+		loadbalancerRule := selectLoadBalancerRule(server.LoadbalancerRules)
+		return NewWeightedRoundRobin(server, loadbalancerRule), nil
 	default:
 		return nil, gerr.ErrLoadBalancerStrategyNotFound
 	}
+}
+
+func selectLoadBalancerRule(loadbalancerRules []config.LoadBalancingRule) config.LoadBalancingRule {
+	for _, loadbalancerRule := range loadbalancerRules {
+		if loadbalancerRule.Condition == config.DefaultLoadBalancerCondition {
+			return loadbalancerRule
+		}
+	}
+	// Return the first rule as a fallback
+	return loadbalancerRules[0]
 }

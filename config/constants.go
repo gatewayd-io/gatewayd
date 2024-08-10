@@ -90,11 +90,12 @@ const (
 	DefaultHealthCheckPeriod = 60 * time.Second // This must match PostgreSQL authentication timeout.
 
 	// Server constants.
-	DefaultListenNetwork        = "tcp"
-	DefaultListenAddress        = "0.0.0.0:15432"
-	DefaultTickInterval         = 5 * time.Second
-	DefaultHandshakeTimeout     = 5 * time.Second
-	DefaultLoadBalancerStrategy = "ROUND_ROBIN"
+	DefaultListenNetwork         = "tcp"
+	DefaultListenAddress         = "0.0.0.0:15432"
+	DefaultTickInterval          = 5 * time.Second
+	DefaultHandshakeTimeout      = 5 * time.Second
+	DefaultLoadBalancerStrategy  = "ROUND_ROBIN"
+	DefaultLoadBalancerCondition = "DEFAULT"
 
 	// Utility constants.
 	DefaultSeed = 1000
@@ -129,6 +130,7 @@ const (
 
 // Load balancing strategies.
 const (
-	RoundRobinStrategy = "ROUND_ROBIN"
-	RANDOMStrategy     = "RANDOM"
+	RoundRobinStrategy         = "ROUND_ROBIN"
+	RANDOMStrategy             = "RANDOM"
+	WeightedRoundRobinStrategy = "WEIGHTED_ROUND_ROBIN"
 )
