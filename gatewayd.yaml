@@ -87,9 +87,9 @@ servers:
       loadBalancingRules:
         - condition: "DEFAULT"
           distribution:
-            - proxy: "writes"
+            - proxyName: "writes"
               weight: 70
-            - proxy: "reads"
+            - proxyName: "reads"
               weight: 30
     enableTicker: False
     tickInterval: 5s # duration

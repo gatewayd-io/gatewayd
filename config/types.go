@@ -97,7 +97,7 @@ type Proxy struct {
 }
 
 type Distribution struct {
-	ProxyName string `json:"proxy"`
+	ProxyName string `json:"proxyName"`
 	Weight    int    `json:"weight"`
 }
 
