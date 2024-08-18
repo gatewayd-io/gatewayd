@@ -34,7 +34,7 @@ func TestGetNextProxy(t *testing.T) {
 		server := &Server{Proxies: proxies}
 		random := NewRandom(server)
 
-		proxy, err := random.NextProxy()
+		proxy, err := random.NextProxy(nil)
 
 		assert.Nil(t, err)
 		assert.Contains(t, proxies, proxy)
@@ -44,7 +44,7 @@ func TestGetNextProxy(t *testing.T) {
 		server := &Server{Proxies: []IProxy{}}
 		random := NewRandom(server)
 
-		proxy, err := random.NextProxy()
+		proxy, err := random.NextProxy(nil)
 
 		assert.Nil(t, proxy)
 		assert.Equal(t, gerr.ErrNoProxiesAvailable.Message, err.Message)
@@ -54,8 +54,8 @@ func TestGetNextProxy(t *testing.T) {
 		server := &Server{Proxies: proxies}
 		random := NewRandom(server)
 
-		proxy1, _ := random.NextProxy()
-		proxy2, _ := random.NextProxy()
+		proxy1, _ := random.NextProxy(nil)
+		proxy2, _ := random.NextProxy(nil)
 
 		assert.Contains(t, proxies, proxy1)
 		assert.Contains(t, proxies, proxy2)
@@ -81,7 +81,7 @@ func TestConcurrencySafety(t *testing.T) {
 		waitGroup.Add(1)
 		go func() {
 			defer waitGroup.Done()
-			proxy, _ := random.NextProxy()
+			proxy, _ := random.NextProxy(nil)
 			proxyChan <- proxy
 		}()
 	}

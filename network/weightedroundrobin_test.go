@@ -132,7 +132,7 @@ func TestWeightedRoundRobinNextProxy(t *testing.T) {
 
 	// Simulate the distribution of requests using the WeightedRoundRobin algorithm.
 	for range totalRequests {
-		proxy, err := weightedRR.NextProxy()
+		proxy, err := weightedRR.NextProxy(nil)
 		require.Nil(t, err)
 
 		mockProxy, ok := proxy.(MockProxy)
@@ -187,7 +187,7 @@ func TestWeightedRoundRobinConcurrentAccess(t *testing.T) {
 			defer waitGroup.Done()
 
 			// Retrieve the next proxy using the WeightedRoundRobin algorithm.
-			proxy, err := weightedRR.NextProxy()
+			proxy, err := weightedRR.NextProxy(nil)
 			if assert.Nil(t, err, "No error expected when getting a proxy") {
 				// Safely update the proxy selection count using a mutex.
 				mux.Lock()

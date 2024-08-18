@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"net"
 	"sync"
 
 	gerr "github.com/gatewayd-io/gatewayd/errors"
@@ -24,7 +25,7 @@ func NewRandom(server *Server) *Random {
 }
 
 // NextProxy returns a random proxy from the list.
-func (r *Random) NextProxy() (IProxy, *gerr.GatewayDError) {
+func (r *Random) NextProxy(conn net.Conn) (IProxy, *gerr.GatewayDError) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
