@@ -2,6 +2,7 @@ package network
 
 import (
 	"encoding/binary"
+	"fmt"
 	"net"
 	"strings"
 	"testing"
@@ -211,24 +212,35 @@ func (m MockProxy) GetName() string {
 	return m.name
 }
 
-// Mock implementation of IConnWrapper
+// Mock implementation of IConnWrapper.
 type MockConnWrapper struct {
 	mock.Mock
 }
 
 func (m *MockConnWrapper) Conn() net.Conn {
 	args := m.Called()
-	return args.Get(0).(net.Conn)
+	conn, ok := args.Get(0).(net.Conn)
+	if !ok {
+		panic(fmt.Sprintf("expected net.Conn but got %T", args.Get(0)))
+	}
+	return conn
 }
 
 func (m *MockConnWrapper) UpgradeToTLS(upgrader UpgraderFunc) *gerr.GatewayDError {
 	args := m.Called(upgrader)
-	return args.Get(0).(*gerr.GatewayDError)
+	err, ok := args.Get(0).(*gerr.GatewayDError)
+	if !ok {
+		panic(fmt.Sprintf("expected *gerr.GatewayDError but got %T", args.Get(0)))
+	}
+	return err
 }
 
 func (m *MockConnWrapper) Close() error {
 	args := m.Called()
-	return args.Error(0)
+	if err := args.Error(0); err != nil {
+		return fmt.Errorf("failed to close connection: %w", err)
+	}
+	return nil
 }
 
 func (m *MockConnWrapper) Write(data []byte) (int, error) {
@@ -243,12 +255,20 @@ func (m *MockConnWrapper) Read(data []byte) (int, error) {
 
 func (m *MockConnWrapper) RemoteAddr() net.Addr {
 	args := m.Called()
-	return args.Get(0).(net.Addr)
+	addr, ok := args.Get(0).(net.Addr)
+	if !ok {
+		panic(fmt.Sprintf("expected net.Addr but got %T", args.Get(0)))
+	}
+	return addr
 }
 
 func (m *MockConnWrapper) LocalAddr() net.Addr {
 	args := m.Called()
-	return args.Get(0).(net.Addr)
+	addr, ok := args.Get(0).(net.Addr)
+	if !ok {
+		panic(fmt.Sprintf("expected net.Addr but got %T", args.Get(0)))
+	}
+	return addr
 }
 
 func (m *MockConnWrapper) IsTLSEnabled() bool {

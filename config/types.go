@@ -107,7 +107,7 @@ type LoadBalancingRule struct {
 }
 
 type ConsistentHash struct {
-	UseSourceIp bool `json:"useSourceIp"`
+	UseSourceIP bool `json:"useSourceIp"`
 }
 
 type LoadBalancer struct {

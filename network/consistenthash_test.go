@@ -8,19 +8,25 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TestNewConsistentHash verifies that a new ConsistentHash instance is properly created.
+// It checks that the original load balancing strategy is preserved, that the useSourceIp
+// setting is correctly applied, and that the hashMap is initialized.
 func TestNewConsistentHash(t *testing.T) {
 	server := &Server{
-		LoadbalancerConsistentHash: &config.ConsistentHash{UseSourceIp: true},
+		LoadbalancerConsistentHash: &config.ConsistentHash{UseSourceIP: true},
 	}
 	originalStrategy := NewRandom(server)
-	ch := NewConsistentHash(server, originalStrategy)
+	consistentHash := NewConsistentHash(server, originalStrategy)
 
-	assert.NotNil(t, ch)
-	assert.Equal(t, originalStrategy, ch.originalStrategy)
-	assert.True(t, ch.useSourceIp)
-	assert.NotNil(t, ch.hashMap)
+	assert.NotNil(t, consistentHash)
+	assert.Equal(t, originalStrategy, consistentHash.originalStrategy)
+	assert.True(t, consistentHash.useSourceIP)
+	assert.NotNil(t, consistentHash.hashMap)
 }
 
+// TestConsistentHashNextProxyUseSourceIpExists ensures that when useSourceIp is enabled,
+// and the hashed IP exists in the hashMap, the correct proxy is returned.
+// It mocks a connection with a specific IP and verifies the proxy retrieval from the hashMap.
 func TestConsistentHashNextProxyUseSourceIpExists(t *testing.T) {
 	proxies := []IProxy{
 		MockProxy{name: "proxy1"},
@@ -29,22 +35,22 @@ func TestConsistentHashNextProxyUseSourceIpExists(t *testing.T) {
 	}
 	server := &Server{
 		Proxies:                    proxies,
-		LoadbalancerConsistentHash: &config.ConsistentHash{UseSourceIp: true},
+		LoadbalancerConsistentHash: &config.ConsistentHash{UseSourceIP: true},
 	}
 	originalStrategy := NewRandom(server)
-	ch := NewConsistentHash(server, originalStrategy)
+	consistentHash := NewConsistentHash(server, originalStrategy)
 	mockConn := new(MockConnWrapper)
 
-	// Mock RemoteAddr to return a specific IP:port format
+	// Mock LocalAddr to return a specific IP:port format
 	mockAddr := &net.TCPAddr{IP: net.ParseIP("192.168.1.1"), Port: 1234}
-	mockConn.On("RemoteAddr").Return(mockAddr)
+	mockConn.On("LocalAddr").Return(mockAddr)
 
 	key := "192.168.1.1"
 	hash := hashKey(key)
 
-	ch.hashMap[hash] = proxies[2]
+	consistentHash.hashMap[hash] = proxies[2]
 
-	proxy, err := ch.NextProxy(mockConn)
+	proxy, err := consistentHash.NextProxy(mockConn)
 	assert.Nil(t, err)
 	assert.Equal(t, proxies[2], proxy)
 
@@ -52,7 +58,9 @@ func TestConsistentHashNextProxyUseSourceIpExists(t *testing.T) {
 	mockConn.AssertExpectations(t)
 }
 
-// Test case for full address-based hashing
+// TestConsistentHashNextProxyUseFullAddress verifies the behavior when useSourceIp is disabled.
+// It ensures that the full connection address is used for hashing, and the correct proxy is returned
+// and cached in the hashMap. The test also checks that the hash value is computed based on the full address.
 func TestConsistentHashNextProxyUseFullAddress(t *testing.T) {
 	mockConn := new(MockConnWrapper)
 	proxies := []IProxy{
@@ -63,27 +71,27 @@ func TestConsistentHashNextProxyUseFullAddress(t *testing.T) {
 	server := &Server{
 		Proxies: proxies,
 		LoadbalancerConsistentHash: &config.ConsistentHash{
-			UseSourceIp: false,
+			UseSourceIP: false,
 		},
 	}
 	mockStrategy := NewRoundRobin(server)
 
-	// Mock RemoteAddr to return full address
+	// Mock LocalAddr to return full address
 	mockAddr := &net.TCPAddr{IP: net.ParseIP("192.168.1.1"), Port: 1234}
-	mockConn.On("RemoteAddr").Return(mockAddr)
+	mockConn.On("LocalAddr").Return(mockAddr)
 
-	ch := NewConsistentHash(server, mockStrategy)
+	consistentHash := NewConsistentHash(server, mockStrategy)
 
-	proxy, err := ch.NextProxy(mockConn)
+	proxy, err := consistentHash.NextProxy(mockConn)
 	assert.Nil(t, err)
 	assert.NotNil(t, proxy)
 	assert.Equal(t, proxies[1], proxy)
 
 	// Hash should be calculated using the full address and cached in hashMap
 	hash := hashKey("192.168.1.1:1234")
-	ch.hashMapMutex.RLock()
-	cachedProxy, exists := ch.hashMap[hash]
-	ch.hashMapMutex.RUnlock()
+	consistentHash.hashMapMutex.RLock()
+	cachedProxy, exists := consistentHash.hashMap[hash]
+	consistentHash.hashMapMutex.RUnlock()
 
 	assert.True(t, exists)
 	assert.Equal(t, proxies[1], cachedProxy)
