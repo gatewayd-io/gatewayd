@@ -113,7 +113,7 @@ type ConsistentHash struct {
 type LoadBalancer struct {
 	Strategy           string              `json:"strategy"`
 	LoadBalancingRules []LoadBalancingRule `json:"loadBalancingRules"`
-	ConsistentHash     *ConsistentHash     `json:"consistentHash"`
+	ConsistentHash     *ConsistentHash     `json:"consistentHash,omitempty"`
 }
 
 type Server struct {
