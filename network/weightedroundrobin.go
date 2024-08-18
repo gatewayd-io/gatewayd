@@ -2,7 +2,6 @@ package network
 
 import (
 	"errors"
-	"net"
 	"sync"
 
 	"github.com/gatewayd-io/gatewayd/config"
@@ -51,7 +50,7 @@ func NewWeightedRoundRobin(server *Server, loadbalancerRule config.LoadBalancing
 // It adjusts the current weight of each proxy based on its effective weight and selects
 // the proxy with the highest current weight. The selected proxy's current weight is then
 // decreased by the total weight of all proxies to ensure balanced distribution over time.
-func (r *WeightedRoundRobin) NextProxy(conn net.Conn) (IProxy, *gerr.GatewayDError) {
+func (r *WeightedRoundRobin) NextProxy(conn IConnWrapper) (IProxy, *gerr.GatewayDError) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 

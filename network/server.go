@@ -157,7 +157,7 @@ func (s *Server) OnOpen(conn *ConnWrapper) ([]byte, Action) {
 	span.AddEvent("Ran the OnOpening hooks")
 
 	// Attempt to retrieve the next proxy.
-	proxy, err := s.loadbalancerStrategy.NextProxy(conn.Conn())
+	proxy, err := s.loadbalancerStrategy.NextProxy(conn)
 	if err != nil {
 		span.RecordError(err)
 		s.Logger.Error().Err(err).Msg("failed to retrieve next proxy")
