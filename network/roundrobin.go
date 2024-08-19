@@ -16,7 +16,7 @@ func NewRoundRobin(server *Server) *RoundRobin {
 	return &RoundRobin{proxies: server.Proxies}
 }
 
-func (r *RoundRobin) NextProxy() (IProxy, *gerr.GatewayDError) {
+func (r *RoundRobin) NextProxy(_ IConnWrapper) (IProxy, *gerr.GatewayDError) {
 	proxiesLen := uint32(len(r.proxies))
 	if proxiesLen == 0 {
 		return nil, gerr.ErrNoProxiesAvailable.Wrap(errors.New("proxy list is empty"))

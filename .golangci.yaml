@@ -65,6 +65,7 @@ linters-settings:
           - "golang.org/x/text/cases"
           - "golang.org/x/text/language"
           - "github.com/redis/go-redis/v9"
+          - "github.com/spaolacci/murmur3"
       test:
         files:
           - $test

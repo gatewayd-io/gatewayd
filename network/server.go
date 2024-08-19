@@ -75,10 +75,11 @@ type Server struct {
 	stopServer  chan struct{}
 
 	// loadbalancer
-	loadbalancerStrategy     LoadBalancerStrategy
-	LoadbalancerStrategyName string
-	LoadbalancerRules        []config.LoadBalancingRule
-	connectionToProxyMap     map[*ConnWrapper]IProxy
+	loadbalancerStrategy       LoadBalancerStrategy
+	LoadbalancerStrategyName   string
+	LoadbalancerRules          []config.LoadBalancingRule
+	LoadbalancerConsistentHash *config.ConsistentHash
+	connectionToProxyMap       map[*ConnWrapper]IProxy
 }
 
 var _ IServer = (*Server)(nil)
@@ -156,7 +157,7 @@ func (s *Server) OnOpen(conn *ConnWrapper) ([]byte, Action) {
 	span.AddEvent("Ran the OnOpening hooks")
 
 	// Attempt to retrieve the next proxy.
-	proxy, err := s.loadbalancerStrategy.NextProxy()
+	proxy, err := s.loadbalancerStrategy.NextProxy(conn)
 	if err != nil {
 		span.RecordError(err)
 		s.Logger.Error().Err(err).Msg("failed to retrieve next proxy")
@@ -677,27 +678,28 @@ func NewServer(
 
 	// Create the server.
 	server := Server{
-		ctx:                      serverCtx,
-		Network:                  srv.Network,
-		Address:                  srv.Address,
-		Options:                  srv.Options,
-		TickInterval:             srv.TickInterval,
-		Status:                   config.Stopped,
-		EnableTLS:                srv.EnableTLS,
-		CertFile:                 srv.CertFile,
-		KeyFile:                  srv.KeyFile,
-		HandshakeTimeout:         srv.HandshakeTimeout,
-		Proxies:                  srv.Proxies,
-		Logger:                   srv.Logger,
-		PluginRegistry:           srv.PluginRegistry,
-		PluginTimeout:            srv.PluginTimeout,
-		mu:                       &sync.RWMutex{},
-		connections:              0,
-		running:                  &atomic.Bool{},
-		stopServer:               make(chan struct{}),
-		connectionToProxyMap:     make(map[*ConnWrapper]IProxy),
-		LoadbalancerStrategyName: srv.LoadbalancerStrategyName,
-		LoadbalancerRules:        srv.LoadbalancerRules,
+		ctx:                        serverCtx,
+		Network:                    srv.Network,
+		Address:                    srv.Address,
+		Options:                    srv.Options,
+		TickInterval:               srv.TickInterval,
+		Status:                     config.Stopped,
+		EnableTLS:                  srv.EnableTLS,
+		CertFile:                   srv.CertFile,
+		KeyFile:                    srv.KeyFile,
+		HandshakeTimeout:           srv.HandshakeTimeout,
+		Proxies:                    srv.Proxies,
+		Logger:                     srv.Logger,
+		PluginRegistry:             srv.PluginRegistry,
+		PluginTimeout:              srv.PluginTimeout,
+		mu:                         &sync.RWMutex{},
+		connections:                0,
+		running:                    &atomic.Bool{},
+		stopServer:                 make(chan struct{}),
+		connectionToProxyMap:       make(map[*ConnWrapper]IProxy),
+		LoadbalancerStrategyName:   srv.LoadbalancerStrategyName,
+		LoadbalancerRules:          srv.LoadbalancerRules,
+		LoadbalancerConsistentHash: srv.LoadbalancerConsistentHash,
 	}
 
 	// Try to resolve the address and log an error if it can't be resolved.

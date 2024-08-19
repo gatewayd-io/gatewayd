@@ -84,6 +84,8 @@ servers:
     loadBalancer:
       # Load balancer strategies can be found in config/constants.go
       strategy: ROUND_ROBIN # ROUND_ROBIN, RANDOM, WEIGHTED_ROUND_ROBIN
+      consistentHash:
+        useSourceIp: true
       # Optional configuration for strategies that support rules (e.g., WEIGHTED_ROUND_ROBIN)
       # loadBalancingRules:
       #   - condition: "DEFAULT" # Currently, only the "DEFAULT" condition is supported

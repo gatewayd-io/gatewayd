@@ -2,12 +2,15 @@ package network
 
 import (
 	"encoding/binary"
+	"fmt"
+	"net"
 	"strings"
 	"testing"
 
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -207,4 +210,68 @@ func (m MockProxy) BusyConnectionsString() []string {
 // GetName returns the name of the MockProxy.
 func (m MockProxy) GetName() string {
 	return m.name
+}
+
+// Mock implementation of IConnWrapper.
+type MockConnWrapper struct {
+	mock.Mock
+}
+
+func (m *MockConnWrapper) Conn() net.Conn {
+	args := m.Called()
+	conn, ok := args.Get(0).(net.Conn)
+	if !ok {
+		panic(fmt.Sprintf("expected net.Conn but got %T", args.Get(0)))
+	}
+	return conn
+}
+
+func (m *MockConnWrapper) UpgradeToTLS(upgrader UpgraderFunc) *gerr.GatewayDError {
+	args := m.Called(upgrader)
+	err, ok := args.Get(0).(*gerr.GatewayDError)
+	if !ok {
+		panic(fmt.Sprintf("expected *gerr.GatewayDError but got %T", args.Get(0)))
+	}
+	return err
+}
+
+func (m *MockConnWrapper) Close() error {
+	args := m.Called()
+	if err := args.Error(0); err != nil {
+		return fmt.Errorf("failed to close connection: %w", err)
+	}
+	return nil
+}
+
+func (m *MockConnWrapper) Write(data []byte) (int, error) {
+	args := m.Called(data)
+	return args.Int(0), args.Error(1)
+}
+
+func (m *MockConnWrapper) Read(data []byte) (int, error) {
+	args := m.Called(data)
+	return args.Int(0), args.Error(1)
+}
+
+func (m *MockConnWrapper) RemoteAddr() net.Addr {
+	args := m.Called()
+	addr, ok := args.Get(0).(net.Addr)
+	if !ok {
+		panic(fmt.Sprintf("expected net.Addr but got %T", args.Get(0)))
+	}
+	return addr
+}
+
+func (m *MockConnWrapper) LocalAddr() net.Addr {
+	args := m.Called()
+	addr, ok := args.Get(0).(net.Addr)
+	if !ok {
+		panic(fmt.Sprintf("expected net.Addr but got %T", args.Get(0)))
+	}
+	return addr
+}
+
+func (m *MockConnWrapper) IsTLSEnabled() bool {
+	args := m.Called()
+	return args.Bool(0)
 }

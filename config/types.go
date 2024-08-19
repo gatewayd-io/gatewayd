@@ -106,9 +106,14 @@ type LoadBalancingRule struct {
 	Distribution []Distribution `json:"distribution"`
 }
 
+type ConsistentHash struct {
+	UseSourceIP bool `json:"useSourceIp"`
+}
+
 type LoadBalancer struct {
 	Strategy           string              `json:"strategy"`
 	LoadBalancingRules []LoadBalancingRule `json:"loadBalancingRules"`
+	ConsistentHash     *ConsistentHash     `json:"consistentHash,omitempty"`
 }
 
 type Server struct {
