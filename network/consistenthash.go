@@ -15,7 +15,7 @@ type ConsistentHash struct {
 	originalStrategy LoadBalancerStrategy
 	useSourceIP      bool
 	hashMap          map[uint64]IProxy
-	hashMapMutex     sync.RWMutex
+	mu               sync.Mutex
 }
 
 // NewConsistentHash creates a new ConsistentHash instance. It requires a server configuration and an original
@@ -33,6 +33,9 @@ func NewConsistentHash(server *Server, originalStrategy LoadBalancerStrategy) *C
 // proxy in the hash map based on the hashed key (either the source IP or the full address). If no match is found,
 // it falls back to the original load balancing strategy, adds the selected proxy to the hash map, and returns it.
 func (ch *ConsistentHash) NextProxy(conn IConnWrapper) (IProxy, *gerr.GatewayDError) {
+	ch.mu.Lock()
+	defer ch.mu.Unlock()
+
 	var key string
 
 	if ch.useSourceIP {
@@ -47,9 +50,7 @@ func (ch *ConsistentHash) NextProxy(conn IConnWrapper) (IProxy, *gerr.GatewayDEr
 
 	hash := hashKey(key)
 
-	ch.hashMapMutex.RLock()
 	proxy, exists := ch.hashMap[hash]
-	ch.hashMapMutex.RUnlock()
 
 	if exists {
 		return proxy, nil
@@ -62,9 +63,7 @@ func (ch *ConsistentHash) NextProxy(conn IConnWrapper) (IProxy, *gerr.GatewayDEr
 	}
 
 	// Add the selected proxy to the hash map for future requests
-	ch.hashMapMutex.Lock()
 	ch.hashMap[hash] = proxy
-	ch.hashMapMutex.Unlock()
 
 	return proxy, nil
 }

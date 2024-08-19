@@ -2,6 +2,7 @@ package network
 
 import (
 	"net"
+	"sync"
 	"testing"
 
 	"github.com/gatewayd-io/gatewayd/config"
@@ -89,13 +90,65 @@ func TestConsistentHashNextProxyUseFullAddress(t *testing.T) {
 
 	// Hash should be calculated using the full address and cached in hashMap
 	hash := hashKey("192.168.1.1:1234")
-	consistentHash.hashMapMutex.RLock()
 	cachedProxy, exists := consistentHash.hashMap[hash]
-	consistentHash.hashMapMutex.RUnlock()
 
 	assert.True(t, exists)
 	assert.Equal(t, proxies[1], cachedProxy)
 
 	// Clean up
 	mockConn.AssertExpectations(t)
+}
+
+// TestConsistentHashNextProxyConcurrency tests the concurrency safety of the NextProxy method
+// in the ConsistentHash struct. It ensures that multiple goroutines can concurrently call
+// NextProxy without causing race conditions or inconsistent behavior.
+func TestConsistentHashNextProxyConcurrency(t *testing.T) {
+	// Setup mocks
+	conn1 := new(MockConnWrapper)
+	conn2 := new(MockConnWrapper)
+	proxies := []IProxy{
+		MockProxy{name: "proxy1"},
+		MockProxy{name: "proxy2"},
+		MockProxy{name: "proxy3"},
+	}
+	server := &Server{
+		Proxies:                    proxies,
+		LoadbalancerConsistentHash: &config.ConsistentHash{UseSourceIP: true},
+	}
+	originalStrategy := NewRoundRobin(server)
+
+	// Mock IP addresses
+	mockAddr1 := &net.TCPAddr{IP: net.ParseIP("192.168.1.1"), Port: 1234}
+	mockAddr2 := &net.TCPAddr{IP: net.ParseIP("192.168.1.2"), Port: 1234}
+	conn1.On("LocalAddr").Return(mockAddr1)
+	conn2.On("LocalAddr").Return(mockAddr2)
+
+	// Initialize the ConsistentHash
+	consistentHash := NewConsistentHash(server, originalStrategy)
+
+	// Run the test concurrently
+	var waitGroup sync.WaitGroup
+	const numGoroutines = 100
+
+	for range numGoroutines {
+		waitGroup.Add(1)
+		go func() {
+			defer waitGroup.Done()
+			p, err := consistentHash.NextProxy(conn1)
+			assert.Nil(t, err)
+			assert.Equal(t, proxies[1], p)
+		}()
+	}
+
+	waitGroup.Wait()
+
+	// Ensure that the proxy is consistently the same
+	proxy, err := consistentHash.NextProxy(conn1)
+	assert.Nil(t, err)
+	assert.Equal(t, proxies[1], proxy)
+
+	// Ensure that connecting from a different address returns a different proxy
+	proxy, err = consistentHash.NextProxy(conn2)
+	assert.Nil(t, err)
+	assert.Equal(t, proxies[2], proxy)
 }
