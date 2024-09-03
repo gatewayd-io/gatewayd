@@ -42,9 +42,9 @@ func TestConsistentHashNextProxyUseSourceIpExists(t *testing.T) {
 	consistentHash := NewConsistentHash(server, originalStrategy)
 	mockConn := new(MockConnWrapper)
 
-	// Mock LocalAddr to return a specific IP:port format
+	// Mock RemoteAddr to return a specific IP:port format
 	mockAddr := &net.TCPAddr{IP: net.ParseIP("192.168.1.1"), Port: 1234}
-	mockConn.On("LocalAddr").Return(mockAddr)
+	mockConn.On("RemoteAddr").Return(mockAddr)
 
 	key := "192.168.1.1"
 	hash := hashKey(key)
@@ -77,9 +77,9 @@ func TestConsistentHashNextProxyUseFullAddress(t *testing.T) {
 	}
 	mockStrategy := NewRoundRobin(server)
 
-	// Mock LocalAddr to return full address
+	// Mock RemoteAddr to return full address
 	mockAddr := &net.TCPAddr{IP: net.ParseIP("192.168.1.1"), Port: 1234}
-	mockConn.On("LocalAddr").Return(mockAddr)
+	mockConn.On("RemoteAddr").Return(mockAddr)
 
 	consistentHash := NewConsistentHash(server, mockStrategy)
 
@@ -120,8 +120,8 @@ func TestConsistentHashNextProxyConcurrency(t *testing.T) {
 	// Mock IP addresses
 	mockAddr1 := &net.TCPAddr{IP: net.ParseIP("192.168.1.1"), Port: 1234}
 	mockAddr2 := &net.TCPAddr{IP: net.ParseIP("192.168.1.2"), Port: 1234}
-	conn1.On("LocalAddr").Return(mockAddr1)
-	conn2.On("LocalAddr").Return(mockAddr2)
+	conn1.On("RemoteAddr").Return(mockAddr1)
+	conn2.On("RemoteAddr").Return(mockAddr2)
 
 	// Initialize the ConsistentHash
 	consistentHash := NewConsistentHash(server, originalStrategy)
