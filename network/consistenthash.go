@@ -45,7 +45,9 @@ func (ch *ConsistentHash) NextProxy(conn IConnWrapper) (IProxy, *gerr.GatewayDEr
 		}
 		key = sourceIP
 	} else {
-		key = conn.LocalAddr().String() // Fallback to use full address as the key if `useSourceIp` is false
+		// Fallback to using the full remote address (IP:port) as the key if `useSourceIP` is false.
+		// This effectively disables consistent hashing, as the remote address has a random port each time.
+		key = conn.RemoteAddr().String()
 	}
 
 	hash := hashKey(key)
@@ -74,10 +76,10 @@ func hashKey(key string) uint64 {
 	return murmur3.Sum64([]byte(key))
 }
 
-// extractIPFromConn extracts the IP address from the connection's local address. It splits the address
+// extractIPFromConn extracts the IP address from the connection's remote address. It splits the address
 // into IP and port components and returns the IP part. This is useful for hashing based on the source IP.
 func extractIPFromConn(con IConnWrapper) (string, error) {
-	addr := con.LocalAddr().String()
+	addr := con.RemoteAddr().String() // RemoteAddr is the address of the request, LocalAddress is the gateway address.
 	// addr will be in the format "IP:port"
 	ip, _, err := net.SplitHostPort(addr)
 	if err != nil {
