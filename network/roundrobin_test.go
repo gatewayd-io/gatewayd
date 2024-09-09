@@ -74,7 +74,7 @@ func TestRoundRobin_ConcurrentAccess(t *testing.T) {
 
 	waitGroup.Wait()
 	nextIndex := roundRobin.next.Load()
-	if nextIndex != uint32(numGoroutines) {
+	if nextIndex != uint32(numGoroutines) { //nolint:gosec
 		t.Errorf("expected next index to be %d, got %d", numGoroutines, nextIndex)
 	}
 }
