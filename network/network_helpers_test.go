@@ -45,7 +45,7 @@ func writeStartupMsg(buf *WriteBuffer, user, database, appName string) {
 
 	// Write message length
 	binary.BigEndian.PutUint32(
-		buf.Bytes[buf.msgStart:], uint32(len(buf.Bytes)-buf.msgStart))
+		buf.Bytes[buf.msgStart:], uint32(len(buf.Bytes)-buf.msgStart)) //nolint:gosec
 }
 
 // WriteString writes a null-terminated string to the buffer.
@@ -59,7 +59,7 @@ func CreatePostgreSQLPacket(typ byte, msg []byte) []byte {
 	packet := make([]byte, 1+4+len(msg))
 
 	packet[0] = typ
-	binary.BigEndian.PutUint32(packet[1:], uint32(len(msg)+4))
+	binary.BigEndian.PutUint32(packet[1:], uint32(len(msg)+4)) //nolint:gosec
 	for i, b := range msg {
 		packet[i+5] = b
 	}

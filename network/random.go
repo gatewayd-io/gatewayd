@@ -42,9 +42,9 @@ func (r *Random) NextProxy(_ IConnWrapper) (IProxy, *gerr.GatewayDError) {
 }
 
 // randInt generates a random integer between 0 and max-1 using crypto/rand.
-func randInt(max int) (int, error) {
+func randInt(maxValue int) (int, error) {
 	// Generate a secure random number
-	n, err := rand.Int(rand.Reader, big.NewInt(int64(max)))
+	n, err := rand.Int(rand.Reader, big.NewInt(int64(maxValue)))
 	if err != nil {
 		return 0, fmt.Errorf("failed to generate random integer: %w", err)
 	}

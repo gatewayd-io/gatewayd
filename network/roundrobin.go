@@ -1,7 +1,7 @@
 package network
 
 import (
-	"errors"
+	"math"
 	"sync/atomic"
 
 	gerr "github.com/gatewayd-io/gatewayd/errors"
@@ -17,10 +17,13 @@ func NewRoundRobin(server *Server) *RoundRobin {
 }
 
 func (r *RoundRobin) NextProxy(_ IConnWrapper) (IProxy, *gerr.GatewayDError) {
-	proxiesLen := uint32(len(r.proxies))
-	if proxiesLen == 0 {
-		return nil, gerr.ErrNoProxiesAvailable.Wrap(errors.New("proxy list is empty"))
+	if len(r.proxies) > math.MaxUint32 {
+		// This should never happen, but if it does, we fall back to the first proxy.
+		return r.proxies[0], nil
+	} else if len(r.proxies) == 0 {
+		return nil, gerr.ErrNoProxiesAvailable
 	}
+
 	nextIndex := r.next.Add(1)
-	return r.proxies[nextIndex%proxiesLen], nil
+	return r.proxies[nextIndex%uint32(len(r.proxies))], nil //nolint:gosec
 }
