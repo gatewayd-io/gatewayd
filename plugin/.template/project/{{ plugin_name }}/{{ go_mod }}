@@ -1,6 +1,6 @@
 module {{ remote_url|split:'https://'|join:''|split:'http://'|join:'' }}
 
-go 1.22
+go 1.23
 
 require (
 	github.com/gatewayd-io/gatewayd-plugin-sdk v0.2.6

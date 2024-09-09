@@ -64,7 +64,7 @@ jobs:
       - name: Install Go 🧑‍💻
         uses: actions/setup-go@v5
         with:
-          go-version: "1.22"
+          go-version: "1.23"
 
       - name: Lint code with golangci-lint 🚨
         uses: golangci/golangci-lint-action@v4
@@ -120,7 +120,7 @@ jobs:
       - name: Install Go 🧑‍💻
         uses: actions/setup-go@v5
         with:
-          go-version: "1.22"
+          go-version: "1.23"
 
       - name: Checkout test plugin 🛎️
         uses: actions/checkout@v4

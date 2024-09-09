@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # Use the official golang image to build the binary.
-FROM golang:1.22-alpine3.20 as builder
+FROM golang:1.23-alpine3.20 as builder
 
 ARG TARGETOS
 ARG TARGETARCH
