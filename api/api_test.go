@@ -239,9 +239,12 @@ func TestPoolsWithEmptyPools(t *testing.T) {
 }
 
 func TestGetProxies(t *testing.T) {
+	postgresHostIP, postgresMappedPort := setupPostgreSQLTestContainer(context.Background(), t)
+	postgresAddress := postgresHostIP + ":" + postgresMappedPort.Port()
+
 	clientConfig := &config.Client{
 		Network: config.DefaultNetwork,
-		Address: config.DefaultAddress,
+		Address: postgresAddress,
 	}
 	client := network.NewClient(context.TODO(), clientConfig, zerolog.Logger{}, nil)
 	require.NotNil(t, client)
@@ -255,7 +258,7 @@ func TestGetProxies(t *testing.T) {
 			HealthCheckPeriod:    config.DefaultHealthCheckPeriod,
 			ClientConfig: &config.Client{
 				Network: config.DefaultNetwork,
-				Address: config.DefaultAddress,
+				Address: postgresAddress,
 			},
 			Logger:        zerolog.Logger{},
 			PluginTimeout: config.DefaultPluginTimeout,
@@ -289,9 +292,11 @@ func TestGetProxies(t *testing.T) {
 }
 
 func TestGetServers(t *testing.T) {
+	postgresHostIP, postgresMappedPort := setupPostgreSQLTestContainer(context.Background(), t)
+	postgresAddress := postgresHostIP + ":" + postgresMappedPort.Port()
 	clientConfig := &config.Client{
 		Network: config.DefaultNetwork,
-		Address: config.DefaultAddress,
+		Address: postgresAddress,
 	}
 	client := network.NewClient(context.TODO(), clientConfig, zerolog.Logger{}, nil)
 	newPool := pool.NewPool(context.TODO(), 1)
@@ -305,7 +310,7 @@ func TestGetServers(t *testing.T) {
 			HealthCheckPeriod:    config.DefaultHealthCheckPeriod,
 			ClientConfig: &config.Client{
 				Network: config.DefaultNetwork,
-				Address: config.DefaultAddress,
+				Address: postgresAddress,
 			},
 			Logger:        zerolog.Logger{},
 			PluginTimeout: config.DefaultPluginTimeout,
@@ -337,7 +342,7 @@ func TestGetServers(t *testing.T) {
 		context.TODO(),
 		network.Server{
 			Network:      config.DefaultNetwork,
-			Address:      config.DefaultAddress,
+			Address:      postgresAddress,
 			TickInterval: config.DefaultTickInterval,
 			Options: network.Option{
 				EnableTicker: false,
@@ -370,7 +375,6 @@ func TestGetServers(t *testing.T) {
 
 	if defaultServer, ok := servers.AsMap()[config.Default].(map[string]interface{}); ok {
 		assert.Equal(t, config.DefaultNetwork, defaultServer["network"])
-		assert.Equal(t, config.DefaultAddress, "localhost:5432")
 		statusFloat, isStatusFloat := defaultServer["status"].(float64)
 		assert.True(t, isStatusFloat, "status should be of type float64")
 		status := config.Status(statusFloat)

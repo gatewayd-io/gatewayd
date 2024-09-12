@@ -16,6 +16,8 @@ import (
 
 // TestNewProxy tests the creation of a new proxy with a fixed connection pool.
 func TestNewProxy(t *testing.T) {
+	postgresHostIP, postgresMappedPort := setupPostgreSQLTestContainer(context.Background(), t)
+
 	logger := logging.NewLogger(context.Background(), logging.LoggerConfig{
 		Output:            []config.LogOutput{config.Console},
 		TimeFormat:        zerolog.TimeFormatUnix,
@@ -31,7 +33,7 @@ func TestNewProxy(t *testing.T) {
 		context.Background(),
 		&config.Client{
 			Network:            "tcp",
-			Address:            "localhost:5432",
+			Address:            postgresHostIP + ":" + postgresMappedPort.Port(),
 			ReceiveChunkSize:   config.DefaultChunkSize,
 			ReceiveDeadline:    config.DefaultReceiveDeadline,
 			SendDeadline:       config.DefaultSendDeadline,

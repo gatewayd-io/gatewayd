@@ -15,7 +15,6 @@ import (
 	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/gatewayd-io/gatewayd/plugin"
-	"github.com/gatewayd-io/gatewayd/pool"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
@@ -25,10 +24,12 @@ import (
 
 // TestRunServer tests an entire server run with a single client connection and hooks.
 func TestRunServer(t *testing.T) {
+	ctx := context.Background()
+
 	// Reset prometheus metrics.
 	prometheus.DefaultRegisterer = prometheus.NewRegistry()
 
-	logger := logging.NewLogger(context.Background(), logging.LoggerConfig{
+	logger := logging.NewLogger(ctx, logging.LoggerConfig{
 		Output: []config.LogOutput{
 			config.File,
 		},
@@ -50,7 +51,7 @@ func TestRunServer(t *testing.T) {
 			Logger:               logger,
 		})
 	pluginRegistry := plugin.NewRegistry(
-		context.Background(),
+		ctx,
 		plugin.Registry{
 			ActRegistry:   actRegistry,
 			Compatibility: config.Loose,
@@ -69,44 +70,16 @@ func TestRunServer(t *testing.T) {
 	assert.Equal(t, config.DefaultPolicy, pluginRegistry.ActRegistry.DefaultPolicy.Name)
 	assert.Equal(t, config.DefaultPolicy, pluginRegistry.ActRegistry.DefaultSignal.Name)
 
-	clientConfig := config.Client{
-		Network:            "tcp",
-		Address:            "localhost:5432",
-		ReceiveChunkSize:   config.DefaultChunkSize,
-		ReceiveDeadline:    config.DefaultReceiveDeadline,
-		SendDeadline:       config.DefaultSendDeadline,
-		TCPKeepAlive:       false,
-		TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
-	}
+	// Start the test containers.
+	postgresHostIP1, postgresMappedPort1 := setupPostgreSQLTestContainer(ctx, t)
+	postgresHostIP2, postgresMappedPort2 := setupPostgreSQLTestContainer(ctx, t)
 
-	// Create a connection newPool.
-	newPool := pool.NewPool(context.Background(), 3)
-	client1 := NewClient(context.Background(), &clientConfig, logger, nil)
-	err := newPool.Put(client1.ID, client1)
-	assert.Nil(t, err)
-	client2 := NewClient(context.Background(), &clientConfig, logger, nil)
-	err = newPool.Put(client2.ID, client2)
-	assert.Nil(t, err)
-	client3 := NewClient(context.Background(), &clientConfig, logger, nil)
-	err = newPool.Put(client3.ID, client3)
-	assert.Nil(t, err)
-
-	// Create a proxy with a fixed buffer newPool.
-	proxy := NewProxy(
-		context.Background(),
-		Proxy{
-			AvailableConnections: newPool,
-			PluginRegistry:       pluginRegistry,
-			HealthCheckPeriod:    config.DefaultHealthCheckPeriod,
-			ClientConfig:         &clientConfig,
-			Logger:               logger,
-			PluginTimeout:        config.DefaultPluginTimeout,
-		},
-	)
+	proxy1 := setupProxy(ctx, t, postgresHostIP1, postgresMappedPort1.Port(), logger, pluginRegistry)
+	proxy2 := setupProxy(ctx, t, postgresHostIP2, postgresMappedPort2.Port(), logger, pluginRegistry)
 
 	// Create a server.
 	server := NewServer(
-		context.Background(),
+		ctx,
 		Server{
 			Network:      "tcp",
 			Address:      "127.0.0.1:15432",
@@ -114,7 +87,7 @@ func TestRunServer(t *testing.T) {
 			Options: Option{
 				EnableTicker: true,
 			},
-			Proxies:                  []IProxy{proxy},
+			Proxies:                  []IProxy{proxy1, proxy2},
 			Logger:                   logger,
 			PluginRegistry:           pluginRegistry,
 			PluginTimeout:            config.DefaultPluginTimeout,
@@ -130,7 +103,7 @@ func TestRunServer(t *testing.T) {
 	assert.False(t, server.running.Load())
 
 	var waitGroup sync.WaitGroup
-	waitGroup.Add(2)
+	waitGroup.Add(3)
 
 	go func(t *testing.T, server *Server, waitGroup *sync.WaitGroup) {
 		t.Helper()
@@ -142,14 +115,20 @@ func TestRunServer(t *testing.T) {
 		waitGroup.Done()
 	}(t, server, &waitGroup)
 
-	go func(t *testing.T, server *Server, pluginRegistry *plugin.Registry, proxy *Proxy, waitGroup *sync.WaitGroup) {
+	testProxy := func(
+		t *testing.T,
+		server *Server,
+		pluginRegistry *plugin.Registry,
+		proxy *Proxy,
+		waitGroup *sync.WaitGroup,
+	) {
 		t.Helper()
 
 		defer waitGroup.Done()
 		<-time.After(500 * time.Millisecond)
 
 		client := NewClient(
-			context.Background(),
+			ctx,
 			&config.Client{
 				Network:            "tcp",
 				Address:            "127.0.0.1:15432",
@@ -248,7 +227,13 @@ func TestRunServer(t *testing.T) {
 		// Test Prometheus metrics.
 		// FIXME: Metric tests are flaky.
 		// CollectAndComparePrometheusMetrics(t)
-	}(t, server, pluginRegistry, proxy, &waitGroup)
+	}
+
+	// Test both proxies.
+	// Based on the default Loadbalancer strategy (RoundRobin), the first client request will be sent to proxy2,
+	// followed by proxy1 for the next request.
+	go testProxy(t, server, pluginRegistry, proxy2, &waitGroup)
+	go testProxy(t, server, pluginRegistry, proxy1, &waitGroup)
 
 	waitGroup.Wait()
 }

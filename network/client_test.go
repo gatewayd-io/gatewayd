@@ -12,52 +12,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// CreateNewClient creates a new client for testing.
-func CreateNewClient(t *testing.T) *Client {
-	t.Helper()
-
-	logger := logging.NewLogger(context.Background(), logging.LoggerConfig{
-		Output:            []config.LogOutput{config.Console},
-		TimeFormat:        zerolog.TimeFormatUnix,
-		ConsoleTimeFormat: time.RFC3339,
-		Level:             zerolog.DebugLevel,
-		NoColor:           true,
-	})
-
-	client := NewClient(
-		context.Background(),
-		&config.Client{
-			Network:            "tcp",
-			Address:            "localhost:5432",
-			ReceiveChunkSize:   config.DefaultChunkSize,
-			ReceiveDeadline:    config.DefaultReceiveDeadline,
-			ReceiveTimeout:     config.DefaultReceiveTimeout,
-			SendDeadline:       config.DefaultSendDeadline,
-			DialTimeout:        config.DefaultDialTimeout,
-			TCPKeepAlive:       false,
-			TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
-		},
-		logger,
-		nil)
-
-	return client
-}
-
 // TestNewClient tests the NewClient function.
 func TestNewClient(t *testing.T) {
-	client := CreateNewClient(t)
+	ctx := context.Background()
+	postgresHostIP, postgresMappedPort := setupPostgreSQLTestContainer(ctx, t)
+	client, _ := CreateNewClient(ctx, t, postgresHostIP, postgresMappedPort.Port(), nil)
 	defer client.Close()
 
 	assert.NotNil(t, client)
 	assert.Equal(t, "tcp", client.Network)
-	assert.Equal(t, "127.0.0.1:5432", client.Address)
+	assert.Equal(t, "127.0.0.1:"+postgresMappedPort.Port(), client.Address)
 	assert.NotEmpty(t, client.ID)
 	assert.NotNil(t, client.conn)
 }
 
 // TestSend tests the Send function.
 func TestSend(t *testing.T) {
-	client := CreateNewClient(t)
+	ctx := context.Background()
+	postgresHostIP, postgresMappedPort := setupPostgreSQLTestContainer(ctx, t)
+	client, _ := CreateNewClient(ctx, t, postgresHostIP, postgresMappedPort.Port(), nil)
 	defer client.Close()
 
 	assert.NotNil(t, client)
@@ -69,7 +42,9 @@ func TestSend(t *testing.T) {
 
 // TestReceive tests the Receive function.
 func TestReceive(t *testing.T) {
-	client := CreateNewClient(t)
+	ctx := context.Background()
+	postgresHostIP, postgresMappedPort := setupPostgreSQLTestContainer(ctx, t)
+	client, _ := CreateNewClient(ctx, t, postgresHostIP, postgresMappedPort.Port(), nil)
 	defer client.Close()
 
 	assert.NotNil(t, client)
@@ -92,7 +67,9 @@ func TestReceive(t *testing.T) {
 
 // TestClose tests the Close function.
 func TestClose(t *testing.T) {
-	client := CreateNewClient(t)
+	ctx := context.Background()
+	postgresHostIP, postgresMappedPort := setupPostgreSQLTestContainer(ctx, t)
+	client, _ := CreateNewClient(ctx, t, postgresHostIP, postgresMappedPort.Port(), nil)
 
 	assert.NotNil(t, client)
 	client.Close()
@@ -104,7 +81,8 @@ func TestClose(t *testing.T) {
 
 // TestIsConnected tests the IsConnected function.
 func TestIsConnected(t *testing.T) {
-	client := CreateNewClient(t)
+	postgresHostIP, postgresMappedPort := setupPostgreSQLTestContainer(context.Background(), t)
+	client, _ := CreateNewClient(context.Background(), t, postgresHostIP, postgresMappedPort.Port(), nil)
 
 	assert.True(t, client.IsConnected())
 	client.Close()
@@ -112,7 +90,9 @@ func TestIsConnected(t *testing.T) {
 }
 
 func TestReconnect(t *testing.T) {
-	client := CreateNewClient(t)
+	ctx := context.Background()
+	postgresHostIP, postgresMappedPort := setupPostgreSQLTestContainer(ctx, t)
+	client, _ := CreateNewClient(ctx, t, postgresHostIP, postgresMappedPort.Port(), nil)
 	defer client.Close()
 
 	assert.NotNil(t, client)

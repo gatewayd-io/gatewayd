@@ -1,17 +1,28 @@
 package network
 
 import (
+	"context"
 	"encoding/binary"
 	"fmt"
 	"net"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/docker/go-connections/nat"
+	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
+	"github.com/gatewayd-io/gatewayd/logging"
+	"github.com/gatewayd-io/gatewayd/plugin"
+	"github.com/gatewayd-io/gatewayd/pool"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 type WriteBuffer struct {
@@ -162,6 +173,112 @@ func CollectAndComparePrometheusMetrics(t *testing.T) {
 	)
 	require.NoError(t,
 		testutil.GatherAndCompare(prometheus.DefaultGatherer, strings.NewReader(want), metrics...))
+}
+
+// setupTestContainer initializes and starts the PostgreSQL test container.
+func setupPostgreSQLTestContainer(ctx context.Context, t *testing.T) (string, nat.Port) {
+	t.Helper()
+
+	postgresPort := "5432"
+	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: testcontainers.ContainerRequest{
+			Image:        "postgres:latest",
+			ExposedPorts: []string{postgresPort + "/tcp"},
+			Env: map[string]string{
+				"POSTGRES_USER":     "postgres",
+				"POSTGRES_PASSWORD": "postgres",
+			},
+			WaitingFor: wait.ForAll(
+				wait.ForLog("database system is ready to accept connections"),
+				wait.ForListeningPort(nat.Port(postgresPort+"/tcp")),
+			),
+		},
+		Started: true,
+	})
+	require.NoError(t, err)
+
+	hostIP, err := container.Host(ctx)
+	require.NoError(t, err, "Failed to retrieve PostgreSQL test container host IP")
+
+	mappedPort, err := container.MappedPort(ctx, nat.Port(postgresPort+"/tcp"))
+	require.NoError(t, err, "Failed to map PostgreSQL test container port")
+
+	return hostIP, mappedPort
+}
+
+// CreateNewClient creates a new client for testing.
+func CreateNewClient(
+	ctx context.Context,
+	t *testing.T,
+	clientIP,
+	clientPort string,
+	logger *zerolog.Logger,
+) (*Client, *config.Client) {
+	t.Helper()
+
+	if logger == nil {
+		newLogger := logging.NewLogger(ctx, logging.LoggerConfig{
+			Output:            []config.LogOutput{config.Console},
+			TimeFormat:        zerolog.TimeFormatUnix,
+			ConsoleTimeFormat: time.RFC3339,
+			Level:             zerolog.DebugLevel,
+			NoColor:           true,
+		})
+		logger = &newLogger
+	}
+
+	clientConfig := config.Client{
+		Network:            "tcp",
+		Address:            clientIP + ":" + clientPort,
+		ReceiveChunkSize:   config.DefaultChunkSize,
+		ReceiveDeadline:    config.DefaultReceiveDeadline,
+		SendDeadline:       config.DefaultSendDeadline,
+		TCPKeepAlive:       false,
+		TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
+	}
+
+	client := NewClient(
+		ctx,
+		&clientConfig,
+		*logger,
+		nil)
+
+	return client, &clientConfig
+}
+
+// setupProxy initializes a connection pool and creates a proxy.
+func setupProxy(
+	ctx context.Context,
+	t *testing.T,
+	clientIP,
+	clientPort string,
+	logger zerolog.Logger,
+	pluginRegistry *plugin.Registry,
+) *Proxy {
+	t.Helper()
+	connectionPool := pool.NewPool(ctx, 3)
+
+	var clientConfig *config.Client
+	var client *Client
+	for range 3 {
+		client, clientConfig = CreateNewClient(ctx, t, clientIP, clientPort, &logger)
+		err := connectionPool.Put(client.ID, client)
+		assert.Nil(t, err)
+	}
+
+	proxy := NewProxy(
+		ctx,
+		Proxy{
+			AvailableConnections: connectionPool,
+			PluginRegistry:       pluginRegistry,
+			HealthCheckPeriod:    config.DefaultHealthCheckPeriod,
+			ClientConfig:         clientConfig,
+			Logger:               logger,
+			PluginTimeout:        config.DefaultPluginTimeout,
+		},
+	)
+
+	return proxy
 }
 
 // Connect is a mock implementation of the Connect method in the IProxy interface.

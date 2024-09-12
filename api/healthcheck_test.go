@@ -16,9 +16,11 @@ import (
 )
 
 func Test_Healthchecker(t *testing.T) {
+	postgresHostIP, postgresMappedPort := setupPostgreSQLTestContainer(context.Background(), t)
+	postgresAddress := postgresHostIP + ":" + postgresMappedPort.Port()
 	clientConfig := &config.Client{
 		Network: config.DefaultNetwork,
-		Address: config.DefaultAddress,
+		Address: postgresAddress,
 	}
 	client := network.NewClient(context.TODO(), clientConfig, zerolog.Logger{}, nil)
 	newPool := pool.NewPool(context.TODO(), 1)
@@ -32,7 +34,7 @@ func Test_Healthchecker(t *testing.T) {
 			HealthCheckPeriod:    config.DefaultHealthCheckPeriod,
 			ClientConfig: &config.Client{
 				Network: config.DefaultNetwork,
-				Address: config.DefaultAddress,
+				Address: postgresAddress,
 			},
 			Logger:        zerolog.Logger{},
 			PluginTimeout: config.DefaultPluginTimeout,
@@ -64,7 +66,7 @@ func Test_Healthchecker(t *testing.T) {
 		context.TODO(),
 		network.Server{
 			Network:      config.DefaultNetwork,
-			Address:      config.DefaultAddress,
+			Address:      postgresAddress,
 			TickInterval: config.DefaultTickInterval,
 			Options: network.Option{
 				EnableTicker: false,
