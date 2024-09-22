@@ -26,7 +26,7 @@ import (
 func TestRunServer(t *testing.T) {
 	ctx := context.Background()
 
-	// Reset prometheus metrics.
+	// Reset Prometheus metrics.
 	prometheus.DefaultRegisterer = prometheus.NewRegistry()
 
 	logger := logging.NewLogger(ctx, logging.LoggerConfig{
@@ -103,22 +103,18 @@ func TestRunServer(t *testing.T) {
 	assert.False(t, server.running.Load())
 
 	var waitGroup sync.WaitGroup
-	waitGroup.Add(3)
+	waitGroup.Add(2)
 
-	go func(t *testing.T, server *Server, waitGroup *sync.WaitGroup) {
+	go func(t *testing.T, server *Server) {
 		t.Helper()
 
 		if err := server.Run(); err != nil {
 			t.Errorf("server.Run() error = %v", err)
 		}
-
-		waitGroup.Done()
-	}(t, server, &waitGroup)
+	}(t, server)
 
 	testProxy := func(
 		t *testing.T,
-		server *Server,
-		pluginRegistry *plugin.Registry,
 		proxy *Proxy,
 		waitGroup *sync.WaitGroup,
 	) {
@@ -178,64 +174,67 @@ func TestRunServer(t *testing.T) {
 		client.Close()
 
 		<-time.After(100 * time.Millisecond)
-
-		if server != nil {
-			server.Shutdown()
-		}
-
-		if pluginRegistry != nil {
-			pluginRegistry.Shutdown()
-		}
-
-		// Wait for the server to stop.
-		<-time.After(100 * time.Millisecond)
-
-		// check server status and connections
-		assert.False(t, server.running.Load())
-		assert.Zero(t, server.connections)
-
-		// Read the log file and check if the log file contains the expected log messages.
-		require.FileExists(t, "server_test.log")
-		logFile, origErr := os.Open("server_test.log")
-		assert.Nil(t, origErr)
-
-		reader := bufio.NewReader(logFile)
-		assert.NotNil(t, reader)
-
-		buffer, origErr := io.ReadAll(reader)
-		assert.Nil(t, origErr)
-		assert.NotEmpty(t, buffer) // The log file should not be empty.
-		require.NoError(t, logFile.Close())
-
-		logLines := string(buffer)
-		assert.Contains(t, logLines, "GatewayD is running")
-		assert.Contains(t, logLines, "GatewayD is opening a connection")
-		assert.Contains(t, logLines, "Client has been assigned")
-		assert.Contains(t, logLines, "Received data from client")
-		assert.Contains(t, logLines, "Sent data to database")
-		assert.Contains(t, logLines, "Received data from database")
-		assert.Contains(t, logLines, "Sent data to client")
-		assert.Contains(t, logLines, "GatewayD is closing a connection")
-		assert.Contains(t, logLines, "TLS is disabled")
-		assert.Contains(t, logLines, "GatewayD is shutting down")
-		assert.Contains(t, logLines, "All available connections have been closed")
-		assert.Contains(t, logLines, "All busy connections have been closed")
-		assert.Contains(t, logLines, "Server stopped")
-
-		require.NoError(t, os.Remove("server_test.log"))
-
-		// Test Prometheus metrics.
-		// FIXME: Metric tests are flaky.
-		// CollectAndComparePrometheusMetrics(t)
 	}
 
 	// Test both proxies.
 	// Based on the default Loadbalancer strategy (RoundRobin), the first client request will be sent to proxy2,
 	// followed by proxy1 for the next request.
-	go testProxy(t, server, pluginRegistry, proxy2, &waitGroup)
-	go testProxy(t, server, pluginRegistry, proxy1, &waitGroup)
+	go testProxy(t, proxy2, &waitGroup)
+	go testProxy(t, proxy1, &waitGroup)
 
+	// Wait for all goroutines.
 	waitGroup.Wait()
+
+	// Shutdown the server and plugin registry.
+	server.Shutdown()
+	pluginRegistry.Shutdown()
+
+	// Wait for the server to stop.
+	<-time.After(100 * time.Millisecond)
+
+	// check server status and connections
+	assert.False(t, server.running.Load())
+	assert.Zero(t, server.connections)
+
+	// Read the log file and check if the log file contains the expected log messages.
+	require.FileExists(t, "server_test.log")
+	logFile, origErr := os.Open("server_test.log")
+	assert.Nil(t, origErr)
+
+	reader := bufio.NewReader(logFile)
+	assert.NotNil(t, reader)
+
+	buffer, origErr := io.ReadAll(reader)
+	assert.Nil(t, origErr)
+	assert.NotEmpty(t, buffer) // The log file should not be empty.
+	require.NoError(t, logFile.Close())
+
+	// Check if the log contains expected messages.
+	logLines := string(buffer)
+	expectedLogMessages := []string{
+		"GatewayD is running",
+		"GatewayD is opening a connection",
+		"Client has been assigned",
+		"Received data from client",
+		"Sent data to database",
+		"Received data from database",
+		"Sent data to client",
+		"GatewayD is closing a connection",
+		"TLS is disabled",
+		"GatewayD is shutting down",
+		"All available connections have been closed",
+		"All busy connections have been closed",
+		"Server stopped",
+	}
+
+	for _, msg := range expectedLogMessages {
+		assert.Contains(t, logLines, msg)
+	}
+	require.NoError(t, os.Remove("server_test.log"))
+
+	// Test Prometheus metrics.
+	// FIXME: Metric tests are flaky.
+	// CollectAndComparePrometheusMetrics(t)
 }
 
 func onIncomingTraffic(
