@@ -10,13 +10,14 @@ import (
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
+	"github.com/gatewayd-io/gatewayd/testhelpers"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 )
 
 // TestNewProxy tests the creation of a new proxy with a fixed connection pool.
 func TestNewProxy(t *testing.T) {
-	postgresHostIP, postgresMappedPort := setupPostgreSQLTestContainer(context.Background(), t)
+	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(context.Background(), t)
 
 	logger := logging.NewLogger(context.Background(), logging.LoggerConfig{
 		Output:            []config.LogOutput{config.Console},

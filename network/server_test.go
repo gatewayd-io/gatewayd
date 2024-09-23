@@ -15,6 +15,7 @@ import (
 	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/gatewayd-io/gatewayd/plugin"
+	"github.com/gatewayd-io/gatewayd/testhelpers"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
@@ -71,8 +72,8 @@ func TestRunServer(t *testing.T) {
 	assert.Equal(t, config.DefaultPolicy, pluginRegistry.ActRegistry.DefaultSignal.Name)
 
 	// Start the test containers.
-	postgresHostIP1, postgresMappedPort1 := setupPostgreSQLTestContainer(ctx, t)
-	postgresHostIP2, postgresMappedPort2 := setupPostgreSQLTestContainer(ctx, t)
+	postgresHostIP1, postgresMappedPort1 := testhelpers.SetupPostgreSQLTestContainer(ctx, t)
+	postgresHostIP2, postgresMappedPort2 := testhelpers.SetupPostgreSQLTestContainer(ctx, t)
 
 	proxy1 := setupProxy(ctx, t, postgresHostIP1, postgresMappedPort1.Port(), logger, pluginRegistry)
 	proxy2 := setupProxy(ctx, t, postgresHostIP2, postgresMappedPort2.Port(), logger, pluginRegistry)

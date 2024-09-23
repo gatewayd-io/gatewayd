@@ -7,6 +7,7 @@ import (
 
 	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/gatewayd-io/gatewayd/logging"
+	"github.com/gatewayd-io/gatewayd/testhelpers"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -15,7 +16,7 @@ import (
 // TestNewClient tests the NewClient function.
 func TestNewClient(t *testing.T) {
 	ctx := context.Background()
-	postgresHostIP, postgresMappedPort := setupPostgreSQLTestContainer(ctx, t)
+	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(ctx, t)
 	client, _ := CreateNewClient(ctx, t, postgresHostIP, postgresMappedPort.Port(), nil)
 	defer client.Close()
 
@@ -29,7 +30,7 @@ func TestNewClient(t *testing.T) {
 // TestSend tests the Send function.
 func TestSend(t *testing.T) {
 	ctx := context.Background()
-	postgresHostIP, postgresMappedPort := setupPostgreSQLTestContainer(ctx, t)
+	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(ctx, t)
 	client, _ := CreateNewClient(ctx, t, postgresHostIP, postgresMappedPort.Port(), nil)
 	defer client.Close()
 
@@ -43,7 +44,7 @@ func TestSend(t *testing.T) {
 // TestReceive tests the Receive function.
 func TestReceive(t *testing.T) {
 	ctx := context.Background()
-	postgresHostIP, postgresMappedPort := setupPostgreSQLTestContainer(ctx, t)
+	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(ctx, t)
 	client, _ := CreateNewClient(ctx, t, postgresHostIP, postgresMappedPort.Port(), nil)
 	defer client.Close()
 
@@ -68,7 +69,7 @@ func TestReceive(t *testing.T) {
 // TestClose tests the Close function.
 func TestClose(t *testing.T) {
 	ctx := context.Background()
-	postgresHostIP, postgresMappedPort := setupPostgreSQLTestContainer(ctx, t)
+	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(ctx, t)
 	client, _ := CreateNewClient(ctx, t, postgresHostIP, postgresMappedPort.Port(), nil)
 
 	assert.NotNil(t, client)
@@ -81,7 +82,7 @@ func TestClose(t *testing.T) {
 
 // TestIsConnected tests the IsConnected function.
 func TestIsConnected(t *testing.T) {
-	postgresHostIP, postgresMappedPort := setupPostgreSQLTestContainer(context.Background(), t)
+	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(context.Background(), t)
 	client, _ := CreateNewClient(context.Background(), t, postgresHostIP, postgresMappedPort.Port(), nil)
 
 	assert.True(t, client.IsConnected())
@@ -91,7 +92,7 @@ func TestIsConnected(t *testing.T) {
 
 func TestReconnect(t *testing.T) {
 	ctx := context.Background()
-	postgresHostIP, postgresMappedPort := setupPostgreSQLTestContainer(ctx, t)
+	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(ctx, t)
 	client, _ := CreateNewClient(ctx, t, postgresHostIP, postgresMappedPort.Port(), nil)
 	defer client.Close()
 

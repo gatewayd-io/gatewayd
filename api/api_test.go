@@ -13,6 +13,7 @@ import (
 	"github.com/gatewayd-io/gatewayd/network"
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
+	"github.com/gatewayd-io/gatewayd/testhelpers"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -239,7 +240,7 @@ func TestPoolsWithEmptyPools(t *testing.T) {
 }
 
 func TestGetProxies(t *testing.T) {
-	postgresHostIP, postgresMappedPort := setupPostgreSQLTestContainer(context.Background(), t)
+	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(context.Background(), t)
 	postgresAddress := postgresHostIP + ":" + postgresMappedPort.Port()
 
 	clientConfig := &config.Client{
@@ -292,7 +293,7 @@ func TestGetProxies(t *testing.T) {
 }
 
 func TestGetServers(t *testing.T) {
-	postgresHostIP, postgresMappedPort := setupPostgreSQLTestContainer(context.Background(), t)
+	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(context.Background(), t)
 	postgresAddress := postgresHostIP + ":" + postgresMappedPort.Port()
 	clientConfig := &config.Client{
 		Network: config.DefaultNetwork,

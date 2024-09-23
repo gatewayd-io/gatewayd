@@ -66,6 +66,9 @@ linters-settings:
           - "golang.org/x/text/language"
           - "github.com/redis/go-redis/v9"
           - "github.com/spaolacci/murmur3"
+          - "github.com/testcontainers/testcontainers-go"
+          - "github.com/stretchr/testify/require"
+          - "github.com/docker/go-connections/nat"
       test:
         files:
           - $test
