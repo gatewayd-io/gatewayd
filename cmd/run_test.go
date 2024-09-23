@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gatewayd-io/gatewayd/config"
+	"github.com/gatewayd-io/gatewayd/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -18,6 +19,10 @@ var (
 )
 
 func Test_runCmd(t *testing.T) {
+	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(context.Background(), t)
+	postgredAddress := postgresHostIP + ":" + postgresMappedPort.Port()
+	t.Setenv("GATEWAYD_CLIENTS_DEFAULT_WRITES_ADDRESS", postgredAddress)
+
 	globalTestConfigFile := "./test_global_runCmd.yaml"
 	pluginTestConfigFile := "./test_plugins_runCmd.yaml"
 	// Create a test plugins config file.
@@ -78,6 +83,10 @@ func Test_runCmd(t *testing.T) {
 
 // Test_runCmdWithTLS tests the run command with TLS enabled on the server.
 func Test_runCmdWithTLS(t *testing.T) {
+	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(context.Background(), t)
+	postgredAddress := postgresHostIP + ":" + postgresMappedPort.Port()
+	t.Setenv("GATEWAYD_CLIENTS_DEFAULT_WRITES_ADDRESS", postgredAddress)
+
 	globalTLSTestConfigFile := "./testdata/gatewayd_tls.yaml"
 	pluginTestConfigFile := "./test_plugins_runCmdWithTLS.yaml"
 	// Create a test plugins config file.
@@ -133,8 +142,14 @@ func Test_runCmdWithTLS(t *testing.T) {
 }
 
 // Test_runCmdWithMultiTenancy tests the run command with multi-tenancy enabled.
-// Note: This test needs two instances of PostgreSQL running on ports 5432 and 5433.
 func Test_runCmdWithMultiTenancy(t *testing.T) {
+	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(context.Background(), t)
+	postgredAddress := postgresHostIP + ":" + postgresMappedPort.Port()
+	t.Setenv("GATEWAYD_CLIENTS_DEFAULT_WRITES_ADDRESS", postgredAddress)
+	postgresHostIP2, postgresMappedPort2 := testhelpers.SetupPostgreSQLTestContainer(context.Background(), t)
+	postgredAddress2 := postgresHostIP2 + ":" + postgresMappedPort2.Port()
+	t.Setenv("GATEWAYD_CLIENTS_TEST_WRITE_ADDRESS", postgredAddress2)
+
 	globalTestConfigFile := "./testdata/gatewayd.yaml"
 	pluginTestConfigFile := "./test_plugins_runCmdWithMultiTenancy.yaml"
 	// Create a test plugins config file.
@@ -192,6 +207,10 @@ func Test_runCmdWithMultiTenancy(t *testing.T) {
 }
 
 func Test_runCmdWithCachePlugin(t *testing.T) {
+	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(context.Background(), t)
+	postgredAddress := postgresHostIP + ":" + postgresMappedPort.Port()
+	t.Setenv("GATEWAYD_CLIENTS_DEFAULT_WRITES_ADDRESS", postgredAddress)
+
 	globalTestConfigFile := "./test_global_runCmdWithCachePlugin.yaml"
 	pluginTestConfigFile := "./test_plugins_runCmdWithCachePlugin.yaml"
 	// TODO: Remove this once these global variables are removed from cmd/run.go.

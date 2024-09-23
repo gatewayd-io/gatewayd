@@ -8,11 +8,14 @@ import (
 
 	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/gatewayd-io/gatewayd/logging"
+	"github.com/gatewayd-io/gatewayd/testhelpers"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRetry(t *testing.T) {
+	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(context.Background(), t)
+
 	logger := logging.NewLogger(context.Background(), logging.LoggerConfig{
 		Output:            []config.LogOutput{config.Console},
 		TimeFormat:        zerolog.TimeFormatUnix,
@@ -37,7 +40,7 @@ func TestRetry(t *testing.T) {
 			assert.False(t, retry.DisableBackoffCaps)
 
 			conn, err := retry.Retry(func() (any, error) {
-				return net.Dial("tcp", "localhost:5432")
+				return net.Dial("tcp", postgresHostIP+":"+postgresMappedPort.Port())
 			})
 			assert.NoError(t, err)
 			assert.NotNil(t, conn)
@@ -64,7 +67,7 @@ func TestRetry(t *testing.T) {
 			assert.False(t, retry.DisableBackoffCaps)
 
 			conn, err := retry.Retry(func() (any, error) {
-				return net.DialTimeout("tcp", "localhost:5432", config.DefaultDialTimeout)
+				return net.DialTimeout("tcp", postgresHostIP+":"+postgresMappedPort.Port(), config.DefaultDialTimeout)
 			})
 			assert.NoError(t, err)
 			assert.NotNil(t, conn)

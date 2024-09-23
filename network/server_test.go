@@ -15,7 +15,7 @@ import (
 	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/gatewayd-io/gatewayd/plugin"
-	"github.com/gatewayd-io/gatewayd/pool"
+	"github.com/gatewayd-io/gatewayd/testhelpers"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
@@ -25,10 +25,12 @@ import (
 
 // TestRunServer tests an entire server run with a single client connection and hooks.
 func TestRunServer(t *testing.T) {
-	// Reset prometheus metrics.
+	ctx := context.Background()
+
+	// Reset Prometheus metrics.
 	prometheus.DefaultRegisterer = prometheus.NewRegistry()
 
-	logger := logging.NewLogger(context.Background(), logging.LoggerConfig{
+	logger := logging.NewLogger(ctx, logging.LoggerConfig{
 		Output: []config.LogOutput{
 			config.File,
 		},
@@ -50,7 +52,7 @@ func TestRunServer(t *testing.T) {
 			Logger:               logger,
 		})
 	pluginRegistry := plugin.NewRegistry(
-		context.Background(),
+		ctx,
 		plugin.Registry{
 			ActRegistry:   actRegistry,
 			Compatibility: config.Loose,
@@ -69,44 +71,16 @@ func TestRunServer(t *testing.T) {
 	assert.Equal(t, config.DefaultPolicy, pluginRegistry.ActRegistry.DefaultPolicy.Name)
 	assert.Equal(t, config.DefaultPolicy, pluginRegistry.ActRegistry.DefaultSignal.Name)
 
-	clientConfig := config.Client{
-		Network:            "tcp",
-		Address:            "localhost:5432",
-		ReceiveChunkSize:   config.DefaultChunkSize,
-		ReceiveDeadline:    config.DefaultReceiveDeadline,
-		SendDeadline:       config.DefaultSendDeadline,
-		TCPKeepAlive:       false,
-		TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
-	}
+	// Start the test containers.
+	postgresHostIP1, postgresMappedPort1 := testhelpers.SetupPostgreSQLTestContainer(ctx, t)
+	postgresHostIP2, postgresMappedPort2 := testhelpers.SetupPostgreSQLTestContainer(ctx, t)
 
-	// Create a connection newPool.
-	newPool := pool.NewPool(context.Background(), 3)
-	client1 := NewClient(context.Background(), &clientConfig, logger, nil)
-	err := newPool.Put(client1.ID, client1)
-	assert.Nil(t, err)
-	client2 := NewClient(context.Background(), &clientConfig, logger, nil)
-	err = newPool.Put(client2.ID, client2)
-	assert.Nil(t, err)
-	client3 := NewClient(context.Background(), &clientConfig, logger, nil)
-	err = newPool.Put(client3.ID, client3)
-	assert.Nil(t, err)
-
-	// Create a proxy with a fixed buffer newPool.
-	proxy := NewProxy(
-		context.Background(),
-		Proxy{
-			AvailableConnections: newPool,
-			PluginRegistry:       pluginRegistry,
-			HealthCheckPeriod:    config.DefaultHealthCheckPeriod,
-			ClientConfig:         &clientConfig,
-			Logger:               logger,
-			PluginTimeout:        config.DefaultPluginTimeout,
-		},
-	)
+	proxy1 := setupProxy(ctx, t, postgresHostIP1, postgresMappedPort1.Port(), logger, pluginRegistry)
+	proxy2 := setupProxy(ctx, t, postgresHostIP2, postgresMappedPort2.Port(), logger, pluginRegistry)
 
 	// Create a server.
 	server := NewServer(
-		context.Background(),
+		ctx,
 		Server{
 			Network:      "tcp",
 			Address:      "127.0.0.1:15432",
@@ -114,7 +88,7 @@ func TestRunServer(t *testing.T) {
 			Options: Option{
 				EnableTicker: true,
 			},
-			Proxies:                  []IProxy{proxy},
+			Proxies:                  []IProxy{proxy1, proxy2},
 			Logger:                   logger,
 			PluginRegistry:           pluginRegistry,
 			PluginTimeout:            config.DefaultPluginTimeout,
@@ -132,24 +106,26 @@ func TestRunServer(t *testing.T) {
 	var waitGroup sync.WaitGroup
 	waitGroup.Add(2)
 
-	go func(t *testing.T, server *Server, waitGroup *sync.WaitGroup) {
+	go func(t *testing.T, server *Server) {
 		t.Helper()
 
 		if err := server.Run(); err != nil {
 			t.Errorf("server.Run() error = %v", err)
 		}
+	}(t, server)
 
-		waitGroup.Done()
-	}(t, server, &waitGroup)
-
-	go func(t *testing.T, server *Server, pluginRegistry *plugin.Registry, proxy *Proxy, waitGroup *sync.WaitGroup) {
+	testProxy := func(
+		t *testing.T,
+		proxy *Proxy,
+		waitGroup *sync.WaitGroup,
+	) {
 		t.Helper()
 
 		defer waitGroup.Done()
 		<-time.After(500 * time.Millisecond)
 
 		client := NewClient(
-			context.Background(),
+			ctx,
 			&config.Client{
 				Network:            "tcp",
 				Address:            "127.0.0.1:15432",
@@ -199,58 +175,67 @@ func TestRunServer(t *testing.T) {
 		client.Close()
 
 		<-time.After(100 * time.Millisecond)
+	}
 
-		if server != nil {
-			server.Shutdown()
-		}
+	// Test both proxies.
+	// Based on the default Loadbalancer strategy (RoundRobin), the first client request will be sent to proxy2,
+	// followed by proxy1 for the next request.
+	go testProxy(t, proxy2, &waitGroup)
+	go testProxy(t, proxy1, &waitGroup)
 
-		if pluginRegistry != nil {
-			pluginRegistry.Shutdown()
-		}
-
-		// Wait for the server to stop.
-		<-time.After(100 * time.Millisecond)
-
-		// check server status and connections
-		assert.False(t, server.running.Load())
-		assert.Zero(t, server.connections)
-
-		// Read the log file and check if the log file contains the expected log messages.
-		require.FileExists(t, "server_test.log")
-		logFile, origErr := os.Open("server_test.log")
-		assert.Nil(t, origErr)
-
-		reader := bufio.NewReader(logFile)
-		assert.NotNil(t, reader)
-
-		buffer, origErr := io.ReadAll(reader)
-		assert.Nil(t, origErr)
-		assert.NotEmpty(t, buffer) // The log file should not be empty.
-		require.NoError(t, logFile.Close())
-
-		logLines := string(buffer)
-		assert.Contains(t, logLines, "GatewayD is running")
-		assert.Contains(t, logLines, "GatewayD is opening a connection")
-		assert.Contains(t, logLines, "Client has been assigned")
-		assert.Contains(t, logLines, "Received data from client")
-		assert.Contains(t, logLines, "Sent data to database")
-		assert.Contains(t, logLines, "Received data from database")
-		assert.Contains(t, logLines, "Sent data to client")
-		assert.Contains(t, logLines, "GatewayD is closing a connection")
-		assert.Contains(t, logLines, "TLS is disabled")
-		assert.Contains(t, logLines, "GatewayD is shutting down")
-		assert.Contains(t, logLines, "All available connections have been closed")
-		assert.Contains(t, logLines, "All busy connections have been closed")
-		assert.Contains(t, logLines, "Server stopped")
-
-		require.NoError(t, os.Remove("server_test.log"))
-
-		// Test Prometheus metrics.
-		// FIXME: Metric tests are flaky.
-		// CollectAndComparePrometheusMetrics(t)
-	}(t, server, pluginRegistry, proxy, &waitGroup)
-
+	// Wait for all goroutines.
 	waitGroup.Wait()
+
+	// Shutdown the server and plugin registry.
+	server.Shutdown()
+	pluginRegistry.Shutdown()
+
+	// Wait for the server to stop.
+	<-time.After(100 * time.Millisecond)
+
+	// check server status and connections
+	assert.False(t, server.running.Load())
+	assert.Zero(t, server.connections)
+
+	// Read the log file and check if the log file contains the expected log messages.
+	require.FileExists(t, "server_test.log")
+	logFile, origErr := os.Open("server_test.log")
+	assert.Nil(t, origErr)
+
+	reader := bufio.NewReader(logFile)
+	assert.NotNil(t, reader)
+
+	buffer, origErr := io.ReadAll(reader)
+	assert.Nil(t, origErr)
+	assert.NotEmpty(t, buffer) // The log file should not be empty.
+	require.NoError(t, logFile.Close())
+
+	// Check if the log contains expected messages.
+	logLines := string(buffer)
+	expectedLogMessages := []string{
+		"GatewayD is running",
+		"GatewayD is opening a connection",
+		"Client has been assigned",
+		"Received data from client",
+		"Sent data to database",
+		"Received data from database",
+		"Sent data to client",
+		"GatewayD is closing a connection",
+		"TLS is disabled",
+		"GatewayD is shutting down",
+		"All available connections have been closed",
+		"All busy connections have been closed",
+		"Server stopped",
+	}
+
+	for _, msg := range expectedLogMessages {
+		assert.Contains(t, logLines, msg)
+	}
+	require.NoError(t, os.Remove("server_test.log"))
+
+	// Test Prometheus metrics.
+	// FIXME: Metric tests are flaky.
+	// CollectAndComparePrometheusMetrics(t)
 }
 
 func onIncomingTraffic(
