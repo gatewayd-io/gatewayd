@@ -25,13 +25,13 @@ func executeCommandC(root *cobra.Command, args ...string) (string, error) {
 
 // mustPullPlugin pulls the gatewayd-plugin-cache plugin and returns the path to the archive.
 func mustPullPlugin() (string, error) {
-	pluginURL := "github.com/gatewayd-io/gatewayd-plugin-cache@v0.2.10"
+	pluginURL := "github.com/gatewayd-io/gatewayd-plugin-cache@v0.4.0"
 
 	fileName := fmt.Sprintf(
 		"./gatewayd-plugin-cache-%s-%s-%s%s",
 		runtime.GOOS,
 		runtime.GOARCH,
-		"v0.2.10",
+		"v0.4.0",
 		getFileExtension(),
 	)
 
