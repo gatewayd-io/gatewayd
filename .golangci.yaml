@@ -21,6 +21,7 @@ linters:
     - err113
     - testifylint
     - fatcontext
+    - gomoddirectives
 linters-settings:
   depguard:
     rules:
