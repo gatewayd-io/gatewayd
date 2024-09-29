@@ -494,6 +494,15 @@ func (pr *Proxy) PassThroughToClient(conn *ConnWrapper, stack *Stack) *gerr.Gate
 	received, response, err := pr.receiveTrafficFromServer(client)
 	span.AddEvent("Received traffic from server")
 
+	// If there is no data to send to the client,
+	// we don't need to run the hooks and
+	// we obviously have no data to send to the client.
+	if received == 0 {
+		span.AddEvent("No data to send to client")
+		stack.PopLastRequest()
+		return nil
+	}
+
 	// If there is an error, close the ingress connection.
 	if err != nil {
 		fields := map[string]interface{}{"function": "proxy.passthrough"}
@@ -553,14 +562,9 @@ func (pr *Proxy) PassThroughToClient(conn *ConnWrapper, stack *Stack) *gerr.Gate
 		span.AddEvent("Plugin(s) modified the response")
 	}
 
-	var errVerdict *gerr.GatewayDError
-	if received > 0 {
-		// Send the response to the client.
-		errVerdict = pr.sendTrafficToClient(conn.Conn(), response, received)
-		span.AddEvent("Sent traffic to client")
-	} else {
-		span.AddEvent("No data to send to client")
-	}
+	// Send the response to the client.
+	errVerdict := pr.sendTrafficToClient(conn.Conn(), response, received)
+	span.AddEvent("Sent traffic to client")
 
 	// Run the OnTrafficToClient hooks.
 	pluginTimeoutCtx, cancel = context.WithTimeout(context.Background(), pr.PluginTimeout)
