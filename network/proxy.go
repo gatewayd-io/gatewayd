@@ -721,7 +721,7 @@ func (pr *Proxy) receiveTrafficFromClient(conn net.Conn) ([]byte, *gerr.GatewayD
 		total += read
 		buffer.Write(chunk[:read])
 
-		if total == 0 || read < pr.ClientConfig.ReceiveChunkSize {
+		if read < pr.ClientConfig.ReceiveChunkSize {
 			break
 		}
 

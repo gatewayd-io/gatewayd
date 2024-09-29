@@ -245,7 +245,7 @@ func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 		total += read
 		buffer.Write(chunk[:read])
 
-		if total == 0 || read < c.ReceiveChunkSize {
+		if read < c.ReceiveChunkSize {
 			break
 		}
 	}
