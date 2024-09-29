@@ -79,7 +79,7 @@ type Server struct {
 	LoadbalancerStrategyName   string
 	LoadbalancerRules          []config.LoadBalancingRule
 	LoadbalancerConsistentHash *config.ConsistentHash
-	connectionToProxyMap       map[*ConnWrapper]IProxy
+	connectionToProxyMap       *sync.Map
 }
 
 var _ IServer = (*Server)(nil)
@@ -181,7 +181,7 @@ func (s *Server) OnOpen(conn *ConnWrapper) ([]byte, Action) {
 	}
 
 	// Assign connection to proxy
-	s.connectionToProxyMap[conn] = proxy
+	s.connectionToProxyMap.Store(conn, proxy)
 
 	// Run the OnOpened hooks.
 	pluginTimeoutCtx, cancel = context.WithTimeout(context.Background(), s.PluginTimeout)
@@ -696,7 +696,7 @@ func NewServer(
 		connections:                0,
 		running:                    &atomic.Bool{},
 		stopServer:                 make(chan struct{}),
-		connectionToProxyMap:       make(map[*ConnWrapper]IProxy),
+		connectionToProxyMap:       &sync.Map{},
 		LoadbalancerStrategyName:   srv.LoadbalancerStrategyName,
 		LoadbalancerRules:          srv.LoadbalancerRules,
 		LoadbalancerConsistentHash: srv.LoadbalancerConsistentHash,
@@ -737,11 +737,19 @@ func (s *Server) CountConnections() int {
 
 // GetProxyForConnection returns the proxy associated with the given connection.
 func (s *Server) GetProxyForConnection(conn *ConnWrapper) (IProxy, bool) {
-	proxy, exists := s.connectionToProxyMap[conn]
-	return proxy, exists
+	proxy, exists := s.connectionToProxyMap.Load(conn)
+	if !exists {
+		return nil, false
+	}
+
+	if proxy, ok := proxy.(IProxy); ok {
+		return proxy, true
+	}
+
+	return nil, false
 }
 
 // RemoveConnectionFromMap removes the given connection from the connection-to-proxy map.
 func (s *Server) RemoveConnectionFromMap(conn *ConnWrapper) {
-	delete(s.connectionToProxyMap, conn)
+	s.connectionToProxyMap.Delete(conn)
 }
