@@ -494,8 +494,17 @@ func (pr *Proxy) PassThroughToClient(conn *ConnWrapper, stack *Stack) *gerr.Gate
 	received, response, err := pr.receiveTrafficFromServer(client)
 	span.AddEvent("Received traffic from server")
 
-	// If the response is empty, don't send anything, instead just close the ingress connection.
-	if received == 0 || err != nil {
+	// If there is no data to send to the client,
+	// we don't need to run the hooks and
+	// we obviously have no data to send to the client.
+	if received == 0 {
+		span.AddEvent("No data to send to client")
+		stack.PopLastRequest()
+		return nil
+	}
+
+	// If there is an error, close the ingress connection.
+	if err != nil {
 		fields := map[string]interface{}{"function": "proxy.passthrough"}
 		if client.LocalAddr() != "" {
 			fields["localAddr"] = client.LocalAddr()
@@ -517,7 +526,7 @@ func (pr *Proxy) PassThroughToClient(conn *ConnWrapper, stack *Stack) *gerr.Gate
 
 	// Get the last request from the stack.
 	lastRequest := stack.PopLastRequest()
-	request := make([]byte, 0)
+	request := []byte{}
 	if lastRequest != nil {
 		request = lastRequest.Data
 	}
@@ -698,7 +707,7 @@ func (pr *Proxy) receiveTrafficFromClient(conn net.Conn) ([]byte, *gerr.GatewayD
 	defer span.End()
 
 	// request contains the data from the client.
-	received := 0
+	total := 0
 	buffer := bytes.NewBuffer(nil)
 	for {
 		chunk := make([]byte, pr.ClientConfig.ReceiveChunkSize)
@@ -713,10 +722,10 @@ func (pr *Proxy) receiveTrafficFromClient(conn net.Conn) ([]byte, *gerr.GatewayD
 			return chunk[:read], gerr.ErrReadFailed.Wrap(err)
 		}
 
-		received += read
+		total += read
 		buffer.Write(chunk[:read])
 
-		if received == 0 || received < pr.ClientConfig.ReceiveChunkSize {
+		if read < pr.ClientConfig.ReceiveChunkSize {
 			break
 		}
 
@@ -725,10 +734,9 @@ func (pr *Proxy) receiveTrafficFromClient(conn net.Conn) ([]byte, *gerr.GatewayD
 		}
 	}
 
-	length := len(buffer.Bytes())
 	pr.Logger.Debug().Fields(
 		map[string]interface{}{
-			"length": length,
+			"length": total,
 			"local":  LocalAddr(conn),
 			"remote": RemoteAddr(conn),
 		},
@@ -736,8 +744,8 @@ func (pr *Proxy) receiveTrafficFromClient(conn net.Conn) ([]byte, *gerr.GatewayD
 
 	span.AddEvent("Received data from client")
 
-	metrics.BytesReceivedFromClient.Observe(float64(length))
-	metrics.TotalTrafficBytes.Observe(float64(length))
+	metrics.BytesReceivedFromClient.Observe(float64(total))
+	metrics.TotalTrafficBytes.Observe(float64(total))
 
 	return buffer.Bytes(), nil
 }

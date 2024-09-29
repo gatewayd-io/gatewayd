@@ -231,7 +231,7 @@ func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 		ctx = context.Background()
 	}
 
-	var received int
+	total := 0
 	buffer := bytes.NewBuffer(nil)
 	// Read the data in chunks.
 	for ctx.Err() == nil {
@@ -240,19 +240,19 @@ func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 		if err != nil {
 			c.logger.Error().Err(err).Msg("Couldn't receive data from the server")
 			span.RecordError(err)
-			return received, buffer.Bytes(), gerr.ErrClientReceiveFailed.Wrap(err)
+			return total, buffer.Bytes(), gerr.ErrClientReceiveFailed.Wrap(err)
 		}
-		received += read
+		total += read
 		buffer.Write(chunk[:read])
 
-		if read == 0 || read < c.ReceiveChunkSize {
+		if read < c.ReceiveChunkSize {
 			break
 		}
 	}
 
 	span.AddEvent("Received data from server")
 
-	return received, buffer.Bytes(), nil
+	return total, buffer.Bytes(), nil
 }
 
 // Reconnect reconnects to the server.
