@@ -26,6 +26,7 @@ import (
 	"golang.org/x/exp/maps"
 )
 
+//nolint:interfacebloat
 type IProxy interface {
 	Connect(conn *ConnWrapper) *gerr.GatewayDError
 	Disconnect(conn *ConnWrapper) *gerr.GatewayDError

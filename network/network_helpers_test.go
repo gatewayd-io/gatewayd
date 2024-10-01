@@ -295,6 +295,10 @@ func (m MockProxy) GetBlockName() string {
 	return m.name
 }
 
+func (m MockProxy) GetGroupName() string {
+	return "default"
+}
+
 // Mock implementation of IConnWrapper.
 type MockConnWrapper struct {
 	mock.Mock
