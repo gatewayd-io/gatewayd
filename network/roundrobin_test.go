@@ -44,8 +44,8 @@ func TestRoundRobin_NextProxy(t *testing.T) {
 		if !ok {
 			t.Fatalf("test %d: expected proxy of type MockProxy, got %T", testIndex, proxy)
 		}
-		if mockProxy.GetName() != expected {
-			t.Errorf("test %d: expected proxy name %s, got %s", testIndex, expected, mockProxy.GetName())
+		if mockProxy.GetBlockName() != expected {
+			t.Errorf("test %d: expected proxy name %s, got %s", testIndex, expected, mockProxy.GetBlockName())
 		}
 	}
 }

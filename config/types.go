@@ -44,6 +44,9 @@ type ActionRedisConfig struct {
 }
 
 type Client struct {
+	BlockName string `json:"-"`
+	GroupName string `json:"-"`
+
 	Network            string        `json:"network" jsonschema:"enum=tcp,enum=udp,enum=unix" yaml:"network"`
 	Address            string        `json:"address" yaml:"address"`
 	TCPKeepAlive       bool          `json:"tcpKeepAlive" yaml:"tcpKeepAlive"`

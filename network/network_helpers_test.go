@@ -290,8 +290,8 @@ func (m MockProxy) BusyConnectionsString() []string {
 	return nil
 }
 
-// GetName returns the name of the MockProxy.
-func (m MockProxy) GetName() string {
+// GetBlockName returns the name of the MockProxy.
+func (m MockProxy) GetBlockName() string {
 	return m.name
 }
 

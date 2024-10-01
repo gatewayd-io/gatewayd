@@ -10,51 +10,51 @@ const (
 )
 
 var (
-	ClientConnections = promauto.NewGauge(prometheus.GaugeOpts{
+	ClientConnections = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: Namespace,
 		Name:      "client_connections",
 		Help:      "Number of client connections",
-	})
-	ServerConnections = promauto.NewGauge(prometheus.GaugeOpts{
+	}, []string{"group", "block"})
+	ServerConnections = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: Namespace,
 		Name:      "server_connections",
 		Help:      "Number of server connections",
-	})
-	TLSConnections = promauto.NewGauge(prometheus.GaugeOpts{
+	}, []string{"group", "block"})
+	TLSConnections = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: Namespace,
 		Name:      "tls_connections",
 		Help:      "Number of TLS connections",
-	})
+	}, []string{"group", "block"})
 	ServerTicksFired = promauto.NewCounter(prometheus.CounterOpts{
 		Namespace: Namespace,
 		Name:      "server_ticks_fired_total",
 		Help:      "Total number of server ticks fired",
 	})
-	BytesReceivedFromClient = promauto.NewSummary(prometheus.SummaryOpts{
+	BytesReceivedFromClient = promauto.NewSummaryVec(prometheus.SummaryOpts{
 		Namespace: Namespace,
 		Name:      "bytes_received_from_client",
 		Help:      "Number of bytes received from client",
-	})
-	BytesSentToServer = promauto.NewSummary(prometheus.SummaryOpts{
+	}, []string{"group", "block"})
+	BytesSentToServer = promauto.NewSummaryVec(prometheus.SummaryOpts{
 		Namespace: Namespace,
 		Name:      "bytes_sent_to_server",
 		Help:      "Number of bytes sent to server",
-	})
-	BytesReceivedFromServer = promauto.NewSummary(prometheus.SummaryOpts{
+	}, []string{"group", "block"})
+	BytesReceivedFromServer = promauto.NewSummaryVec(prometheus.SummaryOpts{
 		Namespace: Namespace,
 		Name:      "bytes_received_from_server",
 		Help:      "Number of bytes received from server",
-	})
-	BytesSentToClient = promauto.NewSummary(prometheus.SummaryOpts{
+	}, []string{"group", "block"})
+	BytesSentToClient = promauto.NewSummaryVec(prometheus.SummaryOpts{
 		Namespace: Namespace,
 		Name:      "bytes_sent_to_client",
 		Help:      "Number of bytes sent to client",
-	})
-	TotalTrafficBytes = promauto.NewSummary(prometheus.SummaryOpts{
+	}, []string{"group", "block"})
+	TotalTrafficBytes = promauto.NewSummaryVec(prometheus.SummaryOpts{
 		Namespace: Namespace,
 		Name:      "traffic_bytes",
 		Help:      "Number of total bytes passed through GatewayD via client or server",
-	})
+	}, []string{"group", "block"})
 	PluginsLoaded = promauto.NewCounter(prometheus.CounterOpts{
 		Namespace: Namespace,
 		Name:      "plugins_loaded_total",
@@ -70,31 +70,31 @@ var (
 		Name:      "plugin_hooks_executed_total",
 		Help:      "Number of plugin hooks executed",
 	})
-	ProxyHealthChecks = promauto.NewCounter(prometheus.CounterOpts{
+	ProxyHealthChecks = promauto.NewCounterVec(prometheus.CounterOpts{
 		Namespace: Namespace,
 		Name:      "proxy_health_checks_total",
 		Help:      "Number of proxy health checks",
-	})
-	ProxiedConnections = promauto.NewGauge(prometheus.GaugeOpts{
+	}, []string{"group", "block"})
+	ProxiedConnections = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: Namespace,
 		Name:      "proxied_connections",
 		Help:      "Number of proxy connects",
-	})
-	ProxyPassThroughsToClient = promauto.NewCounter(prometheus.CounterOpts{
+	}, []string{"group", "block"})
+	ProxyPassThroughsToClient = promauto.NewCounterVec(prometheus.CounterOpts{
 		Namespace: Namespace,
 		Name:      "proxy_passthroughs_to_client_total",
 		Help:      "Number of successful proxy passthroughs from server to client",
-	})
-	ProxyPassThroughsToServer = promauto.NewCounter(prometheus.CounterOpts{
+	}, []string{"group", "block"})
+	ProxyPassThroughsToServer = promauto.NewCounterVec(prometheus.CounterOpts{
 		Namespace: Namespace,
 		Name:      "proxy_passthroughs_to_server_total",
 		Help:      "Number of successful proxy passthroughs from client to server",
-	})
-	ProxyPassThroughTerminations = promauto.NewCounter(prometheus.CounterOpts{
+	}, []string{"group", "block"})
+	ProxyPassThroughTerminations = promauto.NewCounterVec(prometheus.CounterOpts{
 		Namespace: Namespace,
 		Name:      "proxy_passthrough_terminations_total",
 		Help:      "Number of proxy passthrough terminations by plugins",
-	})
+	}, []string{"group", "block"})
 	APIRequests = promauto.NewCounterVec(prometheus.CounterOpts{
 		Namespace: Namespace,
 		Name:      "api_requests_total",
