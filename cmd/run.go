@@ -696,6 +696,8 @@ var runCmd = &cobra.Command{
 				// Add clients to the pool.
 				for range currentPoolSize {
 					clientConfig := clients[configGroupName][configBlockName]
+					clientConfig.GroupName = configGroupName
+					clientConfig.BlockName = configBlockName
 					client := network.NewClient(
 						runCtx, clientConfig, logger,
 						network.NewRetry(
@@ -716,6 +718,7 @@ var runCmd = &cobra.Command{
 					if client != nil {
 						eventOptions := trace.WithAttributes(
 							attribute.String("name", configBlockName),
+							attribute.String("group", configGroupName),
 							attribute.String("network", client.Network),
 							attribute.String("address", client.Address),
 							attribute.Int("receiveChunkSize", client.ReceiveChunkSize),
@@ -746,6 +749,8 @@ var runCmd = &cobra.Command{
 
 						clientCfg := map[string]interface{}{
 							"id":                 client.ID,
+							"name":               configBlockName,
+							"group":              configGroupName,
 							"network":            client.Network,
 							"address":            client.Address,
 							"receiveChunkSize":   client.ReceiveChunkSize,
@@ -851,7 +856,8 @@ var runCmd = &cobra.Command{
 				proxies[configGroupName][configBlockName] = network.NewProxy(
 					runCtx,
 					network.Proxy{
-						Name:                 configBlockName,
+						GroupName:            configGroupName,
+						BlockName:            configBlockName,
 						AvailableConnections: pools[configGroupName][configBlockName],
 						PluginRegistry:       pluginRegistry,
 						HealthCheckPeriod:    cfg.HealthCheckPeriod,
@@ -899,8 +905,9 @@ var runCmd = &cobra.Command{
 			servers[name] = network.NewServer(
 				runCtx,
 				network.Server{
-					Network: cfg.Network,
-					Address: cfg.Address,
+					GroupName: name,
+					Network:   cfg.Network,
+					Address:   cfg.Address,
 					TickInterval: config.If(
 						cfg.TickInterval > 0,
 						cfg.TickInterval,

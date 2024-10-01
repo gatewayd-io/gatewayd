@@ -80,7 +80,7 @@ func (r *WeightedRoundRobin) NextProxy(_ IConnWrapper) (IProxy, *gerr.GatewayDEr
 // findProxyByName locates a proxy by its name in the provided list of proxies.
 func findProxyByName(name string, proxies []IProxy) IProxy {
 	for _, proxy := range proxies {
-		if proxy.GetName() == name {
+		if proxy.GetBlockName() == name {
 			return proxy
 		}
 	}

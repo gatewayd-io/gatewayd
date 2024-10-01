@@ -55,6 +55,8 @@ type Server struct {
 	PluginTimeout  time.Duration
 	mu             *sync.RWMutex
 
+	GroupName string
+
 	Network      string // tcp/udp/unix
 	Address      string
 	Options      Option
@@ -201,7 +203,7 @@ func (s *Server) OnOpen(conn *ConnWrapper) ([]byte, Action) {
 	}
 	span.AddEvent("Ran the OnOpened hooks")
 
-	metrics.ClientConnections.Inc()
+	metrics.ClientConnections.WithLabelValues(s.GroupName, proxy.GetBlockName()).Inc()
 
 	return nil, None
 }
@@ -265,7 +267,7 @@ func (s *Server) OnClose(conn *ConnWrapper, err error) Action {
 	s.RemoveConnectionFromMap(conn)
 
 	if conn.IsTLSEnabled() {
-		metrics.TLSConnections.Dec()
+		metrics.TLSConnections.WithLabelValues(s.GroupName, proxy.GetBlockName()).Dec()
 	}
 
 	// Close the incoming connection.
@@ -297,7 +299,7 @@ func (s *Server) OnClose(conn *ConnWrapper, err error) Action {
 	}
 	span.AddEvent("Ran the OnClosed hooks")
 
-	metrics.ClientConnections.Dec()
+	metrics.ClientConnections.WithLabelValues(s.GroupName, proxy.GetBlockName()).Dec()
 
 	return Close
 }
@@ -679,6 +681,7 @@ func NewServer(
 	// Create the server.
 	server := Server{
 		ctx:                        serverCtx,
+		GroupName:                  srv.GroupName,
 		Network:                    srv.Network,
 		Address:                    srv.Address,
 		Options:                    srv.Options,

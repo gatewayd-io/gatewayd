@@ -138,7 +138,7 @@ func TestWeightedRoundRobinNextProxy(t *testing.T) {
 		mockProxy, ok := proxy.(MockProxy)
 		require.True(t, ok, "expected proxy of type MockProxy, got %T", proxy)
 
-		counts[mockProxy.GetName()]++
+		counts[mockProxy.GetBlockName()]++
 	}
 
 	// Validate that the actual distribution of requests closely matches the expected distribution.
@@ -191,7 +191,7 @@ func TestWeightedRoundRobinConcurrentAccess(t *testing.T) {
 			if assert.Nil(t, err, "No error expected when getting a proxy") {
 				// Safely update the proxy selection count using a mutex.
 				mux.Lock()
-				proxySelection[proxy.GetName()]++
+				proxySelection[proxy.GetBlockName()]++
 				mux.Unlock()
 			}
 		}()

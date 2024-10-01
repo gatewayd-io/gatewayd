@@ -26,6 +26,7 @@ import (
 	"golang.org/x/exp/maps"
 )
 
+//nolint:interfacebloat
 type IProxy interface {
 	Connect(conn *ConnWrapper) *gerr.GatewayDError
 	Disconnect(conn *ConnWrapper) *gerr.GatewayDError
@@ -36,11 +37,13 @@ type IProxy interface {
 	Shutdown()
 	AvailableConnectionsString() []string
 	BusyConnectionsString() []string
-	GetName() string
+	GetGroupName() string
+	GetBlockName() string
 }
 
 type Proxy struct {
-	Name                 string
+	GroupName            string
+	BlockName            string
 	AvailableConnections pool.IPool
 	busyConnections      pool.IPool
 	Logger               zerolog.Logger
@@ -65,6 +68,8 @@ func NewProxy(
 	defer span.End()
 
 	proxy := Proxy{
+		GroupName:            pxy.GroupName,
+		BlockName:            pxy.BlockName,
 		AvailableConnections: pxy.AvailableConnections,
 		busyConnections:      pool.NewPool(proxyCtx, config.EmptyPoolCapacity),
 		Logger:               pxy.Logger,
@@ -118,7 +123,8 @@ func NewProxy(
 			})
 			proxy.Logger.Trace().Str("duration", time.Since(now).String()).Msg(
 				"Finished the client health check")
-			metrics.ProxyHealthChecks.Inc()
+			metrics.ProxyHealthChecks.WithLabelValues(
+				proxy.GetGroupName(), proxy.GetBlockName()).Inc()
 		},
 	); err != nil {
 		proxy.Logger.Error().Err(err).Msg("Failed to schedule the client health check")
@@ -138,8 +144,12 @@ func NewProxy(
 	return &proxy
 }
 
-func (pr *Proxy) GetName() string {
-	return pr.Name
+func (pr *Proxy) GetBlockName() string {
+	return pr.BlockName
+}
+
+func (pr *Proxy) GetGroupName() string {
+	return pr.GroupName
 }
 
 // Connect maps a server connection from the available connection pool to a incoming connection.
@@ -181,7 +191,7 @@ func (pr *Proxy) Connect(conn *ConnWrapper) *gerr.GatewayDError {
 		return err
 	}
 
-	metrics.ProxiedConnections.Inc()
+	metrics.ProxiedConnections.WithLabelValues(pr.GetGroupName(), pr.GetBlockName()).Inc()
 
 	fields := map[string]interface{}{
 		"function": "proxy.connect",
@@ -244,7 +254,7 @@ func (pr *Proxy) Disconnect(conn *ConnWrapper) *gerr.GatewayDError {
 		return gerr.ErrCastFailed
 	}
 
-	metrics.ProxiedConnections.Dec()
+	metrics.ProxiedConnections.WithLabelValues(pr.GetGroupName(), pr.GetBlockName()).Dec()
 
 	pr.Logger.Debug().Fields(
 		map[string]interface{}{
@@ -354,7 +364,7 @@ func (pr *Proxy) PassThroughToServer(conn *ConnWrapper, stack *Stack) *gerr.Gate
 				},
 			).Msg("Performed the TLS handshake")
 			span.AddEvent("Performed the TLS handshake")
-			metrics.TLSConnections.Inc()
+			metrics.TLSConnections.WithLabelValues(pr.GetGroupName(), pr.GetBlockName()).Inc()
 		} else {
 			pr.Logger.Error().Fields(
 				map[string]interface{}{
@@ -410,10 +420,10 @@ func (pr *Proxy) PassThroughToServer(conn *ConnWrapper, stack *Stack) *gerr.Gate
 		}
 
 		if modResponse, modReceived := pr.getPluginModifiedResponse(result); modResponse != nil {
-			metrics.ProxyPassThroughsToClient.Inc()
-			metrics.ProxyPassThroughTerminations.Inc()
-			metrics.BytesSentToClient.Observe(float64(modReceived))
-			metrics.TotalTrafficBytes.Observe(float64(modReceived))
+			metrics.ProxyPassThroughsToClient.WithLabelValues(pr.GetGroupName(), pr.GetBlockName()).Inc()
+			metrics.ProxyPassThroughTerminations.WithLabelValues(pr.GetGroupName(), pr.GetBlockName()).Inc()
+			metrics.BytesSentToClient.WithLabelValues(pr.GetGroupName(), pr.GetBlockName()).Observe(float64(modReceived))
+			metrics.TotalTrafficBytes.WithLabelValues(pr.GetGroupName(), pr.GetBlockName()).Observe(float64(modReceived))
 
 			span.AddEvent("Terminating connection")
 
@@ -460,7 +470,7 @@ func (pr *Proxy) PassThroughToServer(conn *ConnWrapper, stack *Stack) *gerr.Gate
 	}
 	span.AddEvent("Ran the OnTrafficToServer hooks")
 
-	metrics.ProxyPassThroughsToServer.Inc()
+	metrics.ProxyPassThroughsToServer.WithLabelValues(pr.GetGroupName(), pr.GetBlockName()).Inc()
 
 	return nil
 }
@@ -597,7 +607,7 @@ func (pr *Proxy) PassThroughToClient(conn *ConnWrapper, stack *Stack) *gerr.Gate
 		span.RecordError(errVerdict)
 	}
 
-	metrics.ProxyPassThroughsToClient.Inc()
+	metrics.ProxyPassThroughsToClient.WithLabelValues(pr.GetGroupName(), pr.GetBlockName()).Inc()
 
 	return errVerdict
 }
@@ -716,8 +726,8 @@ func (pr *Proxy) receiveTrafficFromClient(conn net.Conn) ([]byte, *gerr.GatewayD
 			pr.Logger.Debug().Err(err).Msg("Error reading from client")
 			span.RecordError(err)
 
-			metrics.BytesReceivedFromClient.Observe(float64(read))
-			metrics.TotalTrafficBytes.Observe(float64(read))
+			metrics.BytesReceivedFromClient.WithLabelValues(pr.GetGroupName(), pr.GetBlockName()).Observe(float64(read))
+			metrics.TotalTrafficBytes.WithLabelValues(pr.GetGroupName(), pr.GetBlockName()).Observe(float64(read))
 
 			return chunk[:read], gerr.ErrReadFailed.Wrap(err)
 		}
@@ -744,8 +754,8 @@ func (pr *Proxy) receiveTrafficFromClient(conn net.Conn) ([]byte, *gerr.GatewayD
 
 	span.AddEvent("Received data from client")
 
-	metrics.BytesReceivedFromClient.Observe(float64(total))
-	metrics.TotalTrafficBytes.Observe(float64(total))
+	metrics.BytesReceivedFromClient.WithLabelValues(pr.GetGroupName(), pr.GetBlockName()).Observe(float64(total))
+	metrics.TotalTrafficBytes.WithLabelValues(pr.GetGroupName(), pr.GetBlockName()).Observe(float64(total))
 
 	return buffer.Bytes(), nil
 }
@@ -777,8 +787,8 @@ func (pr *Proxy) sendTrafficToServer(client *Client, request []byte) (int, *gerr
 
 	span.AddEvent("Sent data to database")
 
-	metrics.BytesSentToServer.Observe(float64(sent))
-	metrics.TotalTrafficBytes.Observe(float64(sent))
+	metrics.BytesSentToServer.WithLabelValues(pr.GetGroupName(), pr.GetBlockName()).Observe(float64(sent))
+	metrics.TotalTrafficBytes.WithLabelValues(pr.GetGroupName(), pr.GetBlockName()).Observe(float64(sent))
 
 	return sent, err
 }
@@ -806,8 +816,8 @@ func (pr *Proxy) receiveTrafficFromServer(client *Client) (int, []byte, *gerr.Ga
 
 	span.AddEvent("Received data from database")
 
-	metrics.BytesReceivedFromServer.Observe(float64(received))
-	metrics.TotalTrafficBytes.Observe(float64(received))
+	metrics.BytesReceivedFromServer.WithLabelValues(pr.GetGroupName(), pr.GetBlockName()).Observe(float64(received))
+	metrics.TotalTrafficBytes.WithLabelValues(pr.GetGroupName(), pr.GetBlockName()).Observe(float64(received))
 
 	return received, response, err
 }
@@ -847,8 +857,8 @@ func (pr *Proxy) sendTrafficToClient(
 
 	span.AddEvent("Sent data to client")
 
-	metrics.BytesSentToClient.Observe(float64(received))
-	metrics.TotalTrafficBytes.Observe(float64(received))
+	metrics.BytesSentToClient.WithLabelValues(pr.GetGroupName(), pr.GetBlockName()).Observe(float64(received))
+	metrics.TotalTrafficBytes.WithLabelValues(pr.GetGroupName(), pr.GetBlockName()).Observe(float64(received))
 
 	return nil
 }

@@ -35,6 +35,9 @@ type Client struct {
 	mu        sync.Mutex
 	retry     IRetry
 
+	GroupName string
+	BlockName string
+
 	TCPKeepAlive       bool
 	TCPKeepAlivePeriod time.Duration
 	ReceiveChunkSize   int
@@ -168,7 +171,7 @@ func NewClient(
 		logger,
 	)
 
-	metrics.ServerConnections.Inc()
+	metrics.ServerConnections.WithLabelValues(clientConfig.GroupName, clientConfig.BlockName).Inc()
 
 	return &client
 }
@@ -267,7 +270,7 @@ func (c *Client) Reconnect() error {
 	if c.conn != nil {
 		c.Close()
 	} else {
-		metrics.ServerConnections.Dec()
+		metrics.ServerConnections.WithLabelValues(c.GroupName, c.BlockName).Dec()
 	}
 	c.connected.Store(false)
 
@@ -306,7 +309,7 @@ func (c *Client) Reconnect() error {
 	)
 	c.connected.Store(true)
 	c.logger.Debug().Str("address", c.Address).Msg("Reconnected to server")
-	metrics.ServerConnections.Inc()
+	metrics.ServerConnections.WithLabelValues(c.GroupName, c.BlockName).Inc()
 	span.AddEvent("Reconnected to server")
 
 	return nil
@@ -343,7 +346,7 @@ func (c *Client) Close() {
 	c.Address = ""
 	c.Network = ""
 
-	metrics.ServerConnections.Dec()
+	metrics.ServerConnections.WithLabelValues(c.GroupName, c.BlockName).Dec()
 
 	span.AddEvent("Closed connection to server")
 }
