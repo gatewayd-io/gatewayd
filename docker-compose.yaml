@@ -48,7 +48,18 @@ services:
       retries: 5
   gatewayd:
     image: gatewaydio/gatewayd:latest
-    command: ["run", "--config", "/gatewayd-files/gatewayd.yaml", "--plugin-config", "/gatewayd-files/gatewayd_plugins.yaml", "--tracing", "--collector-url", "tempo:4317"]
+    command:
+      [
+        "run",
+        "--config",
+        "/gatewayd-files/gatewayd.yaml",
+        "--plugin-config",
+        "/gatewayd-files/gatewayd_plugins.yaml",
+        "--tracing",
+        "--collector-url",
+        "tempo:4317",
+      ]
+    pull_policy: always
     environment:
       # For more information about the environment variables, see:
       # https://docs.gatewayd.io/using-gatewayd/configuration#environment-variables
