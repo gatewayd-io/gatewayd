@@ -91,6 +91,7 @@ linters-settings:
           - "github.com/testcontainers/testcontainers-go"
           - "github.com/redis/go-redis/v9"
           - "github.com/docker/go-connections/nat"
+          - "github.com/codingsince1985/checksum"
   tagalign:
     align: false
     sort: false
