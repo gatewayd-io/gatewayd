@@ -1,13 +1,18 @@
 package cmd
 
 import (
-	"fmt"
+	"context"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/codingsince1985/checksum"
+	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/gatewayd-io/gatewayd/plugin"
+	"github.com/gatewayd-io/gatewayd/testhelpers"
 	"github.com/spf13/cast"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -15,13 +20,21 @@ import (
 )
 
 func Test_pluginScaffoldCmd(t *testing.T) {
+	// Start the test containers.
+	ctx := context.Background()
+	postgresHostIP1, postgresMappedPort1 := testhelpers.SetupPostgreSQLTestContainer(ctx, t)
+	postgresHostIP2, postgresMappedPort2 := testhelpers.SetupPostgreSQLTestContainer(ctx, t)
+	postgresAddress1 := postgresHostIP1 + ":" + postgresMappedPort1.Port()
+	t.Setenv("GATEWAYD_CLIENTS_DEFAULT_WRITES_ADDRESS", postgresAddress1)
+	postgresAddress2 := postgresHostIP2 + ":" + postgresMappedPort2.Port()
+	t.Setenv("GATEWAYD_CLIENTS_TEST_WRITE_ADDRESS", postgresAddress2)
+
 	globalTestConfigFile := filepath.Join("testdata", "gatewayd.yaml")
 	plugin.IsPluginTemplateEmbedded()
 	pluginTestScaffoldInputFile := "./testdata/scaffold_input.yaml"
 
 	output, err := executeCommandC(
-		rootCmd, "plugin", "scaffold",
-		"-i", pluginTestScaffoldInputFile)
+		rootCmd, "plugin", "scaffold", "-i", pluginTestScaffoldInputFile)
 	require.NoError(t, err, "plugin scaffold should not return an error")
 	assert.Contains(t, output, "scaffold done")
 	assert.Contains(t, output, "created files:")
@@ -29,14 +42,23 @@ func Test_pluginScaffoldCmd(t *testing.T) {
 	assert.Contains(t, output, "test-gatewayd-plugin/.github/pull_request_template.md")
 	assert.Contains(t, output, "test-gatewayd-plugin/.github/workflows/commits-signed.yaml")
 
-	pluginsConfig, err := os.ReadFile(filepath.Join("plugins", "test-gatewayd-plugin", "gatewayd_plugin.yaml"))
+	pluginsConfig, err := os.ReadFile(
+		filepath.Join("plugins", "test-gatewayd-plugin", "gatewayd_plugin.yaml"))
 	require.NoError(t, err, "reading plugins config file should not return an error")
 
 	var localPluginsConfig map[string]interface{}
 	err = yamlv3.Unmarshal(pluginsConfig, &localPluginsConfig)
 	require.NoError(t, err, "unmarshalling yaml file should not return error")
 
-	// TODO: build the plugin binary and check that it is valid.
+	tidy := exec.Command("go", "mod", "tidy")
+	tidy.Dir = filepath.Join("plugins", "test-gatewayd-plugin")
+	err = tidy.Run()
+	assert.NoError(t, err)
+
+	build := exec.Command("make", "build-dev")
+	build.Dir = filepath.Join("plugins", "test-gatewayd-plugin")
+	err = build.Run()
+	assert.NoError(t, err)
 
 	_, err = os.ReadFile(filepath.Join("plugins", "test-gatewayd-plugin", "test-gatewayd-plugin"))
 	require.NoError(t, err, "reading plugin binary file should not return an error")
@@ -56,52 +78,55 @@ func Test_pluginScaffoldCmd(t *testing.T) {
 	updatedPluginConfig, err := yamlv3.Marshal(plugins)
 	require.NoError(t, err, "marshalling yaml file should not return error")
 
-	err = os.WriteFile(filepath.Join("plugins", "test-gatewayd-plugin", "gatewayd_plugins.yaml"), updatedPluginConfig, FilePermissions)
+	err = os.WriteFile(
+		filepath.Join("plugins", "test-gatewayd-plugin", "gatewayd_plugins.yaml"),
+		updatedPluginConfig, FilePermissions)
 	require.NoError(t, err, "writingh to yaml file should not return error")
 
-	output, err = executeCommandC(rootCmd, "run", "-p", filepath.Join("plugins", "test-gatewayd-plugin", "gatewayd_plugins.yaml"), "-c", globalTestConfigFile)
-	require.NoError(t, err, "run command should not have returned an error")
-	fmt.Println(output)
+	pluginTestConfigFile := filepath.Join(
+		"plugins", "test-gatewayd-plugin", "gatewayd_plugins.yaml")
 
-	// var waitGroup sync.WaitGroup
-	// waitGroup.Add(1)
-	// go func(waitGroup *sync.WaitGroup) {
-	// 	fmt.Println("sasasaas")
-	// 	// Test run command.
-	// 	_, err := executeCommandC(rootCmd, "run", "-p", filepath.Join("plugins", "test-gatewayd-plugin", "gatewayd_plugins.yaml"), "-c", globalTestConfigFile)
-	// 	require.NoError(t, err, "run command should not have returned an error")
-	// 	fmt.Println("2121")
+	stopChan = make(chan struct{})
 
-	// 	// // Print the output for debugging purposes.
-	// 	// runCmd.Print(output)
-	// 	// Check if GatewayD started and stopped correctly.
-	// 	// assert.Contains(t, output, "GatewayD is running")
-	// 	// assert.Contains(t, output, "Stopped all servers")
+	var waitGroup sync.WaitGroup
 
-	// 	waitGroup.Done()
-	// }(&waitGroup)
+	waitGroup.Add(1)
+	go func(waitGroup *sync.WaitGroup) {
+		// Test run command.
+		output, err := executeCommandC(
+			rootCmd, "run", "-c", globalTestConfigFile, "-p", pluginTestConfigFile)
+		require.NoError(t, err, "run command should not have returned an error")
 
-	// waitGroup.Wait()
+		// Print the output for debugging purposes.
+		runCmd.Print(output)
+		// Check if GatewayD started and stopped correctly.
+		assert.Contains(t, output, "GatewayD is running")
+		assert.Contains(t, output, "Stopped all servers")
 
-	// waitGroup.Add(1)
-	// go func(waitGroup *sync.WaitGroup) {
-	// 	time.Sleep(waitBeforeStop * 2)
+		waitGroup.Done()
+	}(&waitGroup)
 
-	// 	StopGracefully(
-	// 		context.Background(),
-	// 		nil,
-	// 		nil,
-	// 		metricsServer,
-	// 		nil,
-	// 		loggers[config.Default],
-	// 		servers,
-	// 		stopChan,
-	// 		nil,
-	// 		nil,
-	// 	)
+	waitGroup.Add(1)
+	go func(waitGroup *sync.WaitGroup) {
+		time.Sleep(waitBeforeStop)
 
-	// 	waitGroup.Done()
-	// }(&waitGroup)
+		StopGracefully(
+			context.Background(),
+			nil,
+			nil,
+			metricsServer,
+			nil,
+			loggers[config.Default],
+			servers,
+			stopChan,
+			nil,
+			nil,
+		)
 
-	// waitGroup.Wait()
+		waitGroup.Done()
+	}(&waitGroup)
+
+	waitGroup.Wait()
+
+	assert.NoError(t, os.RemoveAll("plugins"))
 }
