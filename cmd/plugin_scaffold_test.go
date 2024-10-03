@@ -32,8 +32,10 @@ func Test_pluginScaffoldCmd(t *testing.T) {
 	plugin.IsPluginTemplateEmbedded()
 	pluginTestScaffoldInputFile := "./testdata/scaffold_input.yaml"
 
+	tempDir := t.TempDir()
+
 	output, err := executeCommandC(
-		rootCmd, "plugin", "scaffold", "-i", pluginTestScaffoldInputFile, "-o", t.TempDir())
+		rootCmd, "plugin", "scaffold", "-i", pluginTestScaffoldInputFile, "-o", tempDir)
 	require.NoError(t, err, "plugin scaffold should not return an error")
 	assert.Contains(t, output, "scaffold done")
 	assert.Contains(t, output, "created files:")
@@ -42,7 +44,7 @@ func Test_pluginScaffoldCmd(t *testing.T) {
 	assert.Contains(t, output, "test-gatewayd-plugin/.github/workflows/commits-signed.yaml")
 
 	pluginName := "test-gatewayd-plugin"
-	pluginDir := filepath.Join(t.TempDir(), pluginName)
+	pluginDir := filepath.Join(tempDir, pluginName)
 
 	pluginsConfig, err := os.ReadFile(filepath.Join(pluginDir, "gatewayd_plugin.yaml"))
 	require.NoError(t, err, "reading plugins config file should not return an error")
