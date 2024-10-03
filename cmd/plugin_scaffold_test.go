@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sync"
 	"testing"
@@ -34,7 +33,7 @@ func Test_pluginScaffoldCmd(t *testing.T) {
 	pluginTestScaffoldInputFile := "./testdata/scaffold_input.yaml"
 
 	output, err := executeCommandC(
-		rootCmd, "plugin", "scaffold", "-i", pluginTestScaffoldInputFile)
+		rootCmd, "plugin", "scaffold", "-i", pluginTestScaffoldInputFile, "-o", t.TempDir())
 	require.NoError(t, err, "plugin scaffold should not return an error")
 	assert.Contains(t, output, "scaffold done")
 	assert.Contains(t, output, "created files:")
@@ -42,32 +41,30 @@ func Test_pluginScaffoldCmd(t *testing.T) {
 	assert.Contains(t, output, "test-gatewayd-plugin/.github/pull_request_template.md")
 	assert.Contains(t, output, "test-gatewayd-plugin/.github/workflows/commits-signed.yaml")
 
-	pluginsConfig, err := os.ReadFile(
-		filepath.Join("plugins", "test-gatewayd-plugin", "gatewayd_plugin.yaml"))
+	pluginName := "test-gatewayd-plugin"
+	pluginDir := filepath.Join(t.TempDir(), pluginName)
+
+	pluginsConfig, err := os.ReadFile(filepath.Join(pluginDir, "gatewayd_plugin.yaml"))
 	require.NoError(t, err, "reading plugins config file should not return an error")
 
 	var localPluginsConfig map[string]interface{}
 	err = yamlv3.Unmarshal(pluginsConfig, &localPluginsConfig)
 	require.NoError(t, err, "unmarshalling yaml file should not return error")
 
-	tidy := exec.Command("go", "mod", "tidy")
-	tidy.Dir = filepath.Join("plugins", "test-gatewayd-plugin")
-	err = tidy.Run()
-	assert.NoError(t, err)
+	err = runCommand(pluginDir, "go", "mod", "tidy")
+	require.NoError(t, err, "running go mod tidy should not return an error")
+	runCommand(pluginDir, "make", "build-dev")
+	require.NoError(t, err, "running make build-dev should not return an error")
 
-	build := exec.Command("make", "build-dev")
-	build.Dir = filepath.Join("plugins", "test-gatewayd-plugin")
-	err = build.Run()
-	assert.NoError(t, err)
+	pluginBinaryPath := filepath.Join(pluginDir, pluginName)
 
-	_, err = os.ReadFile(filepath.Join("plugins", "test-gatewayd-plugin", "test-gatewayd-plugin"))
-	require.NoError(t, err, "reading plugin binary file should not return an error")
+	_, err = os.Stat(pluginBinaryPath)
+	require.NoError(t, err, "plugin binary file should exist")
 
 	pluginsList := cast.ToSlice(localPluginsConfig["plugins"])
 	plugin := cast.ToStringMap(pluginsList[0])
-	pluginsList[0] = plugin
-	plugin["localPath"] = filepath.Join("cmd", "plugins", "test-gatewayd-plugin", "test-gatewayd-plugin")
-	sum, err := checksum.SHA256sum(filepath.Join("plugins", "test-gatewayd-plugin", "test-gatewayd-plugin"))
+	plugin["localPath"] = filepath.Join("cmd", pluginDir, pluginName)
+	sum, err := checksum.SHA256sum(pluginBinaryPath)
 	require.NoError(t, err, "marshalling yaml file should not return error")
 	plugin["checksum"] = sum
 
@@ -79,12 +76,11 @@ func Test_pluginScaffoldCmd(t *testing.T) {
 	require.NoError(t, err, "marshalling yaml file should not return error")
 
 	err = os.WriteFile(
-		filepath.Join("plugins", "test-gatewayd-plugin", "gatewayd_plugins.yaml"),
+		filepath.Join(pluginDir, "gatewayd_plugins.yaml"),
 		updatedPluginConfig, FilePermissions)
 	require.NoError(t, err, "writingh to yaml file should not return error")
 
-	pluginTestConfigFile := filepath.Join(
-		"plugins", "test-gatewayd-plugin", "gatewayd_plugins.yaml")
+	pluginTestConfigFile := filepath.Join(pluginDir, "gatewayd_plugins.yaml")
 
 	stopChan = make(chan struct{})
 
