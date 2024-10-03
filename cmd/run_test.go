@@ -20,8 +20,8 @@ var (
 
 func Test_runCmd(t *testing.T) {
 	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(context.Background(), t)
-	postgredAddress := postgresHostIP + ":" + postgresMappedPort.Port()
-	t.Setenv("GATEWAYD_CLIENTS_DEFAULT_WRITES_ADDRESS", postgredAddress)
+	postgresAddress := postgresHostIP + ":" + postgresMappedPort.Port()
+	t.Setenv("GATEWAYD_CLIENTS_DEFAULT_WRITES_ADDRESS", postgresAddress)
 
 	globalTestConfigFile := "./test_global_runCmd.yaml"
 	pluginTestConfigFile := "./test_plugins_runCmd.yaml"
@@ -84,8 +84,8 @@ func Test_runCmd(t *testing.T) {
 // Test_runCmdWithTLS tests the run command with TLS enabled on the server.
 func Test_runCmdWithTLS(t *testing.T) {
 	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(context.Background(), t)
-	postgredAddress := postgresHostIP + ":" + postgresMappedPort.Port()
-	t.Setenv("GATEWAYD_CLIENTS_DEFAULT_WRITES_ADDRESS", postgredAddress)
+	postgresAddress := postgresHostIP + ":" + postgresMappedPort.Port()
+	t.Setenv("GATEWAYD_CLIENTS_DEFAULT_WRITES_ADDRESS", postgresAddress)
 
 	globalTLSTestConfigFile := "./testdata/gatewayd_tls.yaml"
 	pluginTestConfigFile := "./test_plugins_runCmdWithTLS.yaml"
@@ -144,11 +144,11 @@ func Test_runCmdWithTLS(t *testing.T) {
 // Test_runCmdWithMultiTenancy tests the run command with multi-tenancy enabled.
 func Test_runCmdWithMultiTenancy(t *testing.T) {
 	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(context.Background(), t)
-	postgredAddress := postgresHostIP + ":" + postgresMappedPort.Port()
-	t.Setenv("GATEWAYD_CLIENTS_DEFAULT_WRITES_ADDRESS", postgredAddress)
+	postgresAddress := postgresHostIP + ":" + postgresMappedPort.Port()
+	t.Setenv("GATEWAYD_CLIENTS_DEFAULT_WRITES_ADDRESS", postgresAddress)
 	postgresHostIP2, postgresMappedPort2 := testhelpers.SetupPostgreSQLTestContainer(context.Background(), t)
-	postgredAddress2 := postgresHostIP2 + ":" + postgresMappedPort2.Port()
-	t.Setenv("GATEWAYD_CLIENTS_TEST_WRITE_ADDRESS", postgredAddress2)
+	postgresAddress2 := postgresHostIP2 + ":" + postgresMappedPort2.Port()
+	t.Setenv("GATEWAYD_CLIENTS_TEST_WRITE_ADDRESS", postgresAddress2)
 
 	globalTestConfigFile := "./testdata/gatewayd.yaml"
 	pluginTestConfigFile := "./test_plugins_runCmdWithMultiTenancy.yaml"
@@ -208,8 +208,8 @@ func Test_runCmdWithMultiTenancy(t *testing.T) {
 
 func Test_runCmdWithCachePlugin(t *testing.T) {
 	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(context.Background(), t)
-	postgredAddress := postgresHostIP + ":" + postgresMappedPort.Port()
-	t.Setenv("GATEWAYD_CLIENTS_DEFAULT_WRITES_ADDRESS", postgredAddress)
+	postgresAddress := postgresHostIP + ":" + postgresMappedPort.Port()
+	t.Setenv("GATEWAYD_CLIENTS_DEFAULT_WRITES_ADDRESS", postgresAddress)
 
 	globalTestConfigFile := "./test_global_runCmdWithCachePlugin.yaml"
 	pluginTestConfigFile := "./test_plugins_runCmdWithCachePlugin.yaml"

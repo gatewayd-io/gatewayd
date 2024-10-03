@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 
@@ -43,4 +44,11 @@ func mustPullPlugin() (string, error) {
 	}
 
 	return filepath.Abs(fileName) //nolint:wrapcheck
+}
+
+// runCommand runs a command in a given directory.
+func runCommand(dir string, command string, args ...string) error {
+	cmd := exec.Command(command, args...)
+	cmd.Dir = dir
+	return cmd.Run() //nolint:wrapcheck
 }
