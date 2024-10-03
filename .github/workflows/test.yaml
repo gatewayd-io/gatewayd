@@ -67,10 +67,9 @@ jobs:
           go-version: "1.23"
 
       - name: Lint code with golangci-lint 🚨
-        uses: golangci/golangci-lint-action@v4
+        uses: golangci/golangci-lint-action@v6
         with:
-          version: "v1.60.3"
-          skip-pkg-cache: true
+          version: "latest"
           install-mode: "goinstall"
 
       - name: Lint Bash script with shellcheck 🚨
