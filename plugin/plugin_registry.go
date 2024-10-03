@@ -477,7 +477,8 @@ func (reg *Registry) LoadPlugins(
 		// in the config file. Built-in plugins are loaded first, followed by user-defined
 		// plugins. Built-in plugins have a priority of 0 to 999, and user-defined plugins
 		// have a priority of 1000 or greater.
-		plugin.Priority = sdkPlugin.Priority(config.PluginPriorityStart + uint(priority))
+		plugin.Priority = sdkPlugin.Priority(
+			config.PluginPriorityStart + uint(priority)) //nolint:gosec
 
 		logAdapter := logging.NewHcLogAdapter(&reg.Logger, pCfg.Name)
 

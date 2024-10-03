@@ -241,7 +241,7 @@ func (s *Server) OnClose(conn *ConnWrapper, err error) Action {
 
 	// Shutdown the server if there are no more connections and the server is stopped.
 	// This is used to shut down the server gracefully.
-	if uint64(s.CountConnections()) == 0 && !s.IsRunning() {
+	if s.CountConnections() == 0 && !s.IsRunning() {
 		span.AddEvent("Shutting down the server")
 		return Shutdown
 	}

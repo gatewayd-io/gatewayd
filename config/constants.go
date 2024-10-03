@@ -61,7 +61,7 @@ const (
 	// Plugin constants.
 	DefaultMinPort                 = 50000
 	DefaultMaxPort                 = 60000
-	PluginPriorityStart            = 1000
+	PluginPriorityStart            = uint(1000)
 	DefaultPluginAddress           = "http://plugins/metrics"
 	DefaultMetricsMergerPeriod     = 5 * time.Second
 	DefaultPluginHealthCheckPeriod = 5 * time.Second

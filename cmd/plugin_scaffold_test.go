@@ -53,7 +53,7 @@ func Test_pluginScaffoldCmd(t *testing.T) {
 
 	err = runCommand(pluginDir, "go", "mod", "tidy")
 	require.NoError(t, err, "running go mod tidy should not return an error")
-	runCommand(pluginDir, "make", "build-dev")
+	err = runCommand(pluginDir, "make", "build-dev")
 	require.NoError(t, err, "running make build-dev should not return an error")
 
 	pluginBinaryPath := filepath.Join(pluginDir, pluginName)
