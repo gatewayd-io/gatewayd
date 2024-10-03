@@ -123,6 +123,4 @@ func Test_pluginScaffoldCmd(t *testing.T) {
 	}(&waitGroup)
 
 	waitGroup.Wait()
-
-	assert.NoError(t, os.RemoveAll("plugins"))
 }
