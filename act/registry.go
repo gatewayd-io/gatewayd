@@ -407,10 +407,20 @@ func runActionWithTimeout(
 
 // RunAll run all the actions in the outputs and returns the end result.
 func (r *Registry) RunAll(result map[string]any) map[string]any {
-	outputs, ok := result[sdkAct.Outputs].([]*sdkAct.Output)
-	if !ok {
-		r.Logger.Error().Msg("Failed to cast the outputs to the []*act.Output type")
-		return nil
+	if _, exists := result[sdkAct.Outputs]; !exists {
+		r.Logger.Debug().Msg("Outputs key is not present, returning the result as-is")
+		return result
+	}
+
+	var (
+		outputs []*sdkAct.Output
+		ok      bool
+	)
+	if outputs, ok = result[sdkAct.Outputs].([]*sdkAct.Output); !ok || len(outputs) == 0 {
+		// If the outputs are nil or empty, we should delete the key from the result.
+		delete(result, sdkAct.Outputs)
+		r.Logger.Debug().Msg("Outputs are nil or empty, returning the result as-is")
+		return result
 	}
 
 	endResult := make(map[string]any)
