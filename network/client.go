@@ -204,7 +204,7 @@ func (c *Client) Send(data []byte) (int, *gerr.GatewayDError) {
 	}
 
 	c.logger.Debug().Fields(
-		map[string]interface{}{
+		map[string]any{
 			"length":  sent,
 			"address": c.Address,
 		},
@@ -364,7 +364,7 @@ func (c *Client) IsConnected() bool {
 
 	if c.conn == nil || c.ID == "" {
 		c.logger.Debug().Fields(
-			map[string]interface{}{
+			map[string]any{
 				"address": c.Address,
 				"reason":  "connection is nil or invalid",
 			}).Msg("Connection to server is closed")

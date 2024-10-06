@@ -117,14 +117,14 @@ func Scaffold(inputFile string, outputDir string) ([]string, error) {
 // returns a map containing the parsed data.
 //
 // This function opens the provided input file path, reads its contents, and unmarshals
-// the YAML data into a Go map[string]interface{}. It returns the parsed map and any encountered error.
-func readScaffoldInputFile(inputFilePath string) (map[string]interface{}, error) {
+// the YAML data into a Go map[string]any. It returns the parsed map and any encountered error.
+func readScaffoldInputFile(inputFilePath string) (map[string]any, error) {
 	inputBytes, err := os.ReadFile(inputFilePath)
 	if err != nil {
 		return nil, gerr.ErrFailedToReadPluginScaffoldInputFile.Wrap(err)
 	}
 
-	inputJSON := make(map[string]interface{})
+	inputJSON := make(map[string]any)
 	err = yaml.Unmarshal(inputBytes, &inputJSON)
 	if err != nil {
 		return nil, gerr.ErrFailedToReadPluginScaffoldInputFile.Wrap(err)

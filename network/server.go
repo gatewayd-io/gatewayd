@@ -100,7 +100,7 @@ func (s *Server) OnBoot() Action {
 	// Run the OnBooting hooks.
 	_, err := s.PluginRegistry.Run(
 		pluginTimeoutCtx,
-		map[string]interface{}{"status": fmt.Sprint(s.Status)},
+		map[string]any{"status": fmt.Sprint(s.Status)},
 		v1.HookName_HOOK_NAME_ON_BOOTING)
 	if err != nil {
 		s.Logger.Error().Err(err).Msg("Failed to run OnBooting hook")
@@ -119,7 +119,7 @@ func (s *Server) OnBoot() Action {
 
 	_, err = s.PluginRegistry.Run(
 		pluginTimeoutCtx,
-		map[string]interface{}{"status": fmt.Sprint(s.Status)},
+		map[string]any{"status": fmt.Sprint(s.Status)},
 		v1.HookName_HOOK_NAME_ON_BOOTED)
 	if err != nil {
 		s.Logger.Error().Err(err).Msg("Failed to run OnBooted hook")
@@ -144,8 +144,8 @@ func (s *Server) OnOpen(conn *ConnWrapper) ([]byte, Action) {
 	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.PluginTimeout)
 	defer cancel()
 	// Run the OnOpening hooks.
-	onOpeningData := map[string]interface{}{
-		"client": map[string]interface{}{
+	onOpeningData := map[string]any{
+		"client": map[string]any{
 			"local":  LocalAddr(conn.Conn()),
 			"remote": RemoteAddr(conn.Conn()),
 		},
@@ -189,8 +189,8 @@ func (s *Server) OnOpen(conn *ConnWrapper) ([]byte, Action) {
 	pluginTimeoutCtx, cancel = context.WithTimeout(context.Background(), s.PluginTimeout)
 	defer cancel()
 
-	onOpenedData := map[string]interface{}{
-		"client": map[string]interface{}{
+	onOpenedData := map[string]any{
+		"client": map[string]any{
 			"local":  LocalAddr(conn.Conn()),
 			"remote": RemoteAddr(conn.Conn()),
 		},
@@ -221,8 +221,8 @@ func (s *Server) OnClose(conn *ConnWrapper, err error) Action {
 	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.PluginTimeout)
 	defer cancel()
 
-	data := map[string]interface{}{
-		"client": map[string]interface{}{
+	data := map[string]any{
+		"client": map[string]any{
 			"local":  LocalAddr(conn.Conn()),
 			"remote": RemoteAddr(conn.Conn()),
 		},
@@ -281,8 +281,8 @@ func (s *Server) OnClose(conn *ConnWrapper, err error) Action {
 	pluginTimeoutCtx, cancel = context.WithTimeout(context.Background(), s.PluginTimeout)
 	defer cancel()
 
-	data = map[string]interface{}{
-		"client": map[string]interface{}{
+	data = map[string]any{
+		"client": map[string]any{
 			"local":  LocalAddr(conn.Conn()),
 			"remote": RemoteAddr(conn.Conn()),
 		},
@@ -314,8 +314,8 @@ func (s *Server) OnTraffic(conn *ConnWrapper, stopConnection chan struct{}) Acti
 	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.PluginTimeout)
 	defer cancel()
 
-	onTrafficData := map[string]interface{}{
-		"client": map[string]interface{}{
+	onTrafficData := map[string]any{
+		"client": map[string]any{
 			"local":  LocalAddr(conn.Conn()),
 			"remote": RemoteAddr(conn.Conn()),
 		},
@@ -393,7 +393,7 @@ func (s *Server) OnShutdown() {
 	// Run the OnShutdown hooks.
 	_, err := s.PluginRegistry.Run(
 		pluginTimeoutCtx,
-		map[string]interface{}{"connections": s.CountConnections()},
+		map[string]any{"connections": s.CountConnections()},
 		v1.HookName_HOOK_NAME_ON_SHUTDOWN)
 	if err != nil {
 		s.Logger.Error().Err(err).Msg("Failed to run OnShutdown hook")
@@ -426,7 +426,7 @@ func (s *Server) OnTick() (time.Duration, Action) {
 	// Run the OnTick hooks.
 	_, err := s.PluginRegistry.Run(
 		pluginTimeoutCtx,
-		map[string]interface{}{"connections": s.CountConnections()},
+		map[string]any{"connections": s.CountConnections()},
 		v1.HookName_HOOK_NAME_ON_TICK)
 	if err != nil {
 		s.Logger.Error().Err(err).Msg("Failed to run OnTick hook")
@@ -461,7 +461,7 @@ func (s *Server) Run() *gerr.GatewayDError {
 	defer cancel()
 	// Run the OnRun hooks.
 	// Since Run is blocking, we need to run OnRun before it.
-	onRunData := map[string]interface{}{"address": addr}
+	onRunData := map[string]any{"address": addr}
 	if err != nil && err.Unwrap() != nil {
 		onRunData["error"] = err.OriginalError.Error()
 	}

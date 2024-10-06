@@ -129,7 +129,7 @@ func Test_PluginRegistry_Run(t *testing.T) {
 	) (*v1.Struct, error) {
 		return args, nil
 	})
-	result, err := reg.Run(context.Background(), map[string]interface{}{}, v1.HookName_HOOK_NAME_ON_NEW_LOGGER)
+	result, err := reg.Run(context.Background(), map[string]any{}, v1.HookName_HOOK_NAME_ON_NEW_LOGGER)
 	assert.NotNil(t, result)
 	assert.Nil(t, err)
 }
@@ -177,7 +177,7 @@ func BenchmarkHookRun(b *testing.B) {
 		//nolint:errcheck
 		reg.Run(
 			context.Background(),
-			map[string]interface{}{
+			map[string]any{
 				"test": "test",
 			},
 			v1.HookName_HOOK_NAME_ON_NEW_LOGGER,

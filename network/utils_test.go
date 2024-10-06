@@ -165,7 +165,7 @@ func BenchmarkTrafficData(b *testing.B) {
 func BenchmarkExtractFieldValue(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		extractFieldValue(
-			map[string]interface{}{
+			map[string]any{
 				"test": "test",
 			},
 			"test",

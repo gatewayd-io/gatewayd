@@ -131,9 +131,9 @@ func TestMergeGlobalConfig(t *testing.T) {
 	assert.Equal(t, DefaultLogLevel, config.Global.Loggers[Default].Level)
 
 	// Merge a config that sets the log level to debug.
-	err = config.MergeGlobalConfig(ctx, map[string]interface{}{
-		"loggers": map[string]interface{}{
-			"default": map[string]interface{}{
+	err = config.MergeGlobalConfig(ctx, map[string]any{
+		"loggers": map[string]any{
+			"default": map[string]any{
 				"level": "debug",
 			},
 		},

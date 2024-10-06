@@ -9,16 +9,16 @@ import (
 	"go.opentelemetry.io/otel"
 )
 
-type Callback func(key, value interface{}) bool
+type Callback func(key, value any) bool
 
 type IPool interface {
 	ForEach(cb Callback)
 	Pool() *sync.Map
-	Put(key, value interface{}) *gerr.GatewayDError
-	Get(key interface{}) interface{}
-	GetOrPut(key, value interface{}) (interface{}, bool, *gerr.GatewayDError)
-	Pop(key interface{}) interface{}
-	Remove(key interface{})
+	Put(key, value any) *gerr.GatewayDError
+	Get(key any) any
+	GetOrPut(key, value any) (any, bool, *gerr.GatewayDError)
+	Pop(key any) any
+	Remove(key any)
 	Size() int
 	Clear()
 	Cap() int
@@ -50,7 +50,7 @@ func (p *Pool) Pool() *sync.Map {
 }
 
 // Put adds a new key/value pair to the pool.
-func (p *Pool) Put(key, value interface{}) *gerr.GatewayDError {
+func (p *Pool) Put(key, value any) *gerr.GatewayDError {
 	_, span := otel.Tracer(config.TracerName).Start(p.ctx, "Put")
 	defer span.End()
 	if p.cap > 0 && p.Size() >= p.cap {
@@ -68,7 +68,7 @@ func (p *Pool) Put(key, value interface{}) *gerr.GatewayDError {
 }
 
 // Get returns the value for the given key.
-func (p *Pool) Get(key interface{}) interface{} {
+func (p *Pool) Get(key any) any {
 	_, span := otel.Tracer(config.TracerName).Start(p.ctx, "Get")
 	defer span.End()
 	if value, ok := p.pool.Load(key); ok {
@@ -79,7 +79,7 @@ func (p *Pool) Get(key interface{}) interface{} {
 
 // GetOrPut returns the value for the given key if it exists, otherwise it adds
 // the key/value pair to the pool.
-func (p *Pool) GetOrPut(key, value interface{}) (interface{}, bool, *gerr.GatewayDError) {
+func (p *Pool) GetOrPut(key, value any) (any, bool, *gerr.GatewayDError) {
 	_, span := otel.Tracer(config.TracerName).Start(p.ctx, "GetOrPut")
 	defer span.End()
 	if p.cap > 0 && p.Size() >= p.cap {
@@ -97,7 +97,7 @@ func (p *Pool) GetOrPut(key, value interface{}) (interface{}, bool, *gerr.Gatewa
 }
 
 // Pop removes the key/value pair from the pool and returns the value.
-func (p *Pool) Pop(key interface{}) interface{} {
+func (p *Pool) Pop(key any) any {
 	_, span := otel.Tracer(config.TracerName).Start(p.ctx, "Pop")
 	defer span.End()
 	if p.Size() == 0 {
@@ -110,7 +110,7 @@ func (p *Pool) Pop(key interface{}) interface{} {
 }
 
 // Remove removes the key/value pair from the pool.
-func (p *Pool) Remove(key interface{}) {
+func (p *Pool) Remove(key any) {
 	_, span := otel.Tracer(config.TracerName).Start(p.ctx, "Remove")
 	defer span.End()
 	if p.Size() == 0 {
@@ -126,7 +126,7 @@ func (p *Pool) Size() int {
 	_, span := otel.Tracer(config.TracerName).Start(p.ctx, "Size")
 	defer span.End()
 	var size int
-	p.pool.Range(func(_, _ interface{}) bool {
+	p.pool.Range(func(_, _ any) bool {
 		size++
 		return true
 	})

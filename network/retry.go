@@ -78,7 +78,7 @@ func (r *Retry) Retry(callback RetryCallback) (any, error) {
 
 		if retry > 0 {
 			r.Logger.Debug().Fields(
-				map[string]interface{}{
+				map[string]any{
 					"retry": retry,
 					"delay": backoffDuration.String(),
 				},

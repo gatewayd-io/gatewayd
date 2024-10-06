@@ -19,10 +19,10 @@ type HcLogAdapter struct {
 	logger *zerolog.Logger
 	name   string
 
-	impliedArgs []interface{}
+	impliedArgs []any
 }
 
-func (h HcLogAdapter) Log(level hclog.Level, msg string, args ...interface{}) {
+func (h HcLogAdapter) Log(level hclog.Level, msg string, args ...any) {
 	switch level {
 	case hclog.Off:
 		return
@@ -41,31 +41,31 @@ func (h HcLogAdapter) Log(level hclog.Level, msg string, args ...interface{}) {
 	}
 }
 
-func (h HcLogAdapter) Trace(msg string, args ...interface{}) {
+func (h HcLogAdapter) Trace(msg string, args ...any) {
 	extraArgs := ToMap(args)
 	extraArgs["plugin"] = h.name
 	h.logger.Trace().Fields(extraArgs).Msg(msg)
 }
 
-func (h HcLogAdapter) Debug(msg string, args ...interface{}) {
+func (h HcLogAdapter) Debug(msg string, args ...any) {
 	extraArgs := ToMap(args)
 	extraArgs["plugin"] = h.name
 	h.logger.Debug().Fields(extraArgs).Msg(msg)
 }
 
-func (h HcLogAdapter) Info(msg string, args ...interface{}) {
+func (h HcLogAdapter) Info(msg string, args ...any) {
 	extraArgs := ToMap(args)
 	extraArgs["plugin"] = h.name
 	h.logger.Info().Fields(extraArgs).Msg(msg)
 }
 
-func (h HcLogAdapter) Warn(msg string, args ...interface{}) {
+func (h HcLogAdapter) Warn(msg string, args ...any) {
 	extraArgs := ToMap(args)
 	extraArgs["plugin"] = h.name
 	h.logger.Warn().Fields(extraArgs).Msg(msg)
 }
 
-func (h HcLogAdapter) Error(msg string, args ...interface{}) {
+func (h HcLogAdapter) Error(msg string, args ...any) {
 	extraArgs := ToMap(args)
 	extraArgs["plugin"] = h.name
 	h.logger.Error().Fields(extraArgs).Msg(msg)
@@ -115,12 +115,12 @@ func (h HcLogAdapter) IsError() bool {
 	return h.logger.GetLevel() >= zerolog.ErrorLevel
 }
 
-func (h HcLogAdapter) ImpliedArgs() []interface{} {
+func (h HcLogAdapter) ImpliedArgs() []any {
 	// Not supported
 	return nil
 }
 
-func (h HcLogAdapter) With(args ...interface{}) hclog.Logger {
+func (h HcLogAdapter) With(args ...any) hclog.Logger {
 	logger := h.logger.With().Fields(ToMap(args)).Logger()
 	return NewHcLogAdapter(&logger, h.Name())
 }
@@ -179,8 +179,8 @@ func convertLevel(level hclog.Level) zerolog.Level {
 	return zerolog.NoLevel
 }
 
-func ToMap(keyValues []interface{}) map[string]interface{} {
-	mapped := map[string]interface{}{}
+func ToMap(keyValues []any) map[string]any {
+	mapped := map[string]any{}
 
 	if len(keyValues) == 0 {
 		return mapped
@@ -197,7 +197,7 @@ func ToMap(keyValues []interface{}) map[string]interface{} {
 	return mapped
 }
 
-func merge(mapped map[string]interface{}, key, value interface{}) {
+func merge(mapped map[string]any, key, value any) {
 	var casted string
 
 	switch castedKey := key.(type) {

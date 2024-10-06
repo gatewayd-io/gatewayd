@@ -64,7 +64,7 @@ func (a *API) GetGlobalConfig(_ context.Context, group *v1.Group) (*structpb.Str
 
 	var (
 		jsonData []byte
-		global   map[string]interface{}
+		global   map[string]any
 		err      error
 	)
 

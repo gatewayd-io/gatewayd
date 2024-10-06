@@ -111,7 +111,7 @@ func StopGracefully(
 		//nolint:contextcheck
 		_, err := pluginRegistry.Run(
 			pluginTimeoutCtx,
-			map[string]interface{}{"signal": currentSignal},
+			map[string]any{"signal": currentSignal},
 			v1.HookName_HOOK_NAME_ON_SIGNAL,
 		)
 		if err != nil {
@@ -332,7 +332,7 @@ var runCmd = &cobra.Command{
 			}
 		}
 
-		logger.Info().Fields(map[string]interface{}{
+		logger.Info().Fields(map[string]any{
 			"policies": maps.Keys(actRegistry.Policies),
 		}).Msg("Policies are loaded")
 
@@ -561,7 +561,7 @@ var runCmd = &cobra.Command{
 				IdleTimeout:       timeout,
 			}
 
-			logger.Info().Fields(map[string]interface{}{
+			logger.Info().Fields(map[string]any{
 				"address":           address,
 				"timeout":           timeout.String(),
 				"readHeaderTimeout": readHeaderTimeout.String(),
@@ -605,7 +605,7 @@ var runCmd = &cobra.Command{
 		pluginTimeoutCtx, cancel = context.WithTimeout(context.Background(), conf.Plugin.Timeout)
 		defer cancel()
 
-		if data, ok := conf.GlobalKoanf.Get("loggers").(map[string]interface{}); ok {
+		if data, ok := conf.GlobalKoanf.Get("loggers").(map[string]any); ok {
 			_, err = pluginRegistry.Run(
 				pluginTimeoutCtx, data, v1.HookName_HOOK_NAME_ON_NEW_LOGGER)
 			if err != nil {
@@ -747,7 +747,7 @@ var runCmd = &cobra.Command{
 							context.Background(), conf.Plugin.Timeout)
 						defer cancel()
 
-						clientCfg := map[string]interface{}{
+						clientCfg := map[string]any{
 							"id":                 client.ID,
 							"name":               configBlockName,
 							"group":              configGroupName,
@@ -804,7 +804,7 @@ var runCmd = &cobra.Command{
 				}
 
 				// Verify that the pool is properly populated.
-				logger.Info().Fields(map[string]interface{}{
+				logger.Info().Fields(map[string]any{
 					"name":  configBlockName,
 					"count": strconv.Itoa(pools[configGroupName][configBlockName].Size()),
 				}).Msg("There are clients available in the pool")
@@ -824,7 +824,7 @@ var runCmd = &cobra.Command{
 
 				_, err = pluginRegistry.Run(
 					pluginTimeoutCtx,
-					map[string]interface{}{"name": configBlockName, "size": currentPoolSize},
+					map[string]any{"name": configBlockName, "size": currentPoolSize},
 					v1.HookName_HOOK_NAME_ON_NEW_POOL)
 				if err != nil {
 					logger.Error().Err(err).Msg("Failed to run OnNewPool hooks")
@@ -876,7 +876,7 @@ var runCmd = &cobra.Command{
 					context.Background(), conf.Plugin.Timeout)
 				defer cancel()
 
-				if data, ok := conf.GlobalKoanf.Get("proxies").(map[string]interface{}); ok {
+				if data, ok := conf.GlobalKoanf.Get("proxies").(map[string]any); ok {
 					_, err = pluginRegistry.Run(
 						pluginTimeoutCtx, data, v1.HookName_HOOK_NAME_ON_NEW_PROXY)
 					if err != nil {
@@ -947,7 +947,7 @@ var runCmd = &cobra.Command{
 				context.Background(), conf.Plugin.Timeout)
 			defer cancel()
 
-			if data, ok := conf.GlobalKoanf.Get("servers").(map[string]interface{}); ok {
+			if data, ok := conf.GlobalKoanf.Get("servers").(map[string]any); ok {
 				_, err = pluginRegistry.Run(
 					pluginTimeoutCtx, data, v1.HookName_HOOK_NAME_ON_NEW_SERVER)
 				if err != nil {
@@ -994,7 +994,7 @@ var runCmd = &cobra.Command{
 				go httpServer.Start()
 
 				logger.Info().Fields(
-					map[string]interface{}{
+					map[string]any{
 						"network": apiOptions.GRPCNetwork,
 						"address": apiOptions.GRPCAddress,
 					},

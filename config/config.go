@@ -32,7 +32,7 @@ type IConfig interface {
 	LoadGlobalConfigFile(ctx context.Context) *gerr.GatewayDError
 	LoadPluginConfigFile(ctx context.Context) *gerr.GatewayDError
 	MergeGlobalConfig(
-		ctx context.Context, updatedGlobalConfig map[string]interface{}) *gerr.GatewayDError
+		ctx context.Context, updatedGlobalConfig map[string]any) *gerr.GatewayDError
 }
 
 type Config struct {
@@ -344,7 +344,7 @@ func loadEnvVars() *env.Env {
 
 // transformEnvVariable transforms the environment variable name to a format based on JSON tags.
 func transformEnvVariable(envVar string) string {
-	structs := []interface{}{
+	structs := []any{
 		&API{},
 		&Logger{},
 		&Pool{},
@@ -444,7 +444,7 @@ func (c *Config) UnmarshalPluginConfig(ctx context.Context) *gerr.GatewayDError 
 }
 
 func (c *Config) MergeGlobalConfig(
-	ctx context.Context, updatedGlobalConfig map[string]interface{},
+	ctx context.Context, updatedGlobalConfig map[string]any,
 ) *gerr.GatewayDError {
 	_, span := otel.Tracer(TracerName).Start(ctx, "Merge global config from plugins")
 
@@ -530,7 +530,7 @@ func (c *Config) ConvertKeysToLowercase(ctx context.Context) *gerr.GatewayDError
 	globalConfig.Servers = convertMapKeysToLowercase(globalConfig.Servers)
 	globalConfig.Metrics = convertMapKeysToLowercase(globalConfig.Metrics)
 
-	// Convert the globalConfig back to a map[string]interface{}
+	// Convert the globalConfig back to a map[string]any
 	configMap, err := structToMap(globalConfig)
 	if err != nil {
 		span.RecordError(err)
@@ -554,9 +554,9 @@ func (c *Config) ConvertKeysToLowercase(ctx context.Context) *gerr.GatewayDError
 	return nil
 }
 
-// structToMap converts a given struct to a map[string]interface{}.
-func structToMap(v interface{}) (map[string]interface{}, error) {
-	var result map[string]interface{}
+// structToMap converts a given struct to a map[string]any.
+func structToMap(v any) (map[string]any, error) {
+	var result map[string]any
 	data, err := json.Marshal(v)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal struct: %w", err)
@@ -785,7 +785,7 @@ func (c *Config) ValidateGlobalConfig(ctx context.Context) *gerr.GatewayDError {
 }
 
 // generateTagMapping generates a map of JSON tags to lower case json tags.
-func generateTagMapping(structs []interface{}, tagMapping map[string]string) {
+func generateTagMapping(structs []any, tagMapping map[string]string) {
 	for _, s := range structs {
 		structValue := reflect.ValueOf(s).Elem()
 		structType := structValue.Type()
@@ -796,7 +796,7 @@ func generateTagMapping(structs []interface{}, tagMapping map[string]string) {
 
 			// Handle nested structs
 			if field.Type.Kind() == reflect.Struct {
-				generateTagMapping([]interface{}{fieldValue.Addr().Interface()}, tagMapping)
+				generateTagMapping([]any{fieldValue.Addr().Interface()}, tagMapping)
 			}
 
 			jsonTag := field.Tag.Get("json")

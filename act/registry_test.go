@@ -309,7 +309,7 @@ func Test_Apply_ContradictorySignals(t *testing.T) {
 			t, buf.String(), "Terminal signal takes precedence, ignoring non-terminal signals")
 		assert.Equal(t, "log", outputs[1].MatchedPolicy)
 		assert.Equal(t,
-			map[string]interface{}{
+			map[string]any{
 				"async":   true,
 				"level":   "info",
 				"log":     true,
@@ -646,7 +646,7 @@ func Test_Run_Terminate(t *testing.T) {
 	})
 	assert.NotNil(t, outputs)
 	assert.Equal(t, "terminate", outputs[0].MatchedPolicy)
-	assert.Equal(t, outputs[0].Metadata, map[string]interface{}{"terminate": true})
+	assert.Equal(t, outputs[0].Metadata, map[string]any{"terminate": true})
 	assert.True(t, outputs[0].Sync)
 	assert.True(t, cast.ToBool(outputs[0].Verdict))
 	assert.True(t, outputs[0].Terminal)
@@ -685,7 +685,7 @@ func Test_Run_Async(t *testing.T) {
 	assert.NotNil(t, outputs)
 	assert.Equal(t, "log", outputs[0].MatchedPolicy)
 	assert.Equal(t,
-		map[string]interface{}{
+		map[string]any{
 			"async":   true,
 			"level":   "info",
 			"log":     true,
@@ -764,7 +764,7 @@ func Test_Run_Async_Redis(t *testing.T) {
 	assert.NotNil(t, outputs)
 	assert.Equal(t, "log", outputs[0].MatchedPolicy)
 	assert.Equal(t,
-		map[string]interface{}{
+		map[string]any{
 			"async":   true,
 			"level":   "info",
 			"log":     true,
@@ -900,7 +900,7 @@ func Test_Run_Timeout(t *testing.T) {
 			assert.NotNil(t, outputs)
 			assert.Equal(t, name, outputs[0].MatchedPolicy)
 			assert.Equal(t,
-				map[string]interface{}{
+				map[string]any{
 					"async":   isAsync,
 					"level":   "info",
 					"log":     true,

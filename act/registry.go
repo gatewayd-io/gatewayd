@@ -376,7 +376,7 @@ func runActionWithTimeout(
 	if !action.Sync {
 		execMode = "async"
 	}
-	logger.Debug().Fields(map[string]interface{}{
+	logger.Debug().Fields(map[string]any{
 		"executionMode": execMode,
 		"action":        action.Name,
 	}).Msgf("Running action")

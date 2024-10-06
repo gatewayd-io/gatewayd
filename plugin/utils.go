@@ -21,18 +21,18 @@ func NewCommand(cmd string, args []string, env []string) *exec.Cmd {
 
 // castToPrimitiveTypes casts the values of a map to its primitive type
 // (e.g. time.Duration to float64) to prevent structpb invalid type(s) errors.
-func castToPrimitiveTypes(args map[string]interface{}) map[string]interface{} {
+func castToPrimitiveTypes(args map[string]any) map[string]any {
 	for key, value := range args {
 		switch value := value.(type) {
 		case time.Duration:
 			// Cast time.Duration to string.
 			args[key] = value.String()
-		case map[string]interface{}:
+		case map[string]any:
 			// Recursively cast nested maps.
 			args[key] = castToPrimitiveTypes(value)
-		case []interface{}:
+		case []any:
 			// Recursively cast nested arrays.
-			array := make([]interface{}, len(value))
+			array := make([]any, len(value))
 			for idx, v := range value {
 				if durVal, ok := v.(time.Duration); ok {
 					// Cast time.Duration to string.
@@ -92,7 +92,7 @@ func applyPolicies(
 	}
 
 	logger.Debug().Fields(
-		map[string]interface{}{
+		map[string]any{
 			"hook":    hook.Name,
 			"signals": signalNames,
 		},
@@ -100,7 +100,7 @@ func applyPolicies(
 
 	outputs := reg.Apply(signals, hook)
 	logger.Debug().Fields(
-		map[string]interface{}{
+		map[string]any{
 			"hook":    hook.Name,
 			"outputs": outputs,
 		},
