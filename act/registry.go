@@ -12,12 +12,15 @@ import (
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/rs/zerolog"
+	"github.com/spf13/cast"
 )
 
 type IRegistry interface {
 	Add(policy *sdkAct.Policy)
 	Apply(signals []sdkAct.Signal, hook sdkAct.Hook) []*sdkAct.Output
 	Run(output *sdkAct.Output, params ...sdkAct.Parameter) (any, *gerr.GatewayDError)
+	RunAll(result map[string]any) map[string]any
+	ShouldTerminate(result map[string]any) bool
 }
 
 // Registry keeps track of all policies and actions.
@@ -400,6 +403,43 @@ func runActionWithTimeout(
 	case err := <-errChan:
 		return nil, err
 	}
+}
+
+// RunAll run all the actions in the outputs and returns the end result.
+func (r *Registry) RunAll(result map[string]any) map[string]any {
+	outputs, ok := result[sdkAct.Outputs].([]*sdkAct.Output)
+	if !ok {
+		r.Logger.Error().Msg("Failed to cast the outputs to the []*act.Output type")
+		return nil
+	}
+
+	endResult := make(map[string]any)
+	for _, output := range outputs {
+		if !cast.ToBool(output.Verdict) {
+			r.Logger.Debug().Msg(
+				"Skipping the action, because the verdict of the policy execution is false")
+			continue
+		}
+		runResult, err := r.Run(output, WithResult(result))
+		// If the action is async and we received a sentinel error, don't log the error.
+		if err != nil && !errors.Is(err, gerr.ErrAsyncAction) {
+			r.Logger.Error().Err(err).Msg("Error running policy")
+		}
+		// Each action should return a map.
+		if v, ok := runResult.(map[string]any); ok {
+			endResult = v
+		}
+	}
+	return endResult
+}
+
+// ShouldTerminate checks if any of the actions are terminal, indicating that the request
+// should be terminated.
+// This is an optimization to avoid executing the actions' functions unnecessarily.
+// The __terminal__ field is only set when an action intends to terminate the request.
+func (r *Registry) ShouldTerminate(result map[string]any) bool {
+	_, ok := result[sdkAct.Terminal]
+	return ok && cast.ToBool(result[sdkAct.Terminal])
 }
 
 // WithLogger returns a parameter with the Logger to be used by the action.
