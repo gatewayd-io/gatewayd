@@ -930,3 +930,51 @@ func Test_Run_Timeout(t *testing.T) {
 		})
 	}
 }
+
+func Test_RunAll_And_ShouldTerminate(t *testing.T) {
+	out := bytes.Buffer{}
+	logger := zerolog.New(&out)
+	actRegistry := NewActRegistry(
+		Registry{
+			Signals:              BuiltinSignals(),
+			Policies:             BuiltinPolicies(),
+			Actions:              BuiltinActions(),
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               logger,
+		})
+	assert.NotNil(t, actRegistry)
+
+	outputs := actRegistry.Apply([]sdkAct.Signal{
+		*sdkAct.Terminate(),
+		*sdkAct.Log("info", "testing log via Act", map[string]any{"test": true}),
+	}, sdkAct.Hook{
+		Name:     "HOOK_NAME_ON_TRAFFIC_FROM_CLIENT",
+		Priority: 1000,
+		Params:   map[string]any{},
+		Result:   map[string]any{},
+	})
+	assert.NotNil(t, outputs)
+
+	// This is what the hook returns along with "request", "response" and other fields.
+	// These two keys and values should exist in the result after policy execution.
+	result := map[string]any{
+		sdkAct.Outputs:  outputs,
+		sdkAct.Terminal: true,
+	}
+
+	assert.True(t, actRegistry.ShouldTerminate(result))
+
+	result = actRegistry.RunAll(result)
+
+	time.Sleep(time.Millisecond) // wait for async action to complete
+
+	assert.NotEmpty(t, result)
+	// Terminate action does nothing when run. It is just a signal to terminate.
+	assert.Contains(t, out.String(),
+		`{"level":"debug","action":"terminate","executionMode":"sync","message":"Running action"}`)
+	assert.Contains(t, out.String(),
+		`{"level":"debug","action":"log","executionMode":"async","message":"Running action"}`)
+	assert.Contains(t, out.String(), `{"level":"info","test":true,"message":"testing log via Act"}`)
+}
