@@ -931,6 +931,8 @@ func Test_Run_Timeout(t *testing.T) {
 	}
 }
 
+// Test_RunAll_And_ShouldTerminate tests the RunAll function of the act registry
+// with a terminal action (and signal).
 func Test_RunAll_And_ShouldTerminate(t *testing.T) {
 	out := bytes.Buffer{}
 	logger := zerolog.New(&out)
@@ -977,4 +979,38 @@ func Test_RunAll_And_ShouldTerminate(t *testing.T) {
 	assert.Contains(t, out.String(),
 		`{"level":"debug","action":"log","executionMode":"async","message":"Running action"}`)
 	assert.Contains(t, out.String(), `{"level":"info","test":true,"message":"testing log via Act"}`)
+}
+
+// Test_RunAll_Empty_Result tests the RunAll function of the act registry with an empty result.
+func Test_RunAll_Empty_Result(t *testing.T) {
+	out := bytes.Buffer{}
+	logger := zerolog.New(&out)
+	actRegistry := NewActRegistry(
+		Registry{
+			Signals:              BuiltinSignals(),
+			Policies:             BuiltinPolicies(),
+			Actions:              BuiltinActions(),
+			DefaultPolicyName:    config.DefaultPolicy,
+			PolicyTimeout:        config.DefaultPolicyTimeout,
+			DefaultActionTimeout: config.DefaultActionTimeout,
+			Logger:               logger,
+		})
+	assert.NotNil(t, actRegistry)
+
+	results := []map[string]any{
+		{},
+		{
+			sdkAct.Outputs: false, // This is invalid, hence it will be removed.
+		},
+	}
+
+	for _, result := range results {
+		assert.False(t, actRegistry.ShouldTerminate(result))
+
+		result = actRegistry.RunAll(result)
+
+		time.Sleep(time.Millisecond) // wait for async action to complete
+
+		assert.Empty(t, result)
+	}
 }
