@@ -420,7 +420,7 @@ func (r *Registry) RunAll(result map[string]any) map[string]any {
 				"Skipping the action, because the verdict of the policy execution is false")
 			continue
 		}
-		runResult, err := r.Run(output, WithResult(result))
+		runResult, err := r.Run(output, WithResult(result), WithLogger(r.Logger))
 		// If the action is async and we received a sentinel error, don't log the error.
 		if err != nil && !errors.Is(err, gerr.ErrAsyncAction) {
 			r.Logger.Error().Err(err).Msg("Error running policy")
