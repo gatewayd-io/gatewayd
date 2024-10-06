@@ -109,7 +109,7 @@ var pluginInstallCmd = &cobra.Command{
 			}
 
 			// Get the registered plugins from the plugins configuration file.
-			var localPluginsConfig map[string]interface{}
+			var localPluginsConfig map[string]any
 			if err := yamlv3.Unmarshal(pluginsConfig, &localPluginsConfig); err != nil {
 				cmd.Println("Failed to unmarshal the plugins configuration file: ", err)
 				return
@@ -756,7 +756,7 @@ func installPlugin(cmd *cobra.Command, pluginURL string) {
 	}
 
 	// Get the registered plugins from the plugins configuration file.
-	var localPluginsConfig map[string]interface{}
+	var localPluginsConfig map[string]any
 	if err := yamlv3.Unmarshal(pluginsConfig, &localPluginsConfig); err != nil {
 		cmd.Println("Failed to unmarshal the plugins configuration file: ", err)
 		return
@@ -881,7 +881,7 @@ func installPlugin(cmd *cobra.Command, pluginURL string) {
 	}
 
 	// Get the plugin configuration from the downloaded plugins configuration file.
-	var downloadedPluginConfig map[string]interface{}
+	var downloadedPluginConfig map[string]any
 	if err := yamlv3.Unmarshal([]byte(contents), &downloadedPluginConfig); err != nil {
 		cmd.Println("Failed to unmarshal the downloaded plugins configuration file: ", err)
 		return

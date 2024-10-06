@@ -46,7 +46,7 @@ func Test_HTTP_Server(t *testing.T) {
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
-	var respBody map[string]interface{}
+	var respBody map[string]any
 	err = json.NewDecoder(resp.Body).Decode(&respBody)
 	require.NoError(t, err)
 	assert.Equal(t, config.Version, respBody["version"])

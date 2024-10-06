@@ -117,7 +117,7 @@ func lintConfig(fileType configFileType, configFile string) *gerr.GatewayDError 
 	}
 
 	// Unmarshal the JSON data into a map.
-	var jsonBytes map[string]interface{}
+	var jsonBytes map[string]any
 	err = json.Unmarshal(jsonData, &jsonBytes)
 	if err != nil {
 		return gerr.ErrLintingFailed.Wrap(err)

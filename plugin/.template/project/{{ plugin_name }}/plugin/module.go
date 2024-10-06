@@ -17,26 +17,26 @@ var (
 	}
 	// TODO: Handle this in a better way
 	// https://github.com/gatewayd-io/gatewayd-plugin-sdk/issues/3
-	PluginConfig = map[string]interface{}{
-		"id": map[string]interface{}{
+	PluginConfig = map[string]any{
+		"id": map[string]any{
 			"{{ plugin_name }}": PluginID.GetName(),
 			"version":    PluginID.GetVersion(),
 			"remoteUrl":  PluginID.GetRemoteUrl(),
 		},
 		"description": "Template plugin",
-		"authors": []interface{}{
+		"authors": []any{
 			{% if authors %}"{{ authors|join:'", "'|safe }}",{% endif %}
 		},
 		"license":    "Apache 2.0",
 		"projectUrl": "{{ remote_url }}",
 		// Compile-time configuration
-		"config": map[string]interface{}{
+		"config": map[string]any{
 			"metricsEnabled": sdkConfig.GetEnv("METRICS_ENABLED", "true"),
 			"metricsUnixDomainSocket": sdkConfig.GetEnv(
 				"METRICS_UNIX_DOMAIN_SOCKET", "/tmp/{{  plugin_name }}.sock"),
 			"metricsEndpoint": sdkConfig.GetEnv("METRICS_ENDPOINT", "/metrics"),
 		},
-		"hooks": []interface{}{
+		"hooks": []any{
 			// Converting HookName to int32 is required because the plugin
 			// framework doesn't support enums.	See:
 			// https://github.com/gatewayd-io/gatewayd-plugin-sdk/issues/3
@@ -66,7 +66,7 @@ var (
 			// to remove it in your plugin.
 			int32(v1.HookName(1000)),
 		},
-		"tags":       []interface{}{"template", "plugin"},
-		"categories": []interface{}{"template"},
+		"tags":       []any{"template", "plugin"},
+		"categories": []any{"template"},
 	}
 )

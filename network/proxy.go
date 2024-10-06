@@ -87,7 +87,7 @@ func NewProxy(
 		func() {
 			now := time.Now()
 			proxy.Logger.Trace().Msg("Running the client health check to recycle connection(s).")
-			proxy.AvailableConnections.ForEach(func(_, value interface{}) bool {
+			proxy.AvailableConnections.ForEach(func(_, value any) bool {
 				if client, ok := value.(*Client); ok {
 					// Connection is probably dead by now.
 					proxy.AvailableConnections.Remove(client.ID)
@@ -135,7 +135,7 @@ func NewProxy(
 	// Start the scheduler.
 	proxy.scheduler.StartAsync()
 	proxy.Logger.Info().Fields(
-		map[string]interface{}{
+		map[string]any{
 			"startDelay":        startDelay.Format(time.RFC3339),
 			"healthCheckPeriod": proxy.HealthCheckPeriod.String(),
 		},
@@ -160,7 +160,7 @@ func (pr *Proxy) Connect(conn *ConnWrapper) *gerr.GatewayDError {
 
 	var clientID string
 	// Get the first available client from the pool.
-	pr.AvailableConnections.ForEach(func(key, _ interface{}) bool {
+	pr.AvailableConnections.ForEach(func(key, _ any) bool {
 		if cid, ok := key.(string); ok {
 			clientID = cid
 			return false // stop the loop.
@@ -193,7 +193,7 @@ func (pr *Proxy) Connect(conn *ConnWrapper) *gerr.GatewayDError {
 
 	metrics.ProxiedConnections.WithLabelValues(pr.GetGroupName(), pr.GetBlockName()).Inc()
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"function": "proxy.connect",
 		"client":   "unknown",
 		"server":   RemoteAddr(conn.Conn()),
@@ -204,13 +204,13 @@ func (pr *Proxy) Connect(conn *ConnWrapper) *gerr.GatewayDError {
 	pr.Logger.Debug().Fields(fields).Msg("Client has been assigned")
 
 	pr.Logger.Debug().Fields(
-		map[string]interface{}{
+		map[string]any{
 			"function": "proxy.connect",
 			"count":    pr.AvailableConnections.Size(),
 		},
 	).Msg("Available client connections")
 	pr.Logger.Debug().Fields(
-		map[string]interface{}{
+		map[string]any{
 			"function": "proxy.connect",
 			"count":    pr.busyConnections.Size(),
 		},
@@ -257,13 +257,13 @@ func (pr *Proxy) Disconnect(conn *ConnWrapper) *gerr.GatewayDError {
 	metrics.ProxiedConnections.WithLabelValues(pr.GetGroupName(), pr.GetBlockName()).Dec()
 
 	pr.Logger.Debug().Fields(
-		map[string]interface{}{
+		map[string]any{
 			"function": "proxy.disconnect",
 			"count":    pr.AvailableConnections.Size(),
 		},
 	).Msg("Available client connections")
 	pr.Logger.Debug().Fields(
-		map[string]interface{}{
+		map[string]any{
 			"function": "proxy.disconnect",
 			"count":    pr.busyConnections.Size(),
 		},
@@ -342,7 +342,7 @@ func (pr *Proxy) PassThroughToServer(conn *ConnWrapper, stack *Stack) *gerr.Gate
 				span.RecordError(err)
 			} else {
 				pr.Logger.Debug().Fields(
-					map[string]interface{}{
+					map[string]any{
 						"function": "upgradeToTLS",
 						"local":    LocalAddr(conn.Conn()),
 						"remote":   RemoteAddr(conn.Conn()),
@@ -358,7 +358,7 @@ func (pr *Proxy) PassThroughToServer(conn *ConnWrapper, stack *Stack) *gerr.Gate
 		// Check if the TLS handshake was successful.
 		if conn.IsTLSEnabled() {
 			pr.Logger.Debug().Fields(
-				map[string]interface{}{
+				map[string]any{
 					"local":  LocalAddr(conn.Conn()),
 					"remote": RemoteAddr(conn.Conn()),
 				},
@@ -367,7 +367,7 @@ func (pr *Proxy) PassThroughToServer(conn *ConnWrapper, stack *Stack) *gerr.Gate
 			metrics.TLSConnections.WithLabelValues(pr.GetGroupName(), pr.GetBlockName()).Inc()
 		} else {
 			pr.Logger.Error().Fields(
-				map[string]interface{}{
+				map[string]any{
 					"local":  LocalAddr(conn.Conn()),
 					"remote": RemoteAddr(conn.Conn()),
 				},
@@ -382,7 +382,7 @@ func (pr *Proxy) PassThroughToServer(conn *ConnWrapper, stack *Stack) *gerr.Gate
 		// Client sent a SSL request, but the server does not support SSL.
 
 		pr.Logger.Warn().Fields(
-			map[string]interface{}{
+			map[string]any{
 				"local":  LocalAddr(conn.Conn()),
 				"remote": RemoteAddr(conn.Conn()),
 			},
@@ -409,7 +409,7 @@ func (pr *Proxy) PassThroughToServer(conn *ConnWrapper, stack *Stack) *gerr.Gate
 	if terminate, resp := pr.shouldTerminate(result); terminate {
 		if resp != nil {
 			pr.Logger.Trace().Fields(
-				map[string]interface{}{
+				map[string]any{
 					"function": "proxy.passthrough",
 					"result":   resp,
 				},
@@ -515,7 +515,7 @@ func (pr *Proxy) PassThroughToClient(conn *ConnWrapper, stack *Stack) *gerr.Gate
 
 	// If there is an error, close the ingress connection.
 	if err != nil {
-		fields := map[string]interface{}{"function": "proxy.passthrough"}
+		fields := map[string]any{"function": "proxy.passthrough"}
 		if client.LocalAddr() != "" {
 			fields["localAddr"] = client.LocalAddr()
 		}
@@ -643,7 +643,7 @@ func (pr *Proxy) Shutdown() {
 	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "Shutdown")
 	defer span.End()
 
-	pr.AvailableConnections.ForEach(func(_, value interface{}) bool {
+	pr.AvailableConnections.ForEach(func(_, value any) bool {
 		if client, ok := value.(*Client); ok {
 			if client.IsConnected() {
 				client.Close()
@@ -654,7 +654,7 @@ func (pr *Proxy) Shutdown() {
 	pr.AvailableConnections.Clear()
 	pr.Logger.Debug().Msg("All available connections have been closed")
 
-	pr.busyConnections.ForEach(func(key, value interface{}) bool {
+	pr.busyConnections.ForEach(func(key, value any) bool {
 		if conn, ok := key.(net.Conn); ok {
 			// This will stop all the Conn.Read() and Conn.Write() calls.
 			if err := conn.SetDeadline(time.Now()); err != nil {
@@ -686,7 +686,7 @@ func (pr *Proxy) AvailableConnectionsString() []string {
 	defer span.End()
 
 	connections := make([]string, 0)
-	pr.AvailableConnections.ForEach(func(_, value interface{}) bool {
+	pr.AvailableConnections.ForEach(func(_, value any) bool {
 		if cl, ok := value.(*Client); ok {
 			connections = append(connections, cl.LocalAddr())
 		}
@@ -702,7 +702,7 @@ func (pr *Proxy) BusyConnectionsString() []string {
 	defer span.End()
 
 	connections := make([]string, 0)
-	pr.busyConnections.ForEach(func(key, _ interface{}) bool {
+	pr.busyConnections.ForEach(func(key, _ any) bool {
 		if conn, ok := key.(*ConnWrapper); ok {
 			connections = append(connections, RemoteAddr(conn.Conn()))
 		}
@@ -745,7 +745,7 @@ func (pr *Proxy) receiveTrafficFromClient(conn net.Conn) ([]byte, *gerr.GatewayD
 	}
 
 	pr.Logger.Debug().Fields(
-		map[string]interface{}{
+		map[string]any{
 			"length": total,
 			"local":  LocalAddr(conn),
 			"remote": RemoteAddr(conn),
@@ -777,7 +777,7 @@ func (pr *Proxy) sendTrafficToServer(client *Client, request []byte) (int, *gerr
 		span.RecordError(err)
 	}
 	pr.Logger.Debug().Fields(
-		map[string]interface{}{
+		map[string]any{
 			"function": "proxy.passthrough",
 			"length":   sent,
 			"local":    client.LocalAddr(),
@@ -801,7 +801,7 @@ func (pr *Proxy) receiveTrafficFromServer(client *Client) (int, []byte, *gerr.Ga
 	// Receive the response from the server.
 	received, response, err := client.Receive()
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"function": "proxy.passthrough",
 		"length":   received,
 	}
@@ -847,7 +847,7 @@ func (pr *Proxy) sendTrafficToClient(
 	}
 
 	pr.Logger.Debug().Fields(
-		map[string]interface{}{
+		map[string]any{
 			"function": "proxy.passthrough",
 			"length":   sent,
 			"local":    LocalAddr(conn),
@@ -865,7 +865,7 @@ func (pr *Proxy) sendTrafficToClient(
 
 // shouldTerminate is a function that retrieves the terminate field from the hook result.
 // Only the OnTrafficFromClient hook will terminate the request.
-func (pr *Proxy) shouldTerminate(result map[string]interface{}) (bool, map[string]interface{}) {
+func (pr *Proxy) shouldTerminate(result map[string]any) (bool, map[string]any) {
 	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "shouldTerminate")
 	defer span.End()
 
@@ -884,7 +884,7 @@ func (pr *Proxy) shouldTerminate(result map[string]interface{}) (bool, map[strin
 	// that is the `__terminal__` field is set in one of the outputs.
 	keys := maps.Keys(result)
 	terminate := slices.Contains(keys, sdkAct.Terminal) && cast.ToBool(result[sdkAct.Terminal])
-	actionResult := make(map[string]interface{})
+	actionResult := make(map[string]any)
 	for _, output := range outputs {
 		if !cast.ToBool(output.Verdict) {
 			pr.Logger.Debug().Msg(
@@ -899,13 +899,13 @@ func (pr *Proxy) shouldTerminate(result map[string]interface{}) (bool, map[strin
 			pr.Logger.Error().Err(err).Msg("Error running policy")
 		}
 		// The terminate action should return a map.
-		if v, ok := actRes.(map[string]interface{}); ok {
+		if v, ok := actRes.(map[string]any); ok {
 			actionResult = v
 		}
 	}
 	if terminate {
 		pr.Logger.Debug().Fields(
-			map[string]interface{}{
+			map[string]any{
 				"function": "proxy.passthrough",
 				"reason":   "terminate",
 			},
@@ -916,7 +916,7 @@ func (pr *Proxy) shouldTerminate(result map[string]interface{}) (bool, map[strin
 
 // getPluginModifiedRequest is a function that retrieves the modified request
 // from the hook result.
-func (pr *Proxy) getPluginModifiedRequest(result map[string]interface{}) []byte {
+func (pr *Proxy) getPluginModifiedRequest(result map[string]any) []byte {
 	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "getPluginModifiedRequest")
 	defer span.End()
 
@@ -932,7 +932,7 @@ func (pr *Proxy) getPluginModifiedRequest(result map[string]interface{}) []byte 
 
 // getPluginModifiedResponse is a function that retrieves the modified response
 // from the hook result.
-func (pr *Proxy) getPluginModifiedResponse(result map[string]interface{}) ([]byte, int) {
+func (pr *Proxy) getPluginModifiedResponse(result map[string]any) ([]byte, int) {
 	_, span := otel.Tracer(config.TracerName).Start(pr.ctx, "getPluginModifiedResponse")
 	defer span.End()
 
@@ -949,7 +949,7 @@ func (pr *Proxy) getPluginModifiedResponse(result map[string]interface{}) ([]byt
 func (pr *Proxy) isConnectionHealthy(conn net.Conn) bool {
 	if n, err := conn.Read([]byte{}); n == 0 && err != nil {
 		pr.Logger.Debug().Fields(
-			map[string]interface{}{
+			map[string]any{
 				"remote": RemoteAddr(conn),
 				"local":  LocalAddr(conn),
 				"reason": "read 0 bytes",

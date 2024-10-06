@@ -52,18 +52,18 @@ func trafficData(
 	conn net.Conn,
 	client *Client,
 	fields []Field,
-	err interface{},
-) map[string]interface{} {
+	err any,
+) map[string]any {
 	if conn == nil || client == nil {
 		return nil
 	}
 
-	data := map[string]interface{}{
-		"client": map[string]interface{}{
+	data := map[string]any{
+		"client": map[string]any{
 			"local":  LocalAddr(conn),
 			"remote": RemoteAddr(conn),
 		},
-		"server": map[string]interface{}{
+		"server": map[string]any{
 			"local":  client.LocalAddr(),
 			"remote": client.RemoteAddr(),
 		},
@@ -90,7 +90,7 @@ func trafficData(
 }
 
 // extractFieldValue extracts the given field name and error message from the result of the hook.
-func extractFieldValue(result map[string]interface{}, fieldName string) ([]byte, string) {
+func extractFieldValue(result map[string]any, fieldName string) ([]byte, string) {
 	var data []byte
 	var err string
 

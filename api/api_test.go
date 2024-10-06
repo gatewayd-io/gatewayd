@@ -81,7 +81,7 @@ func TestGetGlobalConfigWithGroupName(t *testing.T) {
 	assert.NotEmpty(t, globalconf["servers"])
 	assert.NotEmpty(t, globalconf["metrics"])
 	assert.NotEmpty(t, globalconf["api"])
-	if _, ok := globalconf["loggers"].(map[string]interface{})[config.Default]; !ok {
+	if _, ok := globalconf["loggers"].(map[string]any)[config.Default]; !ok {
 		t.Errorf("loggers.default is not found")
 	}
 }
@@ -374,7 +374,7 @@ func TestGetServers(t *testing.T) {
 	assert.NotEmpty(t, servers)
 	assert.NotEmpty(t, servers.AsMap())
 
-	if defaultServer, ok := servers.AsMap()[config.Default].(map[string]interface{}); ok {
+	if defaultServer, ok := servers.AsMap()[config.Default].(map[string]any); ok {
 		assert.Equal(t, config.DefaultNetwork, defaultServer["network"])
 		statusFloat, isStatusFloat := defaultServer["status"].(float64)
 		assert.True(t, isStatusFloat, "status should be of type float64")
@@ -383,7 +383,7 @@ func TestGetServers(t *testing.T) {
 		tickIntervalFloat, isTickIntervalFloat := defaultServer["tickInterval"].(float64)
 		assert.True(t, isTickIntervalFloat, "tickInterval should be of type float64")
 		assert.Equal(t, config.DefaultTickInterval.Nanoseconds(), int64(tickIntervalFloat))
-		loadBalancerMap, isLoadBalancerMap := defaultServer["loadBalancer"].(map[string]interface{})
+		loadBalancerMap, isLoadBalancerMap := defaultServer["loadBalancer"].(map[string]any)
 		assert.True(t, isLoadBalancerMap, "loadBalancer should be a map")
 		assert.Equal(t, config.DefaultLoadBalancerStrategy, loadBalancerMap["strategy"])
 	} else {

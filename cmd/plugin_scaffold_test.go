@@ -49,7 +49,7 @@ func Test_pluginScaffoldCmd(t *testing.T) {
 	pluginsConfig, err := os.ReadFile(filepath.Join(pluginDir, "gatewayd_plugin.yaml"))
 	require.NoError(t, err, "reading plugins config file should not return an error")
 
-	var localPluginsConfig map[string]interface{}
+	var localPluginsConfig map[string]any
 	err = yamlv3.Unmarshal(pluginsConfig, &localPluginsConfig)
 	require.NoError(t, err, "unmarshalling yaml file should not return error")
 
@@ -71,7 +71,7 @@ func Test_pluginScaffoldCmd(t *testing.T) {
 	plugin["checksum"] = sum
 
 	pluginsList[0] = plugin
-	plugins := make(map[string]interface{})
+	plugins := make(map[string]any)
 	plugins["plugins"] = pluginsList
 
 	updatedPluginConfig, err := yamlv3.Marshal(plugins)

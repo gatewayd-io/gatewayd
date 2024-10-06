@@ -70,7 +70,7 @@ func (m *Merger) Add(pluginName string, unixDomainSocket string) {
 
 	if _, ok := m.Addresses[pluginName]; ok {
 		m.Logger.Warn().Fields(
-			map[string]interface{}{
+			map[string]any{
 				"plugin": pluginName,
 				"socket": unixDomainSocket,
 			}).Msg("Plugin already registered, skipping")
@@ -87,7 +87,7 @@ func (m *Merger) Remove(pluginName string) {
 
 	if _, ok := m.Addresses[pluginName]; !ok {
 		m.Logger.Warn().Fields(
-			map[string]interface{}{
+			map[string]any{
 				"plugin": pluginName,
 			}).Msg("Plugin not registered, skipping")
 		return
@@ -202,7 +202,7 @@ func (m *Merger) MergeMetrics(pluginMetrics map[string][]byte) *gerr.GatewayDErr
 		}
 
 		m.Logger.Trace().Fields(
-			map[string]interface{}{
+			map[string]any{
 				"plugin": pluginName,
 				"count":  len(metricNames),
 			}).Msgf("Processed and merged metrics")
@@ -256,7 +256,7 @@ func (m *Merger) Start() {
 	if len(m.Addresses) > 0 {
 		m.scheduler.StartAsync()
 		m.Logger.Info().Fields(
-			map[string]interface{}{
+			map[string]any{
 				"startDelay":          startDelay.Format(time.RFC3339),
 				"metricsMergerPeriod": m.MetricsMergerPeriod.String(),
 			},

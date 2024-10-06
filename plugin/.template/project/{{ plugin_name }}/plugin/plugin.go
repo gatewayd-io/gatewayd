@@ -27,7 +27,7 @@ func (p *{{ pascal_case_plugin_name }}) GRPCServer(b *goplugin.GRPCBroker, s *gr
 }
 
 // GRPCClient returns the plugin client.
-func (p *{{ pascal_case_plugin_name }}) GRPCClient(ctx context.Context, b *goplugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
+func (p *{{ pascal_case_plugin_name }}) GRPCClient(ctx context.Context, b *goplugin.GRPCBroker, c *grpc.ClientConn) (any, error) {
 	return v1.NewGatewayDPluginServiceClient(c), nil
 }
 

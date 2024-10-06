@@ -23,33 +23,33 @@ func Test_NewCommand(t *testing.T) {
 
 // Test_castToPrimitiveTypes tests the CastToPrimitiveTypes function.
 func Test_castToPrimitiveTypes(t *testing.T) {
-	actual := map[string]interface{}{
+	actual := map[string]any{
 		"string":   "test",
 		"int":      123,
 		"bool":     true,
-		"map":      map[string]interface{}{"test": "test"},
+		"map":      map[string]any{"test": "test"},
 		"duration": time.Duration(123),
-		"array": []interface{}{
+		"array": []any{
 			"test",
 			123,
 			true,
-			map[string]interface{}{
+			map[string]any{
 				"test": "test",
 			},
 			time.Duration(123),
 		},
 	}
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"string":   "test",
 		"int":      123,
 		"bool":     true,
-		"map":      map[string]interface{}{"test": "test"},
+		"map":      map[string]any{"test": "test"},
 		"duration": "123ns", // time.Duration is cast to string.
-		"array": []interface{}{
+		"array": []any{
 			"test",
 			123,
 			true,
-			map[string]interface{}{
+			map[string]any{
 				"test": "test",
 			},
 			"123ns", // time.Duration is cast to string.
@@ -62,7 +62,7 @@ func Test_castToPrimitiveTypes(t *testing.T) {
 
 // Test_getSignals tests the getSignals function.
 func Test_getSignals(t *testing.T) {
-	result := map[string]interface{}{
+	result := map[string]any{
 		sdkAct.Signals: []any{
 			(&sdkAct.Signal{
 				Name:     "test",
@@ -81,7 +81,7 @@ func Test_getSignals(t *testing.T) {
 
 // Test_getSignals_empty tests the getSignals function with an empty result.
 func Test_getSignals_empty(t *testing.T) {
-	result := map[string]interface{}{}
+	result := map[string]any{}
 	signals := getSignals(result)
 	assert.Len(t, signals, 0)
 }

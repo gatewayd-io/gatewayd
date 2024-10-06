@@ -121,7 +121,7 @@ func (reg *Registry) List() []sdkPlugin.Identifier {
 	defer span.End()
 
 	var plugins []sdkPlugin.Identifier
-	reg.plugins.ForEach(func(key, _ interface{}) bool {
+	reg.plugins.ForEach(func(key, _ any) bool {
 		if id, ok := key.(sdkPlugin.Identifier); ok {
 			plugins = append(plugins, id)
 		}
@@ -180,7 +180,7 @@ func (reg *Registry) ForEach(function func(sdkPlugin.Identifier, *Plugin)) {
 	_, span := otel.Tracer(config.TracerName).Start(reg.ctx, "ForEach")
 	defer span.End()
 
-	reg.plugins.ForEach(func(key, value interface{}) bool {
+	reg.plugins.ForEach(func(key, value any) bool {
 		if id, ok := key.(sdkPlugin.Identifier); ok {
 			if plugin, ok := value.(*Plugin); ok {
 				function(id, plugin)
@@ -207,7 +207,7 @@ func (reg *Registry) Shutdown() {
 	_, span := otel.Tracer(config.TracerName).Start(reg.ctx, "Shutdown")
 	defer span.End()
 
-	reg.plugins.ForEach(func(key, value interface{}) bool {
+	reg.plugins.ForEach(func(key, value any) bool {
 		if id, ok := key.(sdkPlugin.Identifier); ok {
 			if plugin, ok := value.(*Plugin); ok {
 				plugin.Stop()
