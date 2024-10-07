@@ -6,13 +6,10 @@ import (
 	"errors"
 	"io"
 	"net"
-	"slices"
 	"time"
 
-	sdkAct "github.com/gatewayd-io/gatewayd-plugin-sdk/act"
 	"github.com/gatewayd-io/gatewayd-plugin-sdk/databases/postgres"
 	v1 "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin/v1"
-	"github.com/gatewayd-io/gatewayd/act"
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/metrics"
@@ -21,9 +18,7 @@ import (
 	"github.com/getsentry/sentry-go"
 	"github.com/go-co-op/gocron"
 	"github.com/rs/zerolog"
-	"github.com/spf13/cast"
 	"go.opentelemetry.io/otel"
-	"golang.org/x/exp/maps"
 )
 
 //nolint:interfacebloat
@@ -873,36 +868,8 @@ func (pr *Proxy) shouldTerminate(result map[string]any) (bool, map[string]any) {
 		return false, result
 	}
 
-	outputs, ok := result[sdkAct.Outputs].([]*sdkAct.Output)
-	if !ok {
-		pr.Logger.Error().Msg("Failed to cast the outputs to the []*act.Output type")
-		return false, result
-	}
-
-	// This is a shortcut to avoid running the actions' functions.
-	// The Terminal field is only present if the action wants to terminate the request,
-	// that is the `__terminal__` field is set in one of the outputs.
-	keys := maps.Keys(result)
-	terminate := slices.Contains(keys, sdkAct.Terminal) && cast.ToBool(result[sdkAct.Terminal])
-	actionResult := make(map[string]any)
-	for _, output := range outputs {
-		if !cast.ToBool(output.Verdict) {
-			pr.Logger.Debug().Msg(
-				"Skipping the action, because the verdict of the policy execution is false")
-			continue
-		}
-		actRes, err := pr.PluginRegistry.ActRegistry.Run(
-			output, act.WithResult(result))
-		// If the action is async and we received a sentinel error,
-		// don't log the error.
-		if err != nil && !errors.Is(err, gerr.ErrAsyncAction) {
-			pr.Logger.Error().Err(err).Msg("Error running policy")
-		}
-		// The terminate action should return a map.
-		if v, ok := actRes.(map[string]any); ok {
-			actionResult = v
-		}
-	}
+	terminate := pr.PluginRegistry.ActRegistry.ShouldTerminate(result)
+	actionResult := pr.PluginRegistry.ActRegistry.RunAll(result)
 	if terminate {
 		pr.Logger.Debug().Fields(
 			map[string]any{

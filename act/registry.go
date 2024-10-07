@@ -12,12 +12,15 @@ import (
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/rs/zerolog"
+	"github.com/spf13/cast"
 )
 
 type IRegistry interface {
 	Add(policy *sdkAct.Policy)
 	Apply(signals []sdkAct.Signal, hook sdkAct.Hook) []*sdkAct.Output
 	Run(output *sdkAct.Output, params ...sdkAct.Parameter) (any, *gerr.GatewayDError)
+	RunAll(result map[string]any) map[string]any
+	ShouldTerminate(result map[string]any) bool
 }
 
 // Registry keeps track of all policies and actions.
@@ -400,6 +403,70 @@ func runActionWithTimeout(
 	case err := <-errChan:
 		return nil, err
 	}
+}
+
+// RunAll run all the actions in the outputs and returns the end result.
+func (r *Registry) RunAll(result map[string]any) map[string]any {
+	if _, exists := result[sdkAct.Outputs]; !exists {
+		r.Logger.Debug().Msg("Outputs key is not present, returning the result as-is")
+		return result
+	}
+
+	var (
+		outputs []*sdkAct.Output
+		ok      bool
+	)
+	if outputs, ok = result[sdkAct.Outputs].([]*sdkAct.Output); !ok || len(outputs) == 0 {
+		r.Logger.Debug().Msg("Outputs are nil or empty, returning the result as-is")
+		// If the outputs are nil or empty, we should delete the key from the result.
+		delete(result, sdkAct.Outputs)
+		return result
+	}
+
+	endResult := make(map[string]any)
+	for _, output := range outputs {
+		if !cast.ToBool(output.Verdict) {
+			r.Logger.Debug().Msg(
+				"Skipping the action, because the verdict of the policy execution is false")
+			continue
+		}
+		runResult, err := r.Run(output, WithResult(result), WithLogger(r.Logger))
+		// If the action is async and we received a sentinel error, don't log the error.
+		if err != nil && !errors.Is(err, gerr.ErrAsyncAction) {
+			r.Logger.Error().Err(err).Msg("Error running policy")
+		}
+		// Each action should return a map.
+		if v, ok := runResult.(map[string]any); ok {
+			endResult = v
+		} else {
+			r.Logger.Debug().Msg("Run result is not a map, skipping merging into end result.")
+		}
+	}
+	return endResult
+}
+
+// ShouldTerminate checks if any of the actions are terminal, indicating that the request
+// should be terminated.
+// This is an optimization to avoid executing the actions' functions unnecessarily.
+// The __terminal__ field is only set when an action intends to terminate the request.
+func (r *Registry) ShouldTerminate(result map[string]any) bool {
+	terminalVal, exists := result[sdkAct.Terminal]
+	if !exists {
+		r.Logger.Debug().Msg("Terminal key not found, request will continue.")
+		return false
+	}
+
+	shouldTerminate, ok := terminalVal.(bool)
+	if !ok {
+		r.Logger.Debug().Msg("Terminal key exists but cannot be cast to a boolean.")
+		return false
+	}
+
+	if shouldTerminate {
+		r.Logger.Debug().Msg("Request is marked as terminal. Terminating.")
+	}
+
+	return shouldTerminate
 }
 
 // WithLogger returns a parameter with the Logger to be used by the action.
