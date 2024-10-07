@@ -119,7 +119,7 @@ func StopGracefully(
 			span.RecordError(err)
 		}
 		if result != nil {
-			_ = pluginRegistry.ActRegistry.RunAll(result)
+			_ = pluginRegistry.ActRegistry.RunAll(result) //nolint:contextcheck
 		}
 	}
 

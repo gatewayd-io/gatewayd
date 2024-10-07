@@ -407,7 +407,7 @@ func runActionWithTimeout(
 
 // RunAll run all the actions in the outputs and returns the end result.
 func (r *Registry) RunAll(result map[string]any) map[string]any {
-	if result == nil || len(result) == 0 {
+	if len(result) == 0 {
 		return result
 	}
 
