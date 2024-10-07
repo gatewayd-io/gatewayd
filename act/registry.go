@@ -417,9 +417,9 @@ func (r *Registry) RunAll(result map[string]any) map[string]any {
 		ok      bool
 	)
 	if outputs, ok = result[sdkAct.Outputs].([]*sdkAct.Output); !ok || len(outputs) == 0 {
+		r.Logger.Debug().Msg("Outputs are nil or empty, returning the result as-is")
 		// If the outputs are nil or empty, we should delete the key from the result.
 		delete(result, sdkAct.Outputs)
-		r.Logger.Debug().Msg("Outputs are nil or empty, returning the result as-is")
 		return result
 	}
 
@@ -438,6 +438,8 @@ func (r *Registry) RunAll(result map[string]any) map[string]any {
 		// Each action should return a map.
 		if v, ok := runResult.(map[string]any); ok {
 			endResult = v
+		} else {
+			r.Logger.Debug().Msg("Run result is not a map, skipping merging into end result.")
 		}
 	}
 	return endResult
@@ -448,8 +450,23 @@ func (r *Registry) RunAll(result map[string]any) map[string]any {
 // This is an optimization to avoid executing the actions' functions unnecessarily.
 // The __terminal__ field is only set when an action intends to terminate the request.
 func (r *Registry) ShouldTerminate(result map[string]any) bool {
-	_, ok := result[sdkAct.Terminal]
-	return ok && cast.ToBool(result[sdkAct.Terminal])
+	terminalVal, exists := result[sdkAct.Terminal]
+	if !exists {
+		r.Logger.Debug().Msg("Terminal key not found, request will continue.")
+		return false
+	}
+
+	shouldTerminate, ok := terminalVal.(bool)
+	if !ok {
+		r.Logger.Debug().Msg("Terminal key exists but cannot be cast to a boolean.")
+		return false
+	}
+
+	if shouldTerminate {
+		r.Logger.Debug().Msg("Request is marked as terminal. Terminating.")
+	}
+
+	return shouldTerminate
 }
 
 // WithLogger returns a parameter with the Logger to be used by the action.
