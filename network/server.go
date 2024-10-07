@@ -98,13 +98,16 @@ func (s *Server) OnBoot() Action {
 	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.PluginTimeout)
 	defer cancel()
 	// Run the OnBooting hooks.
-	_, err := s.PluginRegistry.Run(
+	result, err := s.PluginRegistry.Run(
 		pluginTimeoutCtx,
 		map[string]any{"status": fmt.Sprint(s.Status)},
 		v1.HookName_HOOK_NAME_ON_BOOTING)
 	if err != nil {
 		s.Logger.Error().Err(err).Msg("Failed to run OnBooting hook")
 		span.RecordError(err)
+	}
+	if result != nil {
+		_ = s.PluginRegistry.ActRegistry.RunAll(result)
 	}
 	span.AddEvent("Ran the OnBooting hooks")
 
@@ -117,13 +120,16 @@ func (s *Server) OnBoot() Action {
 	pluginTimeoutCtx, cancel = context.WithTimeout(context.Background(), s.PluginTimeout)
 	defer cancel()
 
-	_, err = s.PluginRegistry.Run(
+	result, err = s.PluginRegistry.Run(
 		pluginTimeoutCtx,
 		map[string]any{"status": fmt.Sprint(s.Status)},
 		v1.HookName_HOOK_NAME_ON_BOOTED)
 	if err != nil {
 		s.Logger.Error().Err(err).Msg("Failed to run OnBooted hook")
 		span.RecordError(err)
+	}
+	if result != nil {
+		_ = s.PluginRegistry.ActRegistry.RunAll(result)
 	}
 	span.AddEvent("Ran the OnBooted hooks")
 
@@ -150,11 +156,14 @@ func (s *Server) OnOpen(conn *ConnWrapper) ([]byte, Action) {
 			"remote": RemoteAddr(conn.Conn()),
 		},
 	}
-	_, err := s.PluginRegistry.Run(
+	result, err := s.PluginRegistry.Run(
 		pluginTimeoutCtx, onOpeningData, v1.HookName_HOOK_NAME_ON_OPENING)
 	if err != nil {
 		s.Logger.Error().Err(err).Msg("Failed to run OnOpening hook")
 		span.RecordError(err)
+	}
+	if result != nil {
+		_ = s.PluginRegistry.ActRegistry.RunAll(result)
 	}
 	span.AddEvent("Ran the OnOpening hooks")
 
@@ -195,11 +204,14 @@ func (s *Server) OnOpen(conn *ConnWrapper) ([]byte, Action) {
 			"remote": RemoteAddr(conn.Conn()),
 		},
 	}
-	_, err = s.PluginRegistry.Run(
+	result, err = s.PluginRegistry.Run(
 		pluginTimeoutCtx, onOpenedData, v1.HookName_HOOK_NAME_ON_OPENED)
 	if err != nil {
 		s.Logger.Error().Err(err).Msg("Failed to run OnOpened hook")
 		span.RecordError(err)
+	}
+	if result != nil {
+		_ = s.PluginRegistry.ActRegistry.RunAll(result)
 	}
 	span.AddEvent("Ran the OnOpened hooks")
 
@@ -231,11 +243,14 @@ func (s *Server) OnClose(conn *ConnWrapper, err error) Action {
 	if err != nil {
 		data["error"] = err.Error()
 	}
-	_, gatewaydErr := s.PluginRegistry.Run(
+	result, gatewaydErr := s.PluginRegistry.Run(
 		pluginTimeoutCtx, data, v1.HookName_HOOK_NAME_ON_CLOSING)
 	if gatewaydErr != nil {
 		s.Logger.Error().Err(gatewaydErr).Msg("Failed to run OnClosing hook")
 		span.RecordError(gatewaydErr)
+	}
+	if result != nil {
+		_ = s.PluginRegistry.ActRegistry.RunAll(result)
 	}
 	span.AddEvent("Ran the OnClosing hooks")
 
@@ -291,11 +306,14 @@ func (s *Server) OnClose(conn *ConnWrapper, err error) Action {
 	if err != nil {
 		data["error"] = err.Error()
 	}
-	_, gatewaydErr = s.PluginRegistry.Run(
+	result, gatewaydErr = s.PluginRegistry.Run(
 		pluginTimeoutCtx, data, v1.HookName_HOOK_NAME_ON_CLOSED)
 	if gatewaydErr != nil {
 		s.Logger.Error().Err(gatewaydErr).Msg("Failed to run OnClosed hook")
 		span.RecordError(gatewaydErr)
+	}
+	if result != nil {
+		_ = s.PluginRegistry.ActRegistry.RunAll(result)
 	}
 	span.AddEvent("Ran the OnClosed hooks")
 
@@ -320,11 +338,14 @@ func (s *Server) OnTraffic(conn *ConnWrapper, stopConnection chan struct{}) Acti
 			"remote": RemoteAddr(conn.Conn()),
 		},
 	}
-	_, err := s.PluginRegistry.Run(
+	result, err := s.PluginRegistry.Run(
 		pluginTimeoutCtx, onTrafficData, v1.HookName_HOOK_NAME_ON_TRAFFIC)
 	if err != nil {
 		s.Logger.Error().Err(err).Msg("Failed to run OnTraffic hook")
 		span.RecordError(err)
+	}
+	if result != nil {
+		_ = s.PluginRegistry.ActRegistry.RunAll(result)
 	}
 	span.AddEvent("Ran the OnTraffic hooks")
 
@@ -391,13 +412,16 @@ func (s *Server) OnShutdown() {
 	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.PluginTimeout)
 	defer cancel()
 	// Run the OnShutdown hooks.
-	_, err := s.PluginRegistry.Run(
+	result, err := s.PluginRegistry.Run(
 		pluginTimeoutCtx,
 		map[string]any{"connections": s.CountConnections()},
 		v1.HookName_HOOK_NAME_ON_SHUTDOWN)
 	if err != nil {
 		s.Logger.Error().Err(err).Msg("Failed to run OnShutdown hook")
 		span.RecordError(err)
+	}
+	if result != nil {
+		_ = s.PluginRegistry.ActRegistry.RunAll(result)
 	}
 	span.AddEvent("Ran the OnShutdown hooks")
 
@@ -424,13 +448,16 @@ func (s *Server) OnTick() (time.Duration, Action) {
 	pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), s.PluginTimeout)
 	defer cancel()
 	// Run the OnTick hooks.
-	_, err := s.PluginRegistry.Run(
+	result, err := s.PluginRegistry.Run(
 		pluginTimeoutCtx,
 		map[string]any{"connections": s.CountConnections()},
 		v1.HookName_HOOK_NAME_ON_TICK)
 	if err != nil {
 		s.Logger.Error().Err(err).Msg("Failed to run OnTick hook")
 		span.RecordError(err)
+	}
+	if result != nil {
+		_ = s.PluginRegistry.ActRegistry.RunAll(result)
 	}
 	span.AddEvent("Ran the OnTick hooks")
 
@@ -474,6 +501,8 @@ func (s *Server) Run() *gerr.GatewayDError {
 	span.AddEvent("Ran the OnRun hooks")
 
 	if result != nil {
+		_ = s.PluginRegistry.ActRegistry.RunAll(result)
+
 		if errMsg, ok := result["error"].(string); ok && errMsg != "" {
 			s.Logger.Error().Str("error", errMsg).Msg("Error in hook")
 		}
