@@ -446,7 +446,7 @@ func (pr *Proxy) PassThroughToServer(conn *ConnWrapper, stack *Stack) *gerr.Gate
 	defer cancel()
 
 	// Run the OnTrafficToServer hooks.
-	_, err = pr.PluginRegistry.Run(
+	result, err = pr.PluginRegistry.Run(
 		pluginTimeoutCtx,
 		trafficData(
 			conn.Conn(),
@@ -463,8 +463,11 @@ func (pr *Proxy) PassThroughToServer(conn *ConnWrapper, stack *Stack) *gerr.Gate
 		pr.Logger.Error().Err(err).Msg("Error running hook")
 		span.RecordError(err)
 	}
-	span.AddEvent("Ran the OnTrafficToServer hooks")
+	if result != nil {
+		_ = pr.PluginRegistry.ActRegistry.RunAll(result)
+	}
 
+	span.AddEvent("Ran the OnTrafficToServer hooks")
 	metrics.ProxyPassThroughsToServer.WithLabelValues(pr.GetGroupName(), pr.GetBlockName()).Inc()
 
 	return nil
@@ -558,6 +561,9 @@ func (pr *Proxy) PassThroughToClient(conn *ConnWrapper, stack *Stack) *gerr.Gate
 		pr.Logger.Error().Err(err).Msg("Error running hook")
 		span.RecordError(err)
 	}
+	if result != nil {
+		result = pr.PluginRegistry.ActRegistry.RunAll(result)
+	}
 	span.AddEvent("Ran the OnTrafficFromServer hooks")
 
 	// If the hook modified the response, use the modified response.
@@ -575,7 +581,7 @@ func (pr *Proxy) PassThroughToClient(conn *ConnWrapper, stack *Stack) *gerr.Gate
 	pluginTimeoutCtx, cancel = context.WithTimeout(context.Background(), pr.PluginTimeout)
 	defer cancel()
 
-	_, err = pr.PluginRegistry.Run(
+	result, err = pr.PluginRegistry.Run(
 		pluginTimeoutCtx,
 		trafficData(
 			conn.Conn(),
@@ -597,6 +603,10 @@ func (pr *Proxy) PassThroughToClient(conn *ConnWrapper, stack *Stack) *gerr.Gate
 		pr.Logger.Error().Err(err).Msg("Error running hook")
 		span.RecordError(err)
 	}
+	if result != nil {
+		_ = pr.PluginRegistry.ActRegistry.RunAll(result)
+	}
+	span.AddEvent("Ran the OnTrafficToClient hooks")
 
 	if errVerdict != nil {
 		span.RecordError(errVerdict)

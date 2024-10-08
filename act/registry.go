@@ -407,6 +407,10 @@ func runActionWithTimeout(
 
 // RunAll run all the actions in the outputs and returns the end result.
 func (r *Registry) RunAll(result map[string]any) map[string]any {
+	if len(result) == 0 {
+		return result
+	}
+
 	if _, exists := result[sdkAct.Outputs]; !exists {
 		r.Logger.Debug().Msg("Outputs key is not present, returning the result as-is")
 		return result

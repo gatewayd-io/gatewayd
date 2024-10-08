@@ -109,7 +109,7 @@ func StopGracefully(
 		defer cancel()
 
 		//nolint:contextcheck
-		_, err := pluginRegistry.Run(
+		result, err := pluginRegistry.Run(
 			pluginTimeoutCtx,
 			map[string]any{"signal": currentSignal},
 			v1.HookName_HOOK_NAME_ON_SIGNAL,
@@ -117,6 +117,9 @@ func StopGracefully(
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to run OnSignal hooks")
 			span.RecordError(err)
+		}
+		if result != nil {
+			_ = pluginRegistry.ActRegistry.RunAll(result) //nolint:contextcheck
 		}
 	}
 
@@ -434,6 +437,9 @@ var runCmd = &cobra.Command{
 			logger.Error().Err(err).Msg("Failed to run OnConfigLoaded hooks")
 			span.RecordError(err)
 		}
+		if updatedGlobalConfig != nil {
+			updatedGlobalConfig = pluginRegistry.ActRegistry.RunAll(updatedGlobalConfig)
+		}
 
 		// If the config was modified by the plugins, merge it with the one loaded from the file.
 		// Only global configuration is merged, which means that plugins cannot modify the plugin
@@ -606,11 +612,14 @@ var runCmd = &cobra.Command{
 		defer cancel()
 
 		if data, ok := conf.GlobalKoanf.Get("loggers").(map[string]any); ok {
-			_, err = pluginRegistry.Run(
+			result, err := pluginRegistry.Run(
 				pluginTimeoutCtx, data, v1.HookName_HOOK_NAME_ON_NEW_LOGGER)
 			if err != nil {
 				logger.Error().Err(err).Msg("Failed to run OnNewLogger hooks")
 				span.RecordError(err)
+			}
+			if result != nil {
+				_ = pluginRegistry.ActRegistry.RunAll(result)
 			}
 		} else {
 			logger.Error().Msg("Failed to get loggers from config")
@@ -767,11 +776,14 @@ var runCmd = &cobra.Command{
 							"backoffMultiplier":  clientConfig.BackoffMultiplier,
 							"disableBackoffCaps": clientConfig.DisableBackoffCaps,
 						}
-						_, err := pluginRegistry.Run(
+						result, err := pluginRegistry.Run(
 							pluginTimeoutCtx, clientCfg, v1.HookName_HOOK_NAME_ON_NEW_CLIENT)
 						if err != nil {
 							logger.Error().Err(err).Msg("Failed to run OnNewClient hooks")
 							span.RecordError(err)
+						}
+						if result != nil {
+							_ = pluginRegistry.ActRegistry.RunAll(result)
 						}
 
 						err = pools[configGroupName][configBlockName].Put(client.ID, client)
@@ -822,13 +834,16 @@ var runCmd = &cobra.Command{
 					context.Background(), conf.Plugin.Timeout)
 				defer cancel()
 
-				_, err = pluginRegistry.Run(
+				result, err := pluginRegistry.Run(
 					pluginTimeoutCtx,
 					map[string]any{"name": configBlockName, "size": currentPoolSize},
 					v1.HookName_HOOK_NAME_ON_NEW_POOL)
 				if err != nil {
 					logger.Error().Err(err).Msg("Failed to run OnNewPool hooks")
 					span.RecordError(err)
+				}
+				if result != nil {
+					_ = pluginRegistry.ActRegistry.RunAll(result)
 				}
 			}
 		}
@@ -877,11 +892,14 @@ var runCmd = &cobra.Command{
 				defer cancel()
 
 				if data, ok := conf.GlobalKoanf.Get("proxies").(map[string]any); ok {
-					_, err = pluginRegistry.Run(
+					result, err := pluginRegistry.Run(
 						pluginTimeoutCtx, data, v1.HookName_HOOK_NAME_ON_NEW_PROXY)
 					if err != nil {
 						logger.Error().Err(err).Msg("Failed to run OnNewProxy hooks")
 						span.RecordError(err)
+					}
+					if result != nil {
+						_ = pluginRegistry.ActRegistry.RunAll(result)
 					}
 				} else {
 					logger.Error().Msg("Failed to get proxy from config")
@@ -948,11 +966,14 @@ var runCmd = &cobra.Command{
 			defer cancel()
 
 			if data, ok := conf.GlobalKoanf.Get("servers").(map[string]any); ok {
-				_, err = pluginRegistry.Run(
+				result, err := pluginRegistry.Run(
 					pluginTimeoutCtx, data, v1.HookName_HOOK_NAME_ON_NEW_SERVER)
 				if err != nil {
 					logger.Error().Err(err).Msg("Failed to run OnNewServer hooks")
 					span.RecordError(err)
+				}
+				if result != nil {
+					_ = pluginRegistry.ActRegistry.RunAll(result)
 				}
 			} else {
 				logger.Error().Msg("Failed to get the servers configuration")
