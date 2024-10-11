@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # Use the official golang image to build the binary.
-FROM golang:1.23-alpine3.20 as builder
+FROM golang:1.23-alpine3.20 AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -15,7 +15,7 @@ RUN apk --no-cache add git=2.45.2-r0 make=4.4.1-r2 && \
     make build-platform GOOS=${TARGETOS} GOARCH=${TARGETARCH} OUTPUT_DIR=dist/${TARGETOS}-${TARGETARCH}
 
 # Use alpine to create a minimal image to run the gatewayd binary.
-FROM alpine:3.20 as runner
+FROM alpine:3.20 AS runner
 
 ARG TARGETOS
 ARG TARGETARCH
