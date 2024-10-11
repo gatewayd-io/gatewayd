@@ -94,6 +94,11 @@ update-all:
 	@go get -u ./...
 	@go mod tidy
 
+# https://groups.google.com/g/golang-nuts/c/FrWNhWsLDVY/m/CVd_iRedBwAJ
+update-direct-deps:
+	@go get $(go list -f '{{if not (or .Main .Indirect)}}{{.Path}}{{end}}' -m all)
+	@go mod tidy
+
 lint:
 	@buf lint
 
