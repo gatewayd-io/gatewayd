@@ -187,9 +187,10 @@ func (c *Client) Send(data []byte) (int, *gerr.GatewayDError) {
 	}
 
 	sent := 0
-	received := len(data)
+	dataSize := len(data)
 	for {
-		if sent >= received {
+		// If we've sent all the data, we must break the loop.
+		if sent >= dataSize {
 			break
 		}
 
@@ -240,13 +241,15 @@ func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 	for ctx.Err() == nil {
 		chunk := make([]byte, c.ReceiveChunkSize)
 		read, err := c.conn.Read(chunk)
+		if read > 0 {
+			total += read
+			buffer.Write(chunk[:read])
+		}
 		if err != nil {
 			c.logger.Error().Err(err).Msg("Couldn't receive data from the server")
 			span.RecordError(err)
 			return total, buffer.Bytes(), gerr.ErrClientReceiveFailed.Wrap(err)
 		}
-		total += read
-		buffer.Write(chunk[:read])
 
 		if read < c.ReceiveChunkSize {
 			break

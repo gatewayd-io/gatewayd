@@ -727,6 +727,10 @@ func (pr *Proxy) receiveTrafficFromClient(conn net.Conn) ([]byte, *gerr.GatewayD
 	for {
 		chunk := make([]byte, pr.ClientConfig.ReceiveChunkSize)
 		read, err := conn.Read(chunk)
+		if read > 0 {
+			total += read
+			buffer.Write(chunk[:read])
+		}
 		if read == 0 || err != nil {
 			pr.Logger.Debug().Err(err).Msg("Error reading from client")
 			span.RecordError(err)
@@ -734,11 +738,8 @@ func (pr *Proxy) receiveTrafficFromClient(conn net.Conn) ([]byte, *gerr.GatewayD
 			metrics.BytesReceivedFromClient.WithLabelValues(pr.GetGroupName(), pr.GetBlockName()).Observe(float64(read))
 			metrics.TotalTrafficBytes.WithLabelValues(pr.GetGroupName(), pr.GetBlockName()).Observe(float64(read))
 
-			return chunk[:read], gerr.ErrReadFailed.Wrap(err)
+			return buffer.Bytes(), gerr.ErrReadFailed.Wrap(err)
 		}
-
-		total += read
-		buffer.Write(chunk[:read])
 
 		if read < pr.ClientConfig.ReceiveChunkSize {
 			break
