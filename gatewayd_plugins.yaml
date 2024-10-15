@@ -39,11 +39,8 @@ actionTimeout: 30s
 
 # action redis configures a Redis connection for the async actions to be published to.
 actionRedis:
-  # enabled controls whether to enable redis as async action queue
-  enabled: false
-
-  # if enabled, the url and channel are used to connect to the Redis server.
-  address: localhost:6379
+  enabled: false  # Change to true to enable Redis as async action queue
+  address: ${REDIS_URL}  # Use environment variable for Redis URL
   channel: gatewayd-actions
 
 # The policy is a list of policies to apply to the signals received from the plugins.
@@ -72,7 +69,7 @@ plugins:
     env:
       - MAGIC_COOKIE_KEY=GATEWAYD_PLUGIN
       - MAGIC_COOKIE_VALUE=5712b87aa5d7e9f9e9ab643e6603181c5b796015cb1c09d6f5ada882bf2a1872
-      - REDIS_URL=redis://localhost:6379/0
+      - REDIS_URL=${REDIS_URL}  # Use environment variable for Redis URL
       - EXPIRY=1h
       # - DEFAULT_DB_NAME=postgres
       - METRICS_ENABLED=True
