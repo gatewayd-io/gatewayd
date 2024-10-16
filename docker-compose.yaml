@@ -23,7 +23,7 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=postgres
-      - POSTGRE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@write-postgres:5432/${POSTGRES_DB}
+      - POSTGRES_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@write-postgres:5432/${POSTGRES_DB}
   
   write-postgres:
     image: postgres:latest
@@ -76,7 +76,7 @@ services:
       - GATEWAYD_CLIENTS_DEFAULT_WRITES_ADDRESS=write-postgres:5432
       - GATEWAYD_CLIENTS_DEFAULT_READS_ADDRESS=read-postgres:5432
       # Use the connection string set in install_plugins
-      - POSTGRE_URL=${POSTGRE_URL}
+      - POSTGRES_URL=${POSTGRES_URL}
       # - GATEWAYD_LOGGERS_DEFAULT_LEVEL=debug
     ports:
       # GatewayD server for PostgreSQL clients to connect to
