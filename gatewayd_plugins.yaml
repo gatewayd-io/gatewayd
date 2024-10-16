@@ -39,6 +39,10 @@ actionTimeout: 30s
 
 # action redis configures a Redis connection for the async actions to be published to.
 actionRedis:
+  # enabled controls whether to enable redis as async action queue
+  enabled: false
+
+  # if enabled, the url and channel are used to connect to the Redis server.
   address: ${REDIS_URL}  # Use environment variable for Redis URL
   channel: gatewayd-actions
 
