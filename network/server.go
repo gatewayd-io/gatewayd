@@ -34,6 +34,7 @@ const (
 	Shutdown
 )
 
+//nolint:interfacebloat
 type IServer interface {
 	OnBoot() Action
 	OnOpen(conn *ConnWrapper) ([]byte, Action)
