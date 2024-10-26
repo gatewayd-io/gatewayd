@@ -44,7 +44,10 @@ type IServer interface {
 	Run() *gerr.GatewayDError
 	Shutdown()
 	IsRunning() bool
+	IsTLSEnabled() bool
 	CountConnections() int
+	GetProxyForConnection(conn *ConnWrapper) (IProxy, bool)
+	RemoveConnectionFromMap(conn *ConnWrapper)
 }
 
 type Server struct {
@@ -69,12 +72,13 @@ type Server struct {
 	KeyFile          string
 	HandshakeTimeout time.Duration
 
-	listener    net.Listener
-	host        string
-	port        int
-	connections uint32
-	running     *atomic.Bool
-	stopServer  chan struct{}
+	listener     net.Listener
+	host         string
+	port         int
+	connections  uint32
+	running      *atomic.Bool
+	isTLSEnabled *atomic.Bool
+	stopServer   chan struct{}
 
 	// loadbalancer
 	loadbalancerStrategy       LoadBalancerStrategy
@@ -582,6 +586,7 @@ func (s *Server) Run() *gerr.GatewayDError {
 			return gerr.ErrGetTLSConfigFailed.Wrap(origErr)
 		}
 		s.Logger.Info().Msg("TLS is enabled")
+		s.isTLSEnabled.Store(true)
 	} else {
 		s.Logger.Debug().Msg("TLS is disabled")
 	}
@@ -765,6 +770,11 @@ func (s *Server) CountConnections() int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return int(s.connections)
+}
+
+// IsTLSEnabled returns true if TLS is enabled.
+func (s *Server) IsTLSEnabled() bool {
+	return s.isTLSEnabled.Load()
 }
 
 // GetProxyForConnection returns the proxy associated with the given connection.

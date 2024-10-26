@@ -289,6 +289,7 @@ func (a *API) GetServers(context.Context, *emptypb.Empty) (*structpb.Struct, err
 			"status":       uint(server.Status),
 			"tickInterval": server.TickInterval.Nanoseconds(),
 			"loadBalancer": map[string]any{"strategy": server.LoadbalancerStrategyName},
+			"isTLSEnabled": server.IsTLSEnabled(),
 		}
 	}
 
