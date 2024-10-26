@@ -549,6 +549,7 @@ func (s *Server) Run() *gerr.GatewayDError {
 	}
 
 	s.isTLSEnabled = &atomic.Bool{}
+	s.running = &atomic.Bool{}
 
 	go func(server *Server) {
 		<-server.stopServer
