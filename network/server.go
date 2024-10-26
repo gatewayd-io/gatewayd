@@ -548,6 +548,8 @@ func (s *Server) Run() *gerr.GatewayDError {
 		return gerr.ErrCastFailed.Wrap(origErr)
 	}
 
+	s.isTLSEnabled = &atomic.Bool{}
+
 	go func(server *Server) {
 		<-server.stopServer
 		server.OnShutdown()
@@ -775,6 +777,9 @@ func (s *Server) CountConnections() int {
 
 // IsTLSEnabled returns true if TLS is enabled.
 func (s *Server) IsTLSEnabled() bool {
+	if s.isTLSEnabled == nil {
+		return false
+	}
 	return s.isTLSEnabled.Load()
 }
 
