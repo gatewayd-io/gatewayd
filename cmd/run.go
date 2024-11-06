@@ -1074,8 +1074,7 @@ var runCmd = &cobra.Command{
 		}
 
 		// Shutdown the server gracefully.
-		var signals []os.Signal
-		signals = append(signals,
+		signals := []os.Signal{
 			os.Interrupt,
 			os.Kill,
 			syscall.SIGTERM,
@@ -1083,7 +1082,7 @@ var runCmd = &cobra.Command{
 			syscall.SIGQUIT,
 			syscall.SIGHUP,
 			syscall.SIGINT,
-		)
+		}
 		signalsCh := make(chan os.Signal, 1)
 		signal.Notify(signalsCh, signals...)
 		go func(pluginRegistry *plugin.Registry,
