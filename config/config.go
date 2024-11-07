@@ -201,7 +201,7 @@ func (c *Config) LoadDefaults(ctx context.Context) *gerr.GatewayDError {
 				return gerr.ErrConfigParseError.Wrap(err)
 			}
 
-			if configObject == "api" {
+			if configObject == "api" || configObject == "raft" {
 				// Handle API configuration separately
 				// TODO: Add support for multiple API config groups.
 				continue

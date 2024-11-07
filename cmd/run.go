@@ -29,6 +29,7 @@ import (
 	"github.com/gatewayd-io/gatewayd/network"
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
+	"github.com/gatewayd-io/gatewayd/raft"
 	"github.com/gatewayd-io/gatewayd/tracing"
 	usage "github.com/gatewayd-io/gatewayd/usagereport/v1"
 	"github.com/getsentry/sentry-go"
@@ -910,6 +911,11 @@ var runCmd = &cobra.Command{
 
 		span.End()
 
+		raftNode, originalErr := raft.NewRaftNode(logger, conf.Global.Raft)
+		if originalErr != nil {
+			logger.Error().Err(originalErr).Msg("Failed to start raft node")
+		}
+
 		_, span = otel.Tracer(config.TracerName).Start(runCtx, "Create servers")
 		// Create and initialize servers.
 		for name, cfg := range conf.Global.Servers {
@@ -946,6 +952,7 @@ var runCmd = &cobra.Command{
 					LoadbalancerStrategyName:   cfg.LoadBalancer.Strategy,
 					LoadbalancerRules:          cfg.LoadBalancer.LoadBalancingRules,
 					LoadbalancerConsistentHash: cfg.LoadBalancer.ConsistentHash,
+					RaftNode:                   raftNode,
 				},
 			)
 

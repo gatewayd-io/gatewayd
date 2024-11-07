@@ -4,8 +4,12 @@ import (
 	"fmt"
 	"net"
 	"sync"
+	"time"
+
+	"encoding/json"
 
 	gerr "github.com/gatewayd-io/gatewayd/errors"
+	"github.com/gatewayd-io/gatewayd/raft"
 	"github.com/spaolacci/murmur3"
 )
 
@@ -14,18 +18,20 @@ import (
 type ConsistentHash struct {
 	originalStrategy LoadBalancerStrategy
 	useSourceIP      bool
-	hashMap          map[uint64]IProxy
 	mu               sync.Mutex
+	raftNode         *raft.RaftNode
+	server           *Server
 }
 
 // NewConsistentHash creates a new ConsistentHash instance. It requires a server configuration and an original
 // load balancing strategy. The consistent hash can use either the source IP or the full connection address
 // as the key for hashing.
-func NewConsistentHash(server *Server, originalStrategy LoadBalancerStrategy) *ConsistentHash {
+func NewConsistentHash(server *Server, originalStrategy LoadBalancerStrategy, raftNode *raft.RaftNode) *ConsistentHash {
 	return &ConsistentHash{
 		originalStrategy: originalStrategy,
 		useSourceIP:      server.LoadbalancerConsistentHash.UseSourceIP,
-		hashMap:          make(map[uint64]IProxy),
+		raftNode:         raftNode,
+		server:           server,
 	}
 }
 
@@ -52,10 +58,11 @@ func (ch *ConsistentHash) NextProxy(conn IConnWrapper) (IProxy, *gerr.GatewayDEr
 
 	hash := hashKey(key)
 
-	proxy, exists := ch.hashMap[hash]
-
+	proxyID, exists := ch.raftNode.Fsm.GetProxyID(hash)
 	if exists {
-		return proxy, nil
+		if proxy, ok := ch.server.GetProxyByID(proxyID); ok {
+			return proxy, nil
+		}
 	}
 
 	// If no hash exists, fallback to the original strategy
@@ -64,8 +71,22 @@ func (ch *ConsistentHash) NextProxy(conn IConnWrapper) (IProxy, *gerr.GatewayDEr
 		return nil, gerr.ErrNoProxiesAvailable.Wrap(err)
 	}
 
-	// Add the selected proxy to the hash map for future requests
-	ch.hashMap[hash] = proxy
+	// Create and apply the command through Raft
+	cmd := raft.HashMapCommand{
+		Type:    raft.CommandAddHashMapping,
+		Hash:    hash,
+		ProxyID: proxy.GetID(),
+	}
+
+	cmdBytes, marshalErr := json.Marshal(cmd)
+	if marshalErr != nil {
+		return nil, gerr.ErrNoProxiesAvailable.Wrap(marshalErr)
+	}
+
+	// Apply the command through Raft
+	if err := ch.raftNode.Apply(cmdBytes, 10*time.Second); err != nil {
+		return nil, gerr.ErrNoProxiesAvailable.Wrap(err)
+	}
 
 	return proxy, nil
 }

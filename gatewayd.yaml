@@ -80,7 +80,7 @@ proxies:
 servers:
   default:
     network: tcp
-    address: 0.0.0.0:15432
+    address: 0.0.0.0:15433
     loadBalancer:
       # Load balancer strategies can be found in config/constants.go
       strategy: ROUND_ROBIN # ROUND_ROBIN, RANDOM, WEIGHTED_ROUND_ROBIN
@@ -103,6 +103,14 @@ servers:
 
 api:
   enabled: True
-  httpAddress: 0.0.0.0:18080
+  httpAddress: 0.0.0.0:18081
   grpcNetwork: tcp
-  grpcAddress: 0.0.0.0:19090
+  grpcAddress: 0.0.0.0:19091
+
+raft:
+  address: 127.0.0.1:2223
+  nodeID: node2
+  leaderID: node1
+  peers:
+    - id: node1
+      address: 127.0.0.1:2222

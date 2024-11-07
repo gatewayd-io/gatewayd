@@ -17,6 +17,7 @@ import (
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/metrics"
 	"github.com/gatewayd-io/gatewayd/plugin"
+	"github.com/gatewayd-io/gatewayd/raft"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -87,6 +88,8 @@ type Server struct {
 	LoadbalancerRules          []config.LoadBalancingRule
 	LoadbalancerConsistentHash *config.ConsistentHash
 	connectionToProxyMap       *sync.Map
+
+	RaftNode *raft.RaftNode
 }
 
 var _ IServer = (*Server)(nil)
@@ -741,6 +744,7 @@ func NewServer(
 		LoadbalancerStrategyName:   srv.LoadbalancerStrategyName,
 		LoadbalancerRules:          srv.LoadbalancerRules,
 		LoadbalancerConsistentHash: srv.LoadbalancerConsistentHash,
+		RaftNode:                   srv.RaftNode,
 	}
 
 	// Try to resolve the address and log an error if it can't be resolved.
@@ -801,4 +805,14 @@ func (s *Server) GetProxyForConnection(conn *ConnWrapper) (IProxy, bool) {
 // RemoveConnectionFromMap removes the given connection from the connection-to-proxy map.
 func (s *Server) RemoveConnectionFromMap(conn *ConnWrapper) {
 	s.connectionToProxyMap.Delete(conn)
+}
+
+// Add this method to Server struct
+func (s *Server) GetProxyByID(id string) (IProxy, bool) {
+	for _, proxy := range s.Proxies {
+		if proxy.GetID() == id {
+			return proxy, true
+		}
+	}
+	return nil, false
 }

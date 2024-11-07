@@ -138,6 +138,18 @@ type API struct {
 	GRPCNetwork string `json:"grpcNetwork" jsonschema:"enum=tcp,enum=udp,enum=unix"`
 }
 
+type Raft struct {
+	Address  string     `json:"address"`
+	NodeID   string     `json:"nodeID"`
+	LeaderID string     `json:"leaderID"`
+	Peers    []RaftPeer `json:"peers"`
+}
+
+type RaftPeer struct {
+	ID      string `json:"id"`
+	Address string `json:"address"`
+}
+
 type GlobalConfig struct {
 	API     API                           `json:"api"`
 	Loggers map[string]*Logger            `json:"loggers"`
@@ -146,4 +158,5 @@ type GlobalConfig struct {
 	Proxies map[string]map[string]*Proxy  `json:"proxies"`
 	Servers map[string]*Server            `json:"servers"`
 	Metrics map[string]*Metrics           `json:"metrics"`
+	Raft    Raft                          `json:"raft"`
 }
