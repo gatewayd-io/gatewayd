@@ -149,15 +149,13 @@ func (p *Pool) Cap() int {
 }
 
 // NewPool creates a new pool with the given capacity.
-//
-//nolint:predeclared
-func NewPool(ctx context.Context, cap int) *Pool {
+func NewPool(ctx context.Context, capacity int) *Pool {
 	poolCtx, span := otel.Tracer(config.TracerName).Start(ctx, "NewPool")
 	defer span.End()
 
 	return &Pool{
 		pool: sync.Map{},
-		cap:  cap,
+		cap:  capacity,
 		ctx:  poolCtx,
 	}
 }
