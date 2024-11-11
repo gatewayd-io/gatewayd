@@ -22,7 +22,7 @@ type HcLogAdapter struct {
 	impliedArgs []any
 }
 
-func (h HcLogAdapter) Log(level hclog.Level, msg string, args ...any) {
+func (h *HcLogAdapter) Log(level hclog.Level, msg string, args ...any) {
 	switch level {
 	case hclog.Off:
 		return
@@ -41,37 +41,37 @@ func (h HcLogAdapter) Log(level hclog.Level, msg string, args ...any) {
 	}
 }
 
-func (h HcLogAdapter) Trace(msg string, args ...any) {
+func (h *HcLogAdapter) Trace(msg string, args ...any) {
 	extraArgs := ToMap(args)
 	extraArgs["plugin"] = h.name
 	h.logger.Trace().Fields(extraArgs).Msg(msg)
 }
 
-func (h HcLogAdapter) Debug(msg string, args ...any) {
+func (h *HcLogAdapter) Debug(msg string, args ...any) {
 	extraArgs := ToMap(args)
 	extraArgs["plugin"] = h.name
 	h.logger.Debug().Fields(extraArgs).Msg(msg)
 }
 
-func (h HcLogAdapter) Info(msg string, args ...any) {
+func (h *HcLogAdapter) Info(msg string, args ...any) {
 	extraArgs := ToMap(args)
 	extraArgs["plugin"] = h.name
 	h.logger.Info().Fields(extraArgs).Msg(msg)
 }
 
-func (h HcLogAdapter) Warn(msg string, args ...any) {
+func (h *HcLogAdapter) Warn(msg string, args ...any) {
 	extraArgs := ToMap(args)
 	extraArgs["plugin"] = h.name
 	h.logger.Warn().Fields(extraArgs).Msg(msg)
 }
 
-func (h HcLogAdapter) Error(msg string, args ...any) {
+func (h *HcLogAdapter) Error(msg string, args ...any) {
 	extraArgs := ToMap(args)
 	extraArgs["plugin"] = h.name
 	h.logger.Error().Fields(extraArgs).Msg(msg)
 }
 
-func (h HcLogAdapter) GetLevel() hclog.Level {
+func (h *HcLogAdapter) GetLevel() hclog.Level {
 	switch h.logger.GetLevel() {
 	case zerolog.Disabled:
 		return hclog.Off
@@ -95,46 +95,46 @@ func (h HcLogAdapter) GetLevel() hclog.Level {
 	return hclog.NoLevel
 }
 
-func (h HcLogAdapter) IsTrace() bool {
+func (h *HcLogAdapter) IsTrace() bool {
 	return h.logger.GetLevel() >= zerolog.TraceLevel
 }
 
-func (h HcLogAdapter) IsDebug() bool {
+func (h *HcLogAdapter) IsDebug() bool {
 	return h.logger.GetLevel() >= zerolog.DebugLevel
 }
 
-func (h HcLogAdapter) IsInfo() bool {
+func (h *HcLogAdapter) IsInfo() bool {
 	return h.logger.GetLevel() >= zerolog.InfoLevel
 }
 
-func (h HcLogAdapter) IsWarn() bool {
+func (h *HcLogAdapter) IsWarn() bool {
 	return h.logger.GetLevel() >= zerolog.WarnLevel
 }
 
-func (h HcLogAdapter) IsError() bool {
+func (h *HcLogAdapter) IsError() bool {
 	return h.logger.GetLevel() >= zerolog.ErrorLevel
 }
 
-func (h HcLogAdapter) ImpliedArgs() []any {
+func (h *HcLogAdapter) ImpliedArgs() []any {
 	// Not supported
 	return nil
 }
 
-func (h HcLogAdapter) With(args ...any) hclog.Logger {
+func (h *HcLogAdapter) With(args ...any) hclog.Logger {
 	logger := h.logger.With().Fields(ToMap(args)).Logger()
 	return NewHcLogAdapter(&logger, h.Name())
 }
 
-func (h HcLogAdapter) Name() string {
+func (h *HcLogAdapter) Name() string {
 	return h.name
 }
 
-func (h HcLogAdapter) Named(name string) hclog.Logger {
+func (h *HcLogAdapter) Named(name string) hclog.Logger {
 	return NewHcLogAdapter(h.logger, name)
 }
 
-func (h HcLogAdapter) ResetNamed(_ string) hclog.Logger {
-	return &h
+func (h *HcLogAdapter) ResetNamed(_ string) hclog.Logger {
+	return h
 }
 
 func (h *HcLogAdapter) SetLevel(level hclog.Level) {
@@ -142,14 +142,14 @@ func (h *HcLogAdapter) SetLevel(level hclog.Level) {
 	h.logger = &leveledLog
 }
 
-func (h HcLogAdapter) StandardLogger(opts *hclog.StandardLoggerOptions) *log.Logger {
+func (h *HcLogAdapter) StandardLogger(opts *hclog.StandardLoggerOptions) *log.Logger {
 	if opts == nil {
 		opts = &hclog.StandardLoggerOptions{}
 	}
 	return log.New(h.StandardWriter(opts), "", 0)
 }
 
-func (h HcLogAdapter) StandardWriter(_ *hclog.StandardLoggerOptions) io.Writer {
+func (h *HcLogAdapter) StandardWriter(_ *hclog.StandardLoggerOptions) io.Writer {
 	v := reflect.ValueOf(h.logger)
 	w := v.FieldByName("w")
 	writer, ok := w.Interface().(zerolog.LevelWriter)

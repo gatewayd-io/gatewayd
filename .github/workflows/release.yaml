@@ -73,7 +73,7 @@ jobs:
           version: v1
           args: mod -json -licenses -output gatewayd-source-${{ github.ref_name }}.cyclonedx.json
       - name: Create release and add artifacts
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: |
             dist/*.tar.gz
