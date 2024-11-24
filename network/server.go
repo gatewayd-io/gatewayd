@@ -90,6 +90,8 @@ type Server struct {
 	connectionToProxyMap       *sync.Map
 
 	RaftNode *raft.RaftNode
+
+	ProxyByBlock map[string]IProxy
 }
 
 var _ IServer = (*Server)(nil)
@@ -770,6 +772,8 @@ func NewServer(
 	}
 	server.loadbalancerStrategy = st
 
+	server.initializeProxies()
+
 	return &server
 }
 
@@ -815,4 +819,12 @@ func (s *Server) GetProxyByID(id string) (IProxy, bool) {
 		}
 	}
 	return nil, false
+}
+
+// Initialize the map when creating proxies
+func (s *Server) initializeProxies() {
+	s.ProxyByBlock = make(map[string]IProxy)
+	for _, proxy := range s.Proxies {
+		s.ProxyByBlock[proxy.GetBlockName()] = proxy
+	}
 }

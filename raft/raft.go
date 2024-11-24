@@ -23,9 +23,9 @@ const (
 
 // HashMapCommand represents a command to modify the hash map
 type HashMapCommand struct {
-	Type    string `json:"type"`
-	Hash    uint64 `json:"hash"`
-	ProxyID string `json:"proxy_id"` // Using a string identifier for the proxy
+	Type      string `json:"type"`
+	Hash      uint64 `json:"hash"`
+	BlockName string `json:"block_name"`
 }
 
 // RaftNode represents a node in the Raft cluster
@@ -202,22 +202,24 @@ func (n *RaftNode) Shutdown() error {
 
 // FSM represents the Finite State Machine for the Raft cluster
 type FSM struct {
-	hashMap map[uint64]string // private field
-	mu      sync.RWMutex
+	consistentHashMap map[uint64]string
+	mu                sync.RWMutex
 }
 
-// GetProxyID safely retrieves a proxy ID for a given hash
-func (f *FSM) GetProxyID(hash uint64) (string, bool) {
+// GetProxyBlock safely retrieves the block name for a given hash
+func (f *FSM) GetProxyBlock(hash uint64) (string, bool) {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
-	proxyID, exists := f.hashMap[hash]
-	return proxyID, exists
+	if blockName, exists := f.consistentHashMap[hash]; exists {
+		return blockName, true
+	}
+	return "", false
 }
 
 // NewFSM creates a new FSM instance
 func NewFSM() *FSM {
 	return &FSM{
-		hashMap: make(map[uint64]string),
+		consistentHashMap: make(map[uint64]string),
 	}
 }
 
@@ -233,7 +235,7 @@ func (f *FSM) Apply(log *raft.Log) interface{} {
 
 	switch cmd.Type {
 	case CommandAddHashMapping:
-		f.hashMap[cmd.Hash] = cmd.ProxyID
+		f.consistentHashMap[cmd.Hash] = cmd.BlockName
 		return nil
 	default:
 		return fmt.Errorf("unknown command type: %s", cmd.Type)
@@ -247,7 +249,7 @@ func (f *FSM) Snapshot() (raft.FSMSnapshot, error) {
 
 	// Create a copy of the hash map
 	hashMapCopy := make(map[uint64]string)
-	for k, v := range f.hashMap {
+	for k, v := range f.consistentHashMap {
 		hashMapCopy[k] = v
 	}
 
@@ -263,7 +265,7 @@ func (f *FSM) Restore(rc io.ReadCloser) error {
 	}
 
 	f.mu.Lock()
-	f.hashMap = hashMap
+	f.consistentHashMap = hashMap
 	f.mu.Unlock()
 
 	return nil

@@ -32,7 +32,7 @@ func NewLoadBalancerStrategy(server *Server) (LoadBalancerStrategy, *gerr.Gatewa
 
 	// If consistent hashing is enabled, wrap the strategy
 	if server.LoadbalancerConsistentHash != nil {
-		strategy = NewConsistentHash(server, strategy, server.RaftNode)
+		strategy = NewConsistentHash(server, strategy)
 	}
 
 	return strategy, nil
