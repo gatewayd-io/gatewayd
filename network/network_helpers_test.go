@@ -30,7 +30,8 @@ type WriteBuffer struct {
 
 // MockProxy implements the IProxy interface for testing purposes.
 type MockProxy struct {
-	name string
+	name      string
+	groupName string
 }
 
 // writeStartupMsg writes a PostgreSQL startup message to the buffer.
@@ -296,7 +297,7 @@ func (m MockProxy) GetBlockName() string {
 }
 
 func (m MockProxy) GetGroupName() string {
-	return "default"
+	return m.groupName
 }
 
 // Mock implementation of IConnWrapper.

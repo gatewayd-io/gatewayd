@@ -19,6 +19,7 @@ import (
 // Command types for Raft operations
 const (
 	CommandAddHashMapping = "ADD_HASH_MAPPING"
+	RaftLeaderState       = raft.Leader
 )
 
 // HashMapCommand represents a command to modify the hash map
@@ -286,3 +287,8 @@ func (f *FSMSnapshot) Persist(sink raft.SnapshotSink) error {
 }
 
 func (f *FSMSnapshot) Release() {}
+
+// GetState returns the current Raft state
+func (n *RaftNode) GetState() raft.RaftState {
+	return n.raft.State()
+}

@@ -1,12 +1,17 @@
 package network
 
 import (
+	"encoding/json"
 	"net"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/gatewayd-io/gatewayd/config"
+	"github.com/gatewayd-io/gatewayd/raft"
+	"github.com/gatewayd-io/gatewayd/testhelpers"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestNewConsistentHash verifies that a new ConsistentHash instance is properly created.
@@ -22,22 +27,38 @@ func TestNewConsistentHash(t *testing.T) {
 	assert.NotNil(t, consistentHash)
 	assert.Equal(t, originalStrategy, consistentHash.originalStrategy)
 	assert.True(t, consistentHash.useSourceIP)
-	assert.NotNil(t, consistentHash.hashMap)
 }
 
-// TestConsistentHashNextProxyUseSourceIpExists ensures that when useSourceIp is enabled,
-// and the hashed IP exists in the hashMap, the correct proxy is returned.
-// It mocks a connection with a specific IP and verifies the proxy retrieval from the hashMap.
+// TestConsistentHashNextProxyUseSourceIpExists tests the consistent hash load balancer
+// when useSourceIP is enabled. It verifies that:
+// 1. A connection from a specific IP is correctly hashed
+// 2. The hash mapping is properly stored in the Raft FSM
+// 3. The correct proxy is returned based on the stored mapping
+// The test uses a mock connection and Raft node to simulate a distributed environment.
 func TestConsistentHashNextProxyUseSourceIpExists(t *testing.T) {
 	proxies := []IProxy{
-		MockProxy{name: "proxy1"},
-		MockProxy{name: "proxy2"},
-		MockProxy{name: "proxy3"},
+		MockProxy{name: "proxy1", groupName: "test-group"},
+		MockProxy{name: "proxy2", groupName: "test-group"},
+		MockProxy{name: "proxy3", groupName: "test-group"},
 	}
+
+	raftHelper, err := testhelpers.NewTestRaftNode(t)
+	if err != nil {
+		t.Fatalf("Failed to create test raft node: %v", err)
+	}
+	defer func() {
+		if err := raftHelper.Cleanup(); err != nil {
+			t.Errorf("Failed to cleanup raft: %v", err)
+		}
+	}()
+
 	server := &Server{
 		Proxies:                    proxies,
 		LoadbalancerConsistentHash: &config.ConsistentHash{UseSourceIP: true},
+		RaftNode:                   raftHelper.Node,
+		GroupName:                  "test-group",
 	}
+	server.initializeProxies()
 	originalStrategy := NewRandom(server)
 	consistentHash := NewConsistentHash(server, originalStrategy)
 	mockConn := new(MockConnWrapper)
@@ -46,10 +67,22 @@ func TestConsistentHashNextProxyUseSourceIpExists(t *testing.T) {
 	mockAddr := &net.TCPAddr{IP: net.ParseIP("192.168.1.1"), Port: 1234}
 	mockConn.On("RemoteAddr").Return(mockAddr)
 
-	key := "192.168.1.1"
-	hash := hashKey(key)
+	// Instead of setting hashMap directly, setup the FSM
+	hash := hashKey("192.168.1.1" + server.GroupName)
+	// Create and apply the command through Raft
+	cmd := raft.HashMapCommand{
+		Type:      raft.CommandAddHashMapping,
+		Hash:      hash,
+		BlockName: proxies[2].GetBlockName(),
+	}
 
-	consistentHash.hashMap[hash] = proxies[2]
+	cmdBytes, marshalErr := json.Marshal(cmd)
+	require.NoError(t, marshalErr)
+
+	// Apply the command through Raft
+	if err := server.RaftNode.Apply(cmdBytes, 10*time.Second); err != nil {
+		require.NoError(t, err)
+	}
 
 	proxy, err := consistentHash.NextProxy(mockConn)
 	assert.Nil(t, err)
@@ -60,26 +93,40 @@ func TestConsistentHashNextProxyUseSourceIpExists(t *testing.T) {
 }
 
 // TestConsistentHashNextProxyUseFullAddress verifies the behavior when useSourceIp is disabled.
-// It ensures that the full connection address is used for hashing, and the correct proxy is returned
-// and cached in the hashMap. The test also checks that the hash value is computed based on the full address.
+// It ensures that the full connection address (IP:port) plus group name is used for hashing,
+// and the correct proxy is returned. The test also verifies that the proxy mapping is properly
+// stored in the Raft FSM for persistence and cluster-wide consistency.
 func TestConsistentHashNextProxyUseFullAddress(t *testing.T) {
 	mockConn := new(MockConnWrapper)
 	proxies := []IProxy{
-		MockProxy{name: "proxy1"},
-		MockProxy{name: "proxy2"},
-		MockProxy{name: "proxy3"},
+		MockProxy{name: "proxy1", groupName: "test-group"},
+		MockProxy{name: "proxy2", groupName: "test-group"},
+		MockProxy{name: "proxy3", groupName: "test-group"},
 	}
+	raftHelper, err := testhelpers.NewTestRaftNode(t)
+	if err != nil {
+		t.Fatalf("Failed to create test raft node: %v", err)
+	}
+	defer func() {
+		if err := raftHelper.Cleanup(); err != nil {
+			t.Errorf("Failed to cleanup raft: %v", err)
+		}
+	}()
 	server := &Server{
 		Proxies: proxies,
 		LoadbalancerConsistentHash: &config.ConsistentHash{
 			UseSourceIP: false,
 		},
+		RaftNode:  raftHelper.Node,
+		GroupName: "test-group",
 	}
 	mockStrategy := NewRoundRobin(server)
 
 	// Mock RemoteAddr to return full address
 	mockAddr := &net.TCPAddr{IP: net.ParseIP("192.168.1.1"), Port: 1234}
 	mockConn.On("RemoteAddr").Return(mockAddr)
+
+	server.initializeProxies()
 
 	consistentHash := NewConsistentHash(server, mockStrategy)
 
@@ -88,32 +135,45 @@ func TestConsistentHashNextProxyUseFullAddress(t *testing.T) {
 	assert.NotNil(t, proxy)
 	assert.Equal(t, proxies[1], proxy)
 
-	// Hash should be calculated using the full address and cached in hashMap
-	hash := hashKey("192.168.1.1:1234")
-	cachedProxy, exists := consistentHash.hashMap[hash]
-
+	// Verify the hash was stored in Raft FSM
+	hash := hashKey("192.168.1.1:1234" + server.GroupName)
+	blockName, exists := server.RaftNode.Fsm.GetProxyBlock(hash)
 	assert.True(t, exists)
-	assert.Equal(t, proxies[1], cachedProxy)
+	assert.Equal(t, proxies[1].GetBlockName(), blockName)
 
 	// Clean up
 	mockConn.AssertExpectations(t)
 }
 
-// TestConsistentHashNextProxyConcurrency tests the concurrency safety of the NextProxy method
-// in the ConsistentHash struct. It ensures that multiple goroutines can concurrently call
-// NextProxy without causing race conditions or inconsistent behavior.
+// TestConsistentHashNextProxyConcurrency tests the thread safety and consistency of the NextProxy method
+// in a distributed environment. It verifies that:
+// 1. Multiple concurrent requests from the same IP address consistently map to the same proxy
+// 2. The mapping is stable across sequential calls
+// 3. Different IP addresses map to different proxies
+// 4. The Raft-based consistent hash remains thread-safe under high concurrency
 func TestConsistentHashNextProxyConcurrency(t *testing.T) {
 	// Setup mocks
 	conn1 := new(MockConnWrapper)
 	conn2 := new(MockConnWrapper)
 	proxies := []IProxy{
-		MockProxy{name: "proxy1"},
-		MockProxy{name: "proxy2"},
-		MockProxy{name: "proxy3"},
+		MockProxy{name: "proxy1", groupName: "test-group"},
+		MockProxy{name: "proxy2", groupName: "test-group"},
+		MockProxy{name: "proxy3", groupName: "test-group"},
 	}
+	raftHelper, err := testhelpers.NewTestRaftNode(t)
+	if err != nil {
+		t.Fatalf("Failed to create test raft node: %v", err)
+	}
+	defer func() {
+		if err := raftHelper.Cleanup(); err != nil {
+			t.Errorf("Failed to cleanup raft: %v", err)
+		}
+	}()
 	server := &Server{
 		Proxies:                    proxies,
 		LoadbalancerConsistentHash: &config.ConsistentHash{UseSourceIP: true},
+		RaftNode:                   raftHelper.Node,
+		GroupName:                  "test-group",
 	}
 	originalStrategy := NewRoundRobin(server)
 
@@ -122,6 +182,8 @@ func TestConsistentHashNextProxyConcurrency(t *testing.T) {
 	mockAddr2 := &net.TCPAddr{IP: net.ParseIP("192.168.1.2"), Port: 1234}
 	conn1.On("RemoteAddr").Return(mockAddr1)
 	conn2.On("RemoteAddr").Return(mockAddr2)
+
+	server.initializeProxies()
 
 	// Initialize the ConsistentHash
 	consistentHash := NewConsistentHash(server, originalStrategy)
