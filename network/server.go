@@ -811,16 +811,6 @@ func (s *Server) RemoveConnectionFromMap(conn *ConnWrapper) {
 	s.connectionToProxyMap.Delete(conn)
 }
 
-// Add this method to Server struct
-func (s *Server) GetProxyByID(id string) (IProxy, bool) {
-	for _, proxy := range s.Proxies {
-		if proxy.GetID() == id {
-			return proxy, true
-		}
-	}
-	return nil, false
-}
-
 // Initialize the map when creating proxies
 func (s *Server) initializeProxies() {
 	s.ProxyByBlock = make(map[string]IProxy)

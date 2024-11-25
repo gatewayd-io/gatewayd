@@ -17,7 +17,6 @@ import (
 	"github.com/gatewayd-io/gatewayd/pool"
 	"github.com/getsentry/sentry-go"
 	"github.com/go-co-op/gocron"
-	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/otel"
 )
@@ -35,11 +34,9 @@ type IProxy interface {
 	BusyConnectionsString() []string
 	GetGroupName() string
 	GetBlockName() string
-	GetID() string
 }
 
 type Proxy struct {
-	ID                   string
 	GroupName            string
 	BlockName            string
 	AvailableConnections pool.IPool
@@ -66,7 +63,6 @@ func NewProxy(
 	defer span.End()
 
 	proxy := Proxy{
-		ID:                   uuid.New().String(),
 		GroupName:            pxy.GroupName,
 		BlockName:            pxy.BlockName,
 		AvailableConnections: pxy.AvailableConnections,
@@ -141,10 +137,6 @@ func NewProxy(
 	).Msg("Started the client health check scheduler")
 
 	return &proxy
-}
-
-func (pr *Proxy) GetID() string {
-	return pr.ID
 }
 
 func (pr *Proxy) GetBlockName() string {
