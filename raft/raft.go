@@ -18,12 +18,12 @@ import (
 
 // Command types for Raft operations
 const (
-	CommandAddHashMapping = "ADD_HASH_MAPPING"
-	RaftLeaderState       = raft.Leader
+	CommandAddConsistentHashEntry = "ADD_CONSISTENT_HASH_ENTRY"
+	RaftLeaderState               = raft.Leader
 )
 
-// HashMapCommand represents a command to modify the hash map
-type HashMapCommand struct {
+// ConsistentHashCommand represents a command to modify the consistent hash
+type ConsistentHashCommand struct {
 	Type      string `json:"type"`
 	Hash      uint64 `json:"hash"`
 	BlockName string `json:"block_name"`
@@ -57,7 +57,7 @@ func NewRaftNode(logger zerolog.Logger, raftConfig config.Raft) (*RaftNode, erro
 	}
 	raftAddr := raftConfig.Address
 	config.LocalID = raft.ServerID(nodeID)
-	raftDir := filepath.Join("raft", nodeID)
+	raftDir := filepath.Join(raftConfig.Directory, nodeID)
 	err = os.MkdirAll(raftDir, os.ModePerm)
 	if err != nil {
 		return nil, fmt.Errorf("error creating raft directory: %w", err)
@@ -203,7 +203,7 @@ func (n *RaftNode) Shutdown() error {
 
 // FSM represents the Finite State Machine for the Raft cluster
 type FSM struct {
-	consistentHashMap map[uint64]string
+	lbHashToBlockName map[uint64]string
 	mu                sync.RWMutex
 }
 
@@ -211,7 +211,7 @@ type FSM struct {
 func (f *FSM) GetProxyBlock(hash uint64) (string, bool) {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
-	if blockName, exists := f.consistentHashMap[hash]; exists {
+	if blockName, exists := f.lbHashToBlockName[hash]; exists {
 		return blockName, true
 	}
 	return "", false
@@ -220,13 +220,13 @@ func (f *FSM) GetProxyBlock(hash uint64) (string, bool) {
 // NewFSM creates a new FSM instance
 func NewFSM() *FSM {
 	return &FSM{
-		consistentHashMap: make(map[uint64]string),
+		lbHashToBlockName: make(map[uint64]string),
 	}
 }
 
 // Apply implements the raft.FSM interface
 func (f *FSM) Apply(log *raft.Log) interface{} {
-	var cmd HashMapCommand
+	var cmd ConsistentHashCommand
 	if err := json.Unmarshal(log.Data, &cmd); err != nil {
 		return fmt.Errorf("failed to unmarshal command: %w", err)
 	}
@@ -235,8 +235,8 @@ func (f *FSM) Apply(log *raft.Log) interface{} {
 	defer f.mu.Unlock()
 
 	switch cmd.Type {
-	case CommandAddHashMapping:
-		f.consistentHashMap[cmd.Hash] = cmd.BlockName
+	case CommandAddConsistentHashEntry:
+		f.lbHashToBlockName[cmd.Hash] = cmd.BlockName
 		return nil
 	default:
 		return fmt.Errorf("unknown command type: %s", cmd.Type)
@@ -250,23 +250,23 @@ func (f *FSM) Snapshot() (raft.FSMSnapshot, error) {
 
 	// Create a copy of the hash map
 	hashMapCopy := make(map[uint64]string)
-	for k, v := range f.consistentHashMap {
+	for k, v := range f.lbHashToBlockName {
 		hashMapCopy[k] = v
 	}
 
-	return &FSMSnapshot{hashMap: hashMapCopy}, nil
+	return &FSMSnapshot{lbHashToBlockName: hashMapCopy}, nil
 }
 
 // Restore restores the FSM from a snapshot
 func (f *FSM) Restore(rc io.ReadCloser) error {
 	decoder := json.NewDecoder(rc)
-	var hashMap map[uint64]string
-	if err := decoder.Decode(&hashMap); err != nil {
+	var lbHashToBlockName map[uint64]string
+	if err := decoder.Decode(&lbHashToBlockName); err != nil {
 		return err
 	}
 
 	f.mu.Lock()
-	f.consistentHashMap = hashMap
+	f.lbHashToBlockName = lbHashToBlockName
 	f.mu.Unlock()
 
 	return nil
@@ -274,11 +274,11 @@ func (f *FSM) Restore(rc io.ReadCloser) error {
 
 // FSMSnapshot represents a snapshot of the FSM
 type FSMSnapshot struct {
-	hashMap map[uint64]string
+	lbHashToBlockName map[uint64]string
 }
 
 func (f *FSMSnapshot) Persist(sink raft.SnapshotSink) error {
-	err := json.NewEncoder(sink).Encode(f.hashMap)
+	err := json.NewEncoder(sink).Encode(f.lbHashToBlockName)
 	if err != nil {
 		sink.Cancel()
 		return err

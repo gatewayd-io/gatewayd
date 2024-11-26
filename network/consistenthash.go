@@ -71,8 +71,8 @@ func (ch *ConsistentHash) NextProxy(conn IConnWrapper) (IProxy, *gerr.GatewayDEr
 	}
 
 	// Create and apply the command through Raft
-	cmd := raft.HashMapCommand{
-		Type:      raft.CommandAddHashMapping,
+	cmd := raft.ConsistentHashCommand{
+		Type:      raft.CommandAddConsistentHashEntry,
 		Hash:      hash,
 		BlockName: proxy.GetBlockName(),
 	}

@@ -19,6 +19,7 @@ func setupTestLogger() zerolog.Logger {
 
 func TestNewRaftNode(t *testing.T) {
 	logger := setupTestLogger()
+	tempDir := t.TempDir()
 
 	tests := []struct {
 		name       string
@@ -28,21 +29,23 @@ func TestNewRaftNode(t *testing.T) {
 		{
 			name: "valid configuration",
 			raftConfig: config.Raft{
-				NodeID:   "node1",
-				Address:  "127.0.0.1:1234",
-				LeaderID: "node1",
+				NodeID:   "testRaftNodeValidConfigurationnode1",
+				Address:  "127.0.0.1:6001",
+				LeaderID: "testRaftNodeValidConfigurationnode1",
 				Peers: []config.RaftPeer{
-					{ID: "node2", Address: "127.0.0.1:1235"},
+					{ID: "testRaftNodeValidConfigurationnode2", Address: "127.0.0.1:6002"},
 				},
+				Directory: tempDir,
 			},
 			wantErr: false,
 		},
 		{
 			name: "invalid address",
 			raftConfig: config.Raft{
-				NodeID:   "node1",
-				Address:  "invalid:address:",
-				LeaderID: "node1",
+				NodeID:    "testRaftNodeInvalidAddressnode1",
+				Address:   "invalid:address:",
+				LeaderID:  "testRaftNodeInvalidAddressnode1",
+				Directory: tempDir,
 			},
 			wantErr: true,
 		},
@@ -59,7 +62,6 @@ func TestNewRaftNode(t *testing.T) {
 				assert.NotNil(t, node)
 				// Cleanup
 				_ = node.Shutdown()
-				_ = os.RemoveAll("raft")
 			}
 		})
 	}
@@ -69,8 +71,8 @@ func TestFSMOperations(t *testing.T) {
 	fsm := NewFSM()
 
 	// Test adding a hash mapping
-	cmd := HashMapCommand{
-		Type:      CommandAddHashMapping,
+	cmd := ConsistentHashCommand{
+		Type:      CommandAddConsistentHashEntry,
 		Hash:      12345,
 		BlockName: "test-block",
 	}
@@ -97,8 +99,8 @@ func TestFSMSnapshot(t *testing.T) {
 	fsm := NewFSM()
 
 	// Add some data
-	cmd := HashMapCommand{
-		Type:      CommandAddHashMapping,
+	cmd := ConsistentHashCommand{
+		Type:      CommandAddConsistentHashEntry,
 		Hash:      12345,
 		BlockName: "test-block",
 	}
@@ -114,27 +116,28 @@ func TestFSMSnapshot(t *testing.T) {
 	// Verify snapshot data
 	fsmSnapshot, ok := snapshot.(*FSMSnapshot)
 	assert.True(t, ok)
-	assert.Equal(t, "test-block", fsmSnapshot.hashMap[12345])
+	assert.Equal(t, "test-block", fsmSnapshot.lbHashToBlockName[12345])
 }
 
 func TestRaftNodeApply(t *testing.T) {
 	logger := setupTestLogger()
+	tempDir := t.TempDir()
 	config := config.Raft{
-		NodeID:   "node1",
-		Address:  "127.0.0.1:1234",
-		LeaderID: "node1",
+		NodeID:    "testRaftNodeApplynode1",
+		Address:   "127.0.0.1:6003",
+		LeaderID:  "testRaftNodeApplynode1",
+		Directory: tempDir,
 	}
 
 	node, err := NewRaftNode(logger, config)
 	require.NoError(t, err)
 	defer func() {
 		_ = node.Shutdown()
-		_ = os.RemoveAll("raft")
 	}()
 
 	// Test applying data
-	cmd := HashMapCommand{
-		Type:      CommandAddHashMapping,
+	cmd := ConsistentHashCommand{
+		Type:      CommandAddConsistentHashEntry,
 		Hash:      12345,
 		BlockName: "test-block",
 	}
@@ -148,43 +151,44 @@ func TestRaftNodeApply(t *testing.T) {
 
 func TestRaftLeadershipAndFollowers(t *testing.T) {
 	logger := setupTestLogger()
+	tempDir := t.TempDir()
 
-	// Create temporary directories for each node
-	defer os.RemoveAll("raft")
-
-	// Configure three nodes
-	nodes := make([]*RaftNode, 3)
+	// Configure three nodes with unique ports
 	nodeConfigs := []config.Raft{
 		{
-			NodeID:   "node1",
-			Address:  "127.0.0.1:1234",
-			LeaderID: "node1", // First node is the bootstrap node
+			NodeID:   "testRaftLeadershipnode1",
+			Address:  "127.0.0.1:6004",
+			LeaderID: "testRaftLeadershipnode1",
 			Peers: []config.RaftPeer{
-				{ID: "node2", Address: "127.0.0.1:1235"},
-				{ID: "node3", Address: "127.0.0.1:1236"},
+				{ID: "testRaftLeadershipnode2", Address: "127.0.0.1:6005"},
+				{ID: "testRaftLeadershipnode3", Address: "127.0.0.1:6006"},
 			},
+			Directory: tempDir,
 		},
 		{
-			NodeID:   "node2",
-			Address:  "127.0.0.1:1235",
-			LeaderID: "node1",
+			NodeID:   "testRaftLeadershipnode2",
+			Address:  "127.0.0.1:6005",
+			LeaderID: "testRaftLeadershipnode1",
 			Peers: []config.RaftPeer{
-				{ID: "node1", Address: "127.0.0.1:1234"},
-				{ID: "node3", Address: "127.0.0.1:1236"},
+				{ID: "testRaftLeadershipnode1", Address: "127.0.0.1:6004"},
+				{ID: "testRaftLeadershipnode3", Address: "127.0.0.1:6006"},
 			},
+			Directory: tempDir,
 		},
 		{
-			NodeID:   "node3",
-			Address:  "127.0.0.1:1236",
-			LeaderID: "node1",
+			NodeID:   "testRaftLeadershipnode3",
+			Address:  "127.0.0.1:6006",
+			LeaderID: "testRaftLeadershipnode1",
 			Peers: []config.RaftPeer{
-				{ID: "node1", Address: "127.0.0.1:1234"},
-				{ID: "node2", Address: "127.0.0.1:1235"},
+				{ID: "testRaftLeadershipnode1", Address: "127.0.0.1:6004"},
+				{ID: "testRaftLeadershipnode2", Address: "127.0.0.1:6005"},
 			},
+			Directory: tempDir,
 		},
 	}
 
 	// Start all nodes
+	nodes := make([]*RaftNode, len(nodeConfigs))
 	for i, cfg := range nodeConfigs {
 		node, err := NewRaftNode(logger, cfg)
 		require.NoError(t, err)
@@ -215,8 +219,8 @@ func TestRaftLeadershipAndFollowers(t *testing.T) {
 	}
 
 	// Test 3: Test cluster functionality by applying a command
-	cmd := HashMapCommand{
-		Type:      CommandAddHashMapping,
+	cmd := ConsistentHashCommand{
+		Type:      CommandAddConsistentHashEntry,
 		Hash:      12345,
 		BlockName: "test-block",
 	}

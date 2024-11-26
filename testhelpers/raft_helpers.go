@@ -2,8 +2,8 @@ package testhelpers
 
 import (
 	"fmt"
+	"net"
 	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -22,15 +22,19 @@ type TestRaftHelper struct {
 
 // NewTestRaftNode creates a Raft node for testing purposes
 func NewTestRaftNode(t *testing.T) (*TestRaftHelper, error) {
-	// Create a temporary directory for Raft data
-	tempDir, err := os.MkdirTemp("", "raft-test-*")
-	if err != nil {
-		return nil, fmt.Errorf("failed to create temp dir: %w", err)
-	}
+	tempDir := t.TempDir()
 
 	// Setup test configuration
-	nodeID := "test-node-1"
-	raftAddr := "127.0.0.1:0" // Using port 0 lets the system assign a random available port
+	nodeID := fmt.Sprintf("test-node-%d", time.Now().UnixNano())
+	// Get a random available port
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get random port: %w", err)
+	}
+	port := listener.Addr().(*net.TCPAddr).Port
+	listener.Close()
+
+	raftAddr := fmt.Sprintf("127.0.0.1:%d", port)
 
 	// Create test logger
 	logger := zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr}).
@@ -39,16 +43,16 @@ func NewTestRaftNode(t *testing.T) (*TestRaftHelper, error) {
 
 	// Create Raft configuration
 	raftConfig := config.Raft{
-		NodeID:   nodeID,
-		Address:  raftAddr,
-		LeaderID: nodeID,              // Make this node the leader for testing
-		Peers:    []config.RaftPeer{}, // Empty peers for single-node testing
+		NodeID:    nodeID,
+		Address:   raftAddr,
+		LeaderID:  nodeID,              // Make this node the leader for testing
+		Peers:     []config.RaftPeer{}, // Empty peers for single-node testing
+		Directory: tempDir,
 	}
 
 	// Create new Raft node
 	node, err := raft.NewRaftNode(logger, raftConfig)
 	if err != nil {
-		os.RemoveAll(tempDir)
 		return nil, fmt.Errorf("failed to create raft node: %w", err)
 	}
 
@@ -62,7 +66,6 @@ func NewTestRaftNode(t *testing.T) (*TestRaftHelper, error) {
 	}
 
 	if node.GetState() != raft.RaftLeaderState {
-		os.RemoveAll(tempDir)
 		return nil, fmt.Errorf("timeout waiting for node to become leader")
 	}
 
@@ -80,15 +83,6 @@ func (h *TestRaftHelper) Cleanup() error {
 		if err := h.Node.Shutdown(); err != nil {
 			return fmt.Errorf("failed to shutdown raft node: %w", err)
 		}
-	}
-
-	if err := os.RemoveAll(h.TempDir); err != nil {
-		return fmt.Errorf("failed to remove temp dir: %w", err)
-	}
-
-	// Also clean up the default raft directory
-	if err := os.RemoveAll(filepath.Join("raft", h.NodeID)); err != nil {
-		return fmt.Errorf("failed to remove raft directory: %w", err)
 	}
 
 	return nil

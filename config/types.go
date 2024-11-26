@@ -139,10 +139,11 @@ type API struct {
 }
 
 type Raft struct {
-	Address  string     `json:"address"`
-	NodeID   string     `json:"nodeID"`
-	LeaderID string     `json:"leaderID"`
-	Peers    []RaftPeer `json:"peers"`
+	Address   string     `json:"address"`
+	NodeID    string     `json:"nodeID"`
+	LeaderID  string     `json:"leaderID"`
+	Peers     []RaftPeer `json:"peers"`
+	Directory string     `json:"directory" jsonschema:"default=raft"`
 }
 
 type RaftPeer struct {
