@@ -180,6 +180,12 @@ func (c *Config) LoadDefaults(ctx context.Context) *gerr.GatewayDError {
 			GRPCNetwork: DefaultGRPCAPINetwork,
 			GRPCAddress: DefaultGRPCAPIAddress,
 		},
+		Raft: Raft{
+			Address:   DefaultRaftAddress,
+			NodeID:    DefaultRaftNodeID,
+			LeaderID:  DefaultRaftLeaderID,
+			Directory: DefaultRaftDirectory,
+		},
 	}
 
 	//nolint:nestif
