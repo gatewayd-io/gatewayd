@@ -1,6 +1,7 @@
 package testhelpers
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -12,16 +13,21 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// TestRaftHelper contains utilities for testing Raft functionality
+// TestRaftHelper contains utilities for testing Raft functionality.
 type TestRaftHelper struct {
-	Node     *raft.RaftNode
+	Node     *raft.Node
 	TempDir  string
 	NodeID   string
 	RaftAddr string
 }
 
-// NewTestRaftNode creates a Raft node for testing purposes
+const (
+	pollInterval = 100 * time.Millisecond
+)
+
+// NewTestRaftNode creates a Raft node for testing purposes.
 func NewTestRaftNode(t *testing.T) (*TestRaftHelper, error) {
+	t.Helper()
 	tempDir := t.TempDir()
 
 	// Setup test configuration
@@ -31,7 +37,12 @@ func NewTestRaftNode(t *testing.T) (*TestRaftHelper, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get random port: %w", err)
 	}
-	port := listener.Addr().(*net.TCPAddr).Port
+
+	addr, ok := listener.Addr().(*net.TCPAddr)
+	if !ok {
+		return nil, errors.New("failed to get TCP address from listener")
+	}
+	port := addr.Port
 	listener.Close()
 
 	raftAddr := fmt.Sprintf("127.0.0.1:%d", port)
@@ -57,16 +68,16 @@ func NewTestRaftNode(t *testing.T) (*TestRaftHelper, error) {
 	}
 
 	// Wait for the node to become leader
-	timeout := time.Now().Add(3 * time.Second)
+	timeout := time.Now().Add(raft.LeaderElectionTimeout)
 	for time.Now().Before(timeout) {
 		if node.GetState() == raft.RaftLeaderState {
 			break
 		}
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(pollInterval)
 	}
 
 	if node.GetState() != raft.RaftLeaderState {
-		return nil, fmt.Errorf("timeout waiting for node to become leader")
+		return nil, errors.New("timeout waiting for node to become leader")
 	}
 
 	return &TestRaftHelper{
@@ -77,7 +88,7 @@ func NewTestRaftNode(t *testing.T) (*TestRaftHelper, error) {
 	}, nil
 }
 
-// Cleanup removes temporary files and shuts down the Raft node
+// Cleanup removes temporary files and shuts down the Raft node.
 func (h *TestRaftHelper) Cleanup() error {
 	if h.Node != nil {
 		if err := h.Node.Shutdown(); err != nil {

@@ -188,12 +188,17 @@ func TestRaftLeadershipAndFollowers(t *testing.T) {
 	}
 
 	// Start all nodes
-	nodes := make([]*RaftNode, len(nodeConfigs))
+	nodes := make([]*Node, len(nodeConfigs))
 	for i, cfg := range nodeConfigs {
 		node, err := NewRaftNode(logger, cfg)
 		require.NoError(t, err)
 		nodes[i] = node
-		defer node.Shutdown()
+		defer func() {
+			err := node.Shutdown()
+			if err != nil {
+				t.Errorf("Failed to shutdown node: %v", err)
+			}
+		}()
 	}
 
 	// Wait for leader election
@@ -201,7 +206,7 @@ func TestRaftLeadershipAndFollowers(t *testing.T) {
 
 	// Test 1: Verify that exactly one leader is elected
 	leaderCount := 0
-	var leaderNode *RaftNode
+	var leaderNode *Node
 	for _, node := range nodes {
 		if node.GetState() == raft.Leader {
 			leaderCount++

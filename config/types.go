@@ -140,8 +140,8 @@ type API struct {
 
 type Raft struct {
 	Address   string     `json:"address"`
-	NodeID    string     `json:"nodeID"`
-	LeaderID  string     `json:"leaderID"`
+	NodeID    string     `json:"nodeId"`
+	LeaderID  string     `json:"leaderId"`
 	Peers     []RaftPeer `json:"peers"`
 	Directory string     `json:"directory" jsonschema:"default=raft"`
 }

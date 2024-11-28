@@ -1,12 +1,10 @@
 package network
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 	"sync"
-	"time"
-
-	"encoding/json"
 
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/raft"
@@ -83,7 +81,7 @@ func (ch *ConsistentHash) NextProxy(conn IConnWrapper) (IProxy, *gerr.GatewayDEr
 	}
 
 	// Apply the command through Raft
-	if err := ch.server.RaftNode.Apply(cmdBytes, 10*time.Second); err != nil {
+	if err := ch.server.RaftNode.Apply(cmdBytes, raft.LeaderElectionTimeout); err != nil {
 		return nil, gerr.ErrNoProxiesAvailable.Wrap(err)
 	}
 

@@ -150,7 +150,7 @@ func TestConsistentHashNextProxyUseFullAddress(t *testing.T) {
 // 1. Multiple concurrent requests from the same IP address consistently map to the same proxy
 // 2. The mapping is stable across sequential calls
 // 3. Different IP addresses map to different proxies
-// 4. The Raft-based consistent hash remains thread-safe under high concurrency
+// 4. The Raft-based consistent hash remains thread-safe under high concurrency.
 func TestConsistentHashNextProxyConcurrency(t *testing.T) {
 	// Setup mocks
 	conn1 := new(MockConnWrapper)

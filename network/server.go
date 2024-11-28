@@ -89,7 +89,7 @@ type Server struct {
 	LoadbalancerConsistentHash *config.ConsistentHash
 	connectionToProxyMap       *sync.Map
 
-	RaftNode *raft.RaftNode
+	RaftNode *raft.Node
 
 	ProxyByBlock map[string]IProxy
 }
@@ -811,7 +811,7 @@ func (s *Server) RemoveConnectionFromMap(conn *ConnWrapper) {
 	s.connectionToProxyMap.Delete(conn)
 }
 
-// Initialize the map when creating proxies
+// Initialize the map when creating proxies.
 func (s *Server) initializeProxies() {
 	s.ProxyByBlock = make(map[string]IProxy)
 	for _, proxy := range s.Proxies {
