@@ -1,11 +1,13 @@
 package network
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 	"sync"
 
 	gerr "github.com/gatewayd-io/gatewayd/errors"
+	"github.com/gatewayd-io/gatewayd/raft"
 	"github.com/spaolacci/murmur3"
 )
 
@@ -14,8 +16,8 @@ import (
 type ConsistentHash struct {
 	originalStrategy LoadBalancerStrategy
 	useSourceIP      bool
-	hashMap          map[uint64]IProxy
 	mu               sync.Mutex
+	server           *Server
 }
 
 // NewConsistentHash creates a new ConsistentHash instance. It requires a server configuration and an original
@@ -25,7 +27,7 @@ func NewConsistentHash(server *Server, originalStrategy LoadBalancerStrategy) *C
 	return &ConsistentHash{
 		originalStrategy: originalStrategy,
 		useSourceIP:      server.LoadbalancerConsistentHash.UseSourceIP,
-		hashMap:          make(map[uint64]IProxy),
+		server:           server,
 	}
 }
 
@@ -50,22 +52,38 @@ func (ch *ConsistentHash) NextProxy(conn IConnWrapper) (IProxy, *gerr.GatewayDEr
 		key = conn.RemoteAddr().String()
 	}
 
-	hash := hashKey(key)
+	hash := hashKey(key + ch.server.GroupName)
 
-	proxy, exists := ch.hashMap[hash]
-
+	// Get block name for this hash
+	blockName, exists := ch.server.RaftNode.Fsm.GetProxyBlock(hash)
 	if exists {
-		return proxy, nil
+		if proxy, ok := ch.server.ProxyByBlock[blockName]; ok {
+			return proxy, nil
+		}
 	}
 
-	// If no hash exists, fallback to the original strategy
+	// If no hash exists or no matching proxy found, fallback to the original strategy
 	proxy, err := ch.originalStrategy.NextProxy(conn)
 	if err != nil {
 		return nil, gerr.ErrNoProxiesAvailable.Wrap(err)
 	}
 
-	// Add the selected proxy to the hash map for future requests
-	ch.hashMap[hash] = proxy
+	// Create and apply the command through Raft
+	cmd := raft.ConsistentHashCommand{
+		Type:      raft.CommandAddConsistentHashEntry,
+		Hash:      hash,
+		BlockName: proxy.GetBlockName(),
+	}
+
+	cmdBytes, marshalErr := json.Marshal(cmd)
+	if marshalErr != nil {
+		return nil, gerr.ErrNoProxiesAvailable.Wrap(marshalErr)
+	}
+
+	// Apply the command through Raft
+	if err := ch.server.RaftNode.Apply(cmdBytes, raft.LeaderElectionTimeout); err != nil {
+		return nil, gerr.ErrNoProxiesAvailable.Wrap(err)
+	}
 
 	return proxy, nil
 }

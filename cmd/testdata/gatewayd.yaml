@@ -73,3 +73,9 @@ servers:
 
 api:
   enabled: True
+
+raft:
+  address: 127.0.0.1:2223
+  nodeID: node2
+  leaderID: node2
+  peers: {}

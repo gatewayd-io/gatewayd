@@ -180,6 +180,12 @@ func (c *Config) LoadDefaults(ctx context.Context) *gerr.GatewayDError {
 			GRPCNetwork: DefaultGRPCAPINetwork,
 			GRPCAddress: DefaultGRPCAPIAddress,
 		},
+		Raft: Raft{
+			Address:   DefaultRaftAddress,
+			NodeID:    DefaultRaftNodeID,
+			LeaderID:  DefaultRaftLeaderID,
+			Directory: DefaultRaftDirectory,
+		},
 	}
 
 	//nolint:nestif
@@ -201,7 +207,7 @@ func (c *Config) LoadDefaults(ctx context.Context) *gerr.GatewayDError {
 				return gerr.ErrConfigParseError.Wrap(err)
 			}
 
-			if configObject == "api" {
+			if configObject == "api" || configObject == "raft" {
 				// Handle API configuration separately
 				// TODO: Add support for multiple API config groups.
 				continue
