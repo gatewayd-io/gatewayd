@@ -139,16 +139,18 @@ type API struct {
 }
 
 type Raft struct {
-	Address   string     `json:"address"`
-	NodeID    string     `json:"nodeId"`
-	LeaderID  string     `json:"leaderId"`
-	Peers     []RaftPeer `json:"peers"`
-	Directory string     `json:"directory" jsonschema:"default=raft"`
+	Address     string     `json:"address"`
+	NodeID      string     `json:"nodeId"`
+	LeaderID    string     `json:"leaderId"`
+	Peers       []RaftPeer `json:"peers"`
+	Directory   string     `json:"directory" jsonschema:"default=raft"`
+	GRPCAddress string     `json:"grpcAddress"`
 }
 
 type RaftPeer struct {
-	ID      string `json:"id"`
-	Address string `json:"address"`
+	ID          string `json:"id"`
+	Address     string `json:"address"`
+	GRPCAddress string `json:"grpcAddress"`
 }
 
 type GlobalConfig struct {

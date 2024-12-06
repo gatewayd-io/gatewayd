@@ -1,6 +1,7 @@
 package raft
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,6 +15,9 @@ import (
 	"github.com/hashicorp/raft"
 	raftboltdb "github.com/hashicorp/raft-boltdb"
 	"github.com/rs/zerolog"
+	"google.golang.org/grpc"
+
+	pb "github.com/gatewayd-io/gatewayd/raft/proto"
 )
 
 // Command types for Raft operations.
@@ -44,7 +48,10 @@ type Node struct {
 	snapshotStore raft.SnapshotStore
 	transport     raft.Transport
 	Logger        zerolog.Logger
-	Peers         []raft.Server
+	Peers         []config.RaftPeer
+	rpcServer     *grpc.Server
+	rpcClient     *rpcClient
+	grpcAddr      string
 }
 
 // NewRaftNode creates and initializes a new Raft node.
@@ -112,7 +119,16 @@ func NewRaftNode(logger zerolog.Logger, raftConfig config.Raft) (*Node, error) {
 		snapshotStore: snapshotStore,
 		transport:     transport,
 		Logger:        logger,
-		Peers:         convertPeers(raftConfig.Peers),
+		Peers:         raftConfig.Peers,
+		grpcAddr:      raftConfig.GRPCAddress,
+	}
+
+	// Initialize RPC client
+	node.rpcClient = newRPCClient(node)
+
+	// Start RPC server
+	if err := node.startRPCServer(); err != nil {
+		return nil, fmt.Errorf("failed to start RPC server: %w", err)
 	}
 
 	// Handle bootstrapping
@@ -123,8 +139,8 @@ func NewRaftNode(logger zerolog.Logger, raftConfig config.Raft) (*Node, error) {
 		}
 		for i, peer := range node.Peers {
 			configuration.Servers[i] = raft.Server{
-				ID:      peer.ID,
-				Address: peer.Address,
+				ID:      raft.ServerID(peer.ID),
+				Address: raft.ServerAddress(peer.Address),
 			}
 		}
 		configuration.Servers = append(configuration.Servers, raft.Server{
@@ -162,7 +178,7 @@ func (n *Node) monitorLeadership() {
 				existingConfig := n.raft.GetConfiguration().Configuration()
 				peerExists := false
 				for _, server := range existingConfig.Servers {
-					if server.ID == peer.ID {
+					if server.ID == raft.ServerID(peer.ID) {
 						peerExists = true
 						n.Logger.Info().Msgf("Peer %s already exists in Raft cluster, skipping", peer.ID)
 						break
@@ -200,8 +216,16 @@ func (n *Node) RemovePeer(peerID string) error {
 	return nil
 }
 
-// Apply applies a new log entry to the Raft log.
+// Apply is the public method that handles forwarding if necessary
 func (n *Node) Apply(data []byte, timeout time.Duration) error {
+	if n.raft.State() != raft.Leader {
+		return n.forwardToLeader(data, timeout)
+	}
+	return n.applyInternal(data, timeout)
+}
+
+// applyInternal is the internal method that actually applies the data
+func (n *Node) applyInternal(data []byte, timeout time.Duration) error {
 	future := n.raft.Apply(data, timeout)
 	if err := future.Error(); err != nil {
 		return fmt.Errorf("failed to apply log entry: %w", err)
@@ -209,8 +233,59 @@ func (n *Node) Apply(data []byte, timeout time.Duration) error {
 	return nil
 }
 
-// Shutdown gracefully shuts down the Raft node.
+func (n *Node) forwardToLeader(data []byte, timeout time.Duration) error {
+	leaderAddr, leaderId := n.raft.LeaderWithID()
+	if leaderId == "" {
+		return fmt.Errorf("no leader available")
+	}
+
+	n.Logger.Debug().
+		Str("leader_id", string(leaderId)).
+		Str("leader_addr", string(leaderAddr)).
+		Msg("forwarding request to leader")
+
+	var leaderGrpcAddr string
+	for _, peer := range n.Peers {
+		if raft.ServerID(peer.ID) == leaderId {
+			leaderGrpcAddr = string(peer.GRPCAddress)
+			break
+		}
+	}
+	// Get the RPC client for the leader
+	client, err := n.rpcClient.getClient(string(leaderGrpcAddr))
+	if err != nil {
+		return fmt.Errorf("failed to get client for leader: %w", err)
+	}
+
+	// Create context with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	// Forward the request
+	resp, err := client.ForwardApply(ctx, &pb.ApplyRequest{
+		Data:      data,
+		TimeoutMs: timeout.Milliseconds(),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to forward request: %w", err)
+	}
+
+	if !resp.Success {
+		return fmt.Errorf("leader failed to apply: %s", resp.Error)
+	}
+
+	return nil
+}
+
+// Update Shutdown to clean up RPC resources
 func (n *Node) Shutdown() error {
+	if n.rpcServer != nil {
+		n.rpcServer.GracefulStop()
+	}
+	if n.rpcClient != nil {
+		n.rpcClient.close()
+	}
+
 	if err := n.raft.Shutdown().Error(); err != nil {
 		return fmt.Errorf("failed to shutdown raft node: %w", err)
 	}
@@ -312,4 +387,22 @@ func (f *FSMSnapshot) Release() {}
 // GetState returns the current Raft state.
 func (n *Node) GetState() raft.RaftState {
 	return n.raft.State()
+}
+
+func (n *Node) startRPCServer() error {
+	listener, err := net.Listen("tcp", n.grpcAddr)
+	if err != nil {
+		return fmt.Errorf("failed to listen on %s: %w", n.grpcAddr, err)
+	}
+
+	n.rpcServer = grpc.NewServer()
+	pb.RegisterRaftServiceServer(n.rpcServer, &rpcServer{node: n})
+
+	go func() {
+		if err := n.rpcServer.Serve(listener); err != nil {
+			n.Logger.Error().Err(err).Msg("RPC server failed")
+		}
+	}()
+
+	return nil
 }
