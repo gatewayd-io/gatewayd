@@ -109,8 +109,9 @@ api:
 
 raft:
   address: 127.0.0.1:2223
-  nodeId: node2
-  leaderId: node2
-  peers: {}
-    # - id: node1
-    #   address: 127.0.0.1:2222
+  nodeId: node1
+  leaderId: node1
+  grpcAddress: 127.0.0.1:50051
+  peers: []
+  # - id: node1
+  #   address: 127.0.0.1:2222
