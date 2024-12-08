@@ -15,15 +15,15 @@ type rpcServer struct {
 	node *Node
 }
 
-func (s *rpcServer) ForwardApply(ctx context.Context, req *pb.ApplyRequest) (*pb.ApplyResponse, error) {
-	timeout := time.Duration(req.TimeoutMs) * time.Millisecond
+func (s *rpcServer) ForwardApply(_ context.Context, req *pb.ApplyRequest) (*pb.ApplyResponse, error) {
+	timeout := time.Duration(req.GetTimeoutMs()) * time.Millisecond
 
-	err := s.node.applyInternal(req.Data, timeout)
+	err := s.node.applyInternal(req.GetData(), timeout)
 	if err != nil {
 		return &pb.ApplyResponse{
 			Success: false,
 			Error:   err.Error(),
-		}, nil
+		}, err
 	}
 
 	return &pb.ApplyResponse{

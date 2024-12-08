@@ -3,6 +3,7 @@ package raft
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -12,12 +13,11 @@ import (
 	"time"
 
 	"github.com/gatewayd-io/gatewayd/config"
+	pb "github.com/gatewayd-io/gatewayd/raft/proto"
 	"github.com/hashicorp/raft"
 	raftboltdb "github.com/hashicorp/raft-boltdb"
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
-
-	pb "github.com/gatewayd-io/gatewayd/raft/proto"
 )
 
 // Command types for Raft operations.
@@ -155,17 +155,6 @@ func NewRaftNode(logger zerolog.Logger, raftConfig config.Raft) (*Node, error) {
 	return node, nil
 }
 
-func convertPeers(configPeers []config.RaftPeer) []raft.Server {
-	peers := make([]raft.Server, len(configPeers))
-	for i, peer := range configPeers {
-		peers[i] = raft.Server{
-			ID:      raft.ServerID(peer.ID),
-			Address: raft.ServerAddress(peer.Address),
-		}
-	}
-	return peers
-}
-
 // monitorLeadership checks if the node is the Raft leader and logs state changes.
 func (n *Node) monitorLeadership() {
 	for {
@@ -187,7 +176,7 @@ func (n *Node) monitorLeadership() {
 				if peerExists {
 					continue
 				}
-				err := n.AddPeer(string(peer.ID), string(peer.Address))
+				err := n.AddPeer(peer.ID, peer.Address)
 				if err != nil {
 					n.Logger.Error().Err(err).Msgf("Failed to add node %s to Raft cluster", peer.ID)
 				}
@@ -216,7 +205,7 @@ func (n *Node) RemovePeer(peerID string) error {
 	return nil
 }
 
-// Apply is the public method that handles forwarding if necessary
+// Apply is the public method that handles forwarding if necessary.
 func (n *Node) Apply(data []byte, timeout time.Duration) error {
 	if n.raft.State() != raft.Leader {
 		return n.forwardToLeader(data, timeout)
@@ -224,7 +213,7 @@ func (n *Node) Apply(data []byte, timeout time.Duration) error {
 	return n.applyInternal(data, timeout)
 }
 
-// applyInternal is the internal method that actually applies the data
+// applyInternal is the internal method that actually applies the data.
 func (n *Node) applyInternal(data []byte, timeout time.Duration) error {
 	future := n.raft.Apply(data, timeout)
 	if err := future.Error(); err != nil {
@@ -234,25 +223,25 @@ func (n *Node) applyInternal(data []byte, timeout time.Duration) error {
 }
 
 func (n *Node) forwardToLeader(data []byte, timeout time.Duration) error {
-	leaderAddr, leaderId := n.raft.LeaderWithID()
-	if leaderId == "" {
-		return fmt.Errorf("no leader available")
+	leaderAddr, leaderID := n.raft.LeaderWithID()
+	if leaderID == "" {
+		return errors.New("no leader available")
 	}
 
 	n.Logger.Debug().
-		Str("leader_id", string(leaderId)).
+		Str("leader_id", string(leaderID)).
 		Str("leader_addr", string(leaderAddr)).
 		Msg("forwarding request to leader")
 
 	var leaderGrpcAddr string
 	for _, peer := range n.Peers {
-		if raft.ServerID(peer.ID) == leaderId {
-			leaderGrpcAddr = string(peer.GRPCAddress)
+		if raft.ServerID(peer.ID) == leaderID {
+			leaderGrpcAddr = peer.GRPCAddress
 			break
 		}
 	}
 	// Get the RPC client for the leader
-	client, err := n.rpcClient.getClient(string(leaderGrpcAddr))
+	client, err := n.rpcClient.getClient(leaderGrpcAddr)
 	if err != nil {
 		return fmt.Errorf("failed to get client for leader: %w", err)
 	}
@@ -270,14 +259,14 @@ func (n *Node) forwardToLeader(data []byte, timeout time.Duration) error {
 		return fmt.Errorf("failed to forward request: %w", err)
 	}
 
-	if !resp.Success {
-		return fmt.Errorf("leader failed to apply: %s", resp.Error)
+	if !resp.GetSuccess() {
+		return fmt.Errorf("leader failed to apply: %s", resp.GetError())
 	}
 
 	return nil
 }
 
-// Update Shutdown to clean up RPC resources
+// Update Shutdown to clean up RPC resources.
 func (n *Node) Shutdown() error {
 	if n.rpcServer != nil {
 		n.rpcServer.GracefulStop()

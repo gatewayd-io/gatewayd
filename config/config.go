@@ -347,9 +347,9 @@ func (c *Config) LoadPluginEnvVars(ctx context.Context) *gerr.GatewayDError {
 
 func loadEnvVarsWithTransform() *env.Env {
 	// Use ProviderWithValue to transform both key and value
-	return env.ProviderWithValue(EnvPrefix, ".", func(s string, v string) (string, interface{}) {
+	return env.ProviderWithValue(EnvPrefix, ".", func(envKey string, value string) (string, interface{}) {
 		// Transform the key
-		key := strings.ToLower(strings.TrimPrefix(s, EnvPrefix))
+		key := strings.ToLower(strings.TrimPrefix(envKey, EnvPrefix))
 
 		structs := []any{
 			&API{},
@@ -382,14 +382,14 @@ func loadEnvVarsWithTransform() *env.Env {
 		// Check if the key is "peers" and transform the value using JSON unmarshal
 		if transformedParts.String() == "raft.peers" {
 			var raftPeers []RaftPeer
-			if err := json.Unmarshal([]byte(v), &raftPeers); err != nil {
+			if err := json.Unmarshal([]byte(value), &raftPeers); err != nil {
 				return transformedParts.String(), fmt.Errorf("failed to unmarshal peers: %w", err)
 			}
 			return transformedParts.String(), raftPeers
 		}
 
 		// Return the key and value as is if no transformation is needed
-		return transformedParts.String(), v
+		return transformedParts.String(), value
 	})
 }
 
