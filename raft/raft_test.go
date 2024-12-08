@@ -2,7 +2,7 @@ package raft
 
 import (
 	"encoding/json"
-	"os"
+	"io"
 	"testing"
 	"time"
 
@@ -14,7 +14,7 @@ import (
 )
 
 func setupTestLogger() zerolog.Logger {
-	return zerolog.New(os.Stdout).With().Timestamp().Logger()
+	return zerolog.New(io.Discard).With().Timestamp().Logger()
 }
 
 func TestNewRaftNode(t *testing.T) {
