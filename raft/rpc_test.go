@@ -16,8 +16,9 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-// setupGRPCServer creates a gRPC server for testing on a random port
+// setupGRPCServer creates a gRPC server for testing on a random port.
 func setupGRPCServer(t *testing.T, node *Node) (*grpc.Server, net.Listener) {
+	t.Helper()
 	lis, err := net.Listen("tcp", "localhost:0") // Bind to a random available port
 	require.NoError(t, err, "Failed to create listener")
 
@@ -33,12 +34,13 @@ func setupGRPCServer(t *testing.T, node *Node) (*grpc.Server, net.Listener) {
 	return server, lis
 }
 
-// getListenerAddr returns address for the listener
+// getListenerAddr returns address for the listener.
 func getListenerAddr(lis net.Listener) string {
 	return lis.Addr().String()
 }
 
 func setupNodes(t *testing.T, logger zerolog.Logger, ports []int, tempDir string) []*Node {
+	t.Helper()
 	nodeConfigs := []config.Raft{
 		{
 			NodeID:      "testRaftLeadershipnode1",
@@ -103,9 +105,8 @@ func TestRPCServer_ForwardApply(t *testing.T) {
 			wantErr:     false,
 		},
 	}
-
-	for i, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for i, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			tempDir := t.TempDir()
 			logger := setupTestLogger()
 			ports := []int{6004 + i, 6005 + i, 6006 + i}
@@ -127,17 +128,17 @@ func TestRPCServer_ForwardApply(t *testing.T) {
 
 			client := pb.NewRaftServiceClient(conn)
 			resp, err := client.ForwardApply(context.Background(), &pb.ApplyRequest{
-				Data:      tt.data,
-				TimeoutMs: tt.timeoutMs,
+				Data:      testCase.data,
+				TimeoutMs: testCase.timeoutMs,
 			})
 
-			if tt.wantErr {
+			if testCase.wantErr {
 				assert.Error(t, err)
 				return
 			}
 
 			require.NoError(t, err)
-			assert.Equal(t, tt.wantSuccess, resp.Success)
+			assert.Equal(t, testCase.wantSuccess, resp.GetSuccess())
 		})
 	}
 }
