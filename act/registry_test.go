@@ -781,7 +781,7 @@ func Test_Run_Async_Redis(t *testing.T) {
 	assert.Equal(t, err, gerr.ErrAsyncAction, "expected async action sentinel error")
 	assert.Nil(t, result, "expected nil result")
 
-	time.Sleep(time.Millisecond) // wait for async action to complete
+	time.Sleep(time.Millisecond * 2) // wait for async action to complete
 
 	// The following is the expected log output from running the async action.
 	assert.Contains(t, out.String(), "{\"level\":\"debug\",\"action\":\"log\",\"executionMode\":\"async\",\"message\":\"Running action\"}") //nolint:lll
