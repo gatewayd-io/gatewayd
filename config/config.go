@@ -180,6 +180,13 @@ func (c *Config) LoadDefaults(ctx context.Context) *gerr.GatewayDError {
 			GRPCNetwork: DefaultGRPCAPINetwork,
 			GRPCAddress: DefaultGRPCAPIAddress,
 		},
+		Raft: Raft{
+			Address:     DefaultRaftAddress,
+			NodeID:      DefaultRaftNodeID,
+			IsBootstrap: DefaultRaftIsBootstrap,
+			Directory:   DefaultRaftDirectory,
+			GRPCAddress: DefaultRaftGRPCAddress,
+		},
 	}
 
 	//nolint:nestif
@@ -201,7 +208,7 @@ func (c *Config) LoadDefaults(ctx context.Context) *gerr.GatewayDError {
 				return gerr.ErrConfigParseError.Wrap(err)
 			}
 
-			if configObject == "api" {
+			if configObject == "api" || configObject == "raft" {
 				// Handle API configuration separately
 				// TODO: Add support for multiple API config groups.
 				continue
@@ -309,7 +316,7 @@ func (c *Config) LoadDefaults(ctx context.Context) *gerr.GatewayDError {
 func (c *Config) LoadGlobalEnvVars(ctx context.Context) *gerr.GatewayDError {
 	_, span := otel.Tracer(TracerName).Start(ctx, "Load global environment variables")
 
-	if err := c.GlobalKoanf.Load(loadEnvVars(), nil); err != nil {
+	if err := c.GlobalKoanf.Load(loadEnvVarsWithTransform(), nil); err != nil {
 		span.RecordError(err)
 		span.End()
 		return gerr.ErrConfigParseError.Wrap(
@@ -326,7 +333,7 @@ func (c *Config) LoadGlobalEnvVars(ctx context.Context) *gerr.GatewayDError {
 func (c *Config) LoadPluginEnvVars(ctx context.Context) *gerr.GatewayDError {
 	_, span := otel.Tracer(TracerName).Start(ctx, "Load plugin environment variables")
 
-	if err := c.PluginKoanf.Load(loadEnvVars(), nil); err != nil {
+	if err := c.PluginKoanf.Load(loadEnvVarsWithTransform(), nil); err != nil {
 		span.RecordError(err)
 		span.End()
 		return gerr.ErrConfigParseError.Wrap(
@@ -338,41 +345,52 @@ func (c *Config) LoadPluginEnvVars(ctx context.Context) *gerr.GatewayDError {
 	return nil
 }
 
-func loadEnvVars() *env.Env {
-	return env.Provider(EnvPrefix, ".", transformEnvVariable)
-}
+func loadEnvVarsWithTransform() *env.Env {
+	// Use ProviderWithValue to transform both key and value
+	return env.ProviderWithValue(EnvPrefix, ".", func(envKey string, value string) (string, interface{}) {
+		// Transform the key
+		key := strings.ToLower(strings.TrimPrefix(envKey, EnvPrefix))
 
-// transformEnvVariable transforms the environment variable name to a format based on JSON tags.
-func transformEnvVariable(envVar string) string {
-	structs := []any{
-		&API{},
-		&Logger{},
-		&Pool{},
-		&Proxy{},
-		&Server{},
-		&Metrics{},
-		&PluginConfig{},
-	}
-	tagMapping := make(map[string]string)
-	generateTagMapping(structs, tagMapping)
-
-	lowerEnvVar := strings.ToLower(strings.TrimPrefix(envVar, EnvPrefix))
-	parts := strings.Split(lowerEnvVar, "_")
-
-	var transformedParts strings.Builder
-
-	for i, part := range parts {
-		if i > 0 {
-			transformedParts.WriteString(".")
+		structs := []any{
+			&API{},
+			&Logger{},
+			&Pool{},
+			&Proxy{},
+			&Server{},
+			&Metrics{},
+			&PluginConfig{},
+			&Raft{},
 		}
-		if mappedValue, exists := tagMapping[part]; exists {
-			transformedParts.WriteString(mappedValue)
-		} else {
-			transformedParts.WriteString(part)
-		}
-	}
+		tagMapping := make(map[string]string)
+		generateTagMapping(structs, tagMapping)
 
-	return transformedParts.String()
+		parts := strings.Split(key, "_")
+
+		var transformedParts strings.Builder
+
+		for i, part := range parts {
+			if i > 0 {
+				transformedParts.WriteString(".")
+			}
+			if mappedValue, exists := tagMapping[part]; exists {
+				transformedParts.WriteString(mappedValue)
+			} else {
+				transformedParts.WriteString(part)
+			}
+		}
+
+		// Check if the key is "peers" and transform the value using JSON unmarshal
+		if transformedParts.String() == "raft.peers" {
+			var raftPeers []RaftPeer
+			if err := json.Unmarshal([]byte(value), &raftPeers); err != nil {
+				return transformedParts.String(), fmt.Errorf("failed to unmarshal peers: %w", err)
+			}
+			return transformedParts.String(), raftPeers
+		}
+
+		// Return the key and value as is if no transformation is needed
+		return transformedParts.String(), value
+	})
 }
 
 // LoadGlobalConfigFile loads the plugin configuration file.

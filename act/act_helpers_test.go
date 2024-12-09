@@ -62,7 +62,10 @@ func createTestRedis(t *testing.T) string {
 	req := testcontainers.ContainerRequest{
 		Image:        "redis:6",
 		ExposedPorts: []string{"6379/tcp"},
-		WaitingFor:   wait.ForLog("Ready to accept connections"),
+		WaitingFor: wait.ForAll(
+			wait.ForLog("Ready to accept connections"),
+			wait.ForListeningPort("6379/tcp"),
+		),
 	}
 	redisContainer, err := testcontainers.GenericContainer(
 		ctx, testcontainers.GenericContainerRequest{

@@ -1,0 +1,18 @@
+syntax = "proto3";
+package raft;
+
+option go_package = "github.com/gatewayd-io/gatewayd/raft/proto";
+
+service RaftService {
+  rpc ForwardApply (ApplyRequest) returns (ApplyResponse) {}
+}
+
+message ApplyRequest {
+  bytes data = 1;
+  int64 timeout_ms = 2;
+}
+
+message ApplyResponse {
+  bool success = 1;
+  string error = 2;
+} 
