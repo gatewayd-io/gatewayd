@@ -747,10 +747,12 @@ func Test_Run_Async_Redis(t *testing.T) {
 	consumer, err := sdkAct.NewConsumer(hclogger, rdb, 5, "test-async-chan")
 	require.NoError(t, err)
 
-	require.NoError(t, consumer.Subscribe(context.Background(), func(ctx context.Context, task []byte) error {
-		err := actRegistry.runAsyncActionFn(ctx, task)
-		waitGroup.Done()
-		return err
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	require.NoError(t, consumer.Subscribe(ctx, func(ctx context.Context, task []byte) error {
+		defer waitGroup.Done()
+		return actRegistry.runAsyncActionFn(ctx, task)
 	}))
 
 	outputs := actRegistry.Apply([]sdkAct.Signal{
@@ -781,7 +783,7 @@ func Test_Run_Async_Redis(t *testing.T) {
 	assert.Equal(t, err, gerr.ErrAsyncAction, "expected async action sentinel error")
 	assert.Nil(t, result, "expected nil result")
 
-	time.Sleep(time.Millisecond * 2) // wait for async action to complete
+	time.Sleep(time.Millisecond) // wait for async action to complete
 
 	// The following is the expected log output from running the async action.
 	assert.Contains(t, out.String(), "{\"level\":\"debug\",\"action\":\"log\",\"executionMode\":\"async\",\"message\":\"Running action\"}") //nolint:lll
