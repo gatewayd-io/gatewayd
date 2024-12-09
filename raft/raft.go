@@ -168,7 +168,7 @@ func (n *Node) monitorLeadership() {
 				for _, server := range existingConfig.Servers {
 					if server.ID == raft.ServerID(peer.ID) {
 						peerExists = true
-						n.Logger.Info().Msgf("Peer %s already exists in Raft cluster, skipping", peer.ID)
+						n.Logger.Debug().Msgf("Peer %s already exists in Raft cluster, skipping", peer.ID)
 						break
 					}
 				}
@@ -181,10 +181,10 @@ func (n *Node) monitorLeadership() {
 				}
 			}
 		} else {
-			n.Logger.Info().Msg("This node is a Raft follower")
+			n.Logger.Debug().Msg("This node is a Raft follower")
 		}
 
-		time.Sleep(leadershipCheckInterval) // Use the named constant here
+		time.Sleep(leadershipCheckInterval)
 	}
 }
 
@@ -221,6 +221,10 @@ func (n *Node) applyInternal(data []byte, timeout time.Duration) error {
 	return nil
 }
 
+// forwardToLeader forwards a request to the current Raft leader node. It first identifies
+// the leader's gRPC address by matching the leader ID with the peer list. Then it establishes
+// a gRPC connection to forward the request. The method handles timeouts and returns any errors
+// that occur during forwarding.
 func (n *Node) forwardToLeader(data []byte, timeout time.Duration) error {
 	leaderAddr, leaderID := n.raft.LeaderWithID()
 	if leaderID == "" {
@@ -356,6 +360,7 @@ type FSMSnapshot struct {
 	lbHashToBlockName map[uint64]string
 }
 
+// Persist writes the FSMSnapshot data to the given SnapshotSink.
 func (f *FSMSnapshot) Persist(sink raft.SnapshotSink) error {
 	err := json.NewEncoder(sink).Encode(f.lbHashToBlockName)
 	if err != nil {
@@ -377,6 +382,8 @@ func (n *Node) GetState() raft.RaftState {
 	return n.raft.State()
 }
 
+// startRPCServer starts a gRPC server on the configured address to handle Raft RPC requests.
+// It returns an error if the server fails to start listening on the configured address.
 func (n *Node) startRPCServer() error {
 	listener, err := net.Listen("tcp", n.grpcAddr)
 	if err != nil {

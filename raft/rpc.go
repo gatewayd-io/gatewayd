@@ -10,11 +10,13 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+// rpcServer implements the RaftServiceServer interface and handles incoming RPC requests.
 type rpcServer struct {
 	pb.UnimplementedRaftServiceServer
 	node *Node
 }
 
+// ForwardApply processes an ApplyRequest by applying the data to the node with a specified timeout.
 func (s *rpcServer) ForwardApply(_ context.Context, req *pb.ApplyRequest) (*pb.ApplyResponse, error) {
 	timeout := time.Duration(req.GetTimeoutMs()) * time.Millisecond
 
@@ -31,12 +33,14 @@ func (s *rpcServer) ForwardApply(_ context.Context, req *pb.ApplyRequest) (*pb.A
 	}, nil
 }
 
+// rpcClient manages gRPC clients and connections for communicating with other nodes.
 type rpcClient struct {
 	clients map[string]pb.RaftServiceClient
 	conns   map[string]*grpc.ClientConn
 	node    *Node
 }
 
+// newRPCClient creates a new rpcClient for the given node.
 func newRPCClient(node *Node) *rpcClient {
 	return &rpcClient{
 		clients: make(map[string]pb.RaftServiceClient),
@@ -45,6 +49,7 @@ func newRPCClient(node *Node) *rpcClient {
 	}
 }
 
+// getClient retrieves or establishes a gRPC client connection to the specified address.
 func (c *rpcClient) getClient(address string) (pb.RaftServiceClient, error) {
 	if client, ok := c.clients[address]; ok {
 		return client, nil
@@ -64,6 +69,7 @@ func (c *rpcClient) getClient(address string) (pb.RaftServiceClient, error) {
 	return client, nil
 }
 
+// close terminates all gRPC client connections managed by the rpcClient.
 func (c *rpcClient) close() {
 	for _, conn := range c.conns {
 		conn.Close()

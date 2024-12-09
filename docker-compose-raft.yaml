@@ -47,7 +47,8 @@ services:
       timeout: 5s
       retries: 5
   gatewayd-1:
-    image: gatewayd:raft
+    image: gatewaydio/gatewayd:latest
+    pull_policy: always
     command:
       [
         "run",
@@ -96,7 +97,8 @@ services:
         condition: service_completed_successfully
 
   gatewayd-2:
-    image: gatewayd:raft
+    image: gatewaydio/gatewayd:latest
+    pull_policy: always
     command:
       [
         "run",
@@ -127,7 +129,8 @@ services:
       - ./raft-data-2:/var/lib/gatewayd/raft
 
   gatewayd-3:
-    image: gatewayd:raft
+    image: gatewaydio/gatewayd:latest
+    pull_policy: always
     command:
       [
         "run",
