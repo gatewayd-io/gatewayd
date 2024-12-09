@@ -141,7 +141,7 @@ type API struct {
 type Raft struct {
 	Address     string     `json:"address"`
 	NodeID      string     `json:"nodeId"`
-	LeaderID    string     `json:"leaderId"`
+	IsBootstrap bool       `json:"isBootstrap"`
 	Peers       []RaftPeer `json:"peers"`
 	Directory   string     `json:"directory" jsonschema:"default=raft"`
 	GRPCAddress string     `json:"grpcAddress"`

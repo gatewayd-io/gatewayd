@@ -54,11 +54,11 @@ func NewTestRaftNode(t *testing.T) (*TestRaftHelper, error) {
 
 	// Create Raft configuration
 	raftConfig := config.Raft{
-		NodeID:    nodeID,
-		Address:   raftAddr,
-		LeaderID:  nodeID,              // Make this node the leader for testing
-		Peers:     []config.RaftPeer{}, // Empty peers for single-node testing
-		Directory: tempDir,
+		NodeID:      nodeID,
+		Address:     raftAddr,
+		IsBootstrap: true,                // Make this node the leader for testing
+		Peers:       []config.RaftPeer{}, // Empty peers for single-node testing
+		Directory:   tempDir,
 	}
 
 	// Create new Raft node

@@ -132,8 +132,7 @@ func NewRaftNode(logger zerolog.Logger, raftConfig config.Raft) (*Node, error) {
 	}
 
 	// Handle bootstrapping
-	isBootstrap := raftConfig.LeaderID == nodeID
-	if isBootstrap {
+	if raftConfig.IsBootstrap {
 		configuration := raft.Configuration{
 			Servers: make([]raft.Server, len(node.Peers)),
 		}

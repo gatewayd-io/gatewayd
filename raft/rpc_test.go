@@ -41,9 +41,9 @@ func getListenerAddr(lis net.Listener) string {
 func setupNodes(t *testing.T, logger zerolog.Logger, ports []int, tempDir string) []*Node {
 	nodeConfigs := []config.Raft{
 		{
-			NodeID:   "testRaftLeadershipnode1",
-			Address:  "127.0.0.1:" + strconv.Itoa(ports[0]),
-			LeaderID: "testRaftLeadershipnode1",
+			NodeID:      "testRaftLeadershipnode1",
+			Address:     "127.0.0.1:" + strconv.Itoa(ports[0]),
+			IsBootstrap: true,
 			Peers: []config.RaftPeer{
 				{ID: "testRaftLeadershipnode2", Address: "127.0.0.1:" + strconv.Itoa(ports[1])},
 				{ID: "testRaftLeadershipnode3", Address: "127.0.0.1:" + strconv.Itoa(ports[2])},
@@ -51,9 +51,9 @@ func setupNodes(t *testing.T, logger zerolog.Logger, ports []int, tempDir string
 			Directory: tempDir,
 		},
 		{
-			NodeID:   "testRaftLeadershipnode2",
-			Address:  "127.0.0.1:" + strconv.Itoa(ports[1]),
-			LeaderID: "testRaftLeadershipnode1",
+			NodeID:      "testRaftLeadershipnode2",
+			Address:     "127.0.0.1:" + strconv.Itoa(ports[1]),
+			IsBootstrap: false,
 			Peers: []config.RaftPeer{
 				{ID: "testRaftLeadershipnode1", Address: "127.0.0.1:" + strconv.Itoa(ports[0])},
 				{ID: "testRaftLeadershipnode3", Address: "127.0.0.1:" + strconv.Itoa(ports[2])},
@@ -61,9 +61,9 @@ func setupNodes(t *testing.T, logger zerolog.Logger, ports []int, tempDir string
 			Directory: tempDir,
 		},
 		{
-			NodeID:   "testRaftLeadershipnode3",
-			Address:  "127.0.0.1:" + strconv.Itoa(ports[2]),
-			LeaderID: "testRaftLeadershipnode1",
+			NodeID:      "testRaftLeadershipnode3",
+			Address:     "127.0.0.1:" + strconv.Itoa(ports[2]),
+			IsBootstrap: false,
 			Peers: []config.RaftPeer{
 				{ID: "testRaftLeadershipnode1", Address: "127.0.0.1:" + strconv.Itoa(ports[0])},
 				{ID: "testRaftLeadershipnode2", Address: "127.0.0.1:" + strconv.Itoa(ports[1])},

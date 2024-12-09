@@ -110,7 +110,7 @@ api:
 raft:
   address: 127.0.0.1:2223
   nodeId: node1
-  leaderId: node1
+  isBootstrap: True
   grpcAddress: 127.0.0.1:50051
   peers: []
   # - id: node1

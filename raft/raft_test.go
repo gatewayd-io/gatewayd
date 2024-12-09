@@ -29,9 +29,9 @@ func TestNewRaftNode(t *testing.T) {
 		{
 			name: "valid configuration",
 			raftConfig: config.Raft{
-				NodeID:   "testRaftNodeValidConfigurationnode1",
-				Address:  "127.0.0.1:6001",
-				LeaderID: "testRaftNodeValidConfigurationnode1",
+				NodeID:      "testRaftNodeValidConfigurationnode1",
+				Address:     "127.0.0.1:6001",
+				IsBootstrap: true,
 				Peers: []config.RaftPeer{
 					{ID: "testRaftNodeValidConfigurationnode2", Address: "127.0.0.1:6002"},
 				},
@@ -42,10 +42,10 @@ func TestNewRaftNode(t *testing.T) {
 		{
 			name: "invalid address",
 			raftConfig: config.Raft{
-				NodeID:    "testRaftNodeInvalidAddressnode1",
-				Address:   "invalid:address:",
-				LeaderID:  "testRaftNodeInvalidAddressnode1",
-				Directory: tempDir,
+				NodeID:      "testRaftNodeInvalidAddressnode1",
+				Address:     "invalid:address:",
+				IsBootstrap: true,
+				Directory:   tempDir,
 			},
 			wantErr: true,
 		},
@@ -123,10 +123,10 @@ func TestRaftNodeApply(t *testing.T) {
 	logger := setupTestLogger()
 	tempDir := t.TempDir()
 	config := config.Raft{
-		NodeID:    "testRaftNodeApplynode1",
-		Address:   "127.0.0.1:6003",
-		LeaderID:  "testRaftNodeApplynode1",
-		Directory: tempDir,
+		NodeID:      "testRaftNodeApplynode1",
+		Address:     "127.0.0.1:6003",
+		IsBootstrap: true,
+		Directory:   tempDir,
 	}
 
 	node, err := NewRaftNode(logger, config)
@@ -156,9 +156,9 @@ func TestRaftLeadershipAndFollowers(t *testing.T) {
 	// Configure three nodes with unique ports
 	nodeConfigs := []config.Raft{
 		{
-			NodeID:   "testRaftLeadershipnode1",
-			Address:  "127.0.0.1:6004",
-			LeaderID: "testRaftLeadershipnode1",
+			NodeID:      "testRaftLeadershipnode1",
+			Address:     "127.0.0.1:6004",
+			IsBootstrap: true,
 			Peers: []config.RaftPeer{
 				{ID: "testRaftLeadershipnode2", Address: "127.0.0.1:6005"},
 				{ID: "testRaftLeadershipnode3", Address: "127.0.0.1:6006"},
@@ -166,9 +166,9 @@ func TestRaftLeadershipAndFollowers(t *testing.T) {
 			Directory: tempDir,
 		},
 		{
-			NodeID:   "testRaftLeadershipnode2",
-			Address:  "127.0.0.1:6005",
-			LeaderID: "testRaftLeadershipnode1",
+			NodeID:      "testRaftLeadershipnode2",
+			Address:     "127.0.0.1:6005",
+			IsBootstrap: false,
 			Peers: []config.RaftPeer{
 				{ID: "testRaftLeadershipnode1", Address: "127.0.0.1:6004"},
 				{ID: "testRaftLeadershipnode3", Address: "127.0.0.1:6006"},
@@ -176,9 +176,9 @@ func TestRaftLeadershipAndFollowers(t *testing.T) {
 			Directory: tempDir,
 		},
 		{
-			NodeID:   "testRaftLeadershipnode3",
-			Address:  "127.0.0.1:6006",
-			LeaderID: "testRaftLeadershipnode1",
+			NodeID:      "testRaftLeadershipnode3",
+			Address:     "127.0.0.1:6006",
+			IsBootstrap: false,
 			Peers: []config.RaftPeer{
 				{ID: "testRaftLeadershipnode1", Address: "127.0.0.1:6004"},
 				{ID: "testRaftLeadershipnode2", Address: "127.0.0.1:6005"},

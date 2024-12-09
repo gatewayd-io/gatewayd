@@ -183,7 +183,7 @@ func (c *Config) LoadDefaults(ctx context.Context) *gerr.GatewayDError {
 		Raft: Raft{
 			Address:     DefaultRaftAddress,
 			NodeID:      DefaultRaftNodeID,
-			LeaderID:    DefaultRaftLeaderID,
+			IsBootstrap: DefaultRaftIsBootstrap,
 			Directory:   DefaultRaftDirectory,
 			GRPCAddress: DefaultRaftGRPCAddress,
 		},

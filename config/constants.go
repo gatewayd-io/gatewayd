@@ -130,7 +130,7 @@ const (
 	// Raft constants.
 	DefaultRaftAddress     = "127.0.0.1:2223"
 	DefaultRaftNodeID      = "node1"
-	DefaultRaftLeaderID    = "node1"
+	DefaultRaftIsBootstrap = true
 	DefaultRaftDirectory   = "raft"
 	DefaultRaftGRPCAddress = "127.0.0.1:50051"
 )
