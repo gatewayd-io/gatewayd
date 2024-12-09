@@ -1,11 +1,14 @@
 package plugin
 
 import (
+	"fmt"
 	"os/exec"
+	"strings"
 	"time"
 
 	sdkAct "github.com/gatewayd-io/gatewayd-plugin-sdk/act"
 	"github.com/gatewayd-io/gatewayd/act"
+	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cast"
 )
@@ -47,6 +50,13 @@ func castToPrimitiveTypes(args map[string]any) map[string]any {
 				// Recursively cast nested maps.
 				args[key] = castToPrimitiveTypes(valuemap)
 			}
+		case []config.RaftPeer:
+			// Cast raft peers to comma-separated string using strings.Join
+			peers := make([]string, len(value))
+			for i, peer := range value {
+				peers[i] = fmt.Sprintf("%s:%s:%s", peer.ID, peer.Address, peer.GRPCAddress)
+			}
+			args[key] = strings.Join(peers, ",")
 		// TODO: Add more types here as needed.
 		default:
 			args[key] = value
