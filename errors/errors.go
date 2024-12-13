@@ -219,4 +219,5 @@ const (
 	FailedToStartServer       = 3
 	FailedToStartTracer       = 4
 	FailedToCreateActRegistry = 5
+	FailedToStartRaftNode     = 6
 )

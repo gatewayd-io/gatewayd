@@ -911,9 +911,15 @@ var runCmd = &cobra.Command{
 
 		span.End()
 
+		_, span = otel.Tracer(config.TracerName).Start(runCtx, "Create Raft Node")
+		defer span.End()
+
 		raftNode, originalErr := raft.NewRaftNode(logger, conf.Global.Raft)
 		if originalErr != nil {
 			logger.Error().Err(originalErr).Msg("Failed to start raft node")
+			span.RecordError(originalErr)
+			pluginRegistry.Shutdown()
+			os.Exit(gerr.FailedToStartRaftNode)
 		}
 
 		_, span = otel.Tracer(config.TracerName).Start(runCtx, "Create servers")

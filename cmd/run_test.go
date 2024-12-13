@@ -25,6 +25,8 @@ func Test_runCmd(t *testing.T) {
 
 	tempDir := t.TempDir()
 	t.Setenv("GATEWAYD_RAFT_DIRECTORY", tempDir)
+	t.Setenv("GATEWAYD_RAFT_ADDRESS", "127.0.0.1:0")
+	t.Setenv("GATEWAYD_RAFT_GRPCADDRESS", "127.0.0.1:0")
 
 	globalTestConfigFile := "./test_global_runCmd.yaml"
 	pluginTestConfigFile := "./test_plugins_runCmd.yaml"
@@ -92,6 +94,8 @@ func Test_runCmdWithTLS(t *testing.T) {
 
 	tempDir := t.TempDir()
 	t.Setenv("GATEWAYD_RAFT_DIRECTORY", tempDir)
+	t.Setenv("GATEWAYD_RAFT_ADDRESS", "127.0.0.1:0")
+	t.Setenv("GATEWAYD_RAFT_GRPCADDRESS", "127.0.0.1:0")
 
 	globalTLSTestConfigFile := "./testdata/gatewayd_tls.yaml"
 	pluginTestConfigFile := "./test_plugins_runCmdWithTLS.yaml"
@@ -158,6 +162,8 @@ func Test_runCmdWithMultiTenancy(t *testing.T) {
 
 	tempDir := t.TempDir()
 	t.Setenv("GATEWAYD_RAFT_DIRECTORY", tempDir)
+	t.Setenv("GATEWAYD_RAFT_ADDRESS", "127.0.0.1:0")
+	t.Setenv("GATEWAYD_RAFT_GRPCADDRESS", "127.0.0.1:0")
 
 	globalTestConfigFile := "./testdata/gatewayd.yaml"
 	pluginTestConfigFile := "./test_plugins_runCmdWithMultiTenancy.yaml"
@@ -222,6 +228,8 @@ func Test_runCmdWithCachePlugin(t *testing.T) {
 
 	tempDir := t.TempDir()
 	t.Setenv("GATEWAYD_RAFT_DIRECTORY", tempDir)
+	t.Setenv("GATEWAYD_RAFT_ADDRESS", "127.0.0.1:0")
+	t.Setenv("GATEWAYD_RAFT_GRPCADDRESS", "127.0.0.1:0")
 
 	globalTestConfigFile := "./test_global_runCmdWithCachePlugin.yaml"
 	pluginTestConfigFile := "./test_plugins_runCmdWithCachePlugin.yaml"
