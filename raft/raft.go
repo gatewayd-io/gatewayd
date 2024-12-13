@@ -157,8 +157,7 @@ func NewRaftNode(logger zerolog.Logger, raftConfig config.Raft) (*Node, error) {
 // monitorLeadership checks if the node is the Raft leader and logs state changes.
 func (n *Node) monitorLeadership() {
 	for {
-		isLeader := n.raft.State() == raft.Leader
-		if isLeader {
+		if n.raft.State() == raft.Leader {
 			n.Logger.Info().Msg("This node is the Raft leader")
 
 			for _, peer := range n.Peers {
