@@ -20,7 +20,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-// Command types for Raft operations.
+// Configuration constants for Raft operations.
 const (
 	CommandAddConsistentHashEntry = "ADD_CONSISTENT_HASH_ENTRY"
 	RaftLeaderState               = raft.Leader
