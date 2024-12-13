@@ -268,7 +268,10 @@ func (n *Node) forwardToLeader(data []byte, timeout time.Duration) error {
 	return nil
 }
 
-// Update Shutdown to clean up RPC resources.
+// Shutdown gracefully stops the Node by stopping the gRPC server, closing RPC client connections,
+// and shutting down the underlying Raft node. It returns an error if the Raft node fails to
+// shutdown properly, ignoring the ErrRaftShutdown error which indicates the node was already
+// shutdown.
 func (n *Node) Shutdown() error {
 	if n.rpcServer != nil {
 		n.rpcServer.GracefulStop()
@@ -277,7 +280,7 @@ func (n *Node) Shutdown() error {
 		n.rpcClient.close()
 	}
 
-	if err := n.raft.Shutdown().Error(); err != nil {
+	if err := n.raft.Shutdown().Error(); err != nil && !errors.Is(err, raft.ErrRaftShutdown) {
 		return fmt.Errorf("failed to shutdown raft node: %w", err)
 	}
 	return nil
