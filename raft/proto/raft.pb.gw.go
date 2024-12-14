@@ -37,7 +37,7 @@ var (
 
 func request_RaftService_ForwardApply_0(ctx context.Context, marshaler runtime.Marshaler, client RaftServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq ApplyRequest
+		protoReq ForwardApplyRequest
 		metadata runtime.ServerMetadata
 	)
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
@@ -49,7 +49,7 @@ func request_RaftService_ForwardApply_0(ctx context.Context, marshaler runtime.M
 
 func local_request_RaftService_ForwardApply_0(ctx context.Context, marshaler runtime.Marshaler, server RaftServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq ApplyRequest
+		protoReq ForwardApplyRequest
 		metadata runtime.ServerMetadata
 	)
 	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
@@ -71,7 +71,7 @@ func RegisterRaftServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/raft.RaftService/ForwardApply", runtime.WithHTTPPathPattern("/raft.RaftService/ForwardApply"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/raft.RaftService/ForwardApply", runtime.WithHTTPPathPattern("/v1/raft/forward-apply"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -129,7 +129,7 @@ func RegisterRaftServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/raft.RaftService/ForwardApply", runtime.WithHTTPPathPattern("/raft.RaftService/ForwardApply"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/raft.RaftService/ForwardApply", runtime.WithHTTPPathPattern("/v1/raft/forward-apply"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -146,7 +146,7 @@ func RegisterRaftServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux
 }
 
 var (
-	pattern_RaftService_ForwardApply_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"raft.RaftService", "ForwardApply"}, ""))
+	pattern_RaftService_ForwardApply_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "raft", "forward-apply"}, ""))
 )
 
 var (

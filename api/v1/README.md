@@ -15,8 +15,8 @@
     - [GatewayDAdminAPIService](#api-v1-GatewayDAdminAPIService)
   
 - [raft/proto/raft.proto](#raft_proto_raft-proto)
-    - [ApplyRequest](#raft-ApplyRequest)
-    - [ApplyResponse](#raft-ApplyResponse)
+    - [ForwardApplyRequest](#raft-ForwardApplyRequest)
+    - [ForwardApplyResponse](#raft-ForwardApplyResponse)
   
     - [RaftService](#raft-RaftService)
   
@@ -183,9 +183,9 @@ GatewayDAdminAPIService is the administration API of GatewayD.
 
 
 
-<a name="raft-ApplyRequest"></a>
+<a name="raft-ForwardApplyRequest"></a>
 
-### ApplyRequest
+### ForwardApplyRequest
 
 
 
@@ -199,9 +199,9 @@ GatewayDAdminAPIService is the administration API of GatewayD.
 
 
 
-<a name="raft-ApplyResponse"></a>
+<a name="raft-ForwardApplyResponse"></a>
 
-### ApplyResponse
+### ForwardApplyResponse
 
 
 
@@ -228,7 +228,7 @@ GatewayDAdminAPIService is the administration API of GatewayD.
 
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
-| ForwardApply | [ApplyRequest](#raft-ApplyRequest) | [ApplyResponse](#raft-ApplyResponse) |  |
+| ForwardApply | [ForwardApplyRequest](#raft-ForwardApplyRequest) | [ForwardApplyResponse](#raft-ForwardApplyResponse) |  |
 
  
 

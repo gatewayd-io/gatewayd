@@ -15,7 +15,40 @@
   "produces": [
     "application/json"
   ],
-  "paths": {},
+  "paths": {
+    "/v1/raft/forward-apply": {
+      "post": {
+        "operationId": "RaftService_ForwardApply",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/raftForwardApplyResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/raftForwardApplyRequest"
+            }
+          }
+        ],
+        "tags": [
+          "RaftService"
+        ]
+      }
+    }
+  },
   "definitions": {
     "protobufAny": {
       "type": "object",
@@ -26,7 +59,20 @@
       },
       "additionalProperties": {}
     },
-    "raftApplyResponse": {
+    "raftForwardApplyRequest": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "string",
+          "format": "byte"
+        },
+        "timeoutMs": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "raftForwardApplyResponse": {
       "type": "object",
       "properties": {
         "success": {

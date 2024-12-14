@@ -253,7 +253,7 @@ func (n *Node) forwardToLeader(data []byte, timeout time.Duration) error {
 	defer cancel()
 
 	// Forward the request
-	resp, err := client.ForwardApply(ctx, &pb.ApplyRequest{
+	resp, err := client.ForwardApply(ctx, &pb.ForwardApplyRequest{
 		Data:      data,
 		TimeoutMs: timeout.Milliseconds(),
 	})

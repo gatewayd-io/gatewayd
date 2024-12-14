@@ -26,7 +26,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type RaftServiceClient interface {
-	ForwardApply(ctx context.Context, in *ApplyRequest, opts ...grpc.CallOption) (*ApplyResponse, error)
+	ForwardApply(ctx context.Context, in *ForwardApplyRequest, opts ...grpc.CallOption) (*ForwardApplyResponse, error)
 }
 
 type raftServiceClient struct {
@@ -37,9 +37,9 @@ func NewRaftServiceClient(cc grpc.ClientConnInterface) RaftServiceClient {
 	return &raftServiceClient{cc}
 }
 
-func (c *raftServiceClient) ForwardApply(ctx context.Context, in *ApplyRequest, opts ...grpc.CallOption) (*ApplyResponse, error) {
+func (c *raftServiceClient) ForwardApply(ctx context.Context, in *ForwardApplyRequest, opts ...grpc.CallOption) (*ForwardApplyResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ApplyResponse)
+	out := new(ForwardApplyResponse)
 	err := c.cc.Invoke(ctx, RaftService_ForwardApply_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -51,7 +51,7 @@ func (c *raftServiceClient) ForwardApply(ctx context.Context, in *ApplyRequest, 
 // All implementations must embed UnimplementedRaftServiceServer
 // for forward compatibility.
 type RaftServiceServer interface {
-	ForwardApply(context.Context, *ApplyRequest) (*ApplyResponse, error)
+	ForwardApply(context.Context, *ForwardApplyRequest) (*ForwardApplyResponse, error)
 	mustEmbedUnimplementedRaftServiceServer()
 }
 
@@ -62,7 +62,7 @@ type RaftServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedRaftServiceServer struct{}
 
-func (UnimplementedRaftServiceServer) ForwardApply(context.Context, *ApplyRequest) (*ApplyResponse, error) {
+func (UnimplementedRaftServiceServer) ForwardApply(context.Context, *ForwardApplyRequest) (*ForwardApplyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ForwardApply not implemented")
 }
 func (UnimplementedRaftServiceServer) mustEmbedUnimplementedRaftServiceServer() {}
@@ -87,7 +87,7 @@ func RegisterRaftServiceServer(s grpc.ServiceRegistrar, srv RaftServiceServer) {
 }
 
 func _RaftService_ForwardApply_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ApplyRequest)
+	in := new(ForwardApplyRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func _RaftService_ForwardApply_Handler(srv interface{}, ctx context.Context, dec
 		FullMethod: RaftService_ForwardApply_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RaftServiceServer).ForwardApply(ctx, req.(*ApplyRequest))
+		return srv.(RaftServiceServer).ForwardApply(ctx, req.(*ForwardApplyRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
