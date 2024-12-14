@@ -3,7 +3,7 @@ module github.com/gatewayd-io/gatewayd
 go 1.23.3
 
 require (
-	github.com/Masterminds/semver/v3 v3.3.0
+	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/NYTimes/gziphandler v1.1.1
 	github.com/codingsince1985/checksum v1.3.0
 	github.com/cybercyst/go-scaffold v0.0.0-20240606114431-816e6211c151
