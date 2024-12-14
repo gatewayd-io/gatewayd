@@ -17,18 +17,20 @@ type rpcServer struct {
 }
 
 // ForwardApply processes an ApplyRequest by applying the data to the node with a specified timeout.
-func (s *rpcServer) ForwardApply(_ context.Context, req *pb.ApplyRequest) (*pb.ApplyResponse, error) {
+func (s *rpcServer) ForwardApply(
+	_ context.Context, req *pb.ForwardApplyRequest,
+) (*pb.ForwardApplyResponse, error) {
 	timeout := time.Duration(req.GetTimeoutMs()) * time.Millisecond
 
 	err := s.node.applyInternal(req.GetData(), timeout)
 	if err != nil {
-		return &pb.ApplyResponse{
+		return &pb.ForwardApplyResponse{
 			Success: false,
 			Error:   err.Error(),
 		}, err
 	}
 
-	return &pb.ApplyResponse{
+	return &pb.ForwardApplyResponse{
 		Success: true,
 	}, nil
 }

@@ -127,10 +127,13 @@ func TestRPCServer_ForwardApply(t *testing.T) {
 			defer conn.Close()
 
 			client := pb.NewRaftServiceClient(conn)
-			resp, err := client.ForwardApply(context.Background(), &pb.ApplyRequest{
-				Data:      testCase.data,
-				TimeoutMs: testCase.timeoutMs,
-			})
+			resp, err := client.ForwardApply(
+				context.Background(),
+				&pb.ForwardApplyRequest{
+					Data:      testCase.data,
+					TimeoutMs: testCase.timeoutMs,
+				},
+			)
 
 			if testCase.wantErr {
 				assert.Error(t, err)
