@@ -10,6 +10,7 @@ package v1
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 
@@ -25,155 +26,154 @@ import (
 )
 
 // Suppress "imported and not used" errors
-var _ codes.Code
-var _ io.Reader
-var _ status.Status
-var _ = runtime.String
-var _ = utilities.NewDoubleArray
-var _ = metadata.Join
+var (
+	_ codes.Code
+	_ io.Reader
+	_ status.Status
+	_ = errors.New
+	_ = runtime.String
+	_ = utilities.NewDoubleArray
+	_ = metadata.Join
+)
 
 func request_GatewayDAdminAPIService_Version_0(ctx context.Context, marshaler runtime.Marshaler, client GatewayDAdminAPIServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq emptypb.Empty
-	var metadata runtime.ServerMetadata
-
+	var (
+		protoReq emptypb.Empty
+		metadata runtime.ServerMetadata
+	)
 	msg, err := client.Version(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
-
 }
 
 func local_request_GatewayDAdminAPIService_Version_0(ctx context.Context, marshaler runtime.Marshaler, server GatewayDAdminAPIServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq emptypb.Empty
-	var metadata runtime.ServerMetadata
-
+	var (
+		protoReq emptypb.Empty
+		metadata runtime.ServerMetadata
+	)
 	msg, err := server.Version(ctx, &protoReq)
 	return msg, metadata, err
-
 }
 
-var (
-	filter_GatewayDAdminAPIService_GetGlobalConfig_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
-)
+var filter_GatewayDAdminAPIService_GetGlobalConfig_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 
 func request_GatewayDAdminAPIService_GetGlobalConfig_0(ctx context.Context, marshaler runtime.Marshaler, client GatewayDAdminAPIServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq Group
-	var metadata runtime.ServerMetadata
-
+	var (
+		protoReq Group
+		metadata runtime.ServerMetadata
+	)
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_GatewayDAdminAPIService_GetGlobalConfig_0); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-
 	msg, err := client.GetGlobalConfig(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
-
 }
 
 func local_request_GatewayDAdminAPIService_GetGlobalConfig_0(ctx context.Context, marshaler runtime.Marshaler, server GatewayDAdminAPIServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq Group
-	var metadata runtime.ServerMetadata
-
+	var (
+		protoReq Group
+		metadata runtime.ServerMetadata
+	)
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_GatewayDAdminAPIService_GetGlobalConfig_0); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-
 	msg, err := server.GetGlobalConfig(ctx, &protoReq)
 	return msg, metadata, err
-
 }
 
 func request_GatewayDAdminAPIService_GetPluginConfig_0(ctx context.Context, marshaler runtime.Marshaler, client GatewayDAdminAPIServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq emptypb.Empty
-	var metadata runtime.ServerMetadata
-
+	var (
+		protoReq emptypb.Empty
+		metadata runtime.ServerMetadata
+	)
 	msg, err := client.GetPluginConfig(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
-
 }
 
 func local_request_GatewayDAdminAPIService_GetPluginConfig_0(ctx context.Context, marshaler runtime.Marshaler, server GatewayDAdminAPIServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq emptypb.Empty
-	var metadata runtime.ServerMetadata
-
+	var (
+		protoReq emptypb.Empty
+		metadata runtime.ServerMetadata
+	)
 	msg, err := server.GetPluginConfig(ctx, &protoReq)
 	return msg, metadata, err
-
 }
 
 func request_GatewayDAdminAPIService_GetPlugins_0(ctx context.Context, marshaler runtime.Marshaler, client GatewayDAdminAPIServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq emptypb.Empty
-	var metadata runtime.ServerMetadata
-
+	var (
+		protoReq emptypb.Empty
+		metadata runtime.ServerMetadata
+	)
 	msg, err := client.GetPlugins(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
-
 }
 
 func local_request_GatewayDAdminAPIService_GetPlugins_0(ctx context.Context, marshaler runtime.Marshaler, server GatewayDAdminAPIServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq emptypb.Empty
-	var metadata runtime.ServerMetadata
-
+	var (
+		protoReq emptypb.Empty
+		metadata runtime.ServerMetadata
+	)
 	msg, err := server.GetPlugins(ctx, &protoReq)
 	return msg, metadata, err
-
 }
 
 func request_GatewayDAdminAPIService_GetPools_0(ctx context.Context, marshaler runtime.Marshaler, client GatewayDAdminAPIServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq emptypb.Empty
-	var metadata runtime.ServerMetadata
-
+	var (
+		protoReq emptypb.Empty
+		metadata runtime.ServerMetadata
+	)
 	msg, err := client.GetPools(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
-
 }
 
 func local_request_GatewayDAdminAPIService_GetPools_0(ctx context.Context, marshaler runtime.Marshaler, server GatewayDAdminAPIServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq emptypb.Empty
-	var metadata runtime.ServerMetadata
-
+	var (
+		protoReq emptypb.Empty
+		metadata runtime.ServerMetadata
+	)
 	msg, err := server.GetPools(ctx, &protoReq)
 	return msg, metadata, err
-
 }
 
 func request_GatewayDAdminAPIService_GetProxies_0(ctx context.Context, marshaler runtime.Marshaler, client GatewayDAdminAPIServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq emptypb.Empty
-	var metadata runtime.ServerMetadata
-
+	var (
+		protoReq emptypb.Empty
+		metadata runtime.ServerMetadata
+	)
 	msg, err := client.GetProxies(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
-
 }
 
 func local_request_GatewayDAdminAPIService_GetProxies_0(ctx context.Context, marshaler runtime.Marshaler, server GatewayDAdminAPIServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq emptypb.Empty
-	var metadata runtime.ServerMetadata
-
+	var (
+		protoReq emptypb.Empty
+		metadata runtime.ServerMetadata
+	)
 	msg, err := server.GetProxies(ctx, &protoReq)
 	return msg, metadata, err
-
 }
 
 func request_GatewayDAdminAPIService_GetServers_0(ctx context.Context, marshaler runtime.Marshaler, client GatewayDAdminAPIServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq emptypb.Empty
-	var metadata runtime.ServerMetadata
-
+	var (
+		protoReq emptypb.Empty
+		metadata runtime.ServerMetadata
+	)
 	msg, err := client.GetServers(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
-
 }
 
 func local_request_GatewayDAdminAPIService_GetServers_0(ctx context.Context, marshaler runtime.Marshaler, server GatewayDAdminAPIServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq emptypb.Empty
-	var metadata runtime.ServerMetadata
-
+	var (
+		protoReq emptypb.Empty
+		metadata runtime.ServerMetadata
+	)
 	msg, err := server.GetServers(ctx, &protoReq)
 	return msg, metadata, err
-
 }
 
 // RegisterGatewayDAdminAPIServiceHandlerServer registers the http handlers for service GatewayDAdminAPIService to "mux".
@@ -182,16 +182,13 @@ func local_request_GatewayDAdminAPIService_GetServers_0(ctx context.Context, mar
 // Note that using this registration option will cause many gRPC library features to stop working. Consider using RegisterGatewayDAdminAPIServiceHandlerFromEndpoint instead.
 // GRPC interceptors will not work for this type of registration. To use interceptors, you must use the "runtime.WithMiddlewares" option in the "runtime.NewServeMux" call.
 func RegisterGatewayDAdminAPIServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux, server GatewayDAdminAPIServiceServer) error {
-
-	mux.Handle("GET", pattern_GatewayDAdminAPIService_Version_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodGet, pattern_GatewayDAdminAPIService_Version_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/api.v1.GatewayDAdminAPIService/Version", runtime.WithHTTPPathPattern("/v1/GatewayDPluginService/Version"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/api.v1.GatewayDAdminAPIService/Version", runtime.WithHTTPPathPattern("/v1/GatewayDPluginService/Version"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -203,20 +200,15 @@ func RegisterGatewayDAdminAPIServiceHandlerServer(ctx context.Context, mux *runt
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-
 		forward_GatewayDAdminAPIService_Version_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
 	})
-
-	mux.Handle("GET", pattern_GatewayDAdminAPIService_GetGlobalConfig_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodGet, pattern_GatewayDAdminAPIService_GetGlobalConfig_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/api.v1.GatewayDAdminAPIService/GetGlobalConfig", runtime.WithHTTPPathPattern("/v1/GatewayDPluginService/GetGlobalConfig"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/api.v1.GatewayDAdminAPIService/GetGlobalConfig", runtime.WithHTTPPathPattern("/v1/GatewayDPluginService/GetGlobalConfig"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -228,20 +220,15 @@ func RegisterGatewayDAdminAPIServiceHandlerServer(ctx context.Context, mux *runt
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-
 		forward_GatewayDAdminAPIService_GetGlobalConfig_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
 	})
-
-	mux.Handle("GET", pattern_GatewayDAdminAPIService_GetPluginConfig_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodGet, pattern_GatewayDAdminAPIService_GetPluginConfig_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/api.v1.GatewayDAdminAPIService/GetPluginConfig", runtime.WithHTTPPathPattern("/v1/GatewayDPluginService/GetPluginConfig"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/api.v1.GatewayDAdminAPIService/GetPluginConfig", runtime.WithHTTPPathPattern("/v1/GatewayDPluginService/GetPluginConfig"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -253,20 +240,15 @@ func RegisterGatewayDAdminAPIServiceHandlerServer(ctx context.Context, mux *runt
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-
 		forward_GatewayDAdminAPIService_GetPluginConfig_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
 	})
-
-	mux.Handle("GET", pattern_GatewayDAdminAPIService_GetPlugins_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodGet, pattern_GatewayDAdminAPIService_GetPlugins_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/api.v1.GatewayDAdminAPIService/GetPlugins", runtime.WithHTTPPathPattern("/v1/GatewayDPluginService/GetPlugins"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/api.v1.GatewayDAdminAPIService/GetPlugins", runtime.WithHTTPPathPattern("/v1/GatewayDPluginService/GetPlugins"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -278,20 +260,15 @@ func RegisterGatewayDAdminAPIServiceHandlerServer(ctx context.Context, mux *runt
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-
 		forward_GatewayDAdminAPIService_GetPlugins_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
 	})
-
-	mux.Handle("GET", pattern_GatewayDAdminAPIService_GetPools_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodGet, pattern_GatewayDAdminAPIService_GetPools_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/api.v1.GatewayDAdminAPIService/GetPools", runtime.WithHTTPPathPattern("/v1/GatewayDPluginService/GetPools"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/api.v1.GatewayDAdminAPIService/GetPools", runtime.WithHTTPPathPattern("/v1/GatewayDPluginService/GetPools"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -303,20 +280,15 @@ func RegisterGatewayDAdminAPIServiceHandlerServer(ctx context.Context, mux *runt
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-
 		forward_GatewayDAdminAPIService_GetPools_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
 	})
-
-	mux.Handle("GET", pattern_GatewayDAdminAPIService_GetProxies_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodGet, pattern_GatewayDAdminAPIService_GetProxies_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/api.v1.GatewayDAdminAPIService/GetProxies", runtime.WithHTTPPathPattern("/v1/GatewayDPluginService/GetProxies"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/api.v1.GatewayDAdminAPIService/GetProxies", runtime.WithHTTPPathPattern("/v1/GatewayDPluginService/GetProxies"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -328,20 +300,15 @@ func RegisterGatewayDAdminAPIServiceHandlerServer(ctx context.Context, mux *runt
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-
 		forward_GatewayDAdminAPIService_GetProxies_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
 	})
-
-	mux.Handle("GET", pattern_GatewayDAdminAPIService_GetServers_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodGet, pattern_GatewayDAdminAPIService_GetServers_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/api.v1.GatewayDAdminAPIService/GetServers", runtime.WithHTTPPathPattern("/v1/GatewayDPluginService/GetServers"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/api.v1.GatewayDAdminAPIService/GetServers", runtime.WithHTTPPathPattern("/v1/GatewayDPluginService/GetServers"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -353,9 +320,7 @@ func RegisterGatewayDAdminAPIServiceHandlerServer(ctx context.Context, mux *runt
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-
 		forward_GatewayDAdminAPIService_GetServers_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
 	})
 
 	return nil
@@ -382,7 +347,6 @@ func RegisterGatewayDAdminAPIServiceHandlerFromEndpoint(ctx context.Context, mux
 			}
 		}()
 	}()
-
 	return RegisterGatewayDAdminAPIServiceHandler(ctx, mux, conn)
 }
 
@@ -398,14 +362,11 @@ func RegisterGatewayDAdminAPIServiceHandler(ctx context.Context, mux *runtime.Se
 // doesn't go through the normal gRPC flow (creating a gRPC client etc.) then it will be up to the passed in
 // "GatewayDAdminAPIServiceClient" to call the correct interceptors. This client ignores the HTTP middlewares.
 func RegisterGatewayDAdminAPIServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux, client GatewayDAdminAPIServiceClient) error {
-
-	mux.Handle("GET", pattern_GatewayDAdminAPIService_Version_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodGet, pattern_GatewayDAdminAPIService_Version_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/api.v1.GatewayDAdminAPIService/Version", runtime.WithHTTPPathPattern("/v1/GatewayDPluginService/Version"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/api.v1.GatewayDAdminAPIService/Version", runtime.WithHTTPPathPattern("/v1/GatewayDPluginService/Version"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -416,18 +377,13 @@ func RegisterGatewayDAdminAPIServiceHandlerClient(ctx context.Context, mux *runt
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-
 		forward_GatewayDAdminAPIService_Version_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
 	})
-
-	mux.Handle("GET", pattern_GatewayDAdminAPIService_GetGlobalConfig_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodGet, pattern_GatewayDAdminAPIService_GetGlobalConfig_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/api.v1.GatewayDAdminAPIService/GetGlobalConfig", runtime.WithHTTPPathPattern("/v1/GatewayDPluginService/GetGlobalConfig"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/api.v1.GatewayDAdminAPIService/GetGlobalConfig", runtime.WithHTTPPathPattern("/v1/GatewayDPluginService/GetGlobalConfig"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -438,18 +394,13 @@ func RegisterGatewayDAdminAPIServiceHandlerClient(ctx context.Context, mux *runt
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-
 		forward_GatewayDAdminAPIService_GetGlobalConfig_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
 	})
-
-	mux.Handle("GET", pattern_GatewayDAdminAPIService_GetPluginConfig_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodGet, pattern_GatewayDAdminAPIService_GetPluginConfig_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/api.v1.GatewayDAdminAPIService/GetPluginConfig", runtime.WithHTTPPathPattern("/v1/GatewayDPluginService/GetPluginConfig"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/api.v1.GatewayDAdminAPIService/GetPluginConfig", runtime.WithHTTPPathPattern("/v1/GatewayDPluginService/GetPluginConfig"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -460,18 +411,13 @@ func RegisterGatewayDAdminAPIServiceHandlerClient(ctx context.Context, mux *runt
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-
 		forward_GatewayDAdminAPIService_GetPluginConfig_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
 	})
-
-	mux.Handle("GET", pattern_GatewayDAdminAPIService_GetPlugins_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodGet, pattern_GatewayDAdminAPIService_GetPlugins_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/api.v1.GatewayDAdminAPIService/GetPlugins", runtime.WithHTTPPathPattern("/v1/GatewayDPluginService/GetPlugins"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/api.v1.GatewayDAdminAPIService/GetPlugins", runtime.WithHTTPPathPattern("/v1/GatewayDPluginService/GetPlugins"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -482,18 +428,13 @@ func RegisterGatewayDAdminAPIServiceHandlerClient(ctx context.Context, mux *runt
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-
 		forward_GatewayDAdminAPIService_GetPlugins_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
 	})
-
-	mux.Handle("GET", pattern_GatewayDAdminAPIService_GetPools_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodGet, pattern_GatewayDAdminAPIService_GetPools_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/api.v1.GatewayDAdminAPIService/GetPools", runtime.WithHTTPPathPattern("/v1/GatewayDPluginService/GetPools"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/api.v1.GatewayDAdminAPIService/GetPools", runtime.WithHTTPPathPattern("/v1/GatewayDPluginService/GetPools"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -504,18 +445,13 @@ func RegisterGatewayDAdminAPIServiceHandlerClient(ctx context.Context, mux *runt
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-
 		forward_GatewayDAdminAPIService_GetPools_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
 	})
-
-	mux.Handle("GET", pattern_GatewayDAdminAPIService_GetProxies_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodGet, pattern_GatewayDAdminAPIService_GetProxies_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/api.v1.GatewayDAdminAPIService/GetProxies", runtime.WithHTTPPathPattern("/v1/GatewayDPluginService/GetProxies"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/api.v1.GatewayDAdminAPIService/GetProxies", runtime.WithHTTPPathPattern("/v1/GatewayDPluginService/GetProxies"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -526,18 +462,13 @@ func RegisterGatewayDAdminAPIServiceHandlerClient(ctx context.Context, mux *runt
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-
 		forward_GatewayDAdminAPIService_GetProxies_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
 	})
-
-	mux.Handle("GET", pattern_GatewayDAdminAPIService_GetServers_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodGet, pattern_GatewayDAdminAPIService_GetServers_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/api.v1.GatewayDAdminAPIService/GetServers", runtime.WithHTTPPathPattern("/v1/GatewayDPluginService/GetServers"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/api.v1.GatewayDAdminAPIService/GetServers", runtime.WithHTTPPathPattern("/v1/GatewayDPluginService/GetServers"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -548,42 +479,27 @@ func RegisterGatewayDAdminAPIServiceHandlerClient(ctx context.Context, mux *runt
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-
 		forward_GatewayDAdminAPIService_GetServers_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-
 	})
-
 	return nil
 }
 
 var (
-	pattern_GatewayDAdminAPIService_Version_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "GatewayDPluginService", "Version"}, ""))
-
+	pattern_GatewayDAdminAPIService_Version_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "GatewayDPluginService", "Version"}, ""))
 	pattern_GatewayDAdminAPIService_GetGlobalConfig_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "GatewayDPluginService", "GetGlobalConfig"}, ""))
-
 	pattern_GatewayDAdminAPIService_GetPluginConfig_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "GatewayDPluginService", "GetPluginConfig"}, ""))
-
-	pattern_GatewayDAdminAPIService_GetPlugins_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "GatewayDPluginService", "GetPlugins"}, ""))
-
-	pattern_GatewayDAdminAPIService_GetPools_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "GatewayDPluginService", "GetPools"}, ""))
-
-	pattern_GatewayDAdminAPIService_GetProxies_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "GatewayDPluginService", "GetProxies"}, ""))
-
-	pattern_GatewayDAdminAPIService_GetServers_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "GatewayDPluginService", "GetServers"}, ""))
+	pattern_GatewayDAdminAPIService_GetPlugins_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "GatewayDPluginService", "GetPlugins"}, ""))
+	pattern_GatewayDAdminAPIService_GetPools_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "GatewayDPluginService", "GetPools"}, ""))
+	pattern_GatewayDAdminAPIService_GetProxies_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "GatewayDPluginService", "GetProxies"}, ""))
+	pattern_GatewayDAdminAPIService_GetServers_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "GatewayDPluginService", "GetServers"}, ""))
 )
 
 var (
-	forward_GatewayDAdminAPIService_Version_0 = runtime.ForwardResponseMessage
-
+	forward_GatewayDAdminAPIService_Version_0         = runtime.ForwardResponseMessage
 	forward_GatewayDAdminAPIService_GetGlobalConfig_0 = runtime.ForwardResponseMessage
-
 	forward_GatewayDAdminAPIService_GetPluginConfig_0 = runtime.ForwardResponseMessage
-
-	forward_GatewayDAdminAPIService_GetPlugins_0 = runtime.ForwardResponseMessage
-
-	forward_GatewayDAdminAPIService_GetPools_0 = runtime.ForwardResponseMessage
-
-	forward_GatewayDAdminAPIService_GetProxies_0 = runtime.ForwardResponseMessage
-
-	forward_GatewayDAdminAPIService_GetServers_0 = runtime.ForwardResponseMessage
+	forward_GatewayDAdminAPIService_GetPlugins_0      = runtime.ForwardResponseMessage
+	forward_GatewayDAdminAPIService_GetPools_0        = runtime.ForwardResponseMessage
+	forward_GatewayDAdminAPIService_GetProxies_0      = runtime.ForwardResponseMessage
+	forward_GatewayDAdminAPIService_GetServers_0      = runtime.ForwardResponseMessage
 )

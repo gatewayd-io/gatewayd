@@ -14,6 +14,12 @@
   
     - [GatewayDAdminAPIService](#api-v1-GatewayDAdminAPIService)
   
+- [raft/proto/raft.proto](#raft_proto_raft-proto)
+    - [ApplyRequest](#raft-ApplyRequest)
+    - [ApplyResponse](#raft-ApplyResponse)
+  
+    - [RaftService](#raft-RaftService)
+  
 - [Scalar Value Types](#scalar-value-types)
 
 
@@ -165,6 +171,64 @@ GatewayDAdminAPIService is the administration API of GatewayD.
 | GetPools | [.google.protobuf.Empty](#google-protobuf-Empty) | [.google.protobuf.Struct](#google-protobuf-Struct) | GetPools returns the list of pools configured on the GatewayD. |
 | GetProxies | [.google.protobuf.Empty](#google-protobuf-Empty) | [.google.protobuf.Struct](#google-protobuf-Struct) | GetProxies returns the list of proxies configured on the GatewayD. |
 | GetServers | [.google.protobuf.Empty](#google-protobuf-Empty) | [.google.protobuf.Struct](#google-protobuf-Struct) | GetServers returns the list of servers configured on the GatewayD. |
+
+ 
+
+
+
+<a name="raft_proto_raft-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## raft/proto/raft.proto
+
+
+
+<a name="raft-ApplyRequest"></a>
+
+### ApplyRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| data | [bytes](#bytes) |  |  |
+| timeout_ms | [int64](#int64) |  |  |
+
+
+
+
+
+
+<a name="raft-ApplyResponse"></a>
+
+### ApplyResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| success | [bool](#bool) |  |  |
+| error | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+
+<a name="raft-RaftService"></a>
+
+### RaftService
+
+
+| Method Name | Request Type | Response Type | Description |
+| ----------- | ------------ | ------------- | ------------|
+| ForwardApply | [ApplyRequest](#raft-ApplyRequest) | [ApplyResponse](#raft-ApplyResponse) |  |
 
  
 
