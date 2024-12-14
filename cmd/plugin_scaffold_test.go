@@ -28,6 +28,9 @@ func Test_pluginScaffoldCmd(t *testing.T) {
 	postgresAddress2 := postgresHostIP2 + ":" + postgresMappedPort2.Port()
 	t.Setenv("GATEWAYD_CLIENTS_TEST_WRITE_ADDRESS", postgresAddress2)
 
+	raftTempDir := t.TempDir()
+	t.Setenv("GATEWAYD_RAFT_DIRECTORY", raftTempDir)
+
 	globalTestConfigFile := filepath.Join("testdata", "gatewayd.yaml")
 	plugin.IsPluginTemplateEmbedded()
 	pluginTestScaffoldInputFile := "./testdata/scaffold_input.yaml"

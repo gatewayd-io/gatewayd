@@ -73,3 +73,9 @@ servers:
 
 api:
   enabled: True
+
+raft:
+  address: 127.0.0.1:2222
+  nodeID: node1
+  isBootstrap: true
+  peers: {}

@@ -106,3 +106,12 @@ api:
   httpAddress: 0.0.0.0:18080
   grpcNetwork: tcp
   grpcAddress: 0.0.0.0:19090
+
+raft:
+  address: 127.0.0.1:2222
+  nodeId: node1
+  isBootstrap: True
+  grpcAddress: 127.0.0.1:50051
+  peers: []
+  # - id: node2
+  #   address: 127.0.0.1:2223

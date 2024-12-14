@@ -126,6 +126,13 @@ const (
 	DefaultActionRedisEnabled = false
 	DefaultRedisAddress       = "localhost:6379"
 	DefaultRedisChannel       = "gatewayd-actions"
+
+	// Raft constants.
+	DefaultRaftAddress     = "127.0.0.1:2223"
+	DefaultRaftNodeID      = "node1"
+	DefaultRaftIsBootstrap = true
+	DefaultRaftDirectory   = "raft"
+	DefaultRaftGRPCAddress = "127.0.0.1:50051"
 )
 
 // Load balancing strategies.
