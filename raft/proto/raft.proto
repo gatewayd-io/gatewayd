@@ -1,18 +1,26 @@
 syntax = "proto3";
+
 package raft;
+
+import "google/api/annotations.proto";
 
 option go_package = "github.com/gatewayd-io/gatewayd/raft/proto";
 
 service RaftService {
-  rpc ForwardApply (ApplyRequest) returns (ApplyResponse) {}
+  rpc ForwardApply(ForwardApplyRequest) returns (ForwardApplyResponse) {
+    option (google.api.http) = {
+      post: "/v1/raft/forward-apply"
+      body: "*"
+    };
+  }
 }
 
-message ApplyRequest {
+message ForwardApplyRequest {
   bytes data = 1;
   int64 timeout_ms = 2;
 }
 
-message ApplyResponse {
+message ForwardApplyResponse {
   bool success = 1;
   string error = 2;
-} 
+}
