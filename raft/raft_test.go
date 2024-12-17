@@ -71,10 +71,12 @@ func TestFSMOperations(t *testing.T) {
 	fsm := NewFSM()
 
 	// Test adding a hash mapping
-	cmd := ConsistentHashCommand{
-		Type:      CommandAddConsistentHashEntry,
-		Hash:      12345,
-		BlockName: "test-block",
+	cmd := Command{
+		Type: CommandAddConsistentHashEntry,
+		Payload: ConsistentHashPayload{
+			Hash:      "12345",
+			BlockName: "test-block",
+		},
 	}
 
 	data, err := json.Marshal(cmd)
@@ -85,12 +87,12 @@ func TestFSMOperations(t *testing.T) {
 	assert.Nil(t, result)
 
 	// Test retrieving the mapping
-	blockName, exists := fsm.GetProxyBlock(12345)
+	blockName, exists := fsm.GetProxyBlock("12345")
 	assert.True(t, exists)
 	assert.Equal(t, "test-block", blockName)
 
 	// Test non-existent mapping
-	blockName, exists = fsm.GetProxyBlock(99999)
+	blockName, exists = fsm.GetProxyBlock("99999")
 	assert.False(t, exists)
 	assert.Empty(t, blockName)
 }
@@ -99,10 +101,12 @@ func TestFSMSnapshot(t *testing.T) {
 	fsm := NewFSM()
 
 	// Add some data
-	cmd := ConsistentHashCommand{
-		Type:      CommandAddConsistentHashEntry,
-		Hash:      12345,
-		BlockName: "test-block",
+	cmd := Command{
+		Type: CommandAddConsistentHashEntry,
+		Payload: ConsistentHashPayload{
+			Hash:      "12345",
+			BlockName: "test-block",
+		},
 	}
 	data, err := json.Marshal(cmd)
 	require.NoError(t, err)
@@ -116,7 +120,7 @@ func TestFSMSnapshot(t *testing.T) {
 	// Verify snapshot data
 	fsmSnapshot, ok := snapshot.(*FSMSnapshot)
 	assert.True(t, ok)
-	assert.Equal(t, "test-block", fsmSnapshot.lbHashToBlockName[12345])
+	assert.Equal(t, "test-block", fsmSnapshot.lbHashToBlockName["12345"])
 }
 
 func TestRaftNodeApply(t *testing.T) {
@@ -136,10 +140,12 @@ func TestRaftNodeApply(t *testing.T) {
 	}()
 
 	// Test applying data
-	cmd := ConsistentHashCommand{
-		Type:      CommandAddConsistentHashEntry,
-		Hash:      12345,
-		BlockName: "test-block",
+	cmd := Command{
+		Type: CommandAddConsistentHashEntry,
+		Payload: ConsistentHashPayload{
+			Hash:      "12345",
+			BlockName: "test-block",
+		},
 	}
 	data, err := json.Marshal(cmd)
 	require.NoError(t, err)
@@ -224,10 +230,12 @@ func TestRaftLeadershipAndFollowers(t *testing.T) {
 	}
 
 	// Test 3: Test cluster functionality by applying a command
-	cmd := ConsistentHashCommand{
-		Type:      CommandAddConsistentHashEntry,
-		Hash:      12345,
-		BlockName: "test-block",
+	cmd := Command{
+		Type: CommandAddConsistentHashEntry,
+		Payload: ConsistentHashPayload{
+			Hash:      "12345",
+			BlockName: "test-block",
+		},
 	}
 	data, err := json.Marshal(cmd)
 	require.NoError(t, err)
@@ -241,7 +249,7 @@ func TestRaftLeadershipAndFollowers(t *testing.T) {
 
 	// Verify that all nodes have the update
 	for i, node := range nodes {
-		blockName, exists := node.Fsm.GetProxyBlock(12345)
+		blockName, exists := node.Fsm.GetProxyBlock("12345")
 		assert.True(t, exists, "Node %d should have the replicated data", i+1)
 		assert.Equal(t, "test-block", blockName, "Node %d has incorrect data", i+1)
 	}

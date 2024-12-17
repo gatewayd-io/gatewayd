@@ -78,6 +78,16 @@ func TestRunServer(t *testing.T) {
 	proxy1 := setupProxy(ctx, t, postgresHostIP1, postgresMappedPort1.Port(), logger, pluginRegistry)
 	proxy2 := setupProxy(ctx, t, postgresHostIP2, postgresMappedPort2.Port(), logger, pluginRegistry)
 
+	raftHelper, err := testhelpers.NewTestRaftNode(t)
+	if err != nil {
+		t.Fatalf("Failed to create test raft node: %v", err)
+	}
+	defer func() {
+		if err := raftHelper.Cleanup(); err != nil {
+			t.Errorf("Failed to cleanup raft: %v", err)
+		}
+	}()
+
 	// Create a server.
 	server := NewServer(
 		ctx,
@@ -94,6 +104,8 @@ func TestRunServer(t *testing.T) {
 			PluginTimeout:            config.DefaultPluginTimeout,
 			HandshakeTimeout:         config.DefaultHandshakeTimeout,
 			LoadbalancerStrategyName: config.RoundRobinStrategy,
+			GroupName:                "test-group",
+			RaftNode:                 raftHelper.Node,
 		},
 	)
 	assert.NotNil(t, server)

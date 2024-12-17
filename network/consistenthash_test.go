@@ -70,10 +70,12 @@ func TestConsistentHashNextProxyUseSourceIpExists(t *testing.T) {
 	// Instead of setting hashMap directly, setup the FSM
 	hash := hashKey("192.168.1.1" + server.GroupName)
 	// Create and apply the command through Raft
-	cmd := raft.ConsistentHashCommand{
-		Type:      raft.CommandAddConsistentHashEntry,
-		Hash:      hash,
-		BlockName: proxies[2].GetBlockName(),
+	cmd := raft.Command{
+		Type: raft.CommandAddConsistentHashEntry,
+		Payload: raft.ConsistentHashPayload{
+			Hash:      hash,
+			BlockName: proxies[2].GetBlockName(),
+		},
 	}
 
 	cmdBytes, marshalErr := json.Marshal(cmd)
