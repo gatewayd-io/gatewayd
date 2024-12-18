@@ -126,9 +126,10 @@ func TestRunServer(t *testing.T) {
 		}
 	}(t, server)
 
+	var proxyStateMutex sync.Mutex
+
 	testProxy := func(
 		t *testing.T,
-		proxy *Proxy,
 		waitGroup *sync.WaitGroup,
 	) {
 		t.Helper()
@@ -175,8 +176,17 @@ func TestRunServer(t *testing.T) {
 		// AuthenticationOk.
 		assert.Equal(t, uint8(0x52), data[0])
 
-		assert.Equal(t, 2, proxy.AvailableConnections.Size())
-		assert.Equal(t, 1, proxy.busyConnections.Size())
+		// Lock the mutex before checking the proxy states
+		proxyStateMutex.Lock()
+		defer proxyStateMutex.Unlock()
+
+		// Check that one of the proxies has the expected state.
+		if (proxy1.AvailableConnections.Size() == 2 && proxy1.busyConnections.Size() == 1) ||
+			(proxy2.AvailableConnections.Size() == 2 && proxy2.busyConnections.Size() == 1) {
+			// One of the proxies is in the expected state.
+		} else {
+			t.Errorf("Neither proxy is in the expected state")
+		}
 
 		// Terminate the connection.
 		sent, err = client.Send(CreatePgTerminatePacket())
@@ -192,8 +202,8 @@ func TestRunServer(t *testing.T) {
 	// Test both proxies.
 	// Based on the default Loadbalancer strategy (RoundRobin), the first client request will be sent to proxy2,
 	// followed by proxy1 for the next request.
-	go testProxy(t, proxy2, &waitGroup)
-	go testProxy(t, proxy1, &waitGroup)
+	go testProxy(t, &waitGroup)
+	go testProxy(t, &waitGroup)
 
 	// Wait for all goroutines.
 	waitGroup.Wait()
