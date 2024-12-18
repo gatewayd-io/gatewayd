@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/gatewayd-io/gatewayd/config"
+	"github.com/gatewayd-io/gatewayd/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -97,6 +98,16 @@ func TestNewWeightedRoundRobin(t *testing.T) {
 // TestWeightedRoundRobinNextProxy verifies that the WeightedRoundRobin algorithm
 // correctly distributes requests among proxies according to their weights.
 func TestWeightedRoundRobinNextProxy(t *testing.T) {
+
+	raftHelper, err := testhelpers.NewTestRaftNode(t)
+	require.NoError(t, err, "Failed to create test raft node")
+
+	defer func() {
+		if err := raftHelper.Cleanup(); err != nil {
+			t.Errorf("Failed to cleanup raft: %v", err)
+		}
+	}()
+
 	proxies := []IProxy{
 		MockProxy{name: "proxy1"},
 		MockProxy{name: "proxy2"},
@@ -112,7 +123,7 @@ func TestWeightedRoundRobinNextProxy(t *testing.T) {
 		},
 	}
 
-	server := &Server{Proxies: proxies}
+	server := &Server{Proxies: proxies, RaftNode: raftHelper.Node, GroupName: "test-group"}
 	weightedRR := NewWeightedRoundRobin(server, loadBalancingRule)
 
 	// Expected distribution of requests among proxies based on the weights.
@@ -156,6 +167,14 @@ func TestWeightedRoundRobinNextProxy(t *testing.T) {
 // WeightedRoundRobin algorithm by simulating concurrent access through
 // multiple goroutines and ensuring the expected proxy distribution.
 func TestWeightedRoundRobinConcurrentAccess(t *testing.T) {
+	raftHelper, err := testhelpers.NewTestRaftNode(t)
+	require.NoError(t, err, "Failed to create test raft node")
+	defer func() {
+		if err := raftHelper.Cleanup(); err != nil {
+			t.Errorf("Failed to cleanup raft: %v", err)
+		}
+	}()
+
 	proxies := []IProxy{
 		MockProxy{name: "proxy1"},
 		MockProxy{name: "proxy2"},
@@ -171,7 +190,7 @@ func TestWeightedRoundRobinConcurrentAccess(t *testing.T) {
 		},
 	}
 
-	server := &Server{Proxies: proxies}
+	server := &Server{Proxies: proxies, RaftNode: raftHelper.Node, GroupName: "test-group"}
 	weightedRR := NewWeightedRoundRobin(server, loadBalancingRule)
 
 	// WaitGroup to synchronize the completion of all goroutines.

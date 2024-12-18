@@ -1,47 +1,41 @@
 package network
 
 import (
+	"encoding/json"
 	"errors"
 	"sync"
 
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
+	"github.com/gatewayd-io/gatewayd/raft"
 )
 
-type weightedProxy struct {
-	proxy           IProxy
-	currentWeight   int
-	effectiveWeight int
-}
-
 type WeightedRoundRobin struct {
-	proxies     []*weightedProxy
-	totalWeight int
-	mu          sync.Mutex
+	groupName      string
+	proxies        []IProxy
+	raftNode       *raft.Node
+	mu             sync.Mutex
+	initialWeights map[string]int
 }
 
 // NewWeightedRoundRobin creates a new WeightedRoundRobin load balancer.
 // It initializes the weighted proxies based on the distribution rules defined in the load balancer configuration.
 func NewWeightedRoundRobin(server *Server, loadbalancerRule config.LoadBalancingRule) *WeightedRoundRobin {
-	var proxies []*weightedProxy
-	totalWeight := 0
-
+	var proxies []IProxy
+	initialWeights := make(map[string]int)
 	for _, distribution := range loadbalancerRule.Distribution {
 		proxy := findProxyByName(distribution.ProxyName, server.Proxies)
 		if proxy != nil {
-			weight := distribution.Weight
-			totalWeight += weight
-			proxies = append(proxies, &weightedProxy{
-				proxy:           proxy,
-				effectiveWeight: weight,
-				currentWeight:   0,
-			})
+			proxies = append(proxies, proxy)
+			initialWeights[proxy.GetBlockName()] = distribution.Weight
 		}
 	}
 
 	return &WeightedRoundRobin{
-		proxies:     proxies,
-		totalWeight: totalWeight,
+		groupName:      server.GroupName,
+		proxies:        proxies,
+		raftNode:       server.RaftNode,
+		initialWeights: initialWeights,
 	}
 }
 
@@ -58,20 +52,62 @@ func (r *WeightedRoundRobin) NextProxy(_ IConnWrapper) (IProxy, *gerr.GatewayDEr
 		return nil, gerr.ErrNoProxiesAvailable.Wrap(errors.New("proxy list is empty"))
 	}
 
-	var selected *weightedProxy
+	var selected IProxy
+	var maxWeight int
+	totalWeight := 0
 
-	// Adjust weights and select the proxy with the highest current weight.
-	for _, p := range r.proxies {
-		p.currentWeight += p.effectiveWeight
-		if selected == nil || p.currentWeight > selected.currentWeight {
-			selected = p
+	// Calculate total weight and find proxy with highest current weight
+	for _, proxy := range r.proxies {
+		weight, exists := r.raftNode.Fsm.GetWeightedRRState(r.groupName, proxy.GetBlockName())
+		if !exists {
+			weight = raft.WeightedProxy{
+				EffectiveWeight: r.initialWeights[proxy.GetBlockName()],
+				CurrentWeight:   0,
+			}
+		}
+
+		totalWeight += weight.EffectiveWeight
+
+		// Update current weight in Raft
+		newWeight := weight.CurrentWeight + weight.EffectiveWeight
+		cmd := raft.Command{
+			Type: raft.CommandUpdateWeightedRR,
+			Payload: raft.WeightedRRPayload{
+				GroupName: r.groupName,
+				ProxyName: proxy.GetBlockName(),
+				Weight: raft.WeightedProxy{
+					CurrentWeight:   newWeight,
+					EffectiveWeight: weight.EffectiveWeight,
+				},
+			},
+		}
+		data, _ := json.Marshal(cmd)
+		r.raftNode.Apply(data, raft.LeaderElectionTimeout)
+
+		if selected == nil || newWeight > maxWeight {
+			selected = proxy
+			maxWeight = newWeight
 		}
 	}
 
-	// Reduce the selected proxy's current weight by the total weight.
 	if selected != nil {
-		selected.currentWeight -= r.totalWeight
-		return selected.proxy, nil
+		// Decrease the selected proxy's current weight
+		weight, _ := r.raftNode.Fsm.GetWeightedRRState(r.groupName, selected.GetBlockName())
+		cmd := raft.Command{
+			Type: raft.CommandUpdateWeightedRR,
+			Payload: raft.WeightedRRPayload{
+				GroupName: r.groupName,
+				ProxyName: selected.GetBlockName(),
+				Weight: raft.WeightedProxy{
+					CurrentWeight:   weight.CurrentWeight - totalWeight,
+					EffectiveWeight: weight.EffectiveWeight,
+				},
+			},
+		}
+		data, _ := json.Marshal(cmd)
+		r.raftNode.Apply(data, raft.LeaderElectionTimeout)
+
+		return selected, nil
 	}
 
 	return nil, gerr.ErrNoProxiesAvailable.Wrap(errors.New("no proxy selected"))
