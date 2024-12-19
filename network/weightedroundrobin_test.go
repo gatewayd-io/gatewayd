@@ -98,7 +98,6 @@ func TestNewWeightedRoundRobin(t *testing.T) {
 // TestWeightedRoundRobinNextProxy verifies that the WeightedRoundRobin algorithm
 // correctly distributes requests among proxies according to their weights.
 func TestWeightedRoundRobinNextProxy(t *testing.T) {
-
 	raftHelper, err := testhelpers.NewTestRaftNode(t)
 	require.NoError(t, err, "Failed to create test raft node")
 

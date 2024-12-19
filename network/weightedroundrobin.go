@@ -103,7 +103,10 @@ func (r *WeightedRoundRobin) NextProxy(_ IConnWrapper) (IProxy, *gerr.GatewayDEr
 		},
 	}
 
-	data, _ := json.Marshal(cmd)
+	data, err := json.Marshal(cmd)
+	if err != nil {
+		return nil, gerr.ErrNoProxiesAvailable.Wrap(err)
+	}
 	if err := r.raftNode.Apply(data, raft.LeaderElectionTimeout); err != nil {
 		return nil, gerr.ErrNoProxiesAvailable.Wrap(err)
 	}

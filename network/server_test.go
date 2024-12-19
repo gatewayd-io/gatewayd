@@ -181,10 +181,9 @@ func TestRunServer(t *testing.T) {
 		defer proxyStateMutex.Unlock()
 
 		// Check that one of the proxies has the expected state.
-		if (proxy1.AvailableConnections.Size() == 2 && proxy1.busyConnections.Size() == 1) ||
-			(proxy2.AvailableConnections.Size() == 2 && proxy2.busyConnections.Size() == 1) {
-			// One of the proxies is in the expected state.
-		} else {
+		proxyInExpectedState := (proxy1.AvailableConnections.Size() == 2 && proxy1.busyConnections.Size() == 1) ||
+			(proxy2.AvailableConnections.Size() == 2 && proxy2.busyConnections.Size() == 1)
+		if !proxyInExpectedState {
 			t.Errorf("Neither proxy is in the expected state")
 		}
 
