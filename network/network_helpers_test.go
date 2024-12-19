@@ -242,6 +242,8 @@ func setupProxy(
 			ClientConfig:         clientConfig,
 			Logger:               logger,
 			PluginTimeout:        config.DefaultPluginTimeout,
+			GroupName:            "test-group",
+			BlockName:            clientIP + ":" + clientPort,
 		},
 	)
 

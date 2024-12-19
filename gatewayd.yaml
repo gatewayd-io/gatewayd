@@ -115,3 +115,4 @@ raft:
   peers: []
   # - id: node2
   #   address: 127.0.0.1:2223
+  #   grpcAddress: 127.0.0.1:50052
