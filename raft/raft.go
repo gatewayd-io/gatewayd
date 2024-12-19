@@ -26,6 +26,7 @@ const (
 	CommandAddConsistentHashEntry = "ADD_CONSISTENT_HASH_ENTRY"
 	CommandAddRoundRobinNext      = "ADD_ROUND_ROBIN_NEXT"
 	CommandUpdateWeightedRR       = "UPDATE_WEIGHTED_RR"
+	CommandUpdateWeightedRRBatch  = "UPDATE_WEIGHTED_RR_BATCH"
 	RaftLeaderState               = raft.Leader
 	LeaderElectionTimeout         = 3 * time.Second
 	maxSnapshots                  = 3                // Maximum number of snapshots to retain
@@ -63,6 +64,12 @@ type WeightedRRPayload struct {
 	GroupName string        `json:"groupName"`
 	ProxyName string        `json:"proxyName"`
 	Weight    WeightedProxy `json:"weight"`
+}
+
+// WeightedRRBatchPayload represents the payload for batch updates of WeightedRoundRobin operations.
+type WeightedRRBatchPayload struct {
+	GroupName string                   `json:"groupName"`
+	Updates   map[string]WeightedProxy `json:"updates"`
 }
 
 // Node represents a node in the Raft cluster.
@@ -399,6 +406,23 @@ func (f *FSM) Apply(log *raft.Log) interface{} {
 			f.weightedRRStates[payload.GroupName] = make(map[string]WeightedProxy)
 		}
 		f.weightedRRStates[payload.GroupName][payload.ProxyName] = payload.Weight
+		return nil
+	case CommandUpdateWeightedRRBatch:
+		f.mu.Lock()
+		defer f.mu.Unlock()
+		payload, err := convertPayload[WeightedRRBatchPayload](cmd.Payload)
+		if err != nil {
+			return fmt.Errorf("failed to convert payload: %w", err)
+		}
+
+		if _, exists := f.weightedRRStates[payload.GroupName]; !exists {
+			f.weightedRRStates[payload.GroupName] = make(map[string]WeightedProxy)
+		}
+
+		// Update all proxies in a single operation
+		for proxyName, weight := range payload.Updates {
+			f.weightedRRStates[payload.GroupName][proxyName] = weight
+		}
 		return nil
 	default:
 		return fmt.Errorf("unknown command type: %s", cmd.Type)

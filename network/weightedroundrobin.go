@@ -56,33 +56,28 @@ func (r *WeightedRoundRobin) NextProxy(_ IConnWrapper) (IProxy, *gerr.GatewayDEr
 	var maxWeight int
 	totalWeight := 0
 
-	// Calculate total weight and find proxy with highest current weight
+	// Prepare batch updates
+	updates := make(map[string]raft.WeightedProxy)
+
+	// Calculate weights and find the selected proxy
 	for _, proxy := range r.proxies {
-		weight, exists := r.raftNode.Fsm.GetWeightedRRState(r.groupName, proxy.GetBlockName())
+		proxyName := proxy.GetBlockName()
+		weight, exists := r.raftNode.Fsm.GetWeightedRRState(r.groupName, proxyName)
 		if !exists {
 			weight = raft.WeightedProxy{
-				EffectiveWeight: r.initialWeights[proxy.GetBlockName()],
+				EffectiveWeight: r.initialWeights[proxyName],
 				CurrentWeight:   0,
 			}
 		}
 
 		totalWeight += weight.EffectiveWeight
-
-		// Update current weight in Raft
 		newWeight := weight.CurrentWeight + weight.EffectiveWeight
-		cmd := raft.Command{
-			Type: raft.CommandUpdateWeightedRR,
-			Payload: raft.WeightedRRPayload{
-				GroupName: r.groupName,
-				ProxyName: proxy.GetBlockName(),
-				Weight: raft.WeightedProxy{
-					CurrentWeight:   newWeight,
-					EffectiveWeight: weight.EffectiveWeight,
-				},
-			},
+
+		// Store the update
+		updates[proxyName] = raft.WeightedProxy{
+			CurrentWeight:   newWeight,
+			EffectiveWeight: weight.EffectiveWeight,
 		}
-		data, _ := json.Marshal(cmd)
-		r.raftNode.Apply(data, raft.LeaderElectionTimeout)
 
 		if selected == nil || newWeight > maxWeight {
 			selected = proxy
@@ -90,27 +85,30 @@ func (r *WeightedRoundRobin) NextProxy(_ IConnWrapper) (IProxy, *gerr.GatewayDEr
 		}
 	}
 
-	if selected != nil {
-		// Decrease the selected proxy's current weight
-		weight, _ := r.raftNode.Fsm.GetWeightedRRState(r.groupName, selected.GetBlockName())
-		cmd := raft.Command{
-			Type: raft.CommandUpdateWeightedRR,
-			Payload: raft.WeightedRRPayload{
-				GroupName: r.groupName,
-				ProxyName: selected.GetBlockName(),
-				Weight: raft.WeightedProxy{
-					CurrentWeight:   weight.CurrentWeight - totalWeight,
-					EffectiveWeight: weight.EffectiveWeight,
-				},
-			},
-		}
-		data, _ := json.Marshal(cmd)
-		r.raftNode.Apply(data, raft.LeaderElectionTimeout)
-
-		return selected, nil
+	if selected == nil {
+		return nil, gerr.ErrNoProxiesAvailable.Wrap(errors.New("no proxy selected"))
 	}
 
-	return nil, gerr.ErrNoProxiesAvailable.Wrap(errors.New("no proxy selected"))
+	// Update the selected proxy's weight
+	selectedProxy := updates[selected.GetBlockName()]
+	selectedProxy.CurrentWeight -= totalWeight
+	updates[selected.GetBlockName()] = selectedProxy
+
+	// Create and apply the batch update command
+	cmd := raft.Command{
+		Type: raft.CommandUpdateWeightedRRBatch,
+		Payload: raft.WeightedRRBatchPayload{
+			GroupName: r.groupName,
+			Updates:   updates,
+		},
+	}
+
+	data, _ := json.Marshal(cmd)
+	if err := r.raftNode.Apply(data, raft.LeaderElectionTimeout); err != nil {
+		return nil, gerr.ErrNoProxiesAvailable.Wrap(err)
+	}
+
+	return selected, nil
 }
 
 // findProxyByName locates a proxy by its name in the provided list of proxies.
