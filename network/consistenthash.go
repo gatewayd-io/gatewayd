@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"strconv"
 	"sync"
 
 	gerr "github.com/gatewayd-io/gatewayd/errors"
@@ -69,10 +70,12 @@ func (ch *ConsistentHash) NextProxy(conn IConnWrapper) (IProxy, *gerr.GatewayDEr
 	}
 
 	// Create and apply the command through Raft
-	cmd := raft.ConsistentHashCommand{
-		Type:      raft.CommandAddConsistentHashEntry,
-		Hash:      hash,
-		BlockName: proxy.GetBlockName(),
+	cmd := raft.Command{
+		Type: raft.CommandAddConsistentHashEntry,
+		Payload: raft.ConsistentHashPayload{
+			Hash:      hash,
+			BlockName: proxy.GetBlockName(),
+		},
 	}
 
 	cmdBytes, marshalErr := json.Marshal(cmd)
@@ -88,10 +91,11 @@ func (ch *ConsistentHash) NextProxy(conn IConnWrapper) (IProxy, *gerr.GatewayDEr
 	return proxy, nil
 }
 
-// hashKey hashes a given key using the MurmurHash3 algorithm. It is used to generate consistent hash values
-// for IP addresses or connection strings.
-func hashKey(key string) uint64 {
-	return murmur3.Sum64([]byte(key))
+// hashKey hashes a given key using the MurmurHash3 algorithm and returns it as a string. It is used to generate
+// consistent hash values for IP addresses or connection strings.
+func hashKey(key string) string {
+	hash := murmur3.Sum64([]byte(key))
+	return strconv.FormatUint(hash, 10)
 }
 
 // extractIPFromConn extracts the IP address from the connection's remote address. It splits the address
