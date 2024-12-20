@@ -33,6 +33,7 @@ const (
 	maxPool                       = 3                // Maximum number of connections to pool
 	transportTimeout              = 10 * time.Second // Timeout for transport operations
 	leadershipCheckInterval       = 10 * time.Second // Interval for checking leadership status
+	ApplyTimeout                  = 2 * time.Second  // Timeout for applying commands
 )
 
 // Command represents a general command structure for all operations.

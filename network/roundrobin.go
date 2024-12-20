@@ -52,7 +52,7 @@ func (r *RoundRobin) NextProxy(_ IConnWrapper) (IProxy, *gerr.GatewayDError) {
 	}
 
 	// Apply through Raft
-	if err := r.server.RaftNode.Apply(data, raft.LeaderElectionTimeout); err != nil {
+	if err := r.server.RaftNode.Apply(data, raft.ApplyTimeout); err != nil {
 		return nil, gerr.ErrNoProxiesAvailable.Wrap(err)
 	}
 

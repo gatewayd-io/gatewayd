@@ -144,7 +144,7 @@ func TestNextProxyOverflow(t *testing.T) {
 	data, err := json.Marshal(cmd)
 	require.NoError(t, err)
 
-	require.NoError(t, raftHelper.Node.Apply(data, raft.LeaderElectionTimeout))
+	require.NoError(t, raftHelper.Node.Apply(data, raft.ApplyTimeout))
 
 	// Call NextProxy multiple times to trigger the overflow
 	for range 4 {
