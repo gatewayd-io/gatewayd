@@ -1,9 +1,14 @@
 package network
 
 import (
+	"encoding/json"
 	"math"
 	"sync"
 	"testing"
+
+	"github.com/gatewayd-io/gatewayd/raft"
+	"github.com/gatewayd-io/gatewayd/testhelpers"
+	"github.com/stretchr/testify/require"
 )
 
 // TestNewRoundRobin tests the NewRoundRobin function to ensure that it correctly initializes
@@ -25,12 +30,21 @@ func TestNewRoundRobin(t *testing.T) {
 // TestRoundRobin_NextProxy tests the NextProxy method of the round-robin load balancer to ensure
 // that it returns proxies in the expected order.
 func TestRoundRobin_NextProxy(t *testing.T) {
+	raftHelper, err := testhelpers.NewTestRaftNode(t)
+	if err != nil {
+		t.Fatalf("Failed to create test raft node: %v", err)
+	}
+	defer func() {
+		if err := raftHelper.Cleanup(); err != nil {
+			t.Errorf("Failed to cleanup raft: %v", err)
+		}
+	}()
 	proxies := []IProxy{
 		MockProxy{name: "proxy1"},
 		MockProxy{name: "proxy2"},
 		MockProxy{name: "proxy3"},
 	}
-	server := &Server{Proxies: proxies}
+	server := &Server{Proxies: proxies, RaftNode: raftHelper.Node, GroupName: "test-group"}
 	roundRobin := NewRoundRobin(server)
 
 	expectedOrder := []string{"proxy2", "proxy3", "proxy1", "proxy2", "proxy3"}
@@ -58,7 +72,18 @@ func TestRoundRobin_ConcurrentAccess(t *testing.T) {
 		MockProxy{name: "proxy2"},
 		MockProxy{name: "proxy3"},
 	}
-	server := &Server{Proxies: proxies}
+
+	raftHelper, err := testhelpers.NewTestRaftNode(t)
+	if err != nil {
+		t.Fatalf("Failed to create test raft node: %v", err)
+	}
+	defer func() {
+		if err := raftHelper.Cleanup(); err != nil {
+			t.Errorf("Failed to cleanup raft: %v", err)
+		}
+	}()
+	server := &Server{Proxies: proxies, RaftNode: raftHelper.Node, GroupName: "test-group"}
+	server.initializeProxies()
 	roundRobin := NewRoundRobin(server)
 
 	var waitGroup sync.WaitGroup
@@ -73,7 +98,7 @@ func TestRoundRobin_ConcurrentAccess(t *testing.T) {
 	}
 
 	waitGroup.Wait()
-	nextIndex := roundRobin.next.Load()
+	nextIndex := server.RaftNode.Fsm.GetRoundRobinNext(server.GroupName)
 	if nextIndex != uint32(numGoroutines) {
 		t.Errorf("expected next index to be %d, got %d", numGoroutines, nextIndex)
 	}
@@ -84,6 +109,15 @@ func TestRoundRobin_ConcurrentAccess(t *testing.T) {
 // uint32 value and ensures that the proxy selection wraps around as expected when the
 // counter overflows.
 func TestNextProxyOverflow(t *testing.T) {
+	raftHelper, err := testhelpers.NewTestRaftNode(t)
+	if err != nil {
+		t.Fatalf("Failed to create test raft node: %v", err)
+	}
+	defer func() {
+		if err := raftHelper.Cleanup(); err != nil {
+			t.Errorf("Failed to cleanup raft: %v", err)
+		}
+	}()
 	// Create a server with a few mock proxies
 	server := &Server{
 		Proxies: []IProxy{
@@ -91,11 +125,26 @@ func TestNextProxyOverflow(t *testing.T) {
 			&MockProxy{},
 			&MockProxy{},
 		},
+		GroupName: "test-group",
+		RaftNode:  raftHelper.Node,
 	}
+	server.initializeProxies()
+
 	roundRobin := NewRoundRobin(server)
 
 	// Set the next value to near the max uint32 value to force an overflow
-	roundRobin.next.Store(math.MaxUint32 - 1)
+	cmd := raft.Command{
+		Type: raft.CommandAddRoundRobinNext,
+		Payload: raft.RoundRobinPayload{
+			NextIndex: math.MaxUint32 - 1,
+			GroupName: server.GroupName,
+		},
+	}
+	// Convert command to JSON
+	data, err := json.Marshal(cmd)
+	require.NoError(t, err)
+
+	require.NoError(t, raftHelper.Node.Apply(data, raft.ApplyTimeout))
 
 	// Call NextProxy multiple times to trigger the overflow
 	for range 4 {
@@ -110,7 +159,7 @@ func TestNextProxyOverflow(t *testing.T) {
 
 	// After overflow, next value should wrap around
 	expectedNextValue := uint32(2) // (MaxUint32 - 1 + 4) % ProxiesLen = 2
-	actualNextValue := roundRobin.next.Load()
+	actualNextValue := server.RaftNode.Fsm.GetRoundRobinNext(server.GroupName)
 	if actualNextValue != expectedNextValue {
 		t.Fatalf("Expected next value to be %v, got %v", expectedNextValue, actualNextValue)
 	}

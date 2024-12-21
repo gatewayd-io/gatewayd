@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gatewayd-io/gatewayd/config"
@@ -23,19 +24,53 @@ import (
 // Configuration constants for Raft operations.
 const (
 	CommandAddConsistentHashEntry = "ADD_CONSISTENT_HASH_ENTRY"
+	CommandAddRoundRobinNext      = "ADD_ROUND_ROBIN_NEXT"
+	CommandUpdateWeightedRR       = "UPDATE_WEIGHTED_RR"
+	CommandUpdateWeightedRRBatch  = "UPDATE_WEIGHTED_RR_BATCH"
 	RaftLeaderState               = raft.Leader
 	LeaderElectionTimeout         = 3 * time.Second
 	maxSnapshots                  = 3                // Maximum number of snapshots to retain
 	maxPool                       = 3                // Maximum number of connections to pool
 	transportTimeout              = 10 * time.Second // Timeout for transport operations
 	leadershipCheckInterval       = 10 * time.Second // Interval for checking leadership status
+	ApplyTimeout                  = 2 * time.Second  // Timeout for applying commands
 )
 
-// ConsistentHashCommand represents a command to modify the consistent hash.
-type ConsistentHashCommand struct {
-	Type      string `json:"type"`
-	Hash      uint64 `json:"hash"`
+// Command represents a general command structure for all operations.
+type Command struct {
+	Type    string      `json:"type"`
+	Payload interface{} `json:"payload"`
+}
+
+// ConsistentHashPayload represents the payload for consistent hash operations.
+type ConsistentHashPayload struct {
+	Hash      string `json:"hash"`
 	BlockName string `json:"blockName"`
+}
+
+// RoundRobinPayload represents the payload for round robin operations.
+type RoundRobinPayload struct {
+	NextIndex uint32 `json:"nextIndex"`
+	GroupName string `json:"groupName"`
+}
+
+// WeightedProxy represents the weight structure for WeightedRoundRobin operations.
+type WeightedProxy struct {
+	CurrentWeight   int `json:"currentWeight"`
+	EffectiveWeight int `json:"effectiveWeight"`
+}
+
+// WeightedRRPayload represents the payload for WeightedRoundRobin operations.
+type WeightedRRPayload struct {
+	GroupName string        `json:"groupName"`
+	ProxyName string        `json:"proxyName"`
+	Weight    WeightedProxy `json:"weight"`
+}
+
+// WeightedRRBatchPayload represents the payload for batch updates of WeightedRoundRobin operations.
+type WeightedRRBatchPayload struct {
+	GroupName string                   `json:"groupName"`
+	Updates   map[string]WeightedProxy `json:"updates"`
 }
 
 // Node represents a node in the Raft cluster.
@@ -288,12 +323,14 @@ func (n *Node) Shutdown() error {
 
 // FSM represents the Finite State Machine for the Raft cluster.
 type FSM struct {
-	lbHashToBlockName map[uint64]string
+	lbHashToBlockName map[string]string
+	roundRobinIndex   map[string]*atomic.Uint32
+	weightedRRStates  map[string]map[string]WeightedProxy
 	mu                sync.RWMutex
 }
 
 // GetProxyBlock safely retrieves the block name for a given hash.
-func (f *FSM) GetProxyBlock(hash uint64) (string, bool) {
+func (f *FSM) GetProxyBlock(hash string) (string, bool) {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
 	if blockName, exists := f.lbHashToBlockName[hash]; exists {
@@ -302,30 +339,113 @@ func (f *FSM) GetProxyBlock(hash uint64) (string, bool) {
 	return "", false
 }
 
+// GetRoundRobinNext retrieves the next index for a given group name.
+func (f *FSM) GetRoundRobinNext(groupName string) uint32 {
+	if index, ok := f.roundRobinIndex[groupName]; ok {
+		return index.Load()
+	}
+	return 0
+}
+
+// GetWeightedRRState retrieves the weight for a given group name and proxy name.
+func (f *FSM) GetWeightedRRState(groupName, proxyName string) (WeightedProxy, bool) {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+	if group, exists := f.weightedRRStates[groupName]; exists {
+		if weight, ok := group[proxyName]; ok {
+			return weight, true
+		}
+	}
+	return WeightedProxy{}, false
+}
+
 // NewFSM creates a new FSM instance.
 func NewFSM() *FSM {
 	return &FSM{
-		lbHashToBlockName: make(map[uint64]string),
+		lbHashToBlockName: make(map[string]string),
+		roundRobinIndex:   make(map[string]*atomic.Uint32),
+		weightedRRStates:  make(map[string]map[string]WeightedProxy),
 	}
 }
 
 // Apply implements the raft.FSM interface.
 func (f *FSM) Apply(log *raft.Log) interface{} {
-	var cmd ConsistentHashCommand
+	var cmd Command
 	if err := json.Unmarshal(log.Data, &cmd); err != nil {
 		return fmt.Errorf("failed to unmarshal command: %w", err)
 	}
 
-	f.mu.Lock()
-	defer f.mu.Unlock()
-
 	switch cmd.Type {
 	case CommandAddConsistentHashEntry:
-		f.lbHashToBlockName[cmd.Hash] = cmd.BlockName
+		f.mu.Lock()
+		defer f.mu.Unlock()
+		payload, err := convertPayload[ConsistentHashPayload](cmd.Payload)
+		if err != nil {
+			return fmt.Errorf("failed to convert payload: %w", err)
+		}
+		f.lbHashToBlockName[payload.Hash] = payload.BlockName
+		return nil
+	case CommandAddRoundRobinNext:
+		payload, err := convertPayload[RoundRobinPayload](cmd.Payload)
+		if err != nil {
+			return fmt.Errorf("failed to convert payload: %w", err)
+		}
+		if _, exists := f.roundRobinIndex[payload.GroupName]; !exists {
+			f.roundRobinIndex[payload.GroupName] = &atomic.Uint32{}
+		}
+		f.roundRobinIndex[payload.GroupName].Store(payload.NextIndex)
+		return nil
+	case CommandUpdateWeightedRR:
+		f.mu.Lock()
+		defer f.mu.Unlock()
+		payload, err := convertPayload[WeightedRRPayload](cmd.Payload)
+		if err != nil {
+			return fmt.Errorf("failed to convert payload: %w", err)
+		}
+
+		if _, exists := f.weightedRRStates[payload.GroupName]; !exists {
+			f.weightedRRStates[payload.GroupName] = make(map[string]WeightedProxy)
+		}
+		f.weightedRRStates[payload.GroupName][payload.ProxyName] = payload.Weight
+		return nil
+	case CommandUpdateWeightedRRBatch:
+		f.mu.Lock()
+		defer f.mu.Unlock()
+		payload, err := convertPayload[WeightedRRBatchPayload](cmd.Payload)
+		if err != nil {
+			return fmt.Errorf("failed to convert payload: %w", err)
+		}
+
+		if _, exists := f.weightedRRStates[payload.GroupName]; !exists {
+			f.weightedRRStates[payload.GroupName] = make(map[string]WeightedProxy)
+		}
+
+		// Update all proxies in a single operation
+		for proxyName, weight := range payload.Updates {
+			f.weightedRRStates[payload.GroupName][proxyName] = weight
+		}
 		return nil
 	default:
 		return fmt.Errorf("unknown command type: %s", cmd.Type)
 	}
+}
+
+// Helper function to convert interface{} to specific payload type.
+func convertPayload[T any](payload interface{}) (T, error) {
+	var result T
+
+	// Convert the payload to JSON
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return result, fmt.Errorf("failed to marshal payload: %w", err)
+	}
+
+	// Unmarshal into the specific type
+	if err := json.Unmarshal(payloadBytes, &result); err != nil {
+		return result, fmt.Errorf("failed to unmarshal payload: %w", err)
+	}
+
+	return result, nil
 }
 
 // Snapshot returns a snapshot of the FSM.
@@ -333,44 +453,86 @@ func (f *FSM) Snapshot() (raft.FSMSnapshot, error) {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
 
-	// Create a copy of the hash map
-	hashMapCopy := make(map[uint64]string)
+	// Create copies of all maps
+	hashMapCopy := make(map[string]string)
 	for k, v := range f.lbHashToBlockName {
 		hashMapCopy[k] = v
 	}
 
-	return &FSMSnapshot{lbHashToBlockName: hashMapCopy}, nil
+	roundRobinCopy := make(map[string]uint32)
+	for k, v := range f.roundRobinIndex {
+		roundRobinCopy[k] = v.Load()
+	}
+
+	// Copy weightedRRStates
+	weightedRRCopy := make(map[string]map[string]WeightedProxy)
+	for groupName, group := range f.weightedRRStates {
+		weightedRRCopy[groupName] = make(map[string]WeightedProxy)
+		for proxyName, weight := range group {
+			weightedRRCopy[groupName][proxyName] = weight
+		}
+	}
+
+	return &FSMSnapshot{
+		lbHashToBlockName: hashMapCopy,
+		roundRobinIndex:   roundRobinCopy,
+		weightedRRStates:  weightedRRCopy,
+	}, nil
 }
 
 // Restore restores the FSM from a snapshot.
-func (f *FSM) Restore(rc io.ReadCloser) error {
-	decoder := json.NewDecoder(rc)
-	var lbHashToBlockName map[uint64]string
-	if err := decoder.Decode(&lbHashToBlockName); err != nil {
+func (f *FSM) Restore(readCloser io.ReadCloser) error {
+	var data struct {
+		HashToBlock     map[string]string                   `json:"hashToBlock"`
+		RoundRobin      map[string]uint32                   `json:"roundRobin"`
+		WeightedRRState map[string]map[string]WeightedProxy `json:"weightedRrState"`
+	}
+
+	if err := json.NewDecoder(readCloser).Decode(&data); err != nil {
 		return fmt.Errorf("error decoding snapshot: %w", err)
 	}
 
 	f.mu.Lock()
-	f.lbHashToBlockName = lbHashToBlockName
-	f.mu.Unlock()
+	defer f.mu.Unlock()
+
+	f.lbHashToBlockName = data.HashToBlock
+	f.roundRobinIndex = make(map[string]*atomic.Uint32)
+	for k, v := range data.RoundRobin {
+		atomicVal := &atomic.Uint32{}
+		atomicVal.Store(v)
+		f.roundRobinIndex[k] = atomicVal
+	}
+	f.weightedRRStates = data.WeightedRRState
 
 	return nil
 }
 
 // FSMSnapshot represents a snapshot of the FSM.
 type FSMSnapshot struct {
-	lbHashToBlockName map[uint64]string
+	lbHashToBlockName map[string]string
+	roundRobinIndex   map[string]uint32
+	weightedRRStates  map[string]map[string]WeightedProxy
 }
 
 // Persist writes the FSMSnapshot data to the given SnapshotSink.
 func (f *FSMSnapshot) Persist(sink raft.SnapshotSink) error {
-	err := json.NewEncoder(sink).Encode(f.lbHashToBlockName)
-	if err != nil {
+	data := struct {
+		HashToBlock     map[string]string                   `json:"hashToBlock"`
+		RoundRobin      map[string]uint32                   `json:"roundRobin"`
+		WeightedRRState map[string]map[string]WeightedProxy `json:"weightedRrState"`
+	}{
+		HashToBlock:     f.lbHashToBlockName,
+		RoundRobin:      f.roundRobinIndex,
+		WeightedRRState: f.weightedRRStates,
+	}
+
+	if err := json.NewEncoder(sink).Encode(data); err != nil {
 		if cancelErr := sink.Cancel(); cancelErr != nil {
 			return fmt.Errorf("error canceling snapshot: %w (original error: %w)", cancelErr, err)
 		}
 		return fmt.Errorf("error encoding snapshot: %w", err)
 	}
+
 	if err := sink.Close(); err != nil {
 		return fmt.Errorf("error closing snapshot sink: %w", err)
 	}

@@ -71,10 +71,12 @@ func TestFSMOperations(t *testing.T) {
 	fsm := NewFSM()
 
 	// Test adding a hash mapping
-	cmd := ConsistentHashCommand{
-		Type:      CommandAddConsistentHashEntry,
-		Hash:      12345,
-		BlockName: "test-block",
+	cmd := Command{
+		Type: CommandAddConsistentHashEntry,
+		Payload: ConsistentHashPayload{
+			Hash:      "12345",
+			BlockName: "test-block",
+		},
 	}
 
 	data, err := json.Marshal(cmd)
@@ -85,12 +87,12 @@ func TestFSMOperations(t *testing.T) {
 	assert.Nil(t, result)
 
 	// Test retrieving the mapping
-	blockName, exists := fsm.GetProxyBlock(12345)
+	blockName, exists := fsm.GetProxyBlock("12345")
 	assert.True(t, exists)
 	assert.Equal(t, "test-block", blockName)
 
 	// Test non-existent mapping
-	blockName, exists = fsm.GetProxyBlock(99999)
+	blockName, exists = fsm.GetProxyBlock("99999")
 	assert.False(t, exists)
 	assert.Empty(t, blockName)
 }
@@ -99,10 +101,12 @@ func TestFSMSnapshot(t *testing.T) {
 	fsm := NewFSM()
 
 	// Add some data
-	cmd := ConsistentHashCommand{
-		Type:      CommandAddConsistentHashEntry,
-		Hash:      12345,
-		BlockName: "test-block",
+	cmd := Command{
+		Type: CommandAddConsistentHashEntry,
+		Payload: ConsistentHashPayload{
+			Hash:      "12345",
+			BlockName: "test-block",
+		},
 	}
 	data, err := json.Marshal(cmd)
 	require.NoError(t, err)
@@ -116,7 +120,7 @@ func TestFSMSnapshot(t *testing.T) {
 	// Verify snapshot data
 	fsmSnapshot, ok := snapshot.(*FSMSnapshot)
 	assert.True(t, ok)
-	assert.Equal(t, "test-block", fsmSnapshot.lbHashToBlockName[12345])
+	assert.Equal(t, "test-block", fsmSnapshot.lbHashToBlockName["12345"])
 }
 
 func TestRaftNodeApply(t *testing.T) {
@@ -136,10 +140,12 @@ func TestRaftNodeApply(t *testing.T) {
 	}()
 
 	// Test applying data
-	cmd := ConsistentHashCommand{
-		Type:      CommandAddConsistentHashEntry,
-		Hash:      12345,
-		BlockName: "test-block",
+	cmd := Command{
+		Type: CommandAddConsistentHashEntry,
+		Payload: ConsistentHashPayload{
+			Hash:      "12345",
+			BlockName: "test-block",
+		},
 	}
 	data, err := json.Marshal(cmd)
 	require.NoError(t, err)
@@ -224,10 +230,12 @@ func TestRaftLeadershipAndFollowers(t *testing.T) {
 	}
 
 	// Test 3: Test cluster functionality by applying a command
-	cmd := ConsistentHashCommand{
-		Type:      CommandAddConsistentHashEntry,
-		Hash:      12345,
-		BlockName: "test-block",
+	cmd := Command{
+		Type: CommandAddConsistentHashEntry,
+		Payload: ConsistentHashPayload{
+			Hash:      "12345",
+			BlockName: "test-block",
+		},
 	}
 	data, err := json.Marshal(cmd)
 	require.NoError(t, err)
@@ -241,7 +249,7 @@ func TestRaftLeadershipAndFollowers(t *testing.T) {
 
 	// Verify that all nodes have the update
 	for i, node := range nodes {
-		blockName, exists := node.Fsm.GetProxyBlock(12345)
+		blockName, exists := node.Fsm.GetProxyBlock("12345")
 		assert.True(t, exists, "Node %d should have the replicated data", i+1)
 		assert.Equal(t, "test-block", blockName, "Node %d has incorrect data", i+1)
 	}
@@ -261,4 +269,190 @@ func TestRaftLeadershipAndFollowers(t *testing.T) {
 		}
 	}
 	assert.Equal(t, 1, newLeaderCount, "Expected exactly one new leader after original leader shutdown")
+}
+
+func TestWeightedRROperations(t *testing.T) {
+	fsm := NewFSM()
+
+	// Test updating weighted round robin
+	cmd := Command{
+		Type: CommandUpdateWeightedRR,
+		Payload: WeightedRRPayload{
+			GroupName: "test-group",
+			ProxyName: "proxy1",
+			Weight: WeightedProxy{
+				CurrentWeight:   10,
+				EffectiveWeight: 20,
+			},
+		},
+	}
+
+	data, err := json.Marshal(cmd)
+	require.NoError(t, err)
+
+	// Apply the command
+	result := fsm.Apply(&raft.Log{Data: data})
+	assert.Nil(t, result)
+
+	// Test retrieving the weight
+	weight, exists := fsm.GetWeightedRRState("test-group", "proxy1")
+	assert.True(t, exists)
+	assert.Equal(t, WeightedProxy{CurrentWeight: 10, EffectiveWeight: 20}, weight)
+
+	// Test batch update
+	batchCmd := Command{
+		Type: CommandUpdateWeightedRRBatch,
+		Payload: WeightedRRBatchPayload{
+			GroupName: "test-group",
+			Updates: map[string]WeightedProxy{
+				"proxy1": {CurrentWeight: 15, EffectiveWeight: 25},
+				"proxy2": {CurrentWeight: 20, EffectiveWeight: 30},
+			},
+		},
+	}
+
+	data, err = json.Marshal(batchCmd)
+	require.NoError(t, err)
+
+	result = fsm.Apply(&raft.Log{Data: data})
+	assert.Nil(t, result)
+
+	// Verify batch updates
+	weight, exists = fsm.GetWeightedRRState("test-group", "proxy1")
+	assert.True(t, exists)
+	assert.Equal(t, WeightedProxy{CurrentWeight: 15, EffectiveWeight: 25}, weight)
+
+	weight, exists = fsm.GetWeightedRRState("test-group", "proxy2")
+	assert.True(t, exists)
+	assert.Equal(t, WeightedProxy{CurrentWeight: 20, EffectiveWeight: 30}, weight)
+}
+
+func TestRoundRobinOperations(t *testing.T) {
+	fsm := NewFSM()
+
+	// Test adding round robin index
+	cmd := Command{
+		Type: CommandAddRoundRobinNext,
+		Payload: RoundRobinPayload{
+			GroupName: "test-group",
+			NextIndex: 5,
+		},
+	}
+
+	data, err := json.Marshal(cmd)
+	require.NoError(t, err)
+
+	// Apply the command
+	result := fsm.Apply(&raft.Log{Data: data})
+	assert.Nil(t, result)
+
+	// Test retrieving the index
+	index := fsm.GetRoundRobinNext("test-group")
+	assert.Equal(t, uint32(5), index)
+
+	// Test non-existent group
+	index = fsm.GetRoundRobinNext("non-existent")
+	assert.Equal(t, uint32(0), index)
+}
+
+func TestFSMInvalidCommands(t *testing.T) {
+	fsm := NewFSM()
+
+	// Test invalid command type
+	cmd := Command{
+		Type:    "INVALID_COMMAND",
+		Payload: nil,
+	}
+
+	data, err := json.Marshal(cmd)
+	require.NoError(t, err)
+
+	result := fsm.Apply(&raft.Log{Data: data})
+	err, isError := result.(error)
+	assert.True(t, isError, "expected result to be an error")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "unknown command type")
+
+	// Test invalid payload
+	cmd = Command{
+		Type:    CommandAddConsistentHashEntry,
+		Payload: "invalid payload",
+	}
+
+	data, err = json.Marshal(cmd)
+	require.NoError(t, err)
+
+	result = fsm.Apply(&raft.Log{Data: data})
+	err, isError = result.(error)
+	assert.True(t, isError, "expected result to be an error")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to convert payload")
+}
+
+func TestFSMRestoreSnapshot(t *testing.T) {
+	fsm := NewFSM()
+
+	// Create test data
+	testData := struct {
+		HashToBlock     map[string]string                   `json:"hashToBlock"`
+		RoundRobin      map[string]uint32                   `json:"roundRobin"`
+		WeightedRRState map[string]map[string]WeightedProxy `json:"weightedRrState"`
+	}{
+		HashToBlock: map[string]string{"test-hash": "test-block"},
+		RoundRobin:  map[string]uint32{"test-group": 5},
+		WeightedRRState: map[string]map[string]WeightedProxy{
+			"test-group": {
+				"proxy1": {CurrentWeight: 10, EffectiveWeight: 20},
+			},
+		},
+	}
+
+	// Create a pipe to simulate snapshot reading
+	reader, writer := io.Pipe()
+
+	// Write test data in a goroutine
+	go func() {
+		encoder := json.NewEncoder(writer)
+		err := encoder.Encode(testData)
+		assert.NoError(t, err)
+		writer.Close()
+	}()
+
+	// Restore from snapshot
+	err := fsm.Restore(reader)
+	assert.NoError(t, err)
+
+	// Verify restored data
+	blockName, exists := fsm.GetProxyBlock("test-hash")
+	assert.True(t, exists)
+	assert.Equal(t, "test-block", blockName)
+
+	index := fsm.GetRoundRobinNext("test-group")
+	assert.Equal(t, uint32(5), index)
+
+	weight, exists := fsm.GetWeightedRRState("test-group", "proxy1")
+	assert.True(t, exists)
+	assert.Equal(t, WeightedProxy{CurrentWeight: 10, EffectiveWeight: 20}, weight)
+}
+
+func TestNodeShutdown(t *testing.T) {
+	logger := setupTestLogger()
+	tempDir := t.TempDir()
+
+	config := config.Raft{
+		NodeID:      "shutdown-test-node",
+		Address:     "127.0.0.1:0",
+		IsBootstrap: true,
+		Directory:   tempDir,
+	}
+
+	node, err := NewRaftNode(logger, config)
+	require.NoError(t, err)
+
+	// Test multiple shutdowns
+	err = node.Shutdown()
+	assert.NoError(t, err)
+
+	err = node.Shutdown()
+	assert.NoError(t, err) // Should not error on multiple shutdowns
 }
