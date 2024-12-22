@@ -63,7 +63,7 @@ func createHTTPAPI(options *Options) *http.Server {
 	mux := http.NewServeMux()
 	mux.Handle("/", rmux)
 	mux.HandleFunc("/healthz", func(writer http.ResponseWriter, _ *http.Request) {
-		if liveness(options.Servers) {
+		if liveness(options.Servers, options.RaftNode) {
 			writer.Header().Set("Content-Type", "application/json")
 			writer.WriteHeader(http.StatusOK)
 			if err := json.NewEncoder(writer).Encode(Healthz{Status: "SERVING"}); err != nil {
