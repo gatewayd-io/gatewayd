@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/codingsince1985/checksum"
-	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/testhelpers"
 	"github.com/spf13/cast"
@@ -87,7 +86,7 @@ func Test_pluginScaffoldCmd(t *testing.T) {
 
 	pluginTestConfigFile := filepath.Join(pluginDir, "gatewayd_plugins.yaml")
 
-	stopChan = make(chan struct{})
+	App.stopChan = make(chan struct{})
 
 	var waitGroup sync.WaitGroup
 
@@ -114,14 +113,7 @@ func Test_pluginScaffoldCmd(t *testing.T) {
 		StopGracefully(
 			context.Background(),
 			nil,
-			nil,
-			metricsServer,
-			nil,
-			loggers[config.Default],
-			servers,
-			stopChan,
-			nil,
-			nil,
+			App,
 		)
 
 		waitGroup.Done()

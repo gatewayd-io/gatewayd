@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/gatewayd-io/gatewayd/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -41,7 +40,7 @@ func Test_runCmd(t *testing.T) {
 	// Check that the config file was created.
 	assert.FileExists(t, globalTestConfigFile, "configInitCmd should create a config file")
 
-	stopChan = make(chan struct{})
+	App.stopChan = make(chan struct{})
 
 	var waitGroup sync.WaitGroup
 
@@ -67,14 +66,7 @@ func Test_runCmd(t *testing.T) {
 		StopGracefully(
 			context.Background(),
 			nil,
-			nil,
-			metricsServer,
-			nil,
-			loggers[config.Default],
-			servers,
-			stopChan,
-			nil,
-			nil,
+			App,
 		)
 
 		waitGroup.Done()
@@ -104,7 +96,7 @@ func Test_runCmdWithTLS(t *testing.T) {
 	require.NoError(t, err, "plugin init command should not have returned an error")
 	assert.FileExists(t, pluginTestConfigFile, "plugin init command should have created a config file")
 
-	stopChan = make(chan struct{})
+	App.stopChan = make(chan struct{})
 
 	var waitGroup sync.WaitGroup
 	// TODO: Test client certificate authentication.
@@ -133,14 +125,7 @@ func Test_runCmdWithTLS(t *testing.T) {
 		StopGracefully(
 			context.Background(),
 			nil,
-			nil,
-			metricsServer,
-			nil,
-			loggers[config.Default],
-			servers,
-			stopChan,
-			nil,
-			nil,
+			App,
 		)
 
 		waitGroup.Done()
@@ -172,7 +157,7 @@ func Test_runCmdWithMultiTenancy(t *testing.T) {
 	require.NoError(t, err, "plugin init command should not have returned an error")
 	assert.FileExists(t, pluginTestConfigFile, "plugin init command should have created a config file")
 
-	stopChan = make(chan struct{})
+	App.stopChan = make(chan struct{})
 
 	var waitGroup sync.WaitGroup
 
@@ -203,14 +188,7 @@ func Test_runCmdWithMultiTenancy(t *testing.T) {
 		StopGracefully(
 			context.Background(),
 			nil,
-			nil,
-			metricsServer,
-			nil,
-			loggers[config.Default],
-			servers,
-			stopChan,
-			nil,
-			nil,
+			App,
 		)
 
 		waitGroup.Done()
@@ -233,9 +211,8 @@ func Test_runCmdWithCachePlugin(t *testing.T) {
 
 	globalTestConfigFile := "./test_global_runCmdWithCachePlugin.yaml"
 	pluginTestConfigFile := "./test_plugins_runCmdWithCachePlugin.yaml"
-	// TODO: Remove this once these global variables are removed from cmd/run.go.
-	// https://github.com/gatewayd-io/gatewayd/issues/324
-	stopChan = make(chan struct{})
+
+	App.stopChan = make(chan struct{})
 
 	// Create a test plugins config file.
 	_, err := executeCommandC(rootCmd, "plugin", "init", "--force", "-p", pluginTestConfigFile)
@@ -265,7 +242,7 @@ func Test_runCmdWithCachePlugin(t *testing.T) {
 	require.NoError(t, err, "plugin list should not return an error")
 	assert.Contains(t, output, "Name: gatewayd-plugin-cache")
 
-	stopChan = make(chan struct{})
+	App.stopChan = make(chan struct{})
 
 	var waitGroup sync.WaitGroup
 
@@ -291,14 +268,7 @@ func Test_runCmdWithCachePlugin(t *testing.T) {
 		StopGracefully(
 			context.Background(),
 			nil,
-			nil,
-			metricsServer,
-			nil,
-			loggers[config.Default],
-			servers,
-			stopChan,
-			nil,
-			nil,
+			App,
 		)
 
 		waitGroup.Done()
