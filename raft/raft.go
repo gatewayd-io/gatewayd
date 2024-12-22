@@ -590,9 +590,9 @@ func (n *Node) GetHealthStatus() HealthStatus {
 	nodeID := string(n.config.LocalID)
 
 	// Determine leadership status
-	_, leaderId := n.raft.LeaderWithID()
+	_, leaderID := n.raft.LeaderWithID()
 	isLeader := raftState == raft.Leader
-	hasLeader := leaderId != ""
+	hasLeader := leaderID != ""
 
 	// Update metrics for leadership status
 	metrics.RaftLeaderStatus.WithLabelValues(nodeID).Set(boolToFloat(isLeader))
@@ -619,7 +619,7 @@ func (n *Node) GetHealthStatus() HealthStatus {
 	}
 }
 
-// Helper function to parse last contact time safely
+// Helper function to parse last contact time safely.
 func parseLastContact(value string) (time.Duration, error) {
 	switch value {
 	case "", "never":
@@ -629,13 +629,13 @@ func parseLastContact(value string) (time.Duration, error) {
 	default:
 		duration, err := time.ParseDuration(value)
 		if err != nil {
-			return 0, fmt.Errorf("invalid last_contact format: %v", err)
+			return 0, fmt.Errorf("invalid last_contact format: %w", err)
 		}
 		return duration, nil
 	}
 }
 
-// Convert bool to float for metric values
+// Convert bool to float for metric values.
 func boolToFloat(val bool) float64 {
 	if val {
 		return 1
