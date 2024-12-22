@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/gatewayd-io/gatewayd/config"
+	"github.com/gatewayd-io/gatewayd/metrics"
 	pb "github.com/gatewayd-io/gatewayd/raft/proto"
 	"github.com/hashicorp/raft"
 	raftboltdb "github.com/hashicorp/raft-boltdb"
@@ -564,4 +565,80 @@ func (n *Node) startRPCServer() error {
 	}()
 
 	return nil
+}
+
+type HealthStatus struct {
+	IsHealthy   bool
+	HasLeader   bool
+	IsLeader    bool
+	LastContact time.Duration
+	Error       error
+}
+
+func (n *Node) GetHealthStatus() HealthStatus {
+	// Handle uninitialized raft node
+	if n == nil || n.raft == nil {
+		return HealthStatus{
+			IsHealthy: false,
+			Error:     errors.New("raft node not initialized"),
+		}
+	}
+
+	// Cache commonly used values
+	raftState := n.raft.State()
+	stats := n.raft.Stats()
+	nodeID := string(n.config.LocalID)
+
+	// Determine leadership status
+	_, leaderId := n.raft.LeaderWithID()
+	isLeader := raftState == raft.Leader
+	hasLeader := leaderId != ""
+
+	// Update metrics for leadership status
+	metrics.RaftLeaderStatus.WithLabelValues(nodeID).Set(boolToFloat(isLeader))
+
+	// Parse last contact with leader
+	lastContact, lastContactErr := parseLastContact(stats["last_contact"])
+	communicatesWithLeader := isLeader || (hasLeader && lastContactErr == nil && lastContact <= LeaderElectionTimeout)
+
+	// Determine health status
+	isHealthy := communicatesWithLeader
+	metrics.RaftHealthStatus.WithLabelValues(nodeID).Set(boolToFloat(isHealthy))
+
+	// Update latency metric if last contact is valid
+	if lastContactErr == nil && lastContact >= 0 {
+		metrics.RaftLastContactLatency.WithLabelValues(nodeID).Set(float64(lastContact.Milliseconds()))
+	}
+
+	return HealthStatus{
+		IsHealthy:   isHealthy,
+		HasLeader:   hasLeader,
+		IsLeader:    isLeader,
+		LastContact: lastContact,
+		Error:       lastContactErr,
+	}
+}
+
+// Helper function to parse last contact time safely
+func parseLastContact(value string) (time.Duration, error) {
+	switch value {
+	case "", "never":
+		return -1, errors.New("no contact with leader")
+	case "0":
+		return 0, nil
+	default:
+		duration, err := time.ParseDuration(value)
+		if err != nil {
+			return 0, fmt.Errorf("invalid last_contact format: %v", err)
+		}
+		return duration, nil
+	}
+}
+
+// Convert bool to float for metric values
+func boolToFloat(val bool) float64 {
+	if val {
+		return 1
+	}
+	return 0
 }
