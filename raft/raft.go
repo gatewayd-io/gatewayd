@@ -575,6 +575,7 @@ type HealthStatus struct {
 	Error       error
 }
 
+// GetHealthStatus returns the health status of the Raft node.
 func (n *Node) GetHealthStatus() HealthStatus {
 	// Handle uninitialized raft node
 	if n == nil || n.raft == nil {
@@ -584,7 +585,6 @@ func (n *Node) GetHealthStatus() HealthStatus {
 		}
 	}
 
-	// Cache commonly used values
 	raftState := n.raft.State()
 	stats := n.raft.Stats()
 	nodeID := string(n.config.LocalID)
