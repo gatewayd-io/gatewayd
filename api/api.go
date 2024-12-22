@@ -13,6 +13,7 @@ import (
 	"github.com/gatewayd-io/gatewayd/network"
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
+	"github.com/gatewayd-io/gatewayd/raft"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/otel"
 	"google.golang.org/grpc/codes"
@@ -27,6 +28,7 @@ type Options struct {
 	GRPCAddress string
 	HTTPAddress string
 	Servers     map[string]*network.Server
+	RaftNode    *raft.Node
 }
 
 type API struct {
