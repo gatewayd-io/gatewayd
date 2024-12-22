@@ -155,8 +155,8 @@ func StopGracefully(
 		span.AddEvent("Stopped server")
 	}
 	logger.Info().Msg("Stopped all servers")
-	if App.pluginRegistry != nil {
-		App.pluginRegistry.Shutdown()
+	if app.pluginRegistry != nil {
+		app.pluginRegistry.Shutdown()
 		logger.Info().Msg("Stopped plugin registry")
 		span.AddEvent("Stopped plugin registry")
 	}
