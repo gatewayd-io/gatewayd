@@ -1000,7 +1000,7 @@ var runCmd = &cobra.Command{
 				GRPCAddress: App.conf.Global.API.GRPCAddress,
 				HTTPAddress: App.conf.Global.API.HTTPAddress,
 				Servers:     App.servers,
-        RaftNode:    raftNode,
+				RaftNode:    raftNode,
 			}
 
 			apiObj := &api.API{
