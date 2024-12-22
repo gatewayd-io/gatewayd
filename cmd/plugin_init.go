@@ -12,7 +12,7 @@ var pluginInitCmd = &cobra.Command{
 	Short: "Create or overwrite the GatewayD plugins config",
 	Run: func(cmd *cobra.Command, _ []string) {
 		// Enable Sentry.
-		if enableSentry {
+		if App.EnableSentry {
 			// Initialize Sentry.
 			err := sentry.Init(sentry.ClientOptions{
 				Dsn:              DSN,
@@ -30,19 +30,21 @@ var pluginInitCmd = &cobra.Command{
 			defer sentry.Recover()
 		}
 
-		generateConfig(cmd, Plugins, pluginConfigFile, force)
+		generateConfig(cmd, Plugins, App.PluginConfigFile, force)
 	},
 }
 
 func init() {
 	pluginCmd.AddCommand(pluginInitCmd)
 
+	App = &GatewayDInstance{}
+
 	pluginInitCmd.Flags().BoolVarP(
 		&force, "force", "f", false, "Force overwrite of existing config file")
 	pluginInitCmd.Flags().StringVarP(
-		&pluginConfigFile, // Already exists in run.go
+		&App.PluginConfigFile, // Already exists in run.go
 		"plugin-config", "p", config.GetDefaultConfigFilePath(config.PluginsConfigFilename),
 		"Plugin config file")
 	pluginInitCmd.Flags().BoolVar(
-		&enableSentry, "sentry", true, "Enable Sentry") // Already exists in run.go
+		&App.EnableSentry, "sentry", true, "Enable Sentry") // Already exists in run.go
 }

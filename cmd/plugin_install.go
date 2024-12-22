@@ -77,7 +77,7 @@ var pluginInstallCmd = &cobra.Command{
 	Example: "  gatewayd plugin install <github.com/gatewayd-io/gatewayd-plugin-cache@latest|/path/to/plugin[.zip|.tar.gz]>", //nolint:lll
 	Run: func(cmd *cobra.Command, args []string) {
 		// Enable Sentry.
-		if enableSentry {
+		if App.EnableSentry {
 			// Initialize Sentry.
 			err := sentry.Init(sentry.ClientOptions{
 				Dsn:              DSN,
@@ -102,7 +102,7 @@ var pluginInstallCmd = &cobra.Command{
 			installPlugin(cmd, args[0])
 		case LocationConfig:
 			// Read the gatewayd_plugins.yaml file.
-			pluginsConfig, err := os.ReadFile(pluginConfigFile)
+			pluginsConfig, err := os.ReadFile(App.PluginConfigFile)
 			if err != nil {
 				cmd.Println(err)
 				return
@@ -208,8 +208,10 @@ var pluginInstallCmd = &cobra.Command{
 func init() {
 	pluginCmd.AddCommand(pluginInstallCmd)
 
+	App = &GatewayDInstance{}
+
 	pluginInstallCmd.Flags().StringVarP(
-		&pluginConfigFile, // Already exists in run.go
+		&App.PluginConfigFile, // Already exists in run.go
 		"plugin-config", "p", config.GetDefaultConfigFilePath(config.PluginsConfigFilename),
 		"Plugin config file")
 	pluginInstallCmd.Flags().StringVarP(
@@ -232,7 +234,7 @@ func init() {
 	pluginInstallCmd.Flags().BoolVar(
 		&skipPathSlipVerification, "skip-path-slip-verification", false, "Skip path slip verification when extracting the plugin archive from a TRUSTED source") //nolint:lll
 	pluginInstallCmd.Flags().BoolVar(
-		&enableSentry, "sentry", true, "Enable Sentry") // Already exists in run.go
+		&App.EnableSentry, "sentry", true, "Enable Sentry") // Already exists in run.go
 }
 
 // extractZip extracts the files from a zip archive.
@@ -733,8 +735,8 @@ func installPlugin(cmd *cobra.Command, pluginURL string) {
 	// since the plugin binary is already available (or downloaded) at this point.
 
 	// Create a new "gatewayd_plugins.yaml" file if it doesn't exist.
-	if _, err := os.Stat(pluginConfigFile); os.IsNotExist(err) {
-		generateConfig(cmd, Plugins, pluginConfigFile, false)
+	if _, err := os.Stat(App.PluginConfigFile); os.IsNotExist(err) {
+		generateConfig(cmd, Plugins, App.PluginConfigFile, false)
 	} else if !backupConfig && !noPrompt {
 		// If the config file exists, we should prompt the user to back up
 		// the plugins configuration file.
@@ -749,7 +751,7 @@ func installPlugin(cmd *cobra.Command, pluginURL string) {
 	}
 
 	// Read the "gatewayd_plugins.yaml" file.
-	pluginsConfig, err := os.ReadFile(pluginConfigFile)
+	pluginsConfig, err := os.ReadFile(App.PluginConfigFile)
 	if err != nil {
 		cmd.Println(err)
 		return
@@ -794,7 +796,7 @@ func installPlugin(cmd *cobra.Command, pluginURL string) {
 
 	// Check if the user wants to take a backup of the plugins configuration file.
 	if backupConfig {
-		backupFilename := pluginConfigFile + BackupFileExt
+		backupFilename := App.PluginConfigFile + BackupFileExt
 		if err := os.WriteFile(backupFilename, pluginsConfig, FilePermissions); err != nil {
 			cmd.Println("There was an error backing up the plugins configuration file: ", err)
 		}
@@ -921,7 +923,7 @@ func installPlugin(cmd *cobra.Command, pluginURL string) {
 
 	// Write the YAML to the plugins config file if the --overwrite-config flag is set.
 	if overwriteConfig {
-		if err = os.WriteFile(pluginConfigFile, updatedPlugins, FilePermissions); err != nil {
+		if err = os.WriteFile(App.PluginConfigFile, updatedPlugins, FilePermissions); err != nil {
 			cmd.Println("There was an error writing the plugins configuration file: ", err)
 			return
 		}

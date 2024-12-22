@@ -15,7 +15,7 @@ var pluginLintCmd = &cobra.Command{
 	Short: "Lint the GatewayD plugins config",
 	Run: func(cmd *cobra.Command, _ []string) {
 		// Enable Sentry.
-		if enableSentry {
+		if App.EnableSentry {
 			// Initialize Sentry.
 			err := sentry.Init(sentry.ClientOptions{
 				Dsn:              DSN,
@@ -33,7 +33,7 @@ var pluginLintCmd = &cobra.Command{
 			defer sentry.Recover()
 		}
 
-		if err := lintConfig(Plugins, pluginConfigFile); err != nil {
+		if err := lintConfig(Plugins, App.PluginConfigFile); err != nil {
 			log.Fatal(err)
 		}
 
@@ -44,10 +44,12 @@ var pluginLintCmd = &cobra.Command{
 func init() {
 	pluginCmd.AddCommand(pluginLintCmd)
 
+	App = &GatewayDInstance{}
+
 	pluginLintCmd.Flags().StringVarP(
-		&pluginConfigFile, // Already exists in run.go
+		&App.PluginConfigFile, // Already exists in run.go
 		"plugin-config", "p", config.GetDefaultConfigFilePath(config.PluginsConfigFilename),
 		"Plugin config file")
 	pluginLintCmd.Flags().BoolVar(
-		&enableSentry, "sentry", true, "Enable Sentry") // Already exists in run.go
+		&App.EnableSentry, "sentry", true, "Enable Sentry") // Already exists in run.go
 }

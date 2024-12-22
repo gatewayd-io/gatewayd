@@ -15,7 +15,7 @@ var configLintCmd = &cobra.Command{
 	Short: "Lint the GatewayD global config",
 	Run: func(cmd *cobra.Command, _ []string) {
 		// Enable Sentry.
-		if enableSentry {
+		if App.EnableSentry {
 			// Initialize Sentry.
 			err := sentry.Init(sentry.ClientOptions{
 				Dsn:              DSN,
@@ -33,7 +33,7 @@ var configLintCmd = &cobra.Command{
 			defer sentry.Recover()
 		}
 
-		if err := lintConfig(Global, globalConfigFile); err != nil {
+		if err := lintConfig(Global, App.GlobalConfigFile); err != nil {
 			log.Fatal(err)
 		}
 
@@ -44,10 +44,12 @@ var configLintCmd = &cobra.Command{
 func init() {
 	configCmd.AddCommand(configLintCmd)
 
+	App = &GatewayDInstance{}
+
 	configLintCmd.Flags().StringVarP(
-		&globalConfigFile, // Already exists in run.go
+		&App.GlobalConfigFile, // Already exists in run.go
 		"config", "c", config.GetDefaultConfigFilePath(config.GlobalConfigFilename),
 		"Global config file")
 	configLintCmd.Flags().BoolVar(
-		&enableSentry, "sentry", true, "Enable Sentry") // Already exists in run.go
+		&App.EnableSentry, "sentry", true, "Enable Sentry") // Already exists in run.go
 }

@@ -17,7 +17,7 @@ var pluginListCmd = &cobra.Command{
 	Short: "List the GatewayD plugins",
 	Run: func(cmd *cobra.Command, _ []string) {
 		// Enable Sentry.
-		if enableSentry {
+		if App.EnableSentry {
 			// Initialize Sentry.
 			err := sentry.Init(sentry.ClientOptions{
 				Dsn:              DSN,
@@ -35,15 +35,17 @@ var pluginListCmd = &cobra.Command{
 			defer sentry.Recover()
 		}
 
-		listPlugins(cmd, pluginConfigFile, onlyEnabled)
+		listPlugins(cmd, App.PluginConfigFile, onlyEnabled)
 	},
 }
 
 func init() {
 	pluginCmd.AddCommand(pluginListCmd)
 
+	App = &GatewayDInstance{}
+
 	pluginListCmd.Flags().StringVarP(
-		&pluginConfigFile, // Already exists in run.go
+		&App.PluginConfigFile, // Already exists in run.go
 		"plugin-config", "p", config.GetDefaultConfigFilePath(config.PluginsConfigFilename),
 		"Plugin config file")
 	pluginListCmd.Flags().BoolVarP(
@@ -51,7 +53,7 @@ func init() {
 		"only-enabled", "e",
 		false, "Only list enabled plugins")
 	pluginListCmd.Flags().BoolVar(
-		&enableSentry, "sentry", true, "Enable Sentry") // Already exists in run.go
+		&App.EnableSentry, "sentry", true, "Enable Sentry") // Already exists in run.go
 }
 
 func listPlugins(cmd *cobra.Command, pluginConfigFile string, onlyEnabled bool) {
