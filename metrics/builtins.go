@@ -105,4 +105,28 @@ var (
 		Name:      "api_requests_errors_total",
 		Help:      "Number of API request errors",
 	}, []string{"method", "endpoint", "error"})
+	RaftHealthStatus = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: "gatewayd",
+			Name:      "raft_health_status",
+			Help:      "Current health status of the Raft node (1 if healthy, 0 if unhealthy)",
+		},
+		[]string{"node_id"},
+	)
+	RaftLeaderStatus = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: "gatewayd",
+			Name:      "raft_leader_status",
+			Help:      "Indicates if this node is the current Raft leader (1) or follower (0)",
+		},
+		[]string{"node_id"},
+	)
+	RaftLastContactLatency = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: "gatewayd",
+			Name:      "raft_last_contact_seconds",
+			Help:      "Time since last contact with the Raft leader in seconds",
+		},
+		[]string{"node_id"},
+	)
 )

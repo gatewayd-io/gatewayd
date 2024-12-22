@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/gatewayd-io/gatewayd/act"
 	"github.com/gatewayd-io/gatewayd/config"
@@ -63,6 +64,16 @@ func Test_Healthchecker(t *testing.T) {
 		},
 	)
 
+	raftHelper, err := testhelpers.NewTestRaftNode(t)
+	if err != nil {
+		t.Fatalf("Failed to create test raft node: %v", err)
+	}
+	defer func() {
+		if err := raftHelper.Cleanup(); err != nil {
+			t.Errorf("Failed to cleanup raft: %v", err)
+		}
+	}()
+
 	server := network.NewServer(
 		context.TODO(),
 		network.Server{
@@ -77,6 +88,7 @@ func Test_Healthchecker(t *testing.T) {
 			PluginRegistry:   pluginRegistry,
 			PluginTimeout:    config.DefaultPluginTimeout,
 			HandshakeTimeout: config.DefaultHandshakeTimeout,
+			RaftNode:         raftHelper.Node,
 		},
 	)
 
@@ -84,12 +96,27 @@ func Test_Healthchecker(t *testing.T) {
 		Servers: map[string]*network.Server{
 			config.Default: server,
 		},
+		raftNode: raftHelper.Node,
 	}
 	assert.NotNil(t, healthchecker)
 	hcr, err := healthchecker.Check(context.TODO(), &grpc_health_v1.HealthCheckRequest{})
 	assert.NoError(t, err)
 	assert.NotNil(t, hcr)
 	assert.Equal(t, grpc_health_v1.HealthCheckResponse_NOT_SERVING, hcr.GetStatus())
+
+	go func(t *testing.T, server *network.Server) {
+		t.Helper()
+		if err := server.Run(); err != nil {
+			t.Errorf("server.Run() error = %v", err)
+		}
+	}(t, server)
+
+	time.Sleep(1 * time.Second)
+	// Test for SERVING status
+	hcr, err = healthchecker.Check(context.TODO(), &grpc_health_v1.HealthCheckRequest{})
+	assert.NoError(t, err)
+	assert.NotNil(t, hcr)
+	assert.Equal(t, grpc_health_v1.HealthCheckResponse_SERVING, hcr.GetStatus())
 
 	err = healthchecker.Watch(&grpc_health_v1.HealthCheckRequest{}, nil)
 	assert.Error(t, err)

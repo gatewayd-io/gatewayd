@@ -456,3 +456,88 @@ func TestNodeShutdown(t *testing.T) {
 	err = node.Shutdown()
 	assert.NoError(t, err) // Should not error on multiple shutdowns
 }
+
+func TestGetHealthStatus(t *testing.T) {
+	logger := setupTestLogger()
+	tempDir := t.TempDir()
+
+	// Create a Raft node configuration for the first node
+	nodeConfig1 := config.Raft{
+		NodeID:      "testGetHealthStatusNode1",
+		Address:     "127.0.0.1:0",
+		IsBootstrap: true,
+		Directory:   tempDir,
+		Peers: []config.RaftPeer{
+			{ID: "testGetHealthStatusNode2", Address: "127.0.0.1:5678"},
+		},
+	}
+
+	// Create a Raft node configuration for the second node
+	nodeConfig2 := config.Raft{
+		NodeID:      "testGetHealthStatusNode2",
+		Address:     "127.0.0.1:5678",
+		IsBootstrap: false,
+		Directory:   tempDir,
+	}
+
+	// Initialize the first Raft node
+	node1, err := NewRaftNode(logger, nodeConfig1)
+	require.NoError(t, err)
+	defer func() {
+		_ = node1.Shutdown()
+	}()
+
+	// Initialize the second Raft node
+	node2, err := NewRaftNode(logger, nodeConfig2)
+	require.NoError(t, err)
+	defer func() {
+		_ = node2.Shutdown()
+	}()
+
+	// Wait for leader election
+	time.Sleep(3 * time.Second)
+
+	// Test 1: Check health status when node1 is the leader
+	if node1.GetState() == raft.Leader {
+		healthStatus := node1.GetHealthStatus()
+		assert.True(t, healthStatus.IsHealthy, "Leader node should be healthy")
+		assert.True(t, healthStatus.IsLeader, "Node should be the leader")
+		assert.True(t, healthStatus.HasLeader, "Node should have a leader (itself)")
+		assert.NoError(t, healthStatus.Error, "There should be no error in health status")
+		assert.Equal(t, healthStatus.LastContact, time.Duration(0), "Last contact should be 0")
+	}
+
+	// Test 2: Check health status when node2 is a follower
+	if node2.GetState() == raft.Follower {
+		healthStatus := node2.GetHealthStatus()
+		assert.True(t, healthStatus.IsHealthy, "Follower node should be healthy")
+		assert.False(t, healthStatus.IsLeader, "Node should not be the leader")
+		assert.True(t, healthStatus.HasLeader, "Node should have a leader")
+		assert.NoError(t, healthStatus.Error, "There should be no error in health status")
+		assert.Greater(t, healthStatus.LastContact.Milliseconds(), int64(0), "Last contact should be greater than 0")
+	}
+
+	// Test 3: Check health status when no leader is available
+	// Simulate no leader by not bootstrapping any node
+	nodeConfig3 := config.Raft{
+		NodeID:      "testGetHealthStatusNode3",
+		Address:     "127.0.0.1:0",
+		IsBootstrap: false,
+		Directory:   tempDir,
+	}
+	node3, err := NewRaftNode(logger, nodeConfig3)
+	require.NoError(t, err)
+	defer func() {
+		_ = node3.Shutdown()
+	}()
+
+	// Wait for the node to realize there's no leader
+	time.Sleep(3 * time.Second)
+
+	healthStatus := node3.GetHealthStatus()
+	assert.False(t, healthStatus.IsHealthy, "Node should not be healthy without a leader")
+	assert.False(t, healthStatus.IsLeader, "Node should not be the leader")
+	assert.False(t, healthStatus.HasLeader, "Node should not have a leader")
+	assert.Error(t, healthStatus.Error, "There should be an error indicating no leader")
+	assert.Equal(t, healthStatus.LastContact, time.Duration(-1), "Last contact should be -1")
+}

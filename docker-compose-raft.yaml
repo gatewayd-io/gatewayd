@@ -74,6 +74,7 @@ services:
       - "19090:19090"
       - "42223:2223"
       - "50051:50051"
+      - "29090:9090"
     volumes:
       - ./gatewayd-files:/gatewayd-files:ro
       - ./raft-data-1:/var/lib/gatewayd/raft
@@ -124,9 +125,28 @@ services:
       - "19091:19090"
       - "42224:2223"
       - "50052:50051"
+      - "29091:9090"
     volumes:
       - ./gatewayd-files:/gatewayd-files:ro
       - ./raft-data-2:/var/lib/gatewayd/raft
+    links:
+      - write-postgres
+      - read-postgres
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://gatewayd-2:18080/healthz"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      write-postgres:
+        condition: service_healthy
+      read-postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      install_plugins:
+        condition: service_completed_successfully
 
   gatewayd-3:
     image: gatewaydio/gatewayd:latest
@@ -156,10 +176,28 @@ services:
       - "19092:19090"
       - "42225:2223"
       - "50053:50051"
+      - "29092:9090"
     volumes:
       - ./gatewayd-files:/gatewayd-files:ro
       - ./raft-data-3:/var/lib/gatewayd/raft
-
+    links:
+      - write-postgres
+      - read-postgres
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://gatewayd-3:18080/healthz"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      write-postgres:
+        condition: service_healthy
+      read-postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      install_plugins:
+        condition: service_completed_successfully
   prometheus:
     image: prom/prometheus:latest
     volumes:
