@@ -19,11 +19,18 @@ services:
       # Possible values: amd64 or arm64
       # - ARCH=amd64
       - REDIS_URL=redis://redis:6379/0
+      # Allow custom PostgreSQL connection string
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+      - POSTGRES_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@write-postgres:5432/${POSTGRES_DB}
+  
   write-postgres:
     image: postgres:latest
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -34,11 +41,13 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres  # Ensure consistency
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
+
   redis:
     image: redis:latest
     healthcheck:
@@ -46,6 +55,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
   gatewayd:
     image: gatewaydio/gatewayd:latest
     command:
@@ -65,6 +75,8 @@ services:
       # https://docs.gatewayd.io/using-gatewayd/configuration#environment-variables
       - GATEWAYD_CLIENTS_DEFAULT_WRITES_ADDRESS=write-postgres:5432
       - GATEWAYD_CLIENTS_DEFAULT_READS_ADDRESS=read-postgres:5432
+      # Use the connection string set in install_plugins
+      - POSTGRES_URL=${POSTGRES_URL}
       # - GATEWAYD_LOGGERS_DEFAULT_LEVEL=debug
     ports:
       # GatewayD server for PostgreSQL clients to connect to
