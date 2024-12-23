@@ -11,6 +11,9 @@ import (
 
 func Test_pluginListCmd(t *testing.T) {
 	pluginTestConfigFile := "./test_plugins_pluginListCmd.yaml"
+	// TODO: Hack to ensure the plugin config file is created before running the plugin list command. REMOVE THIS HACK.
+	App.PluginConfigFile = pluginTestConfigFile
+
 	// Test plugin list command.
 	output, err := executeCommandC(rootCmd, "plugin", "init", "-p", pluginTestConfigFile)
 	require.NoError(t, err, "plugin init command should not have returned an error")
@@ -36,6 +39,9 @@ func Test_pluginListCmdWithPlugins(t *testing.T) {
 	// Test plugin list command.
 	// Read the plugin config file from the root directory.
 	pluginTestConfigFile := "../gatewayd_plugins.yaml"
+	// TODO: Hack to ensure the plugin config file is created before running the plugin list command. REMOVE THIS HACK.
+	App.PluginConfigFile = pluginTestConfigFile
+
 	output, err := executeCommandC(rootCmd, "plugin", "list", "-p", pluginTestConfigFile)
 	require.NoError(t, err, "plugin list command should not have returned an error")
 	assert.Contains(t,

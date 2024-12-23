@@ -12,6 +12,8 @@ import (
 
 func Test_pluginInstallCmd(t *testing.T) {
 	pluginTestConfigFile := "./test_plugins_pluginInstallCmd.yaml"
+	// TODO: hack
+	App.PluginConfigFile = pluginTestConfigFile
 
 	// Create a test plugin config file.
 	output, err := executeCommandC(rootCmd, "plugin", "init", "-p", pluginTestConfigFile)

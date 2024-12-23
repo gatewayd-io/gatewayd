@@ -16,6 +16,7 @@ import (
 // Test_HTTP_Server tests the HTTP to gRPC gateway.
 func Test_HTTP_Server(t *testing.T) {
 	api := getAPIConfig()
+	api.Servers[config.Default].Address = ":0"
 	healthchecker := &HealthChecker{Servers: api.Servers}
 	grpcServer := NewGRPCServer(
 		context.Background(), GRPCServer{API: api, HealthChecker: healthchecker})
