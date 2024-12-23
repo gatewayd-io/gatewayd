@@ -57,6 +57,8 @@ func Test_pluginInstallCmd(t *testing.T) {
 
 func Test_pluginInstallCmdAutomatedNoOverwrite(t *testing.T) {
 	pluginTestConfigFile := "./testdata/gatewayd_plugins.yaml"
+	// TODO: This test should be removed once the plugin install command is refactored.
+	App.PluginConfigFile = pluginTestConfigFile
 
 	// Reset the global variable.
 	pullOnly = false
