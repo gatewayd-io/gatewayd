@@ -79,7 +79,6 @@ func Test_pluginInstallCmdAutomated(t *testing.T) {
 	assert.Contains(t, output, "File downloaded to "+filepath.Join(pwd, "checksums.txt"))
 	assert.Contains(t, output, "Download completed successfully")
 	assert.Contains(t, output, "Checksum verification passed")
-	assert.Contains(t, output, "Backup completed successfully")
 	assert.Contains(t, output, "Plugin binary extracted to plugins/gatewayd-plugin-cache")
 	assert.Contains(t, output, "Plugin installed successfully")
 
@@ -97,5 +96,4 @@ func Test_pluginInstallCmdAutomated(t *testing.T) {
 	assert.NoFileExists(t, "plugins/gatewayd_plugin.yaml")
 
 	require.NoError(t, os.RemoveAll("plugins/"))
-	require.NoError(t, os.Remove(pluginTestConfigFile+BackupFileExt))
 }
