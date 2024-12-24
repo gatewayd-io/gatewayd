@@ -11,6 +11,7 @@ import (
 
 func Test_pluginListCmd(t *testing.T) {
 	pluginTestConfigFile := "./test_plugins_pluginListCmd.yaml"
+
 	// Test plugin list command.
 	output, err := executeCommandC(rootCmd, "plugin", "init", "-p", pluginTestConfigFile)
 	require.NoError(t, err, "plugin init command should not have returned an error")
@@ -36,6 +37,7 @@ func Test_pluginListCmdWithPlugins(t *testing.T) {
 	// Test plugin list command.
 	// Read the plugin config file from the root directory.
 	pluginTestConfigFile := "../gatewayd_plugins.yaml"
+
 	output, err := executeCommandC(rootCmd, "plugin", "list", "-p", pluginTestConfigFile)
 	require.NoError(t, err, "plugin list command should not have returned an error")
 	assert.Contains(t,

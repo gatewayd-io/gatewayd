@@ -40,12 +40,17 @@ func NewHTTPServer(options *Options) *HTTPServer {
 
 // Start starts the HTTP server.
 func (s *HTTPServer) Start() {
-	s.start(s.options, s.httpServer)
+	// Start HTTP server (and proxy calls to gRPC server endpoint)
+	if err := s.httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		s.options.Logger.Err(err).Msg("failed to start HTTP API")
+	}
 }
 
 // Shutdown shuts down the HTTP server.
 func (s *HTTPServer) Shutdown(ctx context.Context) {
-	s.shutdown(ctx, s.httpServer, s.logger)
+	if err := s.httpServer.Shutdown(ctx); err != nil {
+		s.logger.Err(err).Msg("failed to shutdown HTTP API")
+	}
 }
 
 // CreateHTTPAPI creates a new HTTP API.
@@ -112,19 +117,4 @@ func createHTTPAPI(options *Options) *http.Server {
 	}
 
 	return server
-}
-
-// start starts the HTTP API.
-func (s *HTTPServer) start(options *Options, server *http.Server) {
-	// Start HTTP server (and proxy calls to gRPC server endpoint)
-	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		options.Logger.Err(err).Msg("failed to start HTTP API")
-	}
-}
-
-// shutdown shuts down the HTTP API.
-func (s *HTTPServer) shutdown(ctx context.Context, server *http.Server, logger zerolog.Logger) {
-	if err := server.Shutdown(ctx); err != nil {
-		logger.Err(err).Msg("failed to shutdown HTTP API")
-	}
 }

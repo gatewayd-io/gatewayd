@@ -18,7 +18,8 @@ func Test_pluginInitCmd(t *testing.T) {
 		fmt.Sprintf("Config file '%s' was created successfully.", pluginTestConfigFile),
 		output,
 		"plugin init command should have returned the correct output")
-	assert.FileExists(t, pluginTestConfigFile, "plugin init command should have created a config file")
+	assert.FileExists(
+		t, pluginTestConfigFile, "plugin init command should have created a config file")
 
 	// Clean up.
 	err = os.Remove(pluginTestConfigFile)

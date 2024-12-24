@@ -58,59 +58,65 @@ func (c *cobraCmdWriter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-// TODO: Get rid of the global variables.
-// https://github.com/gatewayd-io/gatewayd/issues/324
+type GatewayDInstance struct {
+	EnableTracing     bool
+	EnableSentry      bool
+	EnableLinting     bool
+	EnableUsageReport bool
+	DevMode           bool
+	CollectorURL      string
+	PluginConfigFile  string
+	GlobalConfigFile  string
+
+	conf           *config.Config
+	pluginRegistry *plugin.Registry
+	actRegistry    *act.Registry
+	metricsServer  *http.Server
+	metricsMerger  *metrics.Merger
+	httpServer     *api.HTTPServer
+	grpcServer     *api.GRPCServer
+
+	loggers              map[string]zerolog.Logger
+	pools                map[string]map[string]*pool.Pool
+	clients              map[string]map[string]*config.Client
+	proxies              map[string]map[string]*network.Proxy
+	servers              map[string]*network.Server
+	healthCheckScheduler *gocron.Scheduler
+	stopChan             chan struct{}
+}
+
 var (
-	enableTracing     bool
-	enableLinting     bool
-	collectorURL      string
-	enableSentry      bool
-	devMode           bool
-	enableUsageReport bool
-	pluginConfigFile  string
-	globalConfigFile  string
-	conf              *config.Config
-	pluginRegistry    *plugin.Registry
-	actRegistry       *act.Registry
-	metricsServer     *http.Server
-
 	UsageReportURL = "localhost:59091"
-
-	loggers              = make(map[string]zerolog.Logger)
-	pools                = make(map[string]map[string]*pool.Pool)
-	clients              = make(map[string]map[string]*config.Client)
-	proxies              = make(map[string]map[string]*network.Proxy)
-	servers              = make(map[string]*network.Server)
-	healthCheckScheduler = gocron.NewScheduler(time.UTC)
-
-	stopChan = make(chan struct{})
+	testMode       bool
+	testApp        *GatewayDInstance
 )
 
-func StopGracefully(
-	runCtx context.Context,
-	sig os.Signal,
-	metricsMerger *metrics.Merger,
-	metricsServer *http.Server,
-	pluginRegistry *plugin.Registry,
-	logger zerolog.Logger,
-	servers map[string]*network.Server,
-	stopChan chan struct{},
-	httpServer *api.HTTPServer,
-	grpcServer *api.GRPCServer,
-) {
+// EnableTestMode enables test mode and returns the previous value.
+// This should only be used in tests.
+func EnableTestMode() bool {
+	previous := testMode
+	testMode = true
+	return previous
+}
+
+// stopGracefully stops the server gracefully.
+func (app *GatewayDInstance) stopGracefully(runCtx context.Context, sig os.Signal) {
 	_, span := otel.Tracer(config.TracerName).Start(runCtx, "Shutdown server")
 	currentSignal := "unknown"
 	if sig != nil {
 		currentSignal = sig.String()
 	}
 
+	logger := app.loggers[config.Default]
+
 	logger.Info().Msg("Notifying the plugins that the server is shutting down")
-	if pluginRegistry != nil {
-		pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), conf.Plugin.Timeout)
+	if app.pluginRegistry != nil {
+		pluginTimeoutCtx, cancel := context.WithTimeout(
+			context.Background(), app.conf.Plugin.Timeout)
 		defer cancel()
 
 		//nolint:contextcheck
-		result, err := pluginRegistry.Run(
+		result, err := app.pluginRegistry.Run(
 			pluginTimeoutCtx,
 			map[string]any{"signal": currentSignal},
 			v1.HookName_HOOK_NAME_ON_SIGNAL,
@@ -120,7 +126,7 @@ func StopGracefully(
 			span.RecordError(err)
 		}
 		if result != nil {
-			_ = pluginRegistry.ActRegistry.RunAll(result) //nolint:contextcheck
+			_ = app.pluginRegistry.ActRegistry.RunAll(result) //nolint:contextcheck
 		}
 	}
 
@@ -128,20 +134,20 @@ func StopGracefully(
 	span.AddEvent("GatewayD is shutting down", trace.WithAttributes(
 		attribute.String("signal", currentSignal),
 	))
-	if healthCheckScheduler != nil {
-		healthCheckScheduler.Stop()
-		healthCheckScheduler.Clear()
+	if app.healthCheckScheduler != nil {
+		app.healthCheckScheduler.Stop()
+		app.healthCheckScheduler.Clear()
 		logger.Info().Msg("Stopped health check scheduler")
 		span.AddEvent("Stopped health check scheduler")
 	}
-	if metricsMerger != nil {
-		metricsMerger.Stop()
+	if app.metricsMerger != nil {
+		app.metricsMerger.Stop()
 		logger.Info().Msg("Stopped metrics merger")
 		span.AddEvent("Stopped metrics merger")
 	}
-	if metricsServer != nil {
+	if app.metricsServer != nil {
 		//nolint:contextcheck
-		if err := metricsServer.Shutdown(context.Background()); err != nil {
+		if err := app.metricsServer.Shutdown(context.Background()); err != nil {
 			logger.Error().Err(err).Msg("Failed to stop metrics server")
 			span.RecordError(err)
 		} else {
@@ -149,34 +155,47 @@ func StopGracefully(
 			span.AddEvent("Stopped metrics server")
 		}
 	}
-	for name, server := range servers {
+	for name, server := range app.servers {
 		logger.Info().Str("name", name).Msg("Stopping server")
 		server.Shutdown()
 		span.AddEvent("Stopped server")
 	}
 	logger.Info().Msg("Stopped all servers")
-	if pluginRegistry != nil {
-		pluginRegistry.Shutdown()
+	if app.pluginRegistry != nil {
+		app.pluginRegistry.Shutdown()
 		logger.Info().Msg("Stopped plugin registry")
 		span.AddEvent("Stopped plugin registry")
 	}
 	span.End()
 
-	if httpServer != nil {
-		httpServer.Shutdown(runCtx)
+	if app.httpServer != nil {
+		app.httpServer.Shutdown(runCtx)
 		logger.Info().Msg("Stopped HTTP Server")
 		span.AddEvent("Stopped HTTP Server")
 	}
 
-	if grpcServer != nil {
-		grpcServer.Shutdown(runCtx)
+	if app.grpcServer != nil {
+		app.grpcServer.Shutdown(runCtx)
 		logger.Info().Msg("Stopped gRPC Server")
 		span.AddEvent("Stopped gRPC Server")
 	}
 
 	// Close the stop channel to notify the other goroutines to stop.
-	stopChan <- struct{}{}
-	close(stopChan)
+	app.stopChan <- struct{}{}
+	close(app.stopChan)
+}
+
+// handleSignals handles the signals and stops the server gracefully.
+func (app *GatewayDInstance) handleSignals(runCtx context.Context, signals []os.Signal) {
+	signalsCh := make(chan os.Signal, 1)
+	signal.Notify(signalsCh, signals...)
+
+	go func() {
+		for sig := range signalsCh {
+			app.stopGracefully(runCtx, sig)
+			os.Exit(0)
+		}
+	}()
 }
 
 // runCmd represents the run command.
@@ -184,10 +203,34 @@ var runCmd = &cobra.Command{
 	Use:   "run",
 	Short: "Run a GatewayD instance",
 	Run: func(cmd *cobra.Command, _ []string) {
+		app := NewGatewayDInstance(cmd)
+
+		// If test mode is enabled, we need to access the app instance from the test,
+		// so we can stop the server gracefully.
+		if testMode {
+			testApp = app
+		}
+
+		runCtx, span := otel.Tracer(config.TracerName).Start(context.Background(), "GatewayD")
+		span.End()
+
+		// Setup signal handling after context is created
+		signals := []os.Signal{
+			os.Interrupt,
+			os.Kill,
+			syscall.SIGTERM,
+			syscall.SIGABRT,
+			syscall.SIGQUIT,
+			syscall.SIGHUP,
+			syscall.SIGINT,
+		}
+
+		app.handleSignals(runCtx, signals)
+
 		// Enable tracing with OpenTelemetry.
-		if enableTracing {
+		if app.EnableTracing {
 			// TODO: Make this configurable.
-			shutdown := tracing.OTLPTracer(true, collectorURL, config.TracerName)
+			shutdown := tracing.OTLPTracer(true, app.CollectorURL, config.TracerName)
 			defer func() {
 				if err := shutdown(context.Background()); err != nil {
 					cmd.Println(err)
@@ -196,11 +239,10 @@ var runCmd = &cobra.Command{
 			}()
 		}
 
-		runCtx, span := otel.Tracer(config.TracerName).Start(context.Background(), "GatewayD")
 		span.End()
 
 		// Enable Sentry.
-		if enableSentry {
+		if app.EnableSentry {
 			_, span := otel.Tracer(config.TracerName).Start(runCtx, "Sentry")
 			defer span.End()
 
@@ -223,32 +265,37 @@ var runCmd = &cobra.Command{
 		}
 
 		// Lint the configuration files before loading them.
-		if enableLinting {
+		if app.EnableLinting {
 			_, span := otel.Tracer(config.TracerName).Start(runCtx, "Lint configuration files")
 			defer span.End()
 
 			// Lint the global configuration file and fail if it's not valid.
-			if err := lintConfig(Global, globalConfigFile); err != nil {
+			if err := lintConfig(Global, app.GlobalConfigFile); err != nil {
 				log.Fatal(err)
 			}
 
 			// Lint the plugin configuration file and fail if it's not valid.
-			if err := lintConfig(Plugins, pluginConfigFile); err != nil {
+			if err := lintConfig(Plugins, app.PluginConfigFile); err != nil {
 				log.Fatal(err)
 			}
 		}
 
 		// Load global and plugin configuration.
-		conf = config.NewConfig(runCtx, config.Config{GlobalConfigFile: globalConfigFile, PluginConfigFile: pluginConfigFile})
-		if err := conf.InitConfig(runCtx); err != nil {
+		app.conf = config.NewConfig(runCtx,
+			config.Config{
+				GlobalConfigFile: app.GlobalConfigFile,
+				PluginConfigFile: app.PluginConfigFile,
+			},
+		)
+		if err := app.conf.InitConfig(runCtx); err != nil {
 			log.Fatal(err)
 		}
 
-		// Create and initialize loggers from the config.
+		// Create and initialize App.loggers from the config.
 		// Use cobra command cmd instead of os.Stdout for the console output.
 		cmdLogger := &cobraCmdWriter{cmd}
-		for name, cfg := range conf.Global.Loggers {
-			loggers[name] = logging.NewLogger(runCtx, logging.LoggerConfig{
+		for name, cfg := range app.conf.Global.Loggers {
+			app.loggers[name] = logging.NewLogger(runCtx, logging.LoggerConfig{
 				Output:     cfg.GetOutput(),
 				ConsoleOut: cmdLogger,
 				Level: config.If(
@@ -282,24 +329,24 @@ var runCmd = &cobra.Command{
 		}
 
 		// Set the default logger.
-		logger := loggers[config.Default]
+		logger := app.loggers[config.Default]
 
-		if devMode {
+		if app.DevMode {
 			logger.Warn().Msg(
 				"Running GatewayD in development mode (not recommended for production)")
 		}
 
 		// Create a new act registry given the built-in signals, policies, and actions.
 		var publisher *act.Publisher
-		if conf.Plugin.ActionRedis.Enabled {
+		if app.conf.Plugin.ActionRedis.Enabled {
 			rdb := redis.NewClient(&redis.Options{
-				Addr: conf.Plugin.ActionRedis.Address,
+				Addr: app.conf.Plugin.ActionRedis.Address,
 			})
 			var err error
 			publisher, err = act.NewPublisher(act.Publisher{
 				Logger:      logger,
 				RedisDB:     rdb,
-				ChannelName: conf.Plugin.ActionRedis.Channel,
+				ChannelName: app.conf.Plugin.ActionRedis.Channel,
 			})
 			if err != nil {
 				logger.Error().Err(err).Msg("Failed to create publisher for act registry")
@@ -308,104 +355,103 @@ var runCmd = &cobra.Command{
 			logger.Info().Msg("Created Redis publisher for Act registry")
 		}
 
-		actRegistry = act.NewActRegistry(
+		app.actRegistry = act.NewActRegistry(
 			act.Registry{
 				Signals:              act.BuiltinSignals(),
 				Policies:             act.BuiltinPolicies(),
 				Actions:              act.BuiltinActions(),
-				DefaultPolicyName:    conf.Plugin.DefaultPolicy,
-				PolicyTimeout:        conf.Plugin.PolicyTimeout,
-				DefaultActionTimeout: conf.Plugin.ActionTimeout,
+				DefaultPolicyName:    app.conf.Plugin.DefaultPolicy,
+				PolicyTimeout:        app.conf.Plugin.PolicyTimeout,
+				DefaultActionTimeout: app.conf.Plugin.ActionTimeout,
 				TaskPublisher:        publisher,
 				Logger:               logger,
 			})
 
-		if actRegistry == nil {
+		if app.actRegistry == nil {
 			logger.Error().Msg("Failed to create act registry")
 			os.Exit(gerr.FailedToCreateActRegistry)
 		}
 
 		// Load policies from the configuration file and add them to the registry.
-		for _, plc := range conf.Plugin.Policies {
+		for _, plc := range app.conf.Plugin.Policies {
 			if policy, err := sdkAct.NewPolicy(
 				plc.Name, plc.Policy, plc.Metadata,
 			); err != nil || policy == nil {
 				logger.Error().Err(err).Str("name", plc.Name).Msg("Failed to create policy")
 			} else {
-				actRegistry.Add(policy)
+				app.actRegistry.Add(policy)
 			}
 		}
 
 		logger.Info().Fields(map[string]any{
-			"policies": maps.Keys(actRegistry.Policies),
+			"policies": maps.Keys(app.actRegistry.Policies),
 		}).Msg("Policies are loaded")
 
 		// Create a new plugin registry.
 		// The plugins are loaded and hooks registered before the configuration is loaded.
-		pluginRegistry = plugin.NewRegistry(
+		app.pluginRegistry = plugin.NewRegistry(
 			runCtx,
 			plugin.Registry{
-				ActRegistry: actRegistry,
+				ActRegistry: app.actRegistry,
 				Compatibility: config.If(
 					config.Exists(
-						config.CompatibilityPolicies, conf.Plugin.CompatibilityPolicy,
+						config.CompatibilityPolicies, app.conf.Plugin.CompatibilityPolicy,
 					),
-					config.CompatibilityPolicies[conf.Plugin.CompatibilityPolicy],
+					config.CompatibilityPolicies[app.conf.Plugin.CompatibilityPolicy],
 					config.DefaultCompatibilityPolicy),
 				Logger:  logger,
-				DevMode: devMode,
+				DevMode: app.DevMode,
 			},
 		)
 
 		// Load plugins and register their hooks.
-		pluginRegistry.LoadPlugins(runCtx, conf.Plugin.Plugins, conf.Plugin.StartTimeout)
+		app.pluginRegistry.LoadPlugins(runCtx, app.conf.Plugin.Plugins, app.conf.Plugin.StartTimeout)
 
 		// Start the metrics merger if enabled.
-		var metricsMerger *metrics.Merger
-		if conf.Plugin.EnableMetricsMerger {
-			metricsMerger = metrics.NewMerger(runCtx, metrics.Merger{
-				MetricsMergerPeriod: conf.Plugin.MetricsMergerPeriod,
+		if app.conf.Plugin.EnableMetricsMerger {
+			app.metricsMerger = metrics.NewMerger(runCtx, metrics.Merger{
+				MetricsMergerPeriod: app.conf.Plugin.MetricsMergerPeriod,
 				Logger:              logger,
 			})
-			pluginRegistry.ForEach(func(_ sdkPlugin.Identifier, plugin *plugin.Plugin) {
+			app.pluginRegistry.ForEach(func(_ sdkPlugin.Identifier, plugin *plugin.Plugin) {
 				if metricsEnabled, err := strconv.ParseBool(plugin.Config["metricsEnabled"]); err == nil && metricsEnabled {
-					metricsMerger.Add(plugin.ID.Name, plugin.Config["metricsUnixDomainSocket"])
+					app.metricsMerger.Add(plugin.ID.Name, plugin.Config["metricsUnixDomainSocket"])
 					logger.Debug().Str("plugin", plugin.ID.Name).Msg(
 						"Added plugin to metrics merger")
 				}
 			})
-			metricsMerger.Start()
+			app.metricsMerger.Start()
 		}
 
 		// TODO: Move this to the plugin registry.
 		ctx, span := otel.Tracer(config.TracerName).Start(runCtx, "Plugin health check")
 
 		// Ping the plugins to check if they are alive, and remove them if they are not.
-		startDelay := time.Now().Add(conf.Plugin.HealthCheckPeriod)
-		if _, err := healthCheckScheduler.Every(
-			conf.Plugin.HealthCheckPeriod).SingletonMode().StartAt(startDelay).Do(func() {
+		startDelay := time.Now().Add(app.conf.Plugin.HealthCheckPeriod)
+		if _, err := app.healthCheckScheduler.Every(
+			app.conf.Plugin.HealthCheckPeriod).SingletonMode().StartAt(startDelay).Do(func() {
 			_, span := otel.Tracer(config.TracerName).Start(ctx, "Run plugin health check")
 			defer span.End()
 
 			var plugins []string
-			pluginRegistry.ForEach(func(pluginId sdkPlugin.Identifier, plugin *plugin.Plugin) {
+			app.pluginRegistry.ForEach(func(pluginId sdkPlugin.Identifier, plugin *plugin.Plugin) {
 				if err := plugin.Ping(); err != nil {
 					span.RecordError(err)
 					logger.Error().Err(err).Msg("Failed to ping plugin")
-					if conf.Plugin.EnableMetricsMerger && metricsMerger != nil {
-						metricsMerger.Remove(pluginId.Name)
+					if app.conf.Plugin.EnableMetricsMerger && app.metricsMerger != nil {
+						app.metricsMerger.Remove(pluginId.Name)
 					}
-					pluginRegistry.Remove(pluginId)
+					app.pluginRegistry.Remove(pluginId)
 
-					if !conf.Plugin.ReloadOnCrash {
+					if !app.conf.Plugin.ReloadOnCrash {
 						return // Do not reload the plugins.
 					}
 
 					// Reload the plugins and register their hooks upon crash.
 					logger.Info().Str("name", pluginId.Name).Msg("Reloading crashed plugin")
-					pluginConfig := conf.Plugin.GetPlugins(pluginId.Name)
+					pluginConfig := app.conf.Plugin.GetPlugins(pluginId.Name)
 					if pluginConfig != nil {
-						pluginRegistry.LoadPlugins(runCtx, pluginConfig, conf.Plugin.StartTimeout)
+						app.pluginRegistry.LoadPlugins(runCtx, pluginConfig, app.conf.Plugin.StartTimeout)
 					}
 				} else {
 					logger.Trace().Str("name", pluginId.Name).Msg("Successfully pinged plugin")
@@ -417,29 +463,29 @@ var runCmd = &cobra.Command{
 			logger.Error().Err(err).Msg("Failed to start plugin health check scheduler")
 			span.RecordError(err)
 		}
-		if pluginRegistry.Size() > 0 {
+		if app.pluginRegistry.Size() > 0 {
 			logger.Info().Str(
-				"healthCheckPeriod", conf.Plugin.HealthCheckPeriod.String(),
+				"healthCheckPeriod", app.conf.Plugin.HealthCheckPeriod.String(),
 			).Msg("Starting plugin health check scheduler")
-			healthCheckScheduler.StartAsync()
+			app.healthCheckScheduler.StartAsync()
 		}
 
 		span.End()
 
 		// Set the plugin timeout context.
-		pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), conf.Plugin.Timeout)
+		pluginTimeoutCtx, cancel := context.WithTimeout(context.Background(), app.conf.Plugin.Timeout)
 		defer cancel()
 
 		// The config will be passed to the plugins that register to the "OnConfigLoaded" plugin.
 		// The plugins can modify the config and return it.
-		updatedGlobalConfig, err := pluginRegistry.Run(
-			pluginTimeoutCtx, conf.GlobalKoanf.All(), v1.HookName_HOOK_NAME_ON_CONFIG_LOADED)
+		updatedGlobalConfig, err := app.pluginRegistry.Run(
+			pluginTimeoutCtx, app.conf.GlobalKoanf.All(), v1.HookName_HOOK_NAME_ON_CONFIG_LOADED)
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to run OnConfigLoaded hooks")
 			span.RecordError(err)
 		}
 		if updatedGlobalConfig != nil {
-			updatedGlobalConfig = pluginRegistry.ActRegistry.RunAll(updatedGlobalConfig)
+			updatedGlobalConfig = app.pluginRegistry.ActRegistry.RunAll(updatedGlobalConfig)
 		}
 
 		// If the config was modified by the plugins, merge it with the one loaded from the file.
@@ -448,7 +494,7 @@ var runCmd = &cobra.Command{
 		if updatedGlobalConfig != nil {
 			// Merge the config with the one loaded from the file (in memory).
 			// The changes won't be persisted to disk.
-			if err := conf.MergeGlobalConfig(runCtx, updatedGlobalConfig); err != nil {
+			if err := app.conf.MergeGlobalConfig(runCtx, updatedGlobalConfig); err != nil {
 				log.Fatal(err)
 			}
 		}
@@ -488,7 +534,7 @@ var runCmd = &cobra.Command{
 			// Merge the metrics from the plugins with the ones from GatewayD.
 			mergedMetricsHandler := func(next http.Handler) http.Handler {
 				handler := func(responseWriter http.ResponseWriter, request *http.Request) {
-					if _, err := responseWriter.Write(metricsMerger.OutputMetrics); err != nil {
+					if _, err := responseWriter.Write(app.metricsMerger.OutputMetrics); err != nil {
 						logger.Error().Err(err).Msg("Failed to write metrics")
 						span.RecordError(err)
 						sentry.CaptureException(err)
@@ -527,7 +573,7 @@ var runCmd = &cobra.Command{
 				}
 			})
 
-			if conf.Plugin.EnableMetricsMerger && metricsMerger != nil {
+			if app.conf.Plugin.EnableMetricsMerger && app.metricsMerger != nil {
 				handler = mergedMetricsHandler(handler)
 			}
 
@@ -559,7 +605,7 @@ var runCmd = &cobra.Command{
 				metricsConfig.Timeout,
 				config.DefaultMetricsServerTimeout,
 			)
-			metricsServer = &http.Server{
+			app.metricsServer = &http.Server{
 				Addr:              metricsConfig.Address,
 				Handler:           mux,
 				ReadHeaderTimeout: readHeaderTimeout,
@@ -576,7 +622,7 @@ var runCmd = &cobra.Command{
 
 			if metricsConfig.CertFile != "" && metricsConfig.KeyFile != "" {
 				// Set up TLS.
-				metricsServer.TLSConfig = &tls.Config{
+				app.metricsServer.TLSConfig = &tls.Config{
 					MinVersion: tls.VersionTLS13,
 					CurvePreferences: []tls.CurveID{
 						tls.CurveP521,
@@ -589,38 +635,38 @@ var runCmd = &cobra.Command{
 						tls.TLS_CHACHA20_POLY1305_SHA256,
 					},
 				}
-				metricsServer.TLSNextProto = make(
+				app.metricsServer.TLSNextProto = make(
 					map[string]func(*http.Server, *tls.Conn, http.Handler))
 				logger.Debug().Msg("Metrics server is running with TLS")
 
 				// Start the metrics server with TLS.
-				if err = metricsServer.ListenAndServeTLS(
+				if err = app.metricsServer.ListenAndServeTLS(
 					metricsConfig.CertFile, metricsConfig.KeyFile); !errors.Is(err, http.ErrServerClosed) {
 					logger.Error().Err(err).Msg("Failed to start metrics server")
 					span.RecordError(err)
 				}
 			} else {
 				// Start the metrics server without TLS.
-				if err = metricsServer.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+				if err = app.metricsServer.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 					logger.Error().Err(err).Msg("Failed to start metrics server")
 					span.RecordError(err)
 				}
 			}
-		}(conf.Global.Metrics[config.Default], logger)
+		}(app.conf.Global.Metrics[config.Default], logger)
 
 		// This is a notification hook, so we don't care about the result.
-		pluginTimeoutCtx, cancel = context.WithTimeout(context.Background(), conf.Plugin.Timeout)
+		pluginTimeoutCtx, cancel = context.WithTimeout(context.Background(), app.conf.Plugin.Timeout)
 		defer cancel()
 
-		if data, ok := conf.GlobalKoanf.Get("loggers").(map[string]any); ok {
-			result, err := pluginRegistry.Run(
+		if data, ok := app.conf.GlobalKoanf.Get("loggers").(map[string]any); ok {
+			result, err := app.pluginRegistry.Run(
 				pluginTimeoutCtx, data, v1.HookName_HOOK_NAME_ON_NEW_LOGGER)
 			if err != nil {
 				logger.Error().Err(err).Msg("Failed to run OnNewLogger hooks")
 				span.RecordError(err)
 			}
 			if result != nil {
-				_ = pluginRegistry.ActRegistry.RunAll(result)
+				_ = app.pluginRegistry.ActRegistry.RunAll(result)
 			}
 		} else {
 			logger.Error().Msg("Failed to get loggers from config")
@@ -632,9 +678,9 @@ var runCmd = &cobra.Command{
 
 		_, span = otel.Tracer(config.TracerName).Start(runCtx, "Create pools and clients")
 		// Create and initialize pools of connections.
-		for configGroupName, configGroup := range conf.Global.Pools {
+		for configGroupName, configGroup := range app.conf.Global.Pools {
 			for configBlockName, cfg := range configGroup {
-				logger := loggers[configGroupName]
+				logger := app.loggers[configGroupName]
 				// Check if the pool size is greater than zero.
 				currentPoolSize := config.If(
 					cfg.Size > 0,
@@ -647,65 +693,65 @@ var runCmd = &cobra.Command{
 					config.DefaultPoolSize,
 				)
 
-				if _, ok := pools[configGroupName]; !ok {
-					pools[configGroupName] = make(map[string]*pool.Pool)
+				if _, ok := app.pools[configGroupName]; !ok {
+					app.pools[configGroupName] = make(map[string]*pool.Pool)
 				}
-				pools[configGroupName][configBlockName] = pool.NewPool(runCtx, currentPoolSize)
+				app.pools[configGroupName][configBlockName] = pool.NewPool(runCtx, currentPoolSize)
 
 				span.AddEvent("Create pool", trace.WithAttributes(
 					attribute.String("name", configBlockName),
 					attribute.Int("size", currentPoolSize),
 				))
 
-				if _, ok := clients[configGroupName]; !ok {
-					clients[configGroupName] = make(map[string]*config.Client)
+				if _, ok := app.clients[configGroupName]; !ok {
+					app.clients[configGroupName] = make(map[string]*config.Client)
 				}
 
 				// Get client config from the config file.
-				if clientConfig, ok := conf.Global.Clients[configGroupName][configBlockName]; !ok {
+				if clientConfig, ok := app.conf.Global.Clients[configGroupName][configBlockName]; !ok {
 					// This ensures that the default client config is used if the pool name is not
 					// found in the clients section.
-					clients[configGroupName][configBlockName] = conf.Global.Clients[config.Default][config.DefaultConfigurationBlock]
+					app.clients[configGroupName][configBlockName] = app.conf.Global.Clients[config.Default][config.DefaultConfigurationBlock] //nolint:lll
 				} else {
 					// Merge the default client config with the one from the pool.
-					clients[configGroupName][configBlockName] = clientConfig
+					app.clients[configGroupName][configBlockName] = clientConfig
 				}
 
 				// Fill the missing and zero values with the default ones.
-				clients[configGroupName][configBlockName].TCPKeepAlivePeriod = config.If(
-					clients[configGroupName][configBlockName].TCPKeepAlivePeriod > 0,
-					clients[configGroupName][configBlockName].TCPKeepAlivePeriod,
+				app.clients[configGroupName][configBlockName].TCPKeepAlivePeriod = config.If(
+					app.clients[configGroupName][configBlockName].TCPKeepAlivePeriod > 0,
+					app.clients[configGroupName][configBlockName].TCPKeepAlivePeriod,
 					config.DefaultTCPKeepAlivePeriod,
 				)
-				clients[configGroupName][configBlockName].ReceiveDeadline = config.If(
-					clients[configGroupName][configBlockName].ReceiveDeadline > 0,
-					clients[configGroupName][configBlockName].ReceiveDeadline,
+				app.clients[configGroupName][configBlockName].ReceiveDeadline = config.If(
+					app.clients[configGroupName][configBlockName].ReceiveDeadline > 0,
+					app.clients[configGroupName][configBlockName].ReceiveDeadline,
 					config.DefaultReceiveDeadline,
 				)
-				clients[configGroupName][configBlockName].ReceiveTimeout = config.If(
-					clients[configGroupName][configBlockName].ReceiveTimeout > 0,
-					clients[configGroupName][configBlockName].ReceiveTimeout,
+				app.clients[configGroupName][configBlockName].ReceiveTimeout = config.If(
+					app.clients[configGroupName][configBlockName].ReceiveTimeout > 0,
+					app.clients[configGroupName][configBlockName].ReceiveTimeout,
 					config.DefaultReceiveTimeout,
 				)
-				clients[configGroupName][configBlockName].SendDeadline = config.If(
-					clients[configGroupName][configBlockName].SendDeadline > 0,
-					clients[configGroupName][configBlockName].SendDeadline,
+				app.clients[configGroupName][configBlockName].SendDeadline = config.If(
+					app.clients[configGroupName][configBlockName].SendDeadline > 0,
+					app.clients[configGroupName][configBlockName].SendDeadline,
 					config.DefaultSendDeadline,
 				)
-				clients[configGroupName][configBlockName].ReceiveChunkSize = config.If(
-					clients[configGroupName][configBlockName].ReceiveChunkSize > 0,
-					clients[configGroupName][configBlockName].ReceiveChunkSize,
+				app.clients[configGroupName][configBlockName].ReceiveChunkSize = config.If(
+					app.clients[configGroupName][configBlockName].ReceiveChunkSize > 0,
+					app.clients[configGroupName][configBlockName].ReceiveChunkSize,
 					config.DefaultChunkSize,
 				)
-				clients[configGroupName][configBlockName].DialTimeout = config.If(
-					clients[configGroupName][configBlockName].DialTimeout > 0,
-					clients[configGroupName][configBlockName].DialTimeout,
+				app.clients[configGroupName][configBlockName].DialTimeout = config.If(
+					app.clients[configGroupName][configBlockName].DialTimeout > 0,
+					app.clients[configGroupName][configBlockName].DialTimeout,
 					config.DefaultDialTimeout,
 				)
 
 				// Add clients to the pool.
 				for range currentPoolSize {
-					clientConfig := clients[configGroupName][configBlockName]
+					clientConfig := app.clients[configGroupName][configBlockName]
 					clientConfig.GroupName = configGroupName
 					clientConfig.BlockName = configBlockName
 					client := network.NewClient(
@@ -720,7 +766,7 @@ var runCmd = &cobra.Command{
 								),
 								BackoffMultiplier:  clientConfig.BackoffMultiplier,
 								DisableBackoffCaps: clientConfig.DisableBackoffCaps,
-								Logger:             loggers[configBlockName],
+								Logger:             app.loggers[configBlockName],
 							},
 						),
 					)
@@ -754,7 +800,7 @@ var runCmd = &cobra.Command{
 						span.AddEvent("Create client", eventOptions)
 
 						pluginTimeoutCtx, cancel = context.WithTimeout(
-							context.Background(), conf.Plugin.Timeout)
+							context.Background(), app.conf.Plugin.Timeout)
 						defer cancel()
 
 						clientCfg := map[string]any{
@@ -777,17 +823,17 @@ var runCmd = &cobra.Command{
 							"backoffMultiplier":  clientConfig.BackoffMultiplier,
 							"disableBackoffCaps": clientConfig.DisableBackoffCaps,
 						}
-						result, err := pluginRegistry.Run(
+						result, err := app.pluginRegistry.Run(
 							pluginTimeoutCtx, clientCfg, v1.HookName_HOOK_NAME_ON_NEW_CLIENT)
 						if err != nil {
 							logger.Error().Err(err).Msg("Failed to run OnNewClient hooks")
 							span.RecordError(err)
 						}
 						if result != nil {
-							_ = pluginRegistry.ActRegistry.RunAll(result)
+							_ = app.pluginRegistry.ActRegistry.RunAll(result)
 						}
 
-						err = pools[configGroupName][configBlockName].Put(client.ID, client)
+						err = app.pools[configGroupName][configBlockName].Put(client.ID, client)
 						if err != nil {
 							logger.Error().Err(err).Msg("Failed to add client to the pool")
 							span.RecordError(err)
@@ -798,44 +844,34 @@ var runCmd = &cobra.Command{
 							// Wait for the stop signal to exit gracefully.
 							// This prevents the program from waiting indefinitely
 							// after the StopGracefully function is called.
-							<-stopChan
+							<-app.stopChan
 							os.Exit(gerr.FailedToCreateClient)
 						}()
-						StopGracefully(
-							runCtx,
-							nil,
-							metricsMerger,
-							metricsServer,
-							pluginRegistry,
-							logger,
-							servers,
-							stopChan,
-							httpServer,
-							grpcServer,
-						)
+						app.stopGracefully(runCtx, nil)
+						os.Exit(gerr.FailedToCreateClient)
 					}
 				}
 
 				// Verify that the pool is properly populated.
 				logger.Info().Fields(map[string]any{
 					"name":  configBlockName,
-					"count": strconv.Itoa(pools[configGroupName][configBlockName].Size()),
+					"count": strconv.Itoa(app.pools[configGroupName][configBlockName].Size()),
 				}).Msg("There are clients available in the pool")
 
-				if pools[configGroupName][configBlockName].Size() != currentPoolSize {
+				if app.pools[configGroupName][configBlockName].Size() != currentPoolSize {
 					logger.Error().Msg(
 						"The pool size is incorrect, either because " +
 							"the clients cannot connect due to no network connectivity " +
 							"or the server is not running. exiting...")
-					pluginRegistry.Shutdown()
+					app.pluginRegistry.Shutdown()
 					os.Exit(gerr.FailedToInitializePool)
 				}
 
 				pluginTimeoutCtx, cancel = context.WithTimeout(
-					context.Background(), conf.Plugin.Timeout)
+					context.Background(), app.conf.Plugin.Timeout)
 				defer cancel()
 
-				result, err := pluginRegistry.Run(
+				result, err := app.pluginRegistry.Run(
 					pluginTimeoutCtx,
 					map[string]any{"name": configBlockName, "size": currentPoolSize},
 					v1.HookName_HOOK_NAME_ON_NEW_POOL)
@@ -844,7 +880,7 @@ var runCmd = &cobra.Command{
 					span.RecordError(err)
 				}
 				if result != nil {
-					_ = pluginRegistry.ActRegistry.RunAll(result)
+					_ = app.pluginRegistry.ActRegistry.RunAll(result)
 				}
 			}
 		}
@@ -853,10 +889,10 @@ var runCmd = &cobra.Command{
 
 		_, span = otel.Tracer(config.TracerName).Start(runCtx, "Create proxies")
 		// Create and initialize prefork proxies with each pool of clients.
-		for configGroupName, configGroup := range conf.Global.Proxies {
+		for configGroupName, configGroup := range app.conf.Global.Proxies {
 			for configBlockName, cfg := range configGroup {
-				logger := loggers[configGroupName]
-				clientConfig := clients[configGroupName][configBlockName]
+				logger := app.loggers[configGroupName]
+				clientConfig := app.clients[configGroupName][configBlockName]
 
 				// Fill the missing and zero value with the default one.
 				cfg.HealthCheckPeriod = config.If(
@@ -865,21 +901,21 @@ var runCmd = &cobra.Command{
 					config.DefaultHealthCheckPeriod,
 				)
 
-				if _, ok := proxies[configGroupName]; !ok {
-					proxies[configGroupName] = make(map[string]*network.Proxy)
+				if _, ok := app.proxies[configGroupName]; !ok {
+					app.proxies[configGroupName] = make(map[string]*network.Proxy)
 				}
 
-				proxies[configGroupName][configBlockName] = network.NewProxy(
+				app.proxies[configGroupName][configBlockName] = network.NewProxy(
 					runCtx,
 					network.Proxy{
 						GroupName:            configGroupName,
 						BlockName:            configBlockName,
-						AvailableConnections: pools[configGroupName][configBlockName],
-						PluginRegistry:       pluginRegistry,
+						AvailableConnections: app.pools[configGroupName][configBlockName],
+						PluginRegistry:       app.pluginRegistry,
 						HealthCheckPeriod:    cfg.HealthCheckPeriod,
 						ClientConfig:         clientConfig,
 						Logger:               logger,
-						PluginTimeout:        conf.Plugin.Timeout,
+						PluginTimeout:        app.conf.Plugin.Timeout,
 					},
 				)
 
@@ -889,18 +925,18 @@ var runCmd = &cobra.Command{
 				))
 
 				pluginTimeoutCtx, cancel = context.WithTimeout(
-					context.Background(), conf.Plugin.Timeout)
+					context.Background(), app.conf.Plugin.Timeout)
 				defer cancel()
 
-				if data, ok := conf.GlobalKoanf.Get("proxies").(map[string]any); ok {
-					result, err := pluginRegistry.Run(
+				if data, ok := app.conf.GlobalKoanf.Get("proxies").(map[string]any); ok {
+					result, err := app.pluginRegistry.Run(
 						pluginTimeoutCtx, data, v1.HookName_HOOK_NAME_ON_NEW_PROXY)
 					if err != nil {
 						logger.Error().Err(err).Msg("Failed to run OnNewProxy hooks")
 						span.RecordError(err)
 					}
 					if result != nil {
-						_ = pluginRegistry.ActRegistry.RunAll(result)
+						_ = app.pluginRegistry.ActRegistry.RunAll(result)
 					}
 				} else {
 					logger.Error().Msg("Failed to get proxy from config")
@@ -914,25 +950,25 @@ var runCmd = &cobra.Command{
 		_, span = otel.Tracer(config.TracerName).Start(runCtx, "Create Raft Node")
 		defer span.End()
 
-		raftNode, originalErr := raft.NewRaftNode(logger, conf.Global.Raft)
+		raftNode, originalErr := raft.NewRaftNode(logger, app.conf.Global.Raft)
 		if originalErr != nil {
 			logger.Error().Err(originalErr).Msg("Failed to start raft node")
 			span.RecordError(originalErr)
-			pluginRegistry.Shutdown()
+			app.pluginRegistry.Shutdown()
 			os.Exit(gerr.FailedToStartRaftNode)
 		}
 
 		_, span = otel.Tracer(config.TracerName).Start(runCtx, "Create servers")
 		// Create and initialize servers.
-		for name, cfg := range conf.Global.Servers {
-			logger := loggers[name]
+		for name, cfg := range app.conf.Global.Servers {
+			logger := app.loggers[name]
 
 			var serverProxies []network.IProxy
-			for _, proxy := range proxies[name] {
+			for _, proxy := range app.proxies[name] {
 				serverProxies = append(serverProxies, proxy)
 			}
 
-			servers[name] = network.NewServer(
+			app.servers[name] = network.NewServer(
 				runCtx,
 				network.Server{
 					GroupName: name,
@@ -949,8 +985,8 @@ var runCmd = &cobra.Command{
 					},
 					Proxies:                    serverProxies,
 					Logger:                     logger,
-					PluginRegistry:             pluginRegistry,
-					PluginTimeout:              conf.Plugin.Timeout,
+					PluginRegistry:             app.pluginRegistry,
+					PluginTimeout:              app.conf.Plugin.Timeout,
 					EnableTLS:                  cfg.EnableTLS,
 					CertFile:                   cfg.CertFile,
 					KeyFile:                    cfg.KeyFile,
@@ -967,7 +1003,7 @@ var runCmd = &cobra.Command{
 				attribute.String("network", cfg.Network),
 				attribute.String("address", cfg.Address),
 				attribute.String("tickInterval", cfg.TickInterval.String()),
-				attribute.String("pluginTimeout", conf.Plugin.Timeout.String()),
+				attribute.String("pluginTimeout", app.conf.Plugin.Timeout.String()),
 				attribute.Bool("enableTLS", cfg.EnableTLS),
 				attribute.String("certFile", cfg.CertFile),
 				attribute.String("keyFile", cfg.KeyFile),
@@ -975,18 +1011,18 @@ var runCmd = &cobra.Command{
 			))
 
 			pluginTimeoutCtx, cancel = context.WithTimeout(
-				context.Background(), conf.Plugin.Timeout)
+				context.Background(), app.conf.Plugin.Timeout)
 			defer cancel()
 
-			if data, ok := conf.GlobalKoanf.Get("servers").(map[string]any); ok {
-				result, err := pluginRegistry.Run(
+			if data, ok := app.conf.GlobalKoanf.Get("servers").(map[string]any); ok {
+				result, err := app.pluginRegistry.Run(
 					pluginTimeoutCtx, data, v1.HookName_HOOK_NAME_ON_NEW_SERVER)
 				if err != nil {
 					logger.Error().Err(err).Msg("Failed to run OnNewServer hooks")
 					span.RecordError(err)
 				}
 				if result != nil {
-					_ = pluginRegistry.ActRegistry.RunAll(result)
+					_ = app.pluginRegistry.ActRegistry.RunAll(result)
 				}
 			} else {
 				logger.Error().Msg("Failed to get the servers configuration")
@@ -996,29 +1032,29 @@ var runCmd = &cobra.Command{
 		span.End()
 
 		// Start the HTTP and gRPC APIs.
-		if conf.Global.API.Enabled {
+		if app.conf.Global.API.Enabled {
 			apiOptions := api.Options{
 				Logger:      logger,
-				GRPCNetwork: conf.Global.API.GRPCNetwork,
-				GRPCAddress: conf.Global.API.GRPCAddress,
-				HTTPAddress: conf.Global.API.HTTPAddress,
-				Servers:     servers,
+				GRPCNetwork: app.conf.Global.API.GRPCNetwork,
+				GRPCAddress: app.conf.Global.API.GRPCAddress,
+				HTTPAddress: app.conf.Global.API.HTTPAddress,
+				Servers:     app.servers,
 				RaftNode:    raftNode,
 			}
 
 			apiObj := &api.API{
 				Options:        &apiOptions,
-				Config:         conf,
-				PluginRegistry: pluginRegistry,
-				Pools:          pools,
-				Proxies:        proxies,
-				Servers:        servers,
+				Config:         app.conf,
+				PluginRegistry: app.pluginRegistry,
+				Pools:          app.pools,
+				Proxies:        app.proxies,
+				Servers:        app.servers,
 			}
 			grpcServer = api.NewGRPCServer(
 				runCtx,
 				api.GRPCServer{
 					API:           apiObj,
-					HealthChecker: &api.HealthChecker{Servers: servers},
+					HealthChecker: &api.HealthChecker{Servers: app.servers},
 				},
 			)
 			if grpcServer != nil {
@@ -1038,7 +1074,7 @@ var runCmd = &cobra.Command{
 		}
 
 		// Report usage statistics.
-		if enableUsageReport {
+		if app.EnableUsageReport {
 			go func() {
 				conn, err := grpc.NewClient(
 					UsageReportURL,
@@ -1068,10 +1104,10 @@ var runCmd = &cobra.Command{
 					Goos:           runtime.GOOS,
 					Goarch:         runtime.GOARCH,
 					Service:        "gatewayd",
-					DevMode:        devMode,
+					DevMode:        app.DevMode,
 					Plugins:        []*usage.Plugin{},
 				}
-				pluginRegistry.ForEach(
+				app.pluginRegistry.ForEach(
 					func(identifier sdkPlugin.Identifier, _ *plugin.Plugin) {
 						report.Plugins = append(report.GetPlugins(), &usage.Plugin{
 							Name:     identifier.Name,
@@ -1087,52 +1123,10 @@ var runCmd = &cobra.Command{
 			}()
 		}
 
-		// Shutdown the server gracefully.
-		signals := []os.Signal{
-			os.Interrupt,
-			os.Kill,
-			syscall.SIGTERM,
-			syscall.SIGABRT,
-			syscall.SIGQUIT,
-			syscall.SIGHUP,
-			syscall.SIGINT,
-		}
-		signalsCh := make(chan os.Signal, 1)
-		signal.Notify(signalsCh, signals...)
-		go func(pluginRegistry *plugin.Registry,
-			logger zerolog.Logger,
-			servers map[string]*network.Server,
-			metricsMerger *metrics.Merger,
-			metricsServer *http.Server,
-			stopChan chan struct{},
-			httpServer *api.HTTPServer,
-			grpcServer *api.GRPCServer,
-		) {
-			for sig := range signalsCh {
-				for _, s := range signals {
-					if sig != s {
-						StopGracefully(
-							runCtx,
-							sig,
-							metricsMerger,
-							metricsServer,
-							pluginRegistry,
-							logger,
-							servers,
-							stopChan,
-							httpServer,
-							grpcServer,
-						)
-						os.Exit(0)
-					}
-				}
-			}
-		}(pluginRegistry, logger, servers, metricsMerger, metricsServer, stopChan, httpServer, grpcServer)
-
 		_, span = otel.Tracer(config.TracerName).Start(runCtx, "Start servers")
 		// Start the server.
-		for name, server := range servers {
-			logger := loggers[name]
+		for name, server := range app.servers {
+			logger := app.loggers[name]
 			go func(
 				span trace.Span,
 				server *network.Server,
@@ -1154,37 +1148,51 @@ var runCmd = &cobra.Command{
 					pluginRegistry.Shutdown()
 					os.Exit(gerr.FailedToStartServer)
 				}
-			}(span, server, logger, healthCheckScheduler, metricsMerger, pluginRegistry)
+			}(span, server, logger, app.healthCheckScheduler, app.metricsMerger, app.pluginRegistry)
 		}
 		span.End()
 
 		// Wait for the server to shut down.
-		<-stopChan
+		<-app.stopChan
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(runCmd)
 
-	runCmd.Flags().StringVarP(
-		&globalConfigFile,
+	runCmd.Flags().StringP(
 		"config", "c", config.GetDefaultConfigFilePath(config.GlobalConfigFilename),
 		"Global config file")
-	runCmd.Flags().StringVarP(
-		&pluginConfigFile,
+	runCmd.Flags().StringP(
 		"plugin-config", "p", config.GetDefaultConfigFilePath(config.PluginsConfigFilename),
 		"Plugin config file")
-	runCmd.Flags().BoolVar(
-		&devMode, "dev", false, "Enable development mode for plugin development")
-	runCmd.Flags().BoolVar(
-		&enableTracing, "tracing", false, "Enable tracing with OpenTelemetry via gRPC")
-	runCmd.Flags().StringVar(
-		&collectorURL, "collector-url", "localhost:4317",
-		"Collector URL of OpenTelemetry gRPC endpoint")
-	runCmd.Flags().BoolVar(
-		&enableSentry, "sentry", true, "Enable Sentry")
-	runCmd.Flags().BoolVar(
-		&enableUsageReport, "usage-report", true, "Enable usage report")
-	runCmd.Flags().BoolVar(
-		&enableLinting, "lint", true, "Enable linting of configuration files")
+	runCmd.Flags().Bool("dev", false, "Enable development mode for plugin development")
+	runCmd.Flags().Bool("tracing", false, "Enable tracing with OpenTelemetry via gRPC")
+	runCmd.Flags().String(
+		"collector-url", "localhost:4317", "Collector URL of OpenTelemetry gRPC endpoint")
+	runCmd.Flags().Bool("sentry", true, "Enable Sentry")
+	runCmd.Flags().Bool("usage-report", true, "Enable usage report")
+	runCmd.Flags().Bool("lint", true, "Enable linting of configuration files")
+	runCmd.Flags().Bool("metrics-merger", true, "Enable metrics merger")
+}
+
+func NewGatewayDInstance(cmd *cobra.Command) *GatewayDInstance {
+	app := GatewayDInstance{
+		loggers:              make(map[string]zerolog.Logger),
+		pools:                make(map[string]map[string]*pool.Pool),
+		clients:              make(map[string]map[string]*config.Client),
+		proxies:              make(map[string]map[string]*network.Proxy),
+		servers:              make(map[string]*network.Server),
+		healthCheckScheduler: gocron.NewScheduler(time.UTC),
+		stopChan:             make(chan struct{}),
+	}
+	app.EnableTracing, _ = cmd.Flags().GetBool("enable-tracing")
+	app.EnableSentry, _ = cmd.Flags().GetBool("enable-sentry")
+	app.EnableUsageReport, _ = cmd.Flags().GetBool("enable-usage-report")
+	app.EnableLinting, _ = cmd.Flags().GetBool("enable-linting")
+	app.DevMode, _ = cmd.Flags().GetBool("dev")
+	app.CollectorURL, _ = cmd.Flags().GetString("collector-url")
+	app.GlobalConfigFile, _ = cmd.Flags().GetString("config")
+	app.PluginConfigFile, _ = cmd.Flags().GetString("plugin-config")
+	return &app
 }

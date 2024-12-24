@@ -215,8 +215,8 @@ func TestRunServer(t *testing.T) {
 	<-time.After(100 * time.Millisecond)
 
 	// check server status and connections
-	assert.False(t, server.running.Load())
-	assert.Zero(t, server.connections)
+	assert.False(t, server.IsRunning())
+	assert.Zero(t, server.CountConnections())
 
 	// Read the log file and check if the log file contains the expected log messages.
 	require.FileExists(t, "server_test.log")
