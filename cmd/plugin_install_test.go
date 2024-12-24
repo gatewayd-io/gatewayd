@@ -73,7 +73,7 @@ func Test_pluginInstallCmdAutomatedNoOverwrite(t *testing.T) {
 		"--update", "--backup", "--overwrite-config=false")
 	require.NoError(t, err, "plugin install should not return an error")
 	assert.Contains(t, output, "Installing plugins from plugins configuration file")
-	assert.Contains(t, output, fmt.Sprintf("File downloaded to %s", pluginArchivePath))
+	assert.Contains(t, output, "File downloaded to "+pluginArchivePath)
 	assert.Contains(t, output, "Download completed successfully")
 	assert.Contains(t, output, "checksums.txt")
 	assert.Contains(t, output, "Checksum verification passed")
