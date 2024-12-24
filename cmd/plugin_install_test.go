@@ -25,6 +25,7 @@ func Test_pluginInstallCmdWithFile(t *testing.T) {
 		t, pluginTestConfigFile, "plugin init command should have created a config file")
 
 	// Pull the plugin archive and install it.
+	var pluginArchivePath string
 	pluginArchivePath, err = mustPullPlugin()
 	require.NoError(t, err, "mustPullPlugin should not return an error")
 	assert.FileExists(t, pluginArchivePath, "mustPullPlugin should have downloaded the plugin archive")
