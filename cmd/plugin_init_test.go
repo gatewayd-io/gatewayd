@@ -15,13 +15,13 @@ func Test_pluginInitCmd(t *testing.T) {
 	output, err := executeCommandC(rootCmd, "plugin", "init", "-p", pluginTestConfigFile)
 	require.NoError(t, err, "plugin init command should not have returned an error")
 	assert.Equal(t,
-		fmt.Sprintf("Config file '%s' was created successfully.", App.PluginConfigFile),
+		fmt.Sprintf("Config file '%s' was created successfully.", pluginTestConfigFile),
 		output,
 		"plugin init command should have returned the correct output")
 	assert.FileExists(
-		t, App.PluginConfigFile, "plugin init command should have created a config file")
+		t, pluginTestConfigFile, "plugin init command should have created a config file")
 
 	// Clean up.
-	err = os.Remove(App.PluginConfigFile)
+	err = os.Remove(pluginTestConfigFile)
 	assert.Nil(t, err)
 }

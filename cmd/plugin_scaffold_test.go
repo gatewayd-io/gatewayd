@@ -18,6 +18,12 @@ import (
 )
 
 func Test_pluginScaffoldCmd(t *testing.T) {
+	previous := EnableTestMode()
+	defer func() {
+		testMode = previous
+		testApp = nil
+	}()
+
 	// Start the test containers.
 	ctx := context.Background()
 	postgresHostIP1, postgresMappedPort1 := testhelpers.SetupPostgreSQLTestContainer(ctx, t)
@@ -86,11 +92,9 @@ func Test_pluginScaffoldCmd(t *testing.T) {
 
 	pluginTestConfigFile := filepath.Join(pluginDir, "gatewayd_plugins.yaml")
 
-	App.stopChan = make(chan struct{})
-
 	var waitGroup sync.WaitGroup
 
-	waitGroup.Add(1)
+	waitGroup.Add(2)
 	go func(waitGroup *sync.WaitGroup) {
 		// Test run command.
 		output, err := executeCommandC(
@@ -106,16 +110,9 @@ func Test_pluginScaffoldCmd(t *testing.T) {
 		waitGroup.Done()
 	}(&waitGroup)
 
-	waitGroup.Add(1)
 	go func(waitGroup *sync.WaitGroup) {
 		time.Sleep(waitBeforeStop)
-
-		StopGracefully(
-			context.Background(),
-			nil,
-			App,
-		)
-
+		testApp.stopGracefully(context.Background(), os.Interrupt)
 		waitGroup.Done()
 	}(&waitGroup)
 

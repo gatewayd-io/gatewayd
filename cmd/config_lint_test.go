@@ -15,11 +15,11 @@ func Test_configLintCmd(t *testing.T) {
 	output, err := executeCommandC(rootCmd, "config", "init", "-c", globalTestConfigFile)
 	require.NoError(t, err, "configInitCmd should not return an error")
 	assert.Equal(t,
-		fmt.Sprintf("Config file '%s' was created successfully.", App.GlobalConfigFile),
+		fmt.Sprintf("Config file '%s' was created successfully.", globalTestConfigFile),
 		output,
 		"configInitCmd should print the correct output")
 	// Check that the config file was created.
-	assert.FileExists(t, App.GlobalConfigFile, "configInitCmd should create a config file")
+	assert.FileExists(t, globalTestConfigFile, "configInitCmd should create a config file")
 
 	// Test configLintCmd.
 	output, err = executeCommandC(rootCmd, "config", "lint", "-c", globalTestConfigFile)
@@ -30,6 +30,6 @@ func Test_configLintCmd(t *testing.T) {
 		"configLintCmd should print the correct output")
 
 	// Clean up.
-	err = os.Remove(App.GlobalConfigFile)
+	err = os.Remove(globalTestConfigFile)
 	assert.Nil(t, err)
 }
