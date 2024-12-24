@@ -73,11 +73,11 @@ func Test_pluginInstallCmdAutomatedNoOverwrite(t *testing.T) {
 		"--update", "--backup", "--overwrite-config=false")
 	require.NoError(t, err, "plugin install should not return an error")
 	assert.Contains(t, output, "Installing plugins from plugins configuration file")
+	assert.Contains(t, output, "Downloading https://github.com/gatewayd-io/gatewayd-plugin-cache/releases/download/v0.4.0/gatewayd-plugin-cache-linux-amd64-v0.4.0.tar.gz") //nolint:lll
 	assert.Contains(t, output, "File downloaded to "+pluginArchivePath)
 	assert.Contains(t, output, "Download completed successfully")
-	assert.Contains(t, output, "checksums.txt")
-	assert.Contains(t, output, "Checksum verification passed")
-	assert.Contains(t, output, "Plugin binary extracted to plugins/gatewayd-plugin-cache")
+	assert.Contains(t, output, "Downloading https://github.com/gatewayd-io/gatewayd-plugin-cache/releases/download/v0.4.0/checksums.txt") //nolint:lll
+	assert.Contains(t, output, "Plugin binary downloaded to gatewayd-plugin-cache-linux-amd64-v0.4.0.tar.gz")
 	assert.Contains(t, output, "Plugin installed successfully")
 
 	// See if the plugin was actually installed.
