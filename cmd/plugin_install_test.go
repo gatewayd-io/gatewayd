@@ -55,6 +55,7 @@ func Test_pluginInstallCmd(t *testing.T) {
 	assert.NoFileExists(t, "plugins/gatewayd_plugin.yaml")
 
 	require.NoError(t, os.RemoveAll("plugins/"))
+	require.NoError(t, os.Remove(pluginArchivePath))
 	require.NoError(t, os.Remove(pluginTestConfigFile))
 	require.NoError(t, os.Remove(pluginTestConfigFile+BackupFileExt))
 }
