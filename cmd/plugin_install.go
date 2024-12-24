@@ -58,26 +58,26 @@ const (
 	Plugins                     configFileType = "plugins"
 )
 
-var (
-	pluginOutputDir          string
-	pullOnly                 bool
-	cleanup                  bool
-	update                   bool
-	backupConfig             bool
-	noPrompt                 bool
-	pluginName               string
-	overwriteConfig          bool
-	skipPathSlipVerification bool
-)
-
 // pluginInstallCmd represents the plugin install command.
 var pluginInstallCmd = &cobra.Command{
 	Use:     "install",
 	Short:   "Install a plugin from a local archive or a GitHub repository",
 	Example: "  gatewayd plugin install <github.com/gatewayd-io/gatewayd-plugin-cache@latest|/path/to/plugin[.zip|.tar.gz]>", //nolint:lll
 	Run: func(cmd *cobra.Command, args []string) {
+		enableSentry, _ := cmd.Flags().GetBool("sentry")
+		pluginConfigFile, _ := cmd.Flags().GetString("plugin-config")
+		pluginOutputDir, _ := cmd.Flags().GetString("output-dir")
+		pullOnly, _ := cmd.Flags().GetBool("pull-only")
+		cleanup, _ := cmd.Flags().GetBool("cleanup")
+		noPrompt, _ := cmd.Flags().GetBool("no-prompt")
+		update, _ := cmd.Flags().GetBool("update")
+		backupConfig, _ := cmd.Flags().GetBool("backup")
+		overwriteConfig, _ := cmd.Flags().GetBool("overwrite-config")
+		pluginName, _ := cmd.Flags().GetString("name")
+		skipPathSlipVerification, _ := cmd.Flags().GetBool("skip-path-slip-verification")
+
 		// Enable Sentry.
-		if App.EnableSentry {
+		if enableSentry {
 			// Initialize Sentry.
 			err := sentry.Init(sentry.ClientOptions{
 				Dsn:              DSN,
@@ -99,10 +99,23 @@ var pluginInstallCmd = &cobra.Command{
 		case LocationArgs:
 			// Install the plugin from the CLI argument.
 			cmd.Println("Installing plugin from CLI argument")
-			installPlugin(cmd, args[0])
+			installPlugin(
+				cmd,
+				args[0],
+				pluginOutputDir,
+				pullOnly,
+				cleanup,
+				noPrompt,
+				update,
+				backupConfig,
+				overwriteConfig,
+				skipPathSlipVerification,
+				pluginConfigFile,
+				pluginName,
+			)
 		case LocationConfig:
 			// Read the gatewayd_plugins.yaml file.
-			pluginsConfig, err := os.ReadFile(App.PluginConfigFile)
+			pluginsConfig, err := os.ReadFile(pluginConfigFile)
 			if err != nil {
 				cmd.Println(err)
 				return
@@ -197,7 +210,20 @@ var pluginInstallCmd = &cobra.Command{
 			// Install all the plugins from the plugins configuration file.
 			cmd.Println("Installing plugins from plugins configuration file")
 			for _, pluginURL := range pluginURLs {
-				installPlugin(cmd, pluginURL)
+				installPlugin(
+					cmd,
+					pluginURL,
+					pluginOutputDir,
+					pullOnly,
+					cleanup,
+					noPrompt,
+					update,
+					backupConfig,
+					overwriteConfig,
+					skipPathSlipVerification,
+					pluginConfigFile,
+					pluginName,
+				)
 			}
 		default:
 			cmd.Println("Invalid plugin URL or file path")
@@ -208,37 +234,36 @@ var pluginInstallCmd = &cobra.Command{
 func init() {
 	pluginCmd.AddCommand(pluginInstallCmd)
 
-	App = &GatewayDInstance{}
-
-	pluginInstallCmd.Flags().StringVarP(
-		&App.PluginConfigFile, // Already exists in run.go
+	pluginInstallCmd.Flags().StringP(
 		"plugin-config", "p", config.GetDefaultConfigFilePath(config.PluginsConfigFilename),
 		"Plugin config file")
-	pluginInstallCmd.Flags().StringVarP(
-		&pluginOutputDir, "output-dir", "o", "./plugins", "Output directory for the plugin")
-	pluginInstallCmd.Flags().BoolVar(
-		&pullOnly, "pull-only", false, "Only pull the plugin, don't install it")
-	pluginInstallCmd.Flags().BoolVar(
-		&cleanup, "cleanup", true,
+	pluginInstallCmd.Flags().StringP(
+		"output-dir", "o", "./plugins", "Output directory for the plugin")
+	pluginInstallCmd.Flags().Bool(
+		"pull-only", false, "Only pull the plugin, don't install it")
+	pluginInstallCmd.Flags().Bool(
+		"cleanup", true,
 		"Delete downloaded and extracted files after installing the plugin (except the plugin binary)")
-	pluginInstallCmd.Flags().BoolVar(
-		&noPrompt, "no-prompt", true, "Do not prompt for user input")
-	pluginInstallCmd.Flags().BoolVar(
-		&update, "update", false, "Update the plugin if it already exists")
-	pluginInstallCmd.Flags().BoolVar(
-		&backupConfig, "backup", false, "Backup the plugins configuration file before installing the plugin")
-	pluginInstallCmd.Flags().StringVarP(
-		&pluginName, "name", "n", "", "Name of the plugin (only for installing from archive files)")
-	pluginInstallCmd.Flags().BoolVar(
-		&overwriteConfig, "overwrite-config", true, "Overwrite the existing plugins configuration file (overrides --update, only used for installing from the plugins configuration file)") //nolint:lll
-	pluginInstallCmd.Flags().BoolVar(
-		&skipPathSlipVerification, "skip-path-slip-verification", false, "Skip path slip verification when extracting the plugin archive from a TRUSTED source") //nolint:lll
-	pluginInstallCmd.Flags().BoolVar(
-		&App.EnableSentry, "sentry", true, "Enable Sentry") // Already exists in run.go
+	pluginInstallCmd.Flags().Bool(
+		"no-prompt", true, "Do not prompt for user input")
+	pluginInstallCmd.Flags().Bool(
+		"update", false, "Update the plugin if it already exists")
+	pluginInstallCmd.Flags().Bool(
+		"backup", false, "Backup the plugins configuration file before installing the plugin")
+	pluginInstallCmd.Flags().StringP(
+		"name", "n", "", "Name of the plugin (only for installing from archive files)")
+	pluginInstallCmd.Flags().Bool(
+		"overwrite-config", true, "Overwrite the existing plugins configuration file (overrides --update, only used for installing from the plugins configuration file)") //nolint:lll
+	pluginInstallCmd.Flags().Bool(
+		"skip-path-slip-verification", false, "Skip path slip verification when extracting the plugin archive from a TRUSTED source") //nolint:lll
+	pluginInstallCmd.Flags().Bool(
+		"sentry", true, "Enable Sentry")
 }
 
 // extractZip extracts the files from a zip archive.
-func extractZip(filename, dest string) ([]string, *gerr.GatewayDError) {
+func extractZip(
+	filename, dest string, skipPathSlipVerification bool,
+) ([]string, *gerr.GatewayDError) {
 	// Open and extract the zip file.
 	zipRc, err := zip.OpenReader(filename)
 	if err != nil {
@@ -319,7 +344,9 @@ func extractZip(filename, dest string) ([]string, *gerr.GatewayDError) {
 }
 
 // extractTarGz extracts the files from a tar.gz archive.
-func extractTarGz(filename, dest string) ([]string, *gerr.GatewayDError) {
+func extractTarGz(
+	filename, dest string, skipPathSlipVerification bool,
+) ([]string, *gerr.GatewayDError) {
 	// Open and extract the tar.gz file.
 	gzipStream, err := os.Open(filename)
 	if err != nil {
@@ -532,7 +559,20 @@ func getFileExtension() Extension {
 }
 
 // installPlugin installs a plugin from a given URL.
-func installPlugin(cmd *cobra.Command, pluginURL string) {
+func installPlugin(
+	cmd *cobra.Command,
+	pluginURL string,
+	outputDir string,
+	pullOnly bool,
+	cleanup bool,
+	noPrompt bool,
+	update bool,
+	backupConfig bool,
+	overwriteConfig bool,
+	skipPathSlipVerification bool,
+	pluginConfigFile string,
+	pluginName string,
+) {
 	var (
 		// This is a list of files that will be deleted after the plugin is installed.
 		toBeDeleted []string
@@ -636,7 +676,7 @@ func installPlugin(cmd *cobra.Command, pluginURL string) {
 		}
 
 		// Create the output directory if it doesn't exist.
-		if err := os.MkdirAll(pluginOutputDir, FolderPermissions); err != nil {
+		if err := os.MkdirAll(outputDir, FolderPermissions); err != nil {
 			cmd.Println("There was an error creating the output directory: ", err)
 			return
 		}
@@ -650,7 +690,7 @@ func installPlugin(cmd *cobra.Command, pluginURL string) {
 		if downloadURL != "" && releaseID != 0 {
 			cmd.Println("Downloading", downloadURL)
 			filePath, gErr := downloadFile(
-				client, account, pluginName, releaseID, pluginFilename, pluginOutputDir)
+				client, account, pluginName, releaseID, pluginFilename, outputDir)
 			toBeDeleted = append(toBeDeleted, filePath)
 			if gErr != nil {
 				cmd.Println("Download failed: ", gErr)
@@ -673,7 +713,7 @@ func installPlugin(cmd *cobra.Command, pluginURL string) {
 		if checksumsFilename != "" && downloadURL != "" && releaseID != 0 {
 			cmd.Println("Downloading", downloadURL)
 			filePath, gErr := downloadFile(
-				client, account, pluginName, releaseID, checksumsFilename, pluginOutputDir)
+				client, account, pluginName, releaseID, checksumsFilename, outputDir)
 			toBeDeleted = append(toBeDeleted, filePath)
 			if gErr != nil {
 				cmd.Println("Download failed: ", gErr)
@@ -735,8 +775,8 @@ func installPlugin(cmd *cobra.Command, pluginURL string) {
 	// since the plugin binary is already available (or downloaded) at this point.
 
 	// Create a new "gatewayd_plugins.yaml" file if it doesn't exist.
-	if _, err := os.Stat(App.PluginConfigFile); os.IsNotExist(err) {
-		generateConfig(cmd, Plugins, App.PluginConfigFile, false)
+	if _, err := os.Stat(pluginConfigFile); os.IsNotExist(err) {
+		generateConfig(cmd, Plugins, pluginConfigFile, false)
 	} else if !backupConfig && !noPrompt {
 		// If the config file exists, we should prompt the user to back up
 		// the plugins configuration file.
@@ -751,7 +791,7 @@ func installPlugin(cmd *cobra.Command, pluginURL string) {
 	}
 
 	// Read the "gatewayd_plugins.yaml" file.
-	pluginsConfig, err := os.ReadFile(App.PluginConfigFile)
+	pluginsConfig, err := os.ReadFile(pluginConfigFile)
 	if err != nil {
 		cmd.Println(err)
 		return
@@ -796,7 +836,7 @@ func installPlugin(cmd *cobra.Command, pluginURL string) {
 
 	// Check if the user wants to take a backup of the plugins configuration file.
 	if backupConfig {
-		backupFilename := App.PluginConfigFile + BackupFileExt
+		backupFilename := pluginConfigFile + BackupFileExt
 		if err := os.WriteFile(backupFilename, pluginsConfig, FilePermissions); err != nil {
 			cmd.Println("There was an error backing up the plugins configuration file: ", err)
 		}
@@ -808,9 +848,9 @@ func installPlugin(cmd *cobra.Command, pluginURL string) {
 	var gErr *gerr.GatewayDError
 	switch archiveExt {
 	case ExtensionZip:
-		filenames, gErr = extractZip(pluginFilename, pluginOutputDir)
+		filenames, gErr = extractZip(pluginFilename, outputDir, skipPathSlipVerification)
 	case ExtensionTarGz:
-		filenames, gErr = extractTarGz(pluginFilename, pluginOutputDir)
+		filenames, gErr = extractTarGz(pluginFilename, outputDir, skipPathSlipVerification)
 	default:
 		cmd.Println("Invalid archive extension")
 		return
@@ -873,7 +913,7 @@ func installPlugin(cmd *cobra.Command, pluginURL string) {
 	} else {
 		// Get the contents of the file.
 		contentsBytes, err := os.ReadFile(
-			filepath.Join(pluginOutputDir, DefaultPluginConfigFilename))
+			filepath.Join(outputDir, DefaultPluginConfigFilename))
 		if err != nil {
 			cmd.Println(
 				"There was an error getting the default plugins configuration file: ", err)
@@ -923,7 +963,7 @@ func installPlugin(cmd *cobra.Command, pluginURL string) {
 
 	// Write the YAML to the plugins config file if the --overwrite-config flag is set.
 	if overwriteConfig {
-		if err = os.WriteFile(App.PluginConfigFile, updatedPlugins, FilePermissions); err != nil {
+		if err = os.WriteFile(pluginConfigFile, updatedPlugins, FilePermissions); err != nil {
 			cmd.Println("There was an error writing the plugins configuration file: ", err)
 			return
 		}
