@@ -36,7 +36,7 @@ const (
 	leadershipCheckInterval       = 10 * time.Second // Interval for checking leadership status
 	ApplyTimeout                  = 2 * time.Second  // Timeout for applying commands
 	peerConnectionInterval        = 5 * time.Second  // Interval between peer connection attempts
-	clusterJoinTimeout            = 1 * time.Minute  // Total timeout for trying to join cluster
+	clusterJoinTimeout            = 5 * time.Minute  // Total timeout for trying to join cluster
 )
 
 // Command represents a general command structure for all operations.
@@ -186,7 +186,7 @@ func NewRaftNode(logger zerolog.Logger, raftConfig config.Raft) (*Node, error) {
 		})
 		node.raft.BootstrapCluster(configuration)
 	} else {
-		go node.TryConnectToCluster()
+		go node.tryConnectToCluster(raftAddr)
 	}
 
 	go node.monitorLeadership()
@@ -194,7 +194,9 @@ func NewRaftNode(logger zerolog.Logger, raftConfig config.Raft) (*Node, error) {
 	return node, nil
 }
 
-func (n *Node) TryConnectToCluster() error {
+// tryConnectToCluster attempts to connect to the cluster by sending AddPeer requests to all peers.
+// It returns an error if the timeout is reached or if the connection fails.
+func (n *Node) tryConnectToCluster(localAddress string) error {
 	timeoutCh := time.After(clusterJoinTimeout)
 	ticker := time.NewTicker(peerConnectionInterval)
 	defer ticker.Stop()
@@ -218,8 +220,8 @@ func (n *Node) TryConnectToCluster() error {
 
 				ctx, cancel := context.WithTimeout(context.Background(), transportTimeout)
 				resp, err := client.AddPeer(ctx, &pb.AddPeerRequest{
-					PeerId:      peer.ID,
-					PeerAddress: peer.Address,
+					PeerId:      string(n.config.LocalID),
+					PeerAddress: localAddress,
 				})
 				cancel()
 

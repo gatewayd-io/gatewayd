@@ -541,3 +541,52 @@ func TestGetHealthStatus(t *testing.T) {
 	assert.Error(t, healthStatus.Error, "There should be an error indicating no leader")
 	assert.Equal(t, healthStatus.LastContact, time.Duration(-1), "Last contact should be -1")
 }
+
+func TestAddPeer(t *testing.T) {
+	logger := setupTestLogger()
+	tempDir := t.TempDir()
+
+	nodeconfig1 := config.Raft{
+		NodeID:      "testAddPeerNode1",
+		Address:     "127.0.0.1:5679",
+		IsBootstrap: true,
+		Directory:   tempDir,
+		GRPCAddress: "127.0.0.1:5680",
+	}
+
+	node1, err := NewRaftNode(logger, nodeconfig1)
+	require.NoError(t, err)
+	defer func() {
+		_ = node1.Shutdown()
+	}()
+
+	time.Sleep(2 * time.Second)
+
+	nodeConfig2 := config.Raft{
+		NodeID:      "testAddPeerNode2",
+		Address:     "127.0.0.1:5689",
+		IsBootstrap: false,
+		Directory:   tempDir,
+		GRPCAddress: "127.0.0.1:5690",
+		Peers: []config.RaftPeer{
+			{ID: "testAddPeerNode1", Address: "127.0.0.1:5679", GRPCAddress: "127.0.0.1:5680"},
+		},
+	}
+
+	node2, err := NewRaftNode(logger, nodeConfig2)
+	require.NoError(t, err)
+	defer func() {
+		_ = node2.Shutdown()
+	}()
+
+	for {
+		existingConfig := node1.raft.GetConfiguration().Configuration()
+		for _, server := range existingConfig.Servers {
+			if server.ID == raft.ServerID(nodeConfig2.NodeID) {
+				assert.True(t, true)
+				return
+			}
+		}
+		time.Sleep(1 * time.Second)
+	}
+}
