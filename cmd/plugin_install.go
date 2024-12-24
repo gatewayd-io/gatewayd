@@ -121,6 +121,16 @@ var pluginInstallCmd = &cobra.Command{
 				return
 			}
 
+			// Backup the config file if requested
+			if backupConfig {
+				backupFilename := pluginConfigFile + BackupFileExt
+				if err := os.WriteFile(backupFilename, pluginsConfig, FilePermissions); err != nil {
+					cmd.Println("There was an error backing up the plugins configuration file: ", err)
+					return
+				}
+				cmd.Println("Backup completed successfully")
+			}
+
 			// Get the registered plugins from the plugins configuration file.
 			var localPluginsConfig map[string]any
 			if err := yamlv3.Unmarshal(pluginsConfig, &localPluginsConfig); err != nil {
@@ -605,6 +615,12 @@ func installPlugin(
 			cmd.Println("Plugin name not specified")
 			return
 		}
+
+		// If pullOnly is true, we're done after verifying the file exists
+		if pullOnly {
+			cmd.Println("Plugin file verified at", pluginFilename)
+			return
+		}
 	case SourceGitHub:
 		// Strip scheme from the plugin URL.
 		pluginURL = strings.TrimPrefix(strings.TrimPrefix(pluginURL, "http://"), "https://")
@@ -760,15 +776,19 @@ func installPlugin(
 
 		if pullOnly {
 			cmd.Println("Plugin binary downloaded to", pluginFilename)
-			// Only the checksums file will be deleted if the --pull-only flag is set.
-			if err := os.Remove(checksumsFilename); err != nil {
-				cmd.Println("There was an error deleting the file: ", err)
+			// Only delete the checksums file if the --pull-only flag is set
+			if cleanup {
+				if err := os.Remove(checksumsFilename); err != nil {
+					cmd.Println("There was an error deleting the checksums file: ", err)
+				}
 			}
 			return
 		}
 	case SourceUnknown:
+		fallthrough
 	default:
 		cmd.Println("Invalid URL or file path")
+		return
 	}
 
 	// NOTE: The rest of the code is executed regardless of the source,
