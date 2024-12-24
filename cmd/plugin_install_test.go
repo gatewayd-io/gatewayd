@@ -69,7 +69,8 @@ func Test_pluginInstallCmdAutomated(t *testing.T) {
 
 	// Test plugin install command.
 	output, err := executeCommandC(
-		rootCmd, "plugin", "install", "-p", pluginTestConfigFile)
+		rootCmd, "plugin", "install", "-p", pluginTestConfigFile,
+		"--update", "--backup")
 	require.NoError(t, err, "plugin install should not return an error")
 	assert.Contains(t, output, "Installing plugins from plugins configuration file")
 	assert.Contains(t, output, "Downloading https://github.com/gatewayd-io/gatewayd-plugin-cache/releases/download/v0.4.0/gatewayd-plugin-cache-linux-amd64-v0.4.0.tar.gz") //nolint:lll
@@ -96,4 +97,7 @@ func Test_pluginInstallCmdAutomated(t *testing.T) {
 	assert.NoFileExists(t, "plugins/gatewayd_plugin.yaml")
 
 	require.NoError(t, os.RemoveAll("plugins/"))
+	require.NoError(t, os.Remove(pluginArchivePath))
+	require.NoError(t, os.Remove(filepath.Join(pwd, "checksums.txt")))
+	require.NoError(t, os.Remove(pluginTestConfigFile+BackupFileExt))
 }
