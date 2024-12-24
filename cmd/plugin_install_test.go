@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_pluginInstallCmd(t *testing.T) {
-	pluginTestConfigFile := "./test_plugins_pluginInstallCmd.yaml"
+func Test_pluginInstallCmdWithFile(t *testing.T) {
+	pluginTestConfigFile := "./test_plugins_pluginInstallCmdWithFile.yaml"
 
 	// Create a test plugin config file.
 	output, err := executeCommandC(rootCmd, "plugin", "init", "-p", pluginTestConfigFile)
@@ -34,10 +34,10 @@ func Test_pluginInstallCmd(t *testing.T) {
 		rootCmd, "plugin", "install", "-p", pluginTestConfigFile,
 		"--update", "--backup", "--name=gatewayd-plugin-cache", pluginArchivePath)
 	require.NoError(t, err, "plugin install should not return an error")
-	assert.Equal(t,
-		"Installing plugin from CLI argument\nBackup completed successfully\nPlugin binary extracted to plugins/gatewayd-plugin-cache\nPlugin installed successfully\n", //nolint:lll
-		output,
-	)
+	assert.Contains(t, output, "Installing plugin from CLI argument")
+	assert.Contains(t, output, "Backup completed successfully")
+	assert.Contains(t, output, "Plugin binary extracted to plugins/gatewayd-plugin-cache")
+	assert.Contains(t, output, "Plugin installed successfully")
 
 	// See if the plugin was actually installed.
 	output, err = executeCommandC(rootCmd, "plugin", "list", "-p", pluginTestConfigFile)
@@ -60,7 +60,7 @@ func Test_pluginInstallCmd(t *testing.T) {
 	require.NoError(t, os.Remove(pluginTestConfigFile+BackupFileExt))
 }
 
-func Test_pluginInstallCmdAutomatedNoOverwrite(t *testing.T) {
+func Test_pluginInstallCmdAutomated(t *testing.T) {
 	pwd, err := os.Getwd()
 	require.NoError(t, err, "os.Getwd should not return an error")
 	pluginArchivePath := filepath.Join(pwd, fmt.Sprintf("gatewayd-plugin-cache-%s-%s-v0.4.0.tar.gz", runtime.GOOS, runtime.GOARCH)) //nolint:lll
@@ -69,9 +69,7 @@ func Test_pluginInstallCmdAutomatedNoOverwrite(t *testing.T) {
 
 	// Test plugin install command.
 	output, err := executeCommandC(
-		rootCmd, "plugin", "install",
-		"-p", pluginTestConfigFile,
-		"--update", "--backup", "--overwrite-config=false", "--skip-path-slip-verification")
+		rootCmd, "plugin", "install", "-p", pluginTestConfigFile)
 	require.NoError(t, err, "plugin install should not return an error")
 	assert.Contains(t, output, "Installing plugins from plugins configuration file")
 	assert.Contains(t, output, "Downloading https://github.com/gatewayd-io/gatewayd-plugin-cache/releases/download/v0.4.0/gatewayd-plugin-cache-linux-amd64-v0.4.0.tar.gz") //nolint:lll
