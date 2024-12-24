@@ -35,6 +35,8 @@ const (
 	transportTimeout              = 10 * time.Second // Timeout for transport operations
 	leadershipCheckInterval       = 10 * time.Second // Interval for checking leadership status
 	ApplyTimeout                  = 2 * time.Second  // Timeout for applying commands
+	peerConnectionInterval        = 5 * time.Second  // Interval between peer connection attempts
+	clusterJoinTimeout            = 1 * time.Minute  // Total timeout for trying to join cluster
 )
 
 // Command represents a general command structure for all operations.
@@ -183,11 +185,58 @@ func NewRaftNode(logger zerolog.Logger, raftConfig config.Raft) (*Node, error) {
 			Address: transport.LocalAddr(),
 		})
 		node.raft.BootstrapCluster(configuration)
+	} else {
+		go node.TryConnectToCluster()
 	}
 
 	go node.monitorLeadership()
 
 	return node, nil
+}
+
+func (n *Node) TryConnectToCluster() error {
+	timeoutCh := time.After(clusterJoinTimeout)
+	ticker := time.NewTicker(peerConnectionInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-timeoutCh:
+			n.Logger.Error().Msg("timeout while trying to connect to cluster")
+			return fmt.Errorf("timeout while trying to connect to cluster")
+		case <-ticker.C:
+			for _, peer := range n.Peers {
+				client, err := n.rpcClient.getClient(peer.GRPCAddress)
+				if err != nil {
+					n.Logger.Debug().
+						Err(err).
+						Str("peer_id", peer.ID).
+						Str("grpc_address", peer.GRPCAddress).
+						Msg("Failed to get client for peer")
+					continue
+				}
+
+				ctx, cancel := context.WithTimeout(context.Background(), transportTimeout)
+				resp, err := client.AddPeer(ctx, &pb.AddPeerRequest{
+					PeerId:      peer.ID,
+					PeerAddress: peer.Address,
+				})
+				cancel()
+
+				if err == nil && resp.GetSuccess() {
+					n.Logger.Info().
+						Str("peer_id", peer.ID).
+						Msg("Successfully joined cluster through peer")
+					return nil
+				}
+
+				n.Logger.Debug().
+					Err(err).
+					Str("peer_id", peer.ID).
+					Msg("Failed to join cluster through peer")
+			}
+		}
+	}
 }
 
 // monitorLeadership checks if the node is the Raft leader and logs state changes.
@@ -223,8 +272,52 @@ func (n *Node) monitorLeadership() {
 	}
 }
 
-// AddPeer adds a new peer to the Raft cluster.
 func (n *Node) AddPeer(peerID, peerAddr string) error {
+	if n.raft.State() != raft.Leader {
+		// Find the leader's gRPC address
+		_, leaderID := n.raft.LeaderWithID()
+		if leaderID == "" {
+			return errors.New("no leader available")
+		}
+
+		var leaderGrpcAddr string
+		for _, peer := range n.Peers {
+			if raft.ServerID(peer.ID) == leaderID {
+				leaderGrpcAddr = peer.GRPCAddress
+				break
+			}
+		}
+
+		// Get the RPC client for the leader
+		client, err := n.rpcClient.getClient(leaderGrpcAddr)
+		if err != nil {
+			return fmt.Errorf("failed to get client for leader: %w", err)
+		}
+
+		// Forward the AddPeer request to the leader
+		ctx, cancel := context.WithTimeout(context.Background(), transportTimeout)
+		defer cancel()
+
+		resp, err := client.AddPeer(ctx, &pb.AddPeerRequest{
+			PeerId:      peerID,
+			PeerAddress: peerAddr,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to forward AddPeer request: %w", err)
+		}
+
+		if !resp.GetSuccess() {
+			return fmt.Errorf("leader failed to add peer: %s", resp.GetError())
+		}
+
+		return nil
+	}
+
+	return n.AddPeerInternal(peerID, peerAddr)
+}
+
+// AddPeer adds a new peer to the Raft cluster.
+func (n *Node) AddPeerInternal(peerID, peerAddr string) error {
 	if err := n.raft.AddVoter(raft.ServerID(peerID), raft.ServerAddress(peerAddr), 0, 0).Error(); err != nil {
 		return fmt.Errorf("failed to add voter: %w", err)
 	}
@@ -327,6 +420,7 @@ type FSM struct {
 	lbHashToBlockName map[string]string
 	roundRobinIndex   map[string]*atomic.Uint32
 	weightedRRStates  map[string]map[string]WeightedProxy
+	raftPeers         map[string]config.RaftPeer
 	mu                sync.RWMutex
 }
 

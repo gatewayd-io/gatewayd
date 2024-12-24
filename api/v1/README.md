@@ -15,6 +15,8 @@
     - [GatewayDAdminAPIService](#api-v1-GatewayDAdminAPIService)
   
 - [raft/proto/raft.proto](#raft_proto_raft-proto)
+    - [AddPeerRequest](#raft-AddPeerRequest)
+    - [AddPeerResponse](#raft-AddPeerResponse)
     - [ForwardApplyRequest](#raft-ForwardApplyRequest)
     - [ForwardApplyResponse](#raft-ForwardApplyResponse)
   
@@ -183,6 +185,38 @@ GatewayDAdminAPIService is the administration API of GatewayD.
 
 
 
+<a name="raft-AddPeerRequest"></a>
+
+### AddPeerRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| peer_id | [string](#string) |  |  |
+| peer_address | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="raft-AddPeerResponse"></a>
+
+### AddPeerResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| success | [bool](#bool) |  |  |
+| error | [string](#string) |  |  |
+
+
+
+
+
+
 <a name="raft-ForwardApplyRequest"></a>
 
 ### ForwardApplyRequest
@@ -229,6 +263,7 @@ GatewayDAdminAPIService is the administration API of GatewayD.
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
 | ForwardApply | [ForwardApplyRequest](#raft-ForwardApplyRequest) | [ForwardApplyResponse](#raft-ForwardApplyResponse) |  |
+| AddPeer | [AddPeerRequest](#raft-AddPeerRequest) | [AddPeerResponse](#raft-AddPeerResponse) |  |
 
  
 

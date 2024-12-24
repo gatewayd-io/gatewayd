@@ -16,6 +16,38 @@
     "application/json"
   ],
   "paths": {
+    "/v1/raft/add-peer": {
+      "post": {
+        "operationId": "RaftService_AddPeer",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/raftAddPeerResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/raftAddPeerRequest"
+            }
+          }
+        ],
+        "tags": [
+          "RaftService"
+        ]
+      }
+    },
     "/v1/raft/forward-apply": {
       "post": {
         "operationId": "RaftService_ForwardApply",
@@ -58,6 +90,28 @@
         }
       },
       "additionalProperties": {}
+    },
+    "raftAddPeerRequest": {
+      "type": "object",
+      "properties": {
+        "peerId": {
+          "type": "string"
+        },
+        "peerAddress": {
+          "type": "string"
+        }
+      }
+    },
+    "raftAddPeerResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "error": {
+          "type": "string"
+        }
+      }
     },
     "raftForwardApplyRequest": {
       "type": "object",

@@ -13,6 +13,12 @@ service RaftService {
       body: "*"
     };
   }
+  rpc AddPeer(AddPeerRequest) returns (AddPeerResponse) {
+    option (google.api.http) = {
+      post: "/v1/raft/add-peer"
+      body: "*"
+    };
+  }
 }
 
 message ForwardApplyRequest {
@@ -21,6 +27,16 @@ message ForwardApplyRequest {
 }
 
 message ForwardApplyResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+message AddPeerRequest {
+  string peer_id = 1;
+  string peer_address = 2;
+}
+
+message AddPeerResponse {
   bool success = 1;
   string error = 2;
 }
