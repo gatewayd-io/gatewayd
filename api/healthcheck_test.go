@@ -78,7 +78,7 @@ func Test_Healthchecker(t *testing.T) {
 		context.TODO(),
 		network.Server{
 			Network:      config.DefaultNetwork,
-			Address:      postgresAddress,
+			Address:      "127.0.0.1:15432",
 			TickInterval: config.DefaultTickInterval,
 			Options: network.Option{
 				EnableTicker: false,
@@ -106,6 +106,7 @@ func Test_Healthchecker(t *testing.T) {
 
 	go func(t *testing.T, server *network.Server) {
 		t.Helper()
+
 		if err := server.Run(); err != nil {
 			t.Errorf("server.Run() error = %v", err)
 		}
@@ -121,4 +122,14 @@ func Test_Healthchecker(t *testing.T) {
 	err = healthchecker.Watch(&grpc_health_v1.HealthCheckRequest{}, nil)
 	assert.Error(t, err)
 	assert.Equal(t, "rpc error: code = Unimplemented desc = not implemented", err.Error())
+
+	server.Shutdown()
+	pluginRegistry.Shutdown()
+
+	// Wait for the server to stop.
+	<-time.After(100 * time.Millisecond)
+
+	// check server status and connections
+	assert.False(t, server.IsRunning())
+	assert.Zero(t, server.CountConnections())
 }
