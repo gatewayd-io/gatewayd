@@ -71,7 +71,7 @@ func Test_pluginInstallCmdAutomatedNoOverwrite(t *testing.T) {
 	output, err := executeCommandC(
 		rootCmd, "plugin", "install",
 		"-p", pluginTestConfigFile,
-		"--update", "--backup", "--overwrite-config=false")
+		"--update", "--backup", "--overwrite-config=false", "--skip-path-slip-verification")
 	require.NoError(t, err, "plugin install should not return an error")
 	assert.Contains(t, output, "Installing plugins from plugins configuration file")
 	assert.Contains(t, output, "Downloading https://github.com/gatewayd-io/gatewayd-plugin-cache/releases/download/v0.4.0/gatewayd-plugin-cache-linux-amd64-v0.4.0.tar.gz") //nolint:lll
