@@ -770,11 +770,9 @@ func installPlugin(
 
 		if pullOnly {
 			cmd.Println("Plugin binary downloaded to", pluginFilename)
-			// Only delete the checksums file if the --pull-only flag is set
-			if cleanup {
-				if err := os.Remove(checksumsFilename); err != nil {
-					cmd.Println("There was an error deleting the checksums file: ", err)
-				}
+			// Only the checksums file will be deleted if the --pull-only flag is set.
+			if err := os.Remove(checksumsFilename); err != nil {
+				cmd.Println("There was an error deleting the file: ", err)
 			}
 			return
 		}
