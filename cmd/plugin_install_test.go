@@ -67,7 +67,7 @@ func Test_pluginInstallCmdAutomatedNoOverwrite(t *testing.T) {
 	// Test plugin install command with overwrite disabled
 	output, err := executeCommandC(
 		rootCmd, "plugin", "install", "-p", pluginTestConfigFile,
-		"--update", "--backup", "--overwrite-config=false")
+		"--update", "--backup", "--overwrite-config=false", "--pull-only=false")
 	require.NoError(t, err, "plugin install should not return an error")
 
 	// Verify expected output for no-overwrite case
