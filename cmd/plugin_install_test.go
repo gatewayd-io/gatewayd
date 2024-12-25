@@ -47,7 +47,7 @@ func Test_pluginInstallCmdWithFile(t *testing.T) {
 	assert.Contains(t, output, "Name: gatewayd-plugin-cache")
 
 	// Clean up.
-	assert.FileExists(t, "plugins/gatewayd-plugin-cache")
+	assert.FileExists(t, filepath.Join("./plugins", "gatewayd-plugin-cache"))
 	assert.FileExists(t, pluginTestConfigFile+BackupFileExt)
 	assert.NoFileExists(t, "gatewayd-plugin-cache-linux-amd64-v0.2.4.tar.gz")
 	assert.NoFileExists(t, "checksums.txt")
@@ -83,7 +83,7 @@ func Test_pluginInstallCmdAutomatedNoOverwrite(t *testing.T) {
 	assert.Contains(t, output, "Plugin installed successfully")
 
 	// Clean up.
-	assert.FileExists(t, "plugins/gatewayd-plugin-cache")
+	assert.FileExists(t, filepath.Join("./plugins", "gatewayd-plugin-cache"))
 	assert.FileExists(t, pluginTestConfigFile+BackupFileExt)
 	assert.NoFileExists(t, "plugins/LICENSE")
 	assert.NoFileExists(t, "plugins/README.md")
