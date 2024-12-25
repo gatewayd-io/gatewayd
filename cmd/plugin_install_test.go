@@ -62,9 +62,6 @@ func Test_pluginInstallCmdWithFile(t *testing.T) {
 }
 
 func Test_pluginInstallCmdAutomatedNoOverwrite(t *testing.T) {
-	pwd, err := os.Getwd()
-	require.NoError(t, err, "os.Getwd should not return an error")
-
 	pluginTestConfigFile := "./testdata/gatewayd_plugins.yaml"
 
 	// Test plugin install command with overwrite disabled
@@ -75,19 +72,25 @@ func Test_pluginInstallCmdAutomatedNoOverwrite(t *testing.T) {
 
 	// Verify expected output for no-overwrite case
 	assert.Contains(t, output, "Installing plugins from plugins configuration file")
-	assert.Contains(t, output, fmt.Sprintf("gatewayd-plugin-cache-%s-%s-", runtime.GOOS, runtime.GOARCH))
+	assert.Contains(
+		t,
+		output,
+		fmt.Sprintf("gatewayd-plugin-cache-%s-%s-", runtime.GOOS, runtime.GOARCH))
 	assert.Contains(t, output, "checksums.txt")
 	assert.Contains(t, output, "Download completed successfully")
 	assert.Contains(t, output, "Checksum verification passed")
 	assert.Contains(t, output, "Plugin binary extracted to plugins/gatewayd-plugin-cache")
 	assert.Contains(t, output, "Plugin installed successfully")
 
-	// Cleanup
+	// Clean up.
+	assert.FileExists(t, "plugins/gatewayd-plugin-cache")
+	assert.FileExists(t, pluginTestConfigFile+BackupFileExt)
+	assert.NoFileExists(t, "plugins/LICENSE")
+	assert.NoFileExists(t, "plugins/README.md")
+	assert.NoFileExists(t, "plugins/checksum.txt")
+	assert.NoFileExists(t, "plugins/gatewayd_plugin.yaml")
+
 	require.NoError(t, os.RemoveAll("plugins/"))
-	checksumFile := filepath.Join(pwd, "checksums.txt")
-	if _, err := os.Stat(checksumFile); err == nil {
-		require.NoError(t, os.Remove(checksumFile))
-	}
 	require.NoError(t, os.Remove(pluginTestConfigFile+BackupFileExt))
 }
 
