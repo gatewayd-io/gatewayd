@@ -615,12 +615,6 @@ func installPlugin(
 			cmd.Println("Plugin name not specified")
 			return
 		}
-
-		// If pullOnly is true, we're done after verifying the file exists
-		if pullOnly {
-			cmd.Println("Plugin file verified at", pluginFilename)
-			return
-		}
 	case SourceGitHub:
 		// Strip scheme from the plugin URL.
 		pluginURL = strings.TrimPrefix(strings.TrimPrefix(pluginURL, "http://"), "https://")

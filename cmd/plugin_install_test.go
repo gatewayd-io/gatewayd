@@ -15,7 +15,8 @@ func Test_pluginInstallCmdWithFile(t *testing.T) {
 	pluginTestConfigFile := "./test_plugins_pluginInstallCmdWithFile.yaml"
 
 	// Create a test plugin config file.
-	output, err := executeCommandC(rootCmd, "plugin", "init", "-p", pluginTestConfigFile)
+	output, err := executeCommandC(
+		rootCmd, "plugin", "init", "-p", pluginTestConfigFile, "--force")
 	require.NoError(t, err, "plugin init should not return an error")
 	assert.Equal(t,
 		fmt.Sprintf("Config file '%s' was created successfully.", pluginTestConfigFile),
@@ -33,7 +34,7 @@ func Test_pluginInstallCmdWithFile(t *testing.T) {
 	// Test plugin install command.
 	output, err = executeCommandC(
 		rootCmd, "plugin", "install", "-p", pluginTestConfigFile,
-		"--update", "--backup", "--name=gatewayd-plugin-cache", pluginArchivePath)
+		"--backup", "--name=gatewayd-plugin-cache", pluginArchivePath)
 	require.NoError(t, err, "plugin install should not return an error")
 	assert.Contains(t, output, "Installing plugin from CLI argument")
 	assert.Contains(t, output, "Backup completed successfully")
@@ -56,7 +57,6 @@ func Test_pluginInstallCmdWithFile(t *testing.T) {
 	assert.NoFileExists(t, "plugins/gatewayd_plugin.yaml")
 
 	require.NoError(t, os.RemoveAll("plugins/"))
-	require.NoError(t, os.Remove(pluginArchivePath))
 	require.NoError(t, os.Remove(pluginTestConfigFile))
 	require.NoError(t, os.Remove(pluginTestConfigFile+BackupFileExt))
 }
