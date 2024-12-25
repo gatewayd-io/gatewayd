@@ -121,16 +121,6 @@ var pluginInstallCmd = &cobra.Command{
 				return
 			}
 
-			// Backup the config file if requested
-			if backupConfig {
-				backupFilename := pluginConfigFile + BackupFileExt
-				if err := os.WriteFile(backupFilename, pluginsConfig, FilePermissions); err != nil {
-					cmd.Println("There was an error backing up the plugins configuration file: ", err)
-					return
-				}
-				cmd.Println("Backup completed successfully")
-			}
-
 			// Get the registered plugins from the plugins configuration file.
 			var localPluginsConfig map[string]any
 			if err := yamlv3.Unmarshal(pluginsConfig, &localPluginsConfig); err != nil {
