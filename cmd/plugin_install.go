@@ -572,7 +572,7 @@ func getFileExtension() Extension {
 func installPlugin(
 	cmd *cobra.Command,
 	pluginURL string,
-	outputDir string,
+	pluginOutputDir string,
 	pullOnly bool,
 	cleanup bool,
 	noPrompt bool,
@@ -686,7 +686,7 @@ func installPlugin(
 		}
 
 		// Create the output directory if it doesn't exist.
-		if err := os.MkdirAll(outputDir, FolderPermissions); err != nil {
+		if err := os.MkdirAll(pluginOutputDir, FolderPermissions); err != nil {
 			cmd.Println("There was an error creating the output directory: ", err)
 			return
 		}
@@ -700,7 +700,7 @@ func installPlugin(
 		if downloadURL != "" && releaseID != 0 {
 			cmd.Println("Downloading", downloadURL)
 			filePath, gErr := downloadFile(
-				client, account, pluginName, releaseID, pluginFilename, outputDir)
+				client, account, pluginName, releaseID, pluginFilename, pluginOutputDir)
 			toBeDeleted = append(toBeDeleted, filePath)
 			if gErr != nil {
 				cmd.Println("Download failed: ", gErr)
@@ -723,7 +723,7 @@ func installPlugin(
 		if checksumsFilename != "" && downloadURL != "" && releaseID != 0 {
 			cmd.Println("Downloading", downloadURL)
 			filePath, gErr := downloadFile(
-				client, account, pluginName, releaseID, checksumsFilename, outputDir)
+				client, account, pluginName, releaseID, checksumsFilename, pluginOutputDir)
 			toBeDeleted = append(toBeDeleted, filePath)
 			if gErr != nil {
 				cmd.Println("Download failed: ", gErr)
@@ -860,9 +860,9 @@ func installPlugin(
 	var gErr *gerr.GatewayDError
 	switch archiveExt {
 	case ExtensionZip:
-		filenames, gErr = extractZip(pluginFilename, outputDir, skipPathSlipVerification)
+		filenames, gErr = extractZip(pluginFilename, pluginOutputDir, skipPathSlipVerification)
 	case ExtensionTarGz:
-		filenames, gErr = extractTarGz(pluginFilename, outputDir, skipPathSlipVerification)
+		filenames, gErr = extractTarGz(pluginFilename, pluginOutputDir, skipPathSlipVerification)
 	default:
 		cmd.Println("Invalid archive extension")
 		return
@@ -925,7 +925,7 @@ func installPlugin(
 	} else {
 		// Get the contents of the file.
 		contentsBytes, err := os.ReadFile(
-			filepath.Join(outputDir, DefaultPluginConfigFilename))
+			filepath.Join(pluginOutputDir, DefaultPluginConfigFilename))
 		if err != nil {
 			cmd.Println(
 				"There was an error getting the default plugins configuration file: ", err)
