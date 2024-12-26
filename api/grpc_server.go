@@ -48,9 +48,11 @@ func (s *GRPCServer) Start() {
 }
 
 // Shutdown shuts down the gRPC server.
-func (s *GRPCServer) Shutdown(_ context.Context) {
-	s.listener.Close()
-	s.grpcServer.Stop()
+func (s *GRPCServer) Shutdown(context.Context) {
+	if err := s.listener.Close(); err != nil && !errors.Is(err, net.ErrClosed) {
+		s.API.Options.Logger.Err(err).Msg("failed to close listener")
+	}
+	s.grpcServer.GracefulStop()
 }
 
 // createGRPCAPI creates a new gRPC API server and listener.

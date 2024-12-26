@@ -39,5 +39,5 @@ func Test_GRPC_Server(t *testing.T) {
 	assert.Equal(t, config.Version, resp.GetVersion())
 	assert.Equal(t, config.VersionInfo(), resp.GetVersionInfo())
 
-	grpcServer.Shutdown(context.Background())
+	grpcServer.Shutdown(nil)
 }

@@ -85,6 +85,6 @@ func Test_HTTP_Server(t *testing.T) {
 	assert.Equal(t, len(config.Version), len(respBodyBytes))
 	assert.Equal(t, config.Version, string(respBodyBytes))
 
-	grpcServer.Shutdown(context.Background())
+	grpcServer.Shutdown(nil)
 	httpServer.Shutdown(context.Background())
 }
