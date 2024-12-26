@@ -1093,12 +1093,14 @@ func (app *GatewayDApp) stopGracefully(runCtx context.Context, sig os.Signal) {
 			earlyExit = true
 		}
 	}
+	logger.Info().Msg("Stopped all servers")
+	span.AddEvent("Stopped all servers")
+
 	if app.pluginRegistry != nil {
 		app.pluginRegistry.Shutdown()
 		logger.Info().Msg("Stopped plugin registry")
 		span.AddEvent("Stopped plugin registry")
 	}
-	span.End()
 
 	if app.httpServer != nil {
 		app.httpServer.Shutdown(runCtx)
@@ -1113,6 +1115,8 @@ func (app *GatewayDApp) stopGracefully(runCtx context.Context, sig os.Signal) {
 	}
 
 	logger.Info().Msg("GatewayD is shutdown")
+	span.AddEvent("GatewayD is shutdown")
+	span.End()
 
 	// If the code never reaches the point where the app.stopChan is used,
 	// it means that the server was never started. This is a manual shutdown
