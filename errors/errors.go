@@ -214,10 +214,12 @@ var (
 )
 
 const (
-	FailedToCreateClient      = 1
-	FailedToInitializePool    = 2
-	FailedToStartServer       = 3
-	FailedToStartTracer       = 4
-	FailedToCreateActRegistry = 5
-	FailedToStartRaftNode     = 6
+	FailedToCreateClient         = 1
+	FailedToStartServer          = 2
+	FailedToStartTracer          = 3
+	FailedToCreateActRegistry    = 4
+	FailedToLoadPolicies         = 5
+	FailedToStartRaftNode        = 6
+	FailedToMergeGlobalConfig    = 7
+	FailedToCreatePoolAndClients = 8
 )
