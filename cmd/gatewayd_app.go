@@ -1084,13 +1084,14 @@ func (app *GatewayDApp) stopGracefully(runCtx context.Context, sig os.Signal) {
 			span.AddEvent("Stopped metrics server")
 		}
 	}
-	earlyExit := false
+
+	properlyInitialized := false
 	for name, server := range app.servers {
 		if server.IsRunning() {
 			logger.Info().Str("name", name).Msg("Stopping server")
 			server.Shutdown()
 			span.AddEvent("Stopped server")
-			earlyExit = true
+			properlyInitialized = true
 		}
 	}
 	logger.Info().Msg("Stopped all servers")
@@ -1118,11 +1119,11 @@ func (app *GatewayDApp) stopGracefully(runCtx context.Context, sig os.Signal) {
 	span.AddEvent("GatewayD is shutdown")
 	span.End()
 
-	// If the code never reaches the point where the app.stopChan is used,
-	// it means that the server was never started. This is a manual shutdown
-	// by the app, so we don't need to send a signal to the other goroutines.
-	if earlyExit {
-		// Close the stop channel to notify the other goroutines to stop.
+	// If the server was properly initialized, the stop channel would have been
+	// listened on by the run command. So, we must close the stop channel to stop
+	// the app. Otherwise, the app is shutting down abruptly, so we don't need to
+	// close the stop channel.
+	if properlyInitialized {
 		app.stopChan <- struct{}{}
 		close(app.stopChan)
 	}
