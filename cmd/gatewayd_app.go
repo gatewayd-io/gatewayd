@@ -5,12 +5,14 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
 	"runtime"
 	"strconv"
+	"sync/atomic"
 	"time"
 
 	"github.com/NYTimes/gziphandler"
@@ -42,6 +44,19 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
+var _ io.Writer = &cobraCmdWriter{}
+
+type cobraCmdWriter struct {
+	*cobra.Command
+}
+
+func (c *cobraCmdWriter) Write(p []byte) (int, error) {
+	c.Print(string(p))
+	return len(p), nil
+}
+
+var UsageReportURL = "localhost:59091"
+
 type GatewayDApp struct {
 	EnableTracing     bool
 	EnableSentry      bool
@@ -67,6 +82,30 @@ type GatewayDApp struct {
 	servers              map[string]*network.Server
 	healthCheckScheduler *gocron.Scheduler
 	stopChan             chan struct{}
+	ranStopGracefully    *atomic.Bool
+}
+
+// NewGatewayDApp creates a new GatewayDApp instance.
+func NewGatewayDApp(cmd *cobra.Command) *GatewayDApp {
+	app := GatewayDApp{
+		loggers:              make(map[string]zerolog.Logger),
+		pools:                make(map[string]map[string]*pool.Pool),
+		clients:              make(map[string]map[string]*config.Client),
+		proxies:              make(map[string]map[string]*network.Proxy),
+		servers:              make(map[string]*network.Server),
+		healthCheckScheduler: gocron.NewScheduler(time.UTC),
+		stopChan:             make(chan struct{}),
+		ranStopGracefully:    &atomic.Bool{},
+	}
+	app.EnableTracing, _ = cmd.Flags().GetBool("enable-tracing")
+	app.EnableSentry, _ = cmd.Flags().GetBool("enable-sentry")
+	app.EnableUsageReport, _ = cmd.Flags().GetBool("enable-usage-report")
+	app.EnableLinting, _ = cmd.Flags().GetBool("enable-linting")
+	app.DevMode, _ = cmd.Flags().GetBool("dev")
+	app.CollectorURL, _ = cmd.Flags().GetString("collector-url")
+	app.GlobalConfigFile, _ = cmd.Flags().GetString("config")
+	app.PluginConfigFile, _ = cmd.Flags().GetString("plugin-config")
+	return &app
 }
 
 // loadConfig loads global and plugin configuration.
@@ -973,6 +1012,11 @@ func (app *GatewayDApp) startServers(
 
 // stopGracefully stops the server gracefully.
 func (app *GatewayDApp) stopGracefully(runCtx context.Context, sig os.Signal) {
+	// Only allow one call to this function.
+	if !app.ranStopGracefully.CompareAndSwap(false, true) {
+		return
+	}
+
 	_, span := otel.Tracer(config.TracerName).Start(runCtx, "Shutdown server")
 	currentSignal := "unknown"
 	if sig != nil {
@@ -1027,12 +1071,15 @@ func (app *GatewayDApp) stopGracefully(runCtx context.Context, sig os.Signal) {
 			span.AddEvent("Stopped metrics server")
 		}
 	}
+	earlyExit := false
 	for name, server := range app.servers {
-		logger.Info().Str("name", name).Msg("Stopping server")
-		server.Shutdown()
-		span.AddEvent("Stopped server")
+		if server.IsRunning() {
+			logger.Info().Str("name", name).Msg("Stopping server")
+			server.Shutdown()
+			span.AddEvent("Stopped server")
+			earlyExit = true
+		}
 	}
-	logger.Info().Msg("Stopped all servers")
 	if app.pluginRegistry != nil {
 		app.pluginRegistry.Shutdown()
 		logger.Info().Msg("Stopped plugin registry")
@@ -1052,9 +1099,16 @@ func (app *GatewayDApp) stopGracefully(runCtx context.Context, sig os.Signal) {
 		span.AddEvent("Stopped gRPC Server")
 	}
 
-	// Close the stop channel to notify the other goroutines to stop.
-	app.stopChan <- struct{}{}
-	close(app.stopChan)
+	logger.Info().Msg("GatewayD is shutdown")
+
+	// If the code never reaches the point where the app.stopChan is used,
+	// it means that the server was never started. This is a manual shutdown
+	// by the app, so we don't need to send a signal to the other goroutines.
+	if earlyExit {
+		// Close the stop channel to notify the other goroutines to stop.
+		app.stopChan <- struct{}{}
+		close(app.stopChan)
+	}
 }
 
 // handleSignals handles the signals and stops the server gracefully.

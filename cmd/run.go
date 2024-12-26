@@ -2,41 +2,23 @@ package cmd
 
 import (
 	"context"
-	"io"
 	"log"
 	"os"
 	"syscall"
-	"time"
 
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
-	"github.com/gatewayd-io/gatewayd/network"
-	"github.com/gatewayd-io/gatewayd/pool"
 	"github.com/gatewayd-io/gatewayd/raft"
 	"github.com/gatewayd-io/gatewayd/tracing"
 	"github.com/getsentry/sentry-go"
-	"github.com/go-co-op/gocron"
-	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	"go.opentelemetry.io/otel"
 	"golang.org/x/exp/maps"
 )
 
-var _ io.Writer = &cobraCmdWriter{}
-
-type cobraCmdWriter struct {
-	*cobra.Command
-}
-
-func (c *cobraCmdWriter) Write(p []byte) (int, error) {
-	c.Print(string(p))
-	return len(p), nil
-}
-
 var (
-	UsageReportURL = "localhost:59091"
-	testMode       bool
-	testApp        *GatewayDApp
+	testMode bool
+	testApp  *GatewayDApp
 )
 
 // EnableTestMode enables test mode and returns the previous value.
@@ -52,7 +34,7 @@ var runCmd = &cobra.Command{
 	Use:   "run",
 	Short: "Run a GatewayD instance",
 	Run: func(cmd *cobra.Command, _ []string) {
-		app := NewGatewayDInstance(cmd)
+		app := NewGatewayDApp(cmd)
 
 		// If test mode is enabled, we need to access the app instance from the test,
 		// so we can stop the server gracefully.
@@ -206,6 +188,7 @@ var runCmd = &cobra.Command{
 
 		_, span = otel.Tracer(config.TracerName).Start(runCtx, "Create pools and clients")
 
+		// Create pools and clients.
 		if err := app.createPoolAndClients(runCtx, span); err != nil {
 			logger.Error().Err(err).Msg("Failed to create pools and clients")
 			span.RecordError(err)
@@ -225,6 +208,7 @@ var runCmd = &cobra.Command{
 		_, span = otel.Tracer(config.TracerName).Start(runCtx, "Create Raft Node")
 		defer span.End()
 
+		// Create the Raft node.
 		raftNode, originalErr := raft.NewRaftNode(logger, app.conf.Global.Raft)
 		if originalErr != nil {
 			logger.Error().Err(originalErr).Msg("Failed to start raft node")
@@ -275,25 +259,4 @@ func init() {
 	runCmd.Flags().Bool("usage-report", true, "Enable usage report")
 	runCmd.Flags().Bool("lint", true, "Enable linting of configuration files")
 	runCmd.Flags().Bool("metrics-merger", true, "Enable metrics merger")
-}
-
-func NewGatewayDInstance(cmd *cobra.Command) *GatewayDApp {
-	app := GatewayDApp{
-		loggers:              make(map[string]zerolog.Logger),
-		pools:                make(map[string]map[string]*pool.Pool),
-		clients:              make(map[string]map[string]*config.Client),
-		proxies:              make(map[string]map[string]*network.Proxy),
-		servers:              make(map[string]*network.Server),
-		healthCheckScheduler: gocron.NewScheduler(time.UTC),
-		stopChan:             make(chan struct{}),
-	}
-	app.EnableTracing, _ = cmd.Flags().GetBool("enable-tracing")
-	app.EnableSentry, _ = cmd.Flags().GetBool("enable-sentry")
-	app.EnableUsageReport, _ = cmd.Flags().GetBool("enable-usage-report")
-	app.EnableLinting, _ = cmd.Flags().GetBool("enable-linting")
-	app.DevMode, _ = cmd.Flags().GetBool("dev")
-	app.CollectorURL, _ = cmd.Flags().GetString("collector-url")
-	app.GlobalConfigFile, _ = cmd.Flags().GetString("config")
-	app.PluginConfigFile, _ = cmd.Flags().GetString("plugin-config")
-	return &app
 }
