@@ -85,6 +85,6 @@ func Test_HTTP_Server(t *testing.T) {
 	assert.Equal(t, len(config.Version), len(respBodyBytes))
 	assert.Equal(t, config.Version, string(respBodyBytes))
 
-	grpcServer.Shutdown(nil)
+	grpcServer.Shutdown(nil) //nolint:staticcheck
 	httpServer.Shutdown(context.Background())
 }

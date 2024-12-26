@@ -1109,7 +1109,7 @@ func (app *GatewayDApp) stopGracefully(runCtx context.Context, sig os.Signal) {
 	}
 
 	if app.grpcServer != nil {
-		app.grpcServer.Shutdown(nil)
+		app.grpcServer.Shutdown(nil) //nolint:staticcheck,contextcheck
 		logger.Info().Msg("Stopped gRPC Server")
 		span.AddEvent("Stopped gRPC Server")
 	}
