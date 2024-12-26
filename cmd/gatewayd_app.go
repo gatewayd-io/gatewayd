@@ -57,6 +57,10 @@ func (c *cobraCmdWriter) Write(p []byte) (int, error) {
 
 var UsageReportURL = "localhost:59091"
 
+const (
+	DefaultMetricsServerProbeTimeout = 5 * time.Second
+)
+
 type GatewayDApp struct {
 	EnableTracing     bool
 	EnableSentry      bool
@@ -183,7 +187,7 @@ func (app *GatewayDApp) createActRegistry(logger zerolog.Logger) error {
 		})
 		if err != nil {
 			logger.Error().Err(err).Msg("Failed to create publisher for act registry")
-			return err
+			return err //nolint:wrapcheck
 		}
 		logger.Info().Msg("Created Redis publisher for Act registry")
 	}
@@ -209,14 +213,14 @@ func (app *GatewayDApp) createActRegistry(logger zerolog.Logger) error {
 func (app *GatewayDApp) loadPolicies(logger zerolog.Logger) error {
 	// Load policies from the configuration file and add them to the registry.
 	for _, plc := range app.conf.Plugin.Policies {
-		if policy, err := sdkAct.NewPolicy(
+		policy, err := sdkAct.NewPolicy(
 			plc.Name, plc.Policy, plc.Metadata,
-		); err != nil || policy == nil {
+		)
+		if err != nil || policy == nil {
 			logger.Error().Err(err).Str("name", plc.Name).Msg("Failed to create policy")
-			return err
-		} else {
-			app.actRegistry.Add(policy)
+			return err //nolint:wrapcheck
 		}
+		app.actRegistry.Add(policy)
 	}
 
 	return nil
@@ -257,7 +261,7 @@ func (app *GatewayDApp) startMetricsMerger(runCtx context.Context, logger zerolo
 					"Added plugin to metrics merger")
 			}
 		})
-		app.metricsMerger.Start()
+		app.metricsMerger.Start() //nolint:contextcheck
 	}
 }
 
@@ -326,14 +330,14 @@ func (app *GatewayDApp) onConfigLoaded(
 
 	// The config will be passed to the plugins that register to the "OnConfigLoaded" plugin.
 	// The plugins can modify the config and return it.
-	updatedGlobalConfig, err := app.pluginRegistry.Run(
+	updatedGlobalConfig, err := app.pluginRegistry.Run( //nolint:contextcheck
 		pluginTimeoutCtx, app.conf.GlobalKoanf.All(), v1.HookName_HOOK_NAME_ON_CONFIG_LOADED)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to run OnConfigLoaded hooks")
 		span.RecordError(err)
 	}
 	if updatedGlobalConfig != nil {
-		updatedGlobalConfig = app.pluginRegistry.ActRegistry.RunAll(updatedGlobalConfig)
+		updatedGlobalConfig = app.pluginRegistry.ActRegistry.RunAll(updatedGlobalConfig) //nolint:contextcheck
 	}
 
 	// If the config was modified by the plugins, merge it with the one loaded from the file.
@@ -379,14 +383,14 @@ func (app *GatewayDApp) startMetricsServer(
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to parse metrics address")
 		span.RecordError(err)
-		return err
+		return err //nolint:wrapcheck
 	}
 
 	address, err := url.JoinPath(fqdn.String(), metricsConfig.Path)
 	if err != nil {
 		logger.Error().Err(err).Msg("Failed to parse metrics path")
 		span.RecordError(err)
-		return err
+		return err //nolint:wrapcheck
 	}
 
 	// Merge the metrics from the plugins with the ones from GatewayD.
@@ -441,8 +445,17 @@ func (app *GatewayDApp) startMetricsServer(
 		config.DefaultReadHeaderTimeout,
 	)
 
-	// Check if the metrics server is already running before registering the handler.
-	if _, err = http.Get(address); err != nil { //nolint:gosec
+	// Check if the metrics server is already running before registering the handler
+	ctx, cancel := context.WithTimeout(context.Background(), DefaultMetricsServerProbeTimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, address, nil) //nolint:contextcheck
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to create request to check metrics server")
+		span.RecordError(err)
+	}
+
+	if resp, err := http.DefaultClient.Do(req); err != nil {
 		// The timeout handler limits the nested handlers from running for too long.
 		mux.Handle(
 			metricsConfig.Path,
@@ -453,6 +466,9 @@ func (app *GatewayDApp) startMetricsServer(
 			),
 		)
 	} else {
+		if resp != nil && resp.Body != nil {
+			defer resp.Body.Close()
+		}
 		logger.Warn().Msg("Metrics server is already running, consider changing the port")
 		span.RecordError(err)
 	}
@@ -690,14 +706,14 @@ func (app *GatewayDApp) createPoolAndClients(
 					"backoffMultiplier":  clientConfig.BackoffMultiplier,
 					"disableBackoffCaps": clientConfig.DisableBackoffCaps,
 				}
-				result, err := app.pluginRegistry.Run(
+				result, err := app.pluginRegistry.Run( //nolint:contextcheck
 					pluginTimeoutCtx, clientCfg, v1.HookName_HOOK_NAME_ON_NEW_CLIENT)
 				if err != nil {
 					logger.Error().Err(err).Msg("Failed to run OnNewClient hooks")
 					span.RecordError(err)
 				}
 				if result != nil {
-					_ = app.pluginRegistry.ActRegistry.RunAll(result)
+					_ = app.pluginRegistry.ActRegistry.RunAll(result) //nolint:contextcheck
 				}
 
 				err = app.pools[configGroupName][configBlockName].Put(client.ID, client)
@@ -727,7 +743,7 @@ func (app *GatewayDApp) createPoolAndClients(
 				context.Background(), app.conf.Plugin.Timeout)
 			defer cancel()
 
-			result, err := app.pluginRegistry.Run(
+			result, err := app.pluginRegistry.Run( //nolint:contextcheck
 				pluginTimeoutCtx,
 				map[string]any{"name": configBlockName, "size": currentPoolSize},
 				v1.HookName_HOOK_NAME_ON_NEW_POOL)
@@ -736,7 +752,7 @@ func (app *GatewayDApp) createPoolAndClients(
 				span.RecordError(err)
 			}
 			if result != nil {
-				_ = app.pluginRegistry.ActRegistry.RunAll(result)
+				_ = app.pluginRegistry.ActRegistry.RunAll(result) //nolint:contextcheck
 			}
 		}
 	}
@@ -787,14 +803,14 @@ func (app *GatewayDApp) createProxies(runCtx context.Context, span trace.Span) {
 			defer cancel()
 
 			if data, ok := app.conf.GlobalKoanf.Get("proxies").(map[string]any); ok {
-				result, err := app.pluginRegistry.Run(
+				result, err := app.pluginRegistry.Run( //nolint:contextcheck
 					pluginTimeoutCtx, data, v1.HookName_HOOK_NAME_ON_NEW_PROXY)
 				if err != nil {
 					logger.Error().Err(err).Msg("Failed to run OnNewProxy hooks")
 					span.RecordError(err)
 				}
 				if result != nil {
-					_ = app.pluginRegistry.ActRegistry.RunAll(result)
+					_ = app.pluginRegistry.ActRegistry.RunAll(result) //nolint:contextcheck
 				}
 			} else {
 				logger.Error().Msg("Failed to get proxy from config")
@@ -863,14 +879,14 @@ func (app *GatewayDApp) createServers(
 		defer cancel()
 
 		if data, ok := app.conf.GlobalKoanf.Get("servers").(map[string]any); ok {
-			result, err := app.pluginRegistry.Run(
+			result, err := app.pluginRegistry.Run( //nolint:contextcheck
 				pluginTimeoutCtx, data, v1.HookName_HOOK_NAME_ON_NEW_SERVER)
 			if err != nil {
 				logger.Error().Err(err).Msg("Failed to run OnNewServer hooks")
 				span.RecordError(err)
 			}
 			if result != nil {
-				_ = app.pluginRegistry.ActRegistry.RunAll(result)
+				_ = app.pluginRegistry.ActRegistry.RunAll(result) //nolint:contextcheck
 			}
 		} else {
 			logger.Error().Msg("Failed to get the servers configuration")
@@ -916,7 +932,7 @@ func (app *GatewayDApp) startAPIServers(
 		go app.grpcServer.Start()
 		logger.Info().Str("address", apiOptions.HTTPAddress).Msg("Started the HTTP API")
 
-		app.httpServer = api.NewHTTPServer(&apiOptions)
+		app.httpServer = api.NewHTTPServer(&apiOptions) //nolint:contextcheck
 		go app.httpServer.Start()
 
 		logger.Info().Fields(
@@ -995,18 +1011,15 @@ func (app *GatewayDApp) startServers(
 			span trace.Span,
 			server *network.Server,
 			logger zerolog.Logger,
-			healthCheckScheduler *gocron.Scheduler,
-			metricsMerger *metrics.Merger,
-			pluginRegistry *plugin.Registry,
 		) {
 			span.AddEvent("Start server")
-			if err := server.Run(); err != nil {
+			if err := server.Run(); err != nil { //nolint:contextcheck
 				logger.Error().Err(err).Msg("Failed to start server")
 				span.RecordError(err)
 				app.stopGracefully(runCtx, nil)
 				os.Exit(gdErr.FailedToStartServer)
 			}
-		}(span, server, logger, app.healthCheckScheduler, app.metricsMerger, app.pluginRegistry)
+		}(span, server, logger)
 	}
 }
 
