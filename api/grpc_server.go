@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"net"
 
 	v1 "github.com/gatewayd-io/gatewayd/api/v1"
@@ -41,7 +42,7 @@ func NewGRPCServer(ctx context.Context, server GRPCServer) *GRPCServer {
 
 // Start starts the gRPC server.
 func (s *GRPCServer) Start() {
-	if err := s.grpcServer.Serve(s.listener); err != nil {
+	if err := s.grpcServer.Serve(s.listener); err != nil && !errors.Is(err, net.ErrClosed) {
 		s.API.Options.Logger.Err(err).Msg("failed to start gRPC API")
 	}
 }
@@ -55,7 +56,7 @@ func (s *GRPCServer) Shutdown(_ context.Context) {
 // createGRPCAPI creates a new gRPC API server and listener.
 func createGRPCAPI(api *API, healthchecker *HealthChecker) (*grpc.Server, net.Listener) {
 	listener, err := net.Listen(api.Options.GRPCNetwork, api.Options.GRPCAddress)
-	if err != nil {
+	if err != nil && !errors.Is(err, net.ErrClosed) {
 		api.Options.Logger.Err(err).Msg("failed to start gRPC API")
 		return nil, nil
 	}
