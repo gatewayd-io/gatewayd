@@ -9,14 +9,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var onlyEnabled bool
-
 // pluginListCmd represents the plugin list command.
 var pluginListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List the GatewayD plugins",
 	Run: func(cmd *cobra.Command, _ []string) {
 		pluginConfigFile, _ := cmd.Flags().GetString("plugin-config")
+		onlyEnabled, _ := cmd.Flags().GetBool("only-enabled")
 		enableSentry, _ := cmd.Flags().GetBool("sentry")
 
 		// Enable Sentry.
