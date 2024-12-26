@@ -55,16 +55,16 @@ func init() {
 
 func listPlugins(cmd *cobra.Command, pluginConfigFile string, onlyEnabled bool) {
 	// Load the plugin config file.
-	conf := config.NewConfig(context.TODO(), config.Config{PluginConfigFile: pluginConfigFile})
-	if err := conf.LoadDefaults(context.TODO()); err != nil {
+	conf := config.NewConfig(context.Background(), config.Config{PluginConfigFile: pluginConfigFile})
+	if err := conf.LoadDefaults(context.Background()); err != nil {
 		cmd.PrintErr(err)
 		return
 	}
-	if err := conf.LoadPluginConfigFile(context.TODO()); err != nil {
+	if err := conf.LoadPluginConfigFile(context.Background()); err != nil {
 		cmd.PrintErr(err)
 		return
 	}
-	if err := conf.UnmarshalPluginConfig(context.TODO()); err != nil {
+	if err := conf.UnmarshalPluginConfig(context.Background()); err != nil {
 		cmd.PrintErr(err)
 		return
 	}

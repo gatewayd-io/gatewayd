@@ -22,7 +22,7 @@ import (
 	"github.com/gatewayd-io/gatewayd/act"
 	"github.com/gatewayd-io/gatewayd/api"
 	"github.com/gatewayd-io/gatewayd/config"
-	gdErr "github.com/gatewayd-io/gatewayd/errors"
+	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/gatewayd-io/gatewayd/metrics"
 	"github.com/gatewayd-io/gatewayd/network"
@@ -1017,7 +1017,7 @@ func (app *GatewayDApp) startServers(
 				logger.Error().Err(err).Msg("Failed to start server")
 				span.RecordError(err)
 				app.stopGracefully(runCtx, nil)
-				os.Exit(gdErr.FailedToStartServer)
+				os.Exit(gerr.FailedToStartServer)
 			}
 		}(span, server, logger)
 	}

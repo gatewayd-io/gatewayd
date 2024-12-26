@@ -35,9 +35,9 @@ func TestGetDefaultConfigFilePath(t *testing.T) {
 // TestFilter tests the Filter function.
 func TestFilter(t *testing.T) {
 	// Load config from the default config file.
-	conf := NewConfig(context.TODO(),
+	conf := NewConfig(context.Background(),
 		Config{GlobalConfigFile: "../gatewayd.yaml", PluginConfigFile: "../gatewayd_plugins.yaml"})
-	err := conf.InitConfig(context.TODO())
+	err := conf.InitConfig(context.Background())
 	require.Nil(t, err)
 	assert.NotEmpty(t, conf.Global)
 
@@ -55,9 +55,9 @@ func TestFilter(t *testing.T) {
 // TestFilterWithMissingGroupName tests the Filter function with a missing group name.
 func TestFilterWithMissingGroupName(t *testing.T) {
 	// Load config from the default config file.
-	conf := NewConfig(context.TODO(),
+	conf := NewConfig(context.Background(),
 		Config{GlobalConfigFile: "../gatewayd.yaml", PluginConfigFile: "../gatewayd_plugins.yaml"})
-	err := conf.InitConfig(context.TODO())
+	err := conf.InitConfig(context.Background())
 	require.Nil(t, err)
 	assert.NotEmpty(t, conf.Global)
 
