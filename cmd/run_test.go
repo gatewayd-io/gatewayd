@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gatewayd-io/gatewayd/config"
 	"github.com/gatewayd-io/gatewayd/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -19,6 +18,12 @@ var (
 )
 
 func Test_runCmd(t *testing.T) {
+	previous := EnableTestMode()
+	defer func() {
+		testMode = previous
+		testApp = nil
+	}()
+
 	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(context.Background(), t)
 	postgresAddress := postgresHostIP + ":" + postgresMappedPort.Port()
 	t.Setenv("GATEWAYD_CLIENTS_DEFAULT_WRITES_ADDRESS", postgresAddress)
@@ -41,14 +46,13 @@ func Test_runCmd(t *testing.T) {
 	// Check that the config file was created.
 	assert.FileExists(t, globalTestConfigFile, "configInitCmd should create a config file")
 
-	stopChan = make(chan struct{})
-
 	var waitGroup sync.WaitGroup
 
 	waitGroup.Add(1)
 	go func(waitGroup *sync.WaitGroup) {
 		// Test run command.
-		output, err := executeCommandC(rootCmd, "run", "-c", globalTestConfigFile, "-p", pluginTestConfigFile)
+		output, err := executeCommandC(
+			rootCmd, "run", "-c", globalTestConfigFile, "-p", pluginTestConfigFile)
 		require.NoError(t, err, "run command should not have returned an error")
 
 		// Print the output for debugging purposes.
@@ -60,23 +64,11 @@ func Test_runCmd(t *testing.T) {
 		waitGroup.Done()
 	}(&waitGroup)
 
+	// Stop the server after a delay
 	waitGroup.Add(1)
 	go func(waitGroup *sync.WaitGroup) {
 		time.Sleep(waitBeforeStop)
-
-		StopGracefully(
-			context.Background(),
-			nil,
-			nil,
-			metricsServer,
-			nil,
-			loggers[config.Default],
-			servers,
-			stopChan,
-			nil,
-			nil,
-		)
-
+		testApp.stopGracefully(context.Background(), os.Interrupt)
 		waitGroup.Done()
 	}(&waitGroup)
 
@@ -88,6 +80,12 @@ func Test_runCmd(t *testing.T) {
 
 // Test_runCmdWithTLS tests the run command with TLS enabled on the server.
 func Test_runCmdWithTLS(t *testing.T) {
+	previous := EnableTestMode()
+	defer func() {
+		testMode = previous
+		testApp = nil
+	}()
+
 	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(context.Background(), t)
 	postgresAddress := postgresHostIP + ":" + postgresMappedPort.Port()
 	t.Setenv("GATEWAYD_CLIENTS_DEFAULT_WRITES_ADDRESS", postgresAddress)
@@ -103,8 +101,6 @@ func Test_runCmdWithTLS(t *testing.T) {
 	_, err := executeCommandC(rootCmd, "plugin", "init", "--force", "-p", pluginTestConfigFile)
 	require.NoError(t, err, "plugin init command should not have returned an error")
 	assert.FileExists(t, pluginTestConfigFile, "plugin init command should have created a config file")
-
-	stopChan = make(chan struct{})
 
 	var waitGroup sync.WaitGroup
 	// TODO: Test client certificate authentication.
@@ -126,23 +122,11 @@ func Test_runCmdWithTLS(t *testing.T) {
 		waitGroup.Done()
 	}(&waitGroup)
 
+	// Stop the server after a delay
 	waitGroup.Add(1)
 	go func(waitGroup *sync.WaitGroup) {
 		time.Sleep(waitBeforeStop)
-
-		StopGracefully(
-			context.Background(),
-			nil,
-			nil,
-			metricsServer,
-			nil,
-			loggers[config.Default],
-			servers,
-			stopChan,
-			nil,
-			nil,
-		)
-
+		testApp.stopGracefully(context.Background(), os.Interrupt)
 		waitGroup.Done()
 	}(&waitGroup)
 
@@ -153,6 +137,12 @@ func Test_runCmdWithTLS(t *testing.T) {
 
 // Test_runCmdWithMultiTenancy tests the run command with multi-tenancy enabled.
 func Test_runCmdWithMultiTenancy(t *testing.T) {
+	previous := EnableTestMode()
+	defer func() {
+		testMode = previous
+		testApp = nil
+	}()
+
 	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(context.Background(), t)
 	postgresAddress := postgresHostIP + ":" + postgresMappedPort.Port()
 	t.Setenv("GATEWAYD_CLIENTS_DEFAULT_WRITES_ADDRESS", postgresAddress)
@@ -171,8 +161,6 @@ func Test_runCmdWithMultiTenancy(t *testing.T) {
 	_, err := executeCommandC(rootCmd, "plugin", "init", "--force", "-p", pluginTestConfigFile)
 	require.NoError(t, err, "plugin init command should not have returned an error")
 	assert.FileExists(t, pluginTestConfigFile, "plugin init command should have created a config file")
-
-	stopChan = make(chan struct{})
 
 	var waitGroup sync.WaitGroup
 
@@ -196,23 +184,11 @@ func Test_runCmdWithMultiTenancy(t *testing.T) {
 		waitGroup.Done()
 	}(&waitGroup)
 
+	// Stop the server after a delay
 	waitGroup.Add(1)
 	go func(waitGroup *sync.WaitGroup) {
 		time.Sleep(waitBeforeStop)
-
-		StopGracefully(
-			context.Background(),
-			nil,
-			nil,
-			metricsServer,
-			nil,
-			loggers[config.Default],
-			servers,
-			stopChan,
-			nil,
-			nil,
-		)
-
+		testApp.stopGracefully(context.Background(), os.Interrupt)
 		waitGroup.Done()
 	}(&waitGroup)
 
@@ -222,6 +198,12 @@ func Test_runCmdWithMultiTenancy(t *testing.T) {
 }
 
 func Test_runCmdWithCachePlugin(t *testing.T) {
+	previous := EnableTestMode()
+	defer func() {
+		testMode = previous
+		testApp = nil
+	}()
+
 	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(context.Background(), t)
 	postgresAddress := postgresHostIP + ":" + postgresMappedPort.Port()
 	t.Setenv("GATEWAYD_CLIENTS_DEFAULT_WRITES_ADDRESS", postgresAddress)
@@ -233,9 +215,6 @@ func Test_runCmdWithCachePlugin(t *testing.T) {
 
 	globalTestConfigFile := "./test_global_runCmdWithCachePlugin.yaml"
 	pluginTestConfigFile := "./test_plugins_runCmdWithCachePlugin.yaml"
-	// TODO: Remove this once these global variables are removed from cmd/run.go.
-	// https://github.com/gatewayd-io/gatewayd/issues/324
-	stopChan = make(chan struct{})
 
 	// Create a test plugins config file.
 	_, err := executeCommandC(rootCmd, "plugin", "init", "--force", "-p", pluginTestConfigFile)
@@ -258,14 +237,15 @@ func Test_runCmdWithCachePlugin(t *testing.T) {
 		rootCmd, "plugin", "install", "-p", pluginTestConfigFile, "--update", "--backup",
 		"--overwrite-config=true", "--name", "gatewayd-plugin-cache", pluginArchivePath)
 	require.NoError(t, err, "plugin install should not return an error")
-	assert.Equal(t, output, "Installing plugin from CLI argument\nBackup completed successfully\nPlugin binary extracted to plugins/gatewayd-plugin-cache\nPlugin installed successfully\n") //nolint:lll
+	assert.Contains(t, output, "Installing plugin from CLI argument")
+	assert.Contains(t, output, "Backup completed successfully")
+	assert.Contains(t, output, "Plugin binary extracted to plugins/gatewayd-plugin-cache")
+	assert.Contains(t, output, "Plugin installed successfully")
 
 	// See if the plugin was actually installed.
 	output, err = executeCommandC(rootCmd, "plugin", "list", "-p", pluginTestConfigFile)
 	require.NoError(t, err, "plugin list should not return an error")
 	assert.Contains(t, output, "Name: gatewayd-plugin-cache")
-
-	stopChan = make(chan struct{})
 
 	var waitGroup sync.WaitGroup
 
@@ -284,23 +264,11 @@ func Test_runCmdWithCachePlugin(t *testing.T) {
 		waitGroup.Done()
 	}(&waitGroup)
 
+	// Stop the server after a delay
 	waitGroup.Add(1)
 	go func(waitGroup *sync.WaitGroup) {
-		time.Sleep(waitBeforeStop * 2)
-
-		StopGracefully(
-			context.Background(),
-			nil,
-			nil,
-			metricsServer,
-			nil,
-			loggers[config.Default],
-			servers,
-			stopChan,
-			nil,
-			nil,
-		)
-
+		time.Sleep(waitBeforeStop)
+		testApp.stopGracefully(context.Background(), os.Interrupt)
 		waitGroup.Done()
 	}(&waitGroup)
 

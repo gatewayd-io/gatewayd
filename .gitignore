@@ -43,3 +43,8 @@ gatewayd-files/
 cmd/gatewayd-plugin-cache-linux-amd64-*
 tempo-data
 
+# Raft files
+raft/node*/
+
+# Accidental installation of plugin
+plugins/gatewayd-plugin-cache

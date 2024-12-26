@@ -27,7 +27,7 @@ func generateConfig(
 		GlobalKoanf: koanf.New("."),
 		PluginKoanf: koanf.New("."),
 	}
-	if err := conf.LoadDefaults(context.TODO()); err != nil {
+	if err := conf.LoadDefaults(context.Background()); err != nil {
 		logger.Fatal(err)
 	}
 
@@ -73,28 +73,28 @@ func lintConfig(fileType configFileType, configFile string) *gerr.GatewayDError 
 	var conf *config.Config
 	switch fileType {
 	case Global:
-		conf = config.NewConfig(context.TODO(), config.Config{GlobalConfigFile: configFile})
-		if err := conf.LoadDefaults(context.TODO()); err != nil {
+		conf = config.NewConfig(context.Background(), config.Config{GlobalConfigFile: configFile})
+		if err := conf.LoadDefaults(context.Background()); err != nil {
 			return err
 		}
-		if err := conf.LoadGlobalConfigFile(context.TODO()); err != nil {
+		if err := conf.LoadGlobalConfigFile(context.Background()); err != nil {
 			return err
 		}
-		if err := conf.ConvertKeysToLowercase(context.TODO()); err != nil {
+		if err := conf.ConvertKeysToLowercase(context.Background()); err != nil {
 			return err
 		}
-		if err := conf.UnmarshalGlobalConfig(context.TODO()); err != nil {
+		if err := conf.UnmarshalGlobalConfig(context.Background()); err != nil {
 			return err
 		}
 	case Plugins:
-		conf = config.NewConfig(context.TODO(), config.Config{PluginConfigFile: configFile})
-		if err := conf.LoadDefaults(context.TODO()); err != nil {
+		conf = config.NewConfig(context.Background(), config.Config{PluginConfigFile: configFile})
+		if err := conf.LoadDefaults(context.Background()); err != nil {
 			return err
 		}
-		if err := conf.LoadPluginConfigFile(context.TODO()); err != nil {
+		if err := conf.LoadPluginConfigFile(context.Background()); err != nil {
 			return err
 		}
-		if err := conf.UnmarshalPluginConfig(context.TODO()); err != nil {
+		if err := conf.UnmarshalPluginConfig(context.Background()); err != nil {
 			return err
 		}
 	default:

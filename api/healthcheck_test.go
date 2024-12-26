@@ -24,13 +24,13 @@ func Test_Healthchecker(t *testing.T) {
 		Network: config.DefaultNetwork,
 		Address: postgresAddress,
 	}
-	client := network.NewClient(context.TODO(), clientConfig, zerolog.Logger{}, nil)
-	newPool := pool.NewPool(context.TODO(), 1)
+	client := network.NewClient(context.Background(), clientConfig, zerolog.Logger{}, nil)
+	newPool := pool.NewPool(context.Background(), 1)
 	require.NotNil(t, newPool)
 	assert.Nil(t, newPool.Put(client.ID, client))
 
 	proxy := network.NewProxy(
-		context.TODO(),
+		context.Background(),
 		network.Proxy{
 			AvailableConnections: newPool,
 			HealthCheckPeriod:    config.DefaultHealthCheckPeriod,
@@ -55,7 +55,7 @@ func Test_Healthchecker(t *testing.T) {
 		})
 
 	pluginRegistry := plugin.NewRegistry(
-		context.TODO(),
+		context.Background(),
 		plugin.Registry{
 			ActRegistry:   actRegistry,
 			Compatibility: config.Loose,
@@ -75,10 +75,10 @@ func Test_Healthchecker(t *testing.T) {
 	}()
 
 	server := network.NewServer(
-		context.TODO(),
+		context.Background(),
 		network.Server{
 			Network:      config.DefaultNetwork,
-			Address:      postgresAddress,
+			Address:      "127.0.0.1:15432",
 			TickInterval: config.DefaultTickInterval,
 			Options: network.Option{
 				EnableTicker: false,
@@ -99,13 +99,14 @@ func Test_Healthchecker(t *testing.T) {
 		raftNode: raftHelper.Node,
 	}
 	assert.NotNil(t, healthchecker)
-	hcr, err := healthchecker.Check(context.TODO(), &grpc_health_v1.HealthCheckRequest{})
+	hcr, err := healthchecker.Check(context.Background(), &grpc_health_v1.HealthCheckRequest{})
 	assert.NoError(t, err)
 	assert.NotNil(t, hcr)
 	assert.Equal(t, grpc_health_v1.HealthCheckResponse_NOT_SERVING, hcr.GetStatus())
 
 	go func(t *testing.T, server *network.Server) {
 		t.Helper()
+
 		if err := server.Run(); err != nil {
 			t.Errorf("server.Run() error = %v", err)
 		}
@@ -113,7 +114,7 @@ func Test_Healthchecker(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 	// Test for SERVING status
-	hcr, err = healthchecker.Check(context.TODO(), &grpc_health_v1.HealthCheckRequest{})
+	hcr, err = healthchecker.Check(context.Background(), &grpc_health_v1.HealthCheckRequest{})
 	assert.NoError(t, err)
 	assert.NotNil(t, hcr)
 	assert.Equal(t, grpc_health_v1.HealthCheckResponse_SERVING, hcr.GetStatus())
@@ -121,4 +122,14 @@ func Test_Healthchecker(t *testing.T) {
 	err = healthchecker.Watch(&grpc_health_v1.HealthCheckRequest{}, nil)
 	assert.Error(t, err)
 	assert.Equal(t, "rpc error: code = Unimplemented desc = not implemented", err.Error())
+
+	server.Shutdown()
+	pluginRegistry.Shutdown()
+
+	// Wait for the server to stop.
+	<-time.After(100 * time.Millisecond)
+
+	// check server status and connections
+	assert.False(t, server.IsRunning())
+	assert.Zero(t, server.CountConnections())
 }
