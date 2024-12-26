@@ -212,14 +212,3 @@ var (
 	// Unwrapped errors.
 	ErrLoggerRequired = errors.New("terminate action requires a logger parameter")
 )
-
-const (
-	FailedToCreateClient         = 1
-	FailedToStartServer          = 2
-	FailedToStartTracer          = 3
-	FailedToCreateActRegistry    = 4
-	FailedToLoadPolicies         = 5
-	FailedToStartRaftNode        = 6
-	FailedToMergeGlobalConfig    = 7
-	FailedToCreatePoolAndClients = 8
-)
