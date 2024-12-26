@@ -109,11 +109,10 @@ func TestRunServer(t *testing.T) {
 		},
 	)
 	assert.NotNil(t, server)
-	assert.Zero(t, server.connections)
 	assert.Zero(t, server.CountConnections())
 	assert.Empty(t, server.host)
 	assert.Empty(t, server.port)
-	assert.False(t, server.running.Load())
+	assert.False(t, server.IsRunning())
 
 	var waitGroup sync.WaitGroup
 	waitGroup.Add(2)
@@ -215,8 +214,8 @@ func TestRunServer(t *testing.T) {
 	<-time.After(100 * time.Millisecond)
 
 	// check server status and connections
-	assert.False(t, server.running.Load())
-	assert.Zero(t, server.connections)
+	assert.False(t, server.IsRunning())
+	assert.Zero(t, server.CountConnections())
 
 	// Read the log file and check if the log file contains the expected log messages.
 	require.FileExists(t, "server_test.log")

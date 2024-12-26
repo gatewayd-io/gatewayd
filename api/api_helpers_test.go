@@ -12,7 +12,7 @@ import (
 )
 
 // getAPIConfig returns a new API configuration with all the necessary components.
-func getAPIConfig() *API {
+func getAPIConfig(httpAddr, grpcAddr string) *API {
 	logger := zerolog.New(nil)
 	defaultPool := pool.NewPool(context.Background(), config.DefaultPoolSize)
 	pluginReg := plugin.NewRegistry(
@@ -60,8 +60,8 @@ func getAPIConfig() *API {
 	return &API{
 		Options: &Options{
 			GRPCNetwork: "tcp",
-			GRPCAddress: "localhost:19090",
-			HTTPAddress: "localhost:18080",
+			GRPCAddress: grpcAddr,
+			HTTPAddress: httpAddr,
 			Logger:      logger,
 			Servers:     servers,
 		},

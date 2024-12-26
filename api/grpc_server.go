@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"net"
 
 	v1 "github.com/gatewayd-io/gatewayd/api/v1"
@@ -41,18 +42,23 @@ func NewGRPCServer(ctx context.Context, server GRPCServer) *GRPCServer {
 
 // Start starts the gRPC server.
 func (s *GRPCServer) Start() {
-	s.start(s.API, s.grpcServer, s.listener)
+	if err := s.grpcServer.Serve(s.listener); err != nil && !errors.Is(err, net.ErrClosed) {
+		s.API.Options.Logger.Err(err).Msg("failed to start gRPC API")
+	}
 }
 
 // Shutdown shuts down the gRPC server.
-func (s *GRPCServer) Shutdown(_ context.Context) {
-	s.shutdown(s.grpcServer)
+func (s *GRPCServer) Shutdown(context.Context) {
+	if err := s.listener.Close(); err != nil && !errors.Is(err, net.ErrClosed) {
+		s.API.Options.Logger.Err(err).Msg("failed to close listener")
+	}
+	s.grpcServer.GracefulStop()
 }
 
 // createGRPCAPI creates a new gRPC API server and listener.
 func createGRPCAPI(api *API, healthchecker *HealthChecker) (*grpc.Server, net.Listener) {
 	listener, err := net.Listen(api.Options.GRPCNetwork, api.Options.GRPCAddress)
-	if err != nil {
+	if err != nil && !errors.Is(err, net.ErrClosed) {
 		api.Options.Logger.Err(err).Msg("failed to start gRPC API")
 		return nil, nil
 	}
@@ -63,16 +69,4 @@ func createGRPCAPI(api *API, healthchecker *HealthChecker) (*grpc.Server, net.Li
 	grpc_health_v1.RegisterHealthServer(grpcServer, healthchecker)
 
 	return grpcServer, listener
-}
-
-// start starts the gRPC API.
-func (s *GRPCServer) start(api *API, grpcServer *grpc.Server, listener net.Listener) {
-	if err := grpcServer.Serve(listener); err != nil {
-		api.Options.Logger.Err(err).Msg("failed to start gRPC API")
-	}
-}
-
-// shutdown shuts down the gRPC API.
-func (s *GRPCServer) shutdown(grpcServer *grpc.Server) {
-	grpcServer.GracefulStop()
 }
