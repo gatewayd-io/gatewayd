@@ -76,52 +76,66 @@ func NewProxy(
 		HealthCheckPeriod:    pxy.HealthCheckPeriod,
 	}
 
-	startDelay := time.Now().Add(proxy.HealthCheckPeriod)
-	// Schedule the client health check.
-	if _, err := proxy.scheduler.Every(proxy.HealthCheckPeriod).SingletonMode().StartAt(startDelay).Do(
-		func() {
-			now := time.Now()
-			proxy.Logger.Trace().Msg("Running the client health check to recycle connection(s).")
-			proxy.AvailableConnections.ForEach(func(_, value any) bool {
-				if client, ok := value.(*Client); ok {
-					// Connection is probably dead by now.
-					proxy.AvailableConnections.Remove(client.ID)
-					client.Close()
-					// Create a new client.
-					client = NewClient(
-						proxyCtx, proxy.ClientConfig, proxy.Logger,
-						NewRetry(
-							Retry{
-								Retries: proxy.ClientConfig.Retries,
-								Backoff: config.If(
-									proxy.ClientConfig.Backoff > 0,
-									proxy.ClientConfig.Backoff,
-									config.DefaultBackoff,
-								),
-								BackoffMultiplier:  proxy.ClientConfig.BackoffMultiplier,
-								DisableBackoffCaps: proxy.ClientConfig.DisableBackoffCaps,
-								Logger:             proxy.Logger,
-							},
-						),
-					)
-					if client != nil && client.ID != "" {
-						if err := proxy.AvailableConnections.Put(client.ID, client); err != nil {
-							proxy.Logger.Err(err).Msg("Failed to update the client connection")
-							// Close the client, because we don't want to have orphaned connections.
-							client.Close()
-						}
-					} else {
-						proxy.Logger.Error().Msg("Failed to create a new client connection")
-					}
-				}
+	connHealthCheck := func() {
+		now := time.Now()
+		proxy.Logger.Trace().Msg("Running the client health check to recycle connection(s).")
+		span.AddEvent("Running the client health check to recycle connection(s).")
+		proxy.AvailableConnections.ForEach(func(_, value any) bool {
+			client, ok := value.(*Client)
+			if !ok {
+				proxy.Logger.Error().Msg("Failed to cast the client to the Client type")
 				return true
-			})
-			proxy.Logger.Trace().Str("duration", time.Since(now).String()).Msg(
-				"Finished the client health check")
-			metrics.ProxyHealthChecks.WithLabelValues(
-				proxy.GetGroupName(), proxy.GetBlockName()).Inc()
-		},
-	); err != nil {
+			}
+
+			// Connection is probably dead by now.
+			proxy.AvailableConnections.Remove(client.ID)
+			client.Close()
+
+			// Create a new client.
+			client = NewClient(
+				proxyCtx, proxy.ClientConfig, proxy.Logger,
+				NewRetry(
+					Retry{
+						Retries: proxy.ClientConfig.Retries,
+						Backoff: config.If(
+							proxy.ClientConfig.Backoff > 0,
+							proxy.ClientConfig.Backoff,
+							config.DefaultBackoff,
+						),
+						BackoffMultiplier:  proxy.ClientConfig.BackoffMultiplier,
+						DisableBackoffCaps: proxy.ClientConfig.DisableBackoffCaps,
+						Logger:             proxy.Logger,
+					},
+				),
+			)
+			if client != nil && client.ID != "" {
+				if err := proxy.AvailableConnections.Put(client.ID, client); err != nil {
+					proxy.Logger.Err(err).Msg("Failed to update the client connection")
+					// Close the client, because we don't want to have orphaned connections.
+					client.Close()
+				}
+			} else {
+				proxy.Logger.Error().Msg("Failed to create a new client connection")
+				span.RecordError(gerr.ErrClientNotConnected)
+			}
+			return true
+		})
+		proxy.Logger.Trace().
+			Str("duration", time.Since(now).String()).
+			Msg("Finished the client health check")
+		span.AddEvent("Finished the client health check")
+		metrics.ProxyHealthChecks.WithLabelValues(
+			proxy.GetGroupName(), proxy.GetBlockName()).Inc()
+	}
+
+	// Schedule the client health check.
+	startDelay := time.Now().Add(proxy.HealthCheckPeriod)
+	_, err := proxy.scheduler.
+		Every(proxy.HealthCheckPeriod).
+		SingletonMode().
+		StartAt(startDelay).
+		Do(connHealthCheck)
+	if err != nil {
 		proxy.Logger.Error().Err(err).Msg("Failed to schedule the client health check")
 		sentry.CaptureException(err)
 		span.RecordError(err)
@@ -135,6 +149,7 @@ func NewProxy(
 			"healthCheckPeriod": proxy.HealthCheckPeriod.String(),
 		},
 	).Msg("Started the client health check scheduler")
+	span.AddEvent("Started the client health check scheduler")
 
 	return &proxy
 }
