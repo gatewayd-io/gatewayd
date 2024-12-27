@@ -63,9 +63,8 @@ type Registry struct {
 	ctx         context.Context //nolint:containedctx
 	DevMode     bool
 
-	Logger        zerolog.Logger
-	Compatibility config.CompatibilityPolicy
-	StartTimeout  time.Duration
+	Logger       zerolog.Logger
+	StartTimeout time.Duration
 }
 
 var _ IRegistry = (*Registry)(nil)
@@ -79,13 +78,12 @@ func NewRegistry(
 	defer span.End()
 
 	return &Registry{
-		plugins:       pool.NewPool(regCtx, config.EmptyPoolCapacity),
-		hooks:         map[v1.HookName]map[sdkPlugin.Priority]sdkPlugin.Method{},
-		ActRegistry:   registry.ActRegistry,
-		ctx:           regCtx,
-		DevMode:       registry.DevMode,
-		Logger:        registry.Logger,
-		Compatibility: registry.Compatibility,
+		plugins:     pool.NewPool(regCtx, config.EmptyPoolCapacity),
+		hooks:       map[v1.HookName]map[sdkPlugin.Priority]sdkPlugin.Method{},
+		ActRegistry: registry.ActRegistry,
+		ctx:         regCtx,
+		DevMode:     registry.DevMode,
+		Logger:      registry.Logger,
 	}
 }
 
@@ -559,19 +557,7 @@ func (reg *Registry) LoadPlugins(
 						"requirement": req.Name,
 					},
 				).Msg("The plugin requirement is not met, so it won't work properly")
-				if reg.Compatibility == config.Strict {
-					reg.Logger.Debug().Str("name", plugin.ID.Name).Msg(
-						"Registry is in strict compatibility mode, so the plugin won't be loaded")
-					plugin.Stop() // Stop the plugin.
-					continue
-				}
-				reg.Logger.Debug().Fields(
-					map[string]any{
-						"name":        plugin.ID.Name,
-						"requirement": req.Name,
-					},
-				).Msg("Registry is in loose compatibility mode, " +
-					"so the plugin will be loaded anyway")
+				plugin.Stop() // Stop the plugin.
 			}
 		}
 
