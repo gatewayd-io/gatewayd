@@ -248,63 +248,95 @@ func (app *GatewayDApp) createPluginRegistry(runCtx context.Context, logger zero
 
 // startMetricsMerger starts the metrics merger if enabled.
 func (app *GatewayDApp) startMetricsMerger(runCtx context.Context, logger zerolog.Logger) {
+	_, span := otel.Tracer(config.TracerName).Start(runCtx, "Start metrics merger")
+	defer span.End()
+
 	// Start the metrics merger if enabled.
-	if app.conf.Plugin.EnableMetricsMerger {
-		app.metricsMerger = metrics.NewMerger(runCtx, metrics.Merger{
-			MetricsMergerPeriod: app.conf.Plugin.MetricsMergerPeriod,
-			Logger:              logger,
-		})
-		app.pluginRegistry.ForEach(func(_ sdkPlugin.Identifier, plugin *plugin.Plugin) {
-			if metricsEnabled, err := strconv.ParseBool(plugin.Config["metricsEnabled"]); err == nil && metricsEnabled {
-				app.metricsMerger.Add(plugin.ID.Name, plugin.Config["metricsUnixDomainSocket"])
-				logger.Debug().Str("plugin", plugin.ID.Name).Msg(
-					"Added plugin to metrics merger")
-			}
-		})
-		app.metricsMerger.Start() //nolint:contextcheck
+	if !app.conf.Plugin.EnableMetricsMerger {
+		logger.Info().Msg("Metrics merger is disabled")
+		span.AddEvent("Metrics merger is disabled")
+		return
 	}
+
+	// Create a new metrics merger.
+	app.metricsMerger = metrics.NewMerger(runCtx, metrics.Merger{
+		MetricsMergerPeriod: app.conf.Plugin.MetricsMergerPeriod,
+		Logger:              logger,
+	})
+
+	// Add the plugins to the metrics merger.
+	app.pluginRegistry.ForEach(
+		func(_ sdkPlugin.Identifier, plugin *plugin.Plugin) {
+			metricsEnabled, err := strconv.ParseBool(plugin.Config["metricsEnabled"])
+			if err == nil && metricsEnabled {
+				app.metricsMerger.Add(plugin.ID.Name, plugin.Config["metricsUnixDomainSocket"])
+				logger.Debug().
+					Str("plugin", plugin.ID.Name).
+					Msg("Added plugin to metrics merger")
+				span.AddEvent("Added plugin to metrics merger")
+			}
+		},
+	)
+
+	// Start the metrics merger in the background if there are plugins to merge metrics from.
+	app.metricsMerger.Start() //nolint:contextcheck
 }
 
 // startHealthCheckScheduler starts the health check scheduler if enabled.
 func (app *GatewayDApp) startHealthCheckScheduler(
 	runCtx, ctx context.Context, span trace.Span, logger zerolog.Logger,
 ) {
+	healthCheck := func() {
+		_, span := otel.Tracer(config.TracerName).Start(ctx, "Run plugin health check")
+		defer span.End()
+
+		plugins := []string{}
+		app.pluginRegistry.ForEach(
+			func(pluginId sdkPlugin.Identifier, plugin *plugin.Plugin) {
+				err := plugin.Ping()
+				if err == nil {
+					logger.Trace().Str("name", pluginId.Name).Msg("Successfully pinged plugin")
+					plugins = append(plugins, pluginId.Name)
+					return
+				}
+
+				span.RecordError(err)
+				logger.Error().Err(err).Msg("Failed to ping plugin")
+
+				// Remove the plugin from the metrics merger to prevent errors.
+				if app.conf.Plugin.EnableMetricsMerger && app.metricsMerger != nil {
+					app.metricsMerger.Remove(pluginId.Name)
+				}
+
+				// Remove the plugin from the registry.
+				app.pluginRegistry.Remove(pluginId)
+
+				if !app.conf.Plugin.ReloadOnCrash {
+					return // Do not reload the plugins.
+				}
+
+				// Reload the plugins and register their hooks upon crash.
+				logger.Info().Str("name", pluginId.Name).Msg("Reloading crashed plugin")
+				//
+				pluginConfig := app.conf.Plugin.GetPlugins(pluginId.Name)
+				if pluginConfig != nil {
+					// Load the plugins and register their hooks.
+					app.pluginRegistry.LoadPlugins(
+						runCtx, pluginConfig, app.conf.Plugin.StartTimeout)
+				}
+			},
+		)
+		span.SetAttributes(attribute.StringSlice("plugins", plugins))
+	}
+
 	// Ping the plugins to check if they are alive, and remove them if they are not.
 	startDelay := time.Now().Add(app.conf.Plugin.HealthCheckPeriod)
-	if _, err := app.healthCheckScheduler.Every(
-		app.conf.Plugin.HealthCheckPeriod).SingletonMode().StartAt(startDelay).Do(
-		func() {
-			_, span := otel.Tracer(config.TracerName).Start(ctx, "Run plugin health check")
-			defer span.End()
-
-			var plugins []string
-			app.pluginRegistry.ForEach(
-				func(pluginId sdkPlugin.Identifier, plugin *plugin.Plugin) {
-					if err := plugin.Ping(); err != nil {
-						span.RecordError(err)
-						logger.Error().Err(err).Msg("Failed to ping plugin")
-						if app.conf.Plugin.EnableMetricsMerger && app.metricsMerger != nil {
-							app.metricsMerger.Remove(pluginId.Name)
-						}
-						app.pluginRegistry.Remove(pluginId)
-
-						if !app.conf.Plugin.ReloadOnCrash {
-							return // Do not reload the plugins.
-						}
-
-						// Reload the plugins and register their hooks upon crash.
-						logger.Info().Str("name", pluginId.Name).Msg("Reloading crashed plugin")
-						pluginConfig := app.conf.Plugin.GetPlugins(pluginId.Name)
-						if pluginConfig != nil {
-							app.pluginRegistry.LoadPlugins(runCtx, pluginConfig, app.conf.Plugin.StartTimeout)
-						}
-					} else {
-						logger.Trace().Str("name", pluginId.Name).Msg("Successfully pinged plugin")
-						plugins = append(plugins, pluginId.Name)
-					}
-				})
-			span.SetAttributes(attribute.StringSlice("plugins", plugins))
-		}); err != nil {
+	_, err := app.healthCheckScheduler.
+		Every(app.conf.Plugin.HealthCheckPeriod).
+		SingletonMode().
+		StartAt(startDelay).
+		Do(healthCheck)
+	if err != nil {
 		logger.Error().Err(err).Msg("Failed to start plugin health check scheduler")
 		span.RecordError(err)
 	}
@@ -315,6 +347,7 @@ func (app *GatewayDApp) startHealthCheckScheduler(
 			"healthCheckPeriod", app.conf.Plugin.HealthCheckPeriod.String(),
 		).Msg("Starting plugin health check scheduler")
 		app.healthCheckScheduler.StartAsync()
+		span.AddEvent("Started plugin health check scheduler")
 	}
 }
 
