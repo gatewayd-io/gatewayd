@@ -142,6 +142,11 @@ func (reg *Registry) Exists(name, version, remoteURL string) bool {
 
 	for _, plugin := range reg.List() {
 		if plugin.Name == name && plugin.RemoteURL == remoteURL {
+			// If the version is the same, the plugin exists.
+			if version == plugin.Version {
+				return true
+			}
+
 			// Parse the supplied version and the version in the registry.
 			suppliedVer, err := semver.NewVersion(version)
 			if err != nil {
@@ -160,7 +165,7 @@ func (reg *Registry) Exists(name, version, remoteURL string) bool {
 			// Check if the version of the plugin is less than or equal to
 			// the version in the registry.
 			// TODO: Should we check the major version only, or as well?
-			if suppliedVer.LessThan(registryVer) || suppliedVer.Equal(registryVer) {
+			if suppliedVer.LessThanEqual(registryVer) {
 				return true
 			}
 
