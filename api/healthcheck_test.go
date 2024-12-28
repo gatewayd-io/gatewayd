@@ -57,10 +57,9 @@ func Test_Healthchecker(t *testing.T) {
 	pluginRegistry := plugin.NewRegistry(
 		context.Background(),
 		plugin.Registry{
-			ActRegistry:   actRegistry,
-			Compatibility: config.Loose,
-			Logger:        zerolog.Logger{},
-			DevMode:       true,
+			ActRegistry: actRegistry,
+			Logger:      zerolog.Logger{},
+			DevMode:     true,
 		},
 	)
 

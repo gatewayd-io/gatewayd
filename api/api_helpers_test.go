@@ -27,10 +27,9 @@ func getAPIConfig(httpAddr, grpcAddr string) *API {
 				Actions:              act.BuiltinActions(),
 				DefaultPolicyName:    config.DefaultPolicy,
 			}),
-			DevMode:       true,
-			Logger:        logger,
-			Compatibility: config.DefaultCompatibilityPolicy,
-			StartTimeout:  config.DefaultPluginStartTimeout,
+			DevMode:      true,
+			Logger:       logger,
+			StartTimeout: config.DefaultPluginStartTimeout,
 		},
 	)
 	defaultProxy := network.NewProxy(

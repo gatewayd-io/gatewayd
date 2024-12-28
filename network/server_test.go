@@ -54,9 +54,8 @@ func TestRunServer(t *testing.T) {
 	pluginRegistry := plugin.NewRegistry(
 		ctx,
 		plugin.Registry{
-			ActRegistry:   actRegistry,
-			Compatibility: config.Loose,
-			Logger:        logger,
+			ActRegistry: actRegistry,
+			Logger:      logger,
 		})
 
 	pluginRegistry.AddHook(v1.HookName_HOOK_NAME_ON_TRAFFIC_FROM_CLIENT, 1, onIncomingTraffic)

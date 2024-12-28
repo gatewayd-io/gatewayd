@@ -273,7 +273,6 @@ func (c *Config) LoadDefaults(ctx context.Context) *gerr.GatewayDError {
 	}
 
 	c.pluginDefaults = PluginConfig{
-		CompatibilityPolicy: string(Strict),
 		EnableMetricsMerger: true,
 		MetricsMergerPeriod: DefaultMetricsMergerPeriod,
 		HealthCheckPeriod:   DefaultPluginHealthCheckPeriod,

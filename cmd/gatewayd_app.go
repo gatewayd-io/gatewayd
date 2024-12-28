@@ -234,14 +234,8 @@ func (app *GatewayDApp) createPluginRegistry(runCtx context.Context, logger zero
 		runCtx,
 		plugin.Registry{
 			ActRegistry: app.actRegistry,
-			Compatibility: config.If(
-				config.Exists(
-					config.CompatibilityPolicies, app.conf.Plugin.CompatibilityPolicy,
-				),
-				config.CompatibilityPolicies[app.conf.Plugin.CompatibilityPolicy],
-				config.DefaultCompatibilityPolicy),
-			Logger:  logger,
-			DevMode: app.DevMode,
+			Logger:      logger,
+			DevMode:     app.DevMode,
 		},
 	)
 }

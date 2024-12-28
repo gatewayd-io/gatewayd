@@ -1,6 +1,5 @@
 # Plugin configuration file for GatewayD
 
-compatibilityPolicy: "strict"
 enableMetricsMerger: True
 metricsMergerPeriod: 5s
 healthCheckPeriod: 5s
