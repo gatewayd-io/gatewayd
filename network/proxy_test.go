@@ -67,9 +67,8 @@ func TestNewProxy(t *testing.T) {
 			PluginRegistry: plugin.NewRegistry(
 				context.Background(),
 				plugin.Registry{
-					ActRegistry:   actRegistry,
-					Compatibility: config.Loose,
-					Logger:        logger,
+					ActRegistry: actRegistry,
+					Logger:      logger,
 				},
 			),
 			HealthCheckPeriod: config.DefaultHealthCheckPeriod,
@@ -124,9 +123,8 @@ func BenchmarkNewProxy(b *testing.B) {
 				PluginRegistry: plugin.NewRegistry(
 					context.Background(),
 					plugin.Registry{
-						ActRegistry:   actRegistry,
-						Compatibility: config.Loose,
-						Logger:        logger,
+						ActRegistry: actRegistry,
+						Logger:      logger,
 					},
 				),
 				HealthCheckPeriod: config.DefaultHealthCheckPeriod,
@@ -182,9 +180,8 @@ func BenchmarkProxyConnectDisconnect(b *testing.B) {
 			PluginRegistry: plugin.NewRegistry(
 				context.Background(),
 				plugin.Registry{
-					ActRegistry:   actRegistry,
-					Compatibility: config.Loose,
-					Logger:        logger,
+					ActRegistry: actRegistry,
+					Logger:      logger,
 				},
 			),
 			HealthCheckPeriod: config.DefaultHealthCheckPeriod,
@@ -248,9 +245,8 @@ func BenchmarkProxyPassThrough(b *testing.B) {
 			PluginRegistry: plugin.NewRegistry(
 				context.Background(),
 				plugin.Registry{
-					ActRegistry:   actRegistry,
-					Compatibility: config.Loose,
-					Logger:        logger,
+					ActRegistry: actRegistry,
+					Logger:      logger,
 				},
 			),
 			HealthCheckPeriod: config.DefaultHealthCheckPeriod,
@@ -319,9 +315,8 @@ func BenchmarkProxyIsHealthyAndIsExhausted(b *testing.B) {
 			PluginRegistry: plugin.NewRegistry(
 				context.Background(),
 				plugin.Registry{
-					ActRegistry:   actRegistry,
-					Compatibility: config.Loose,
-					Logger:        logger,
+					ActRegistry: actRegistry,
+					Logger:      logger,
 				},
 			),
 			HealthCheckPeriod: config.DefaultHealthCheckPeriod,
@@ -388,9 +383,8 @@ func BenchmarkProxyAvailableAndBusyConnectionsString(b *testing.B) {
 			PluginRegistry: plugin.NewRegistry(
 				context.Background(),
 				plugin.Registry{
-					ActRegistry:   actRegistry,
-					Compatibility: config.Loose,
-					Logger:        logger,
+					ActRegistry: actRegistry,
+					Logger:      logger,
 				},
 			),
 			HealthCheckPeriod: config.DefaultHealthCheckPeriod,

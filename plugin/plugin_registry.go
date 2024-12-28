@@ -63,9 +63,8 @@ type Registry struct {
 	ctx         context.Context //nolint:containedctx
 	DevMode     bool
 
-	Logger        zerolog.Logger
-	Compatibility config.CompatibilityPolicy
-	StartTimeout  time.Duration
+	Logger       zerolog.Logger
+	StartTimeout time.Duration
 }
 
 var _ IRegistry = (*Registry)(nil)
@@ -79,13 +78,12 @@ func NewRegistry(
 	defer span.End()
 
 	return &Registry{
-		plugins:       pool.NewPool(regCtx, config.EmptyPoolCapacity),
-		hooks:         map[v1.HookName]map[sdkPlugin.Priority]sdkPlugin.Method{},
-		ActRegistry:   registry.ActRegistry,
-		ctx:           regCtx,
-		DevMode:       registry.DevMode,
-		Logger:        registry.Logger,
-		Compatibility: registry.Compatibility,
+		plugins:     pool.NewPool(regCtx, config.EmptyPoolCapacity),
+		hooks:       map[v1.HookName]map[sdkPlugin.Priority]sdkPlugin.Method{},
+		ActRegistry: registry.ActRegistry,
+		ctx:         regCtx,
+		DevMode:     registry.DevMode,
+		Logger:      registry.Logger,
 	}
 }
 
@@ -144,6 +142,11 @@ func (reg *Registry) Exists(name, version, remoteURL string) bool {
 
 	for _, plugin := range reg.List() {
 		if plugin.Name == name && plugin.RemoteURL == remoteURL {
+			// If the version is the same, the plugin exists.
+			if version == plugin.Version {
+				return true
+			}
+
 			// Parse the supplied version and the version in the registry.
 			suppliedVer, err := semver.NewVersion(version)
 			if err != nil {
@@ -162,7 +165,7 @@ func (reg *Registry) Exists(name, version, remoteURL string) bool {
 			// Check if the version of the plugin is less than or equal to
 			// the version in the registry.
 			// TODO: Should we check the major version only, or as well?
-			if suppliedVer.LessThan(registryVer) || suppliedVer.Equal(registryVer) {
+			if suppliedVer.LessThanEqual(registryVer) {
 				return true
 			}
 
@@ -559,19 +562,7 @@ func (reg *Registry) LoadPlugins(
 						"requirement": req.Name,
 					},
 				).Msg("The plugin requirement is not met, so it won't work properly")
-				if reg.Compatibility == config.Strict {
-					reg.Logger.Debug().Str("name", plugin.ID.Name).Msg(
-						"Registry is in strict compatibility mode, so the plugin won't be loaded")
-					plugin.Stop() // Stop the plugin.
-					continue
-				}
-				reg.Logger.Debug().Fields(
-					map[string]any{
-						"name":        plugin.ID.Name,
-						"requirement": req.Name,
-					},
-				).Msg("Registry is in loose compatibility mode, " +
-					"so the plugin will be loaded anyway")
+				plugin.Stop() // Stop the plugin.
 			}
 		}
 

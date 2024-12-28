@@ -137,10 +137,9 @@ func TestGetPlugins(t *testing.T) {
 	pluginRegistry := plugin.NewRegistry(
 		context.Background(),
 		plugin.Registry{
-			ActRegistry:   actRegistry,
-			Compatibility: config.Loose,
-			Logger:        zerolog.Logger{},
-			DevMode:       true,
+			ActRegistry: actRegistry,
+			Logger:      zerolog.Logger{},
+			DevMode:     true,
 		},
 	)
 	pluginRegistry.Add(&plugin.Plugin{
@@ -192,10 +191,9 @@ func TestGetPluginsWithEmptyPluginRegistry(t *testing.T) {
 	pluginRegistry := plugin.NewRegistry(
 		context.Background(),
 		plugin.Registry{
-			ActRegistry:   actRegistry,
-			Compatibility: config.Loose,
-			Logger:        zerolog.Logger{},
-			DevMode:       true,
+			ActRegistry: actRegistry,
+			Logger:      zerolog.Logger{},
+			DevMode:     true,
 		},
 	)
 
@@ -332,10 +330,9 @@ func TestGetServers(t *testing.T) {
 	pluginRegistry := plugin.NewRegistry(
 		context.Background(),
 		plugin.Registry{
-			ActRegistry:   actRegistry,
-			Compatibility: config.Loose,
-			Logger:        zerolog.Logger{},
-			DevMode:       true,
+			ActRegistry: actRegistry,
+			Logger:      zerolog.Logger{},
+			DevMode:     true,
 		},
 	)
 

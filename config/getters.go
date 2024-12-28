@@ -9,10 +9,6 @@ import (
 )
 
 var (
-	CompatibilityPolicies = map[string]CompatibilityPolicy{
-		"strict": Strict,
-		"loose":  Loose,
-	}
 	logOutputs = map[string]LogOutput{
 		"console": Console,
 		"stdout":  Stdout,
