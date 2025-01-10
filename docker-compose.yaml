@@ -133,7 +133,7 @@ services:
   grafana:
     image: grafana/grafana:latest
     volumes:
-      - ./observability-configs/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
+      - ./observability-configs/datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
     environment:
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_DISABLE_LOGIN_FORM=true
