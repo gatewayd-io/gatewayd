@@ -20,6 +20,8 @@ import (
 	raftboltdb "github.com/hashicorp/raft-boltdb"
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/metadata"
 )
 
 // Configuration constants for Raft operations.
@@ -318,20 +320,102 @@ func (n *Node) AddPeer(peerID, peerAddr string) error {
 	return n.AddPeerInternal(peerID, peerAddr)
 }
 
-// AddPeer adds a new peer to the Raft cluster.
-func (n *Node) AddPeerInternal(peerID, peerAddr string) error {
-	if err := n.raft.AddVoter(raft.ServerID(peerID), raft.ServerAddress(peerAddr), 0, 0).Error(); err != nil {
-		return fmt.Errorf("failed to add voter: %w", err)
+// AddPeer adds a new peer to the Raft cluster
+func (n *Node) AddPeerInternal(peerID, peerAddress string) error {
+	if n.raft.State() != raft.Leader {
+		return errors.New("only the leader can add peers")
 	}
+
+	future := n.raft.AddVoter(raft.ServerID(peerID), raft.ServerAddress(peerAddress), 0, 0)
+	if err := future.Error(); err != nil {
+		return fmt.Errorf("failed to add peer: %w", err)
+	}
+
+	// Log the addition of the new peer
+	metrics.RaftPeerAdditions.Inc()
 	return nil
 }
 
 // RemovePeer removes a peer from the Raft cluster.
 func (n *Node) RemovePeer(peerID string) error {
-	if err := n.raft.RemoveServer(raft.ServerID(peerID), 0, 0).Error(); err != nil {
-		return fmt.Errorf("failed to remove server: %w", err)
+	if n.raft.State() != raft.Leader {
+		// Find the leader's gRPC address
+		_, leaderID := n.raft.LeaderWithID()
+		if leaderID == "" {
+			return errors.New("no leader available")
+		}
+
+		var leaderGrpcAddr string
+		for _, peer := range n.Peers {
+			if raft.ServerID(peer.ID) == leaderID {
+				leaderGrpcAddr = peer.GRPCAddress
+				break
+			}
+		}
+
+		// Get the RPC client for the leader
+		client, err := n.rpcClient.getClient(leaderGrpcAddr)
+		if err != nil {
+			return fmt.Errorf("failed to get client for leader: %w", err)
+		}
+
+		// Forward the RemovePeer request to the leader
+		ctx, cancel := context.WithTimeout(context.Background(), transportTimeout)
+		defer cancel()
+
+		resp, err := client.RemovePeer(ctx, &pb.RemovePeerRequest{
+			PeerId: peerID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to forward RemovePeer request: %w", err)
+		}
+
+		if !resp.GetSuccess() {
+			return fmt.Errorf("leader failed to remove peer: %s", resp.GetError())
+		}
+
+		return nil
 	}
+
+	return n.RemovePeerInternal(peerID)
+}
+
+// RemovePeer removes a peer from the Raft cluster
+func (n *Node) RemovePeerInternal(peerID string) error {
+	if n.raft.State() != raft.Leader {
+		return errors.New("only the leader can remove peers")
+	}
+
+	future := n.raft.RemoveServer(raft.ServerID(peerID), 0, 0)
+	if err := future.Error(); err != nil {
+		return fmt.Errorf("failed to remove peer: %w", err)
+	}
+
+	// Log the removal of the peer
+	metrics.RaftPeerRemovals.Inc()
 	return nil
+}
+
+// DiscoverPeers discovers new peers and adds them to the cluster
+func (n *Node) DiscoverPeers() error {
+	// Implement peer discovery logic here
+	// For example, you can use a service registry or DNS to discover new peers
+
+	// Example: Adding a discovered peer
+	peerID := "new-peer-id"
+	peerAddress := "new-peer-address"
+	return n.AddPeer(peerID, peerAddress)
+}
+
+// GracefulShutdown gracefully removes the node from the cluster
+func (n *Node) GracefulShutdown() error {
+	if n.raft.State() != raft.Leader {
+		return errors.New("only the leader can initiate graceful shutdown")
+	}
+
+	// Remove the current node from the cluster
+	peerID := string(n.config.LocalID)
+	return n.RemovePeer(peerID)
 }
 
 // Apply is the public method that handles forwarding if necessary.
@@ -673,46 +757,46 @@ type HealthStatus struct {
 
 // GetHealthStatus returns the health status of the Raft node.
 func (n *Node) GetHealthStatus() HealthStatus {
-	// Handle uninitialized raft node
-	if n == nil || n.raft == nil {
-		return HealthStatus{
-			IsHealthy: false,
-			Error:     errors.New("raft node not initialized"),
-		}
-	}
+    // Handle uninitialized raft node
+    if n == nil || n.raft == nil {
+        return HealthStatus{
+            IsHealthy: false,
+            Error:     errors.New("raft node not initialized"),
+        }
+    }
 
-	raftState := n.raft.State()
-	stats := n.raft.Stats()
-	nodeID := string(n.config.LocalID)
+    raftState := n.raft.State()
+    stats := n.raft.Stats()
+    nodeID := string(n.config.LocalID)
 
-	// Determine leadership status
-	_, leaderID := n.raft.LeaderWithID()
-	isLeader := raftState == raft.Leader
-	hasLeader := leaderID != ""
+    // Determine leadership status
+    _, leaderID := n.raft.LeaderWithID()
+    isLeader := raftState == raft.Leader
+    hasLeader := leaderID != ""
 
-	// Update metrics for leadership status
-	metrics.RaftLeaderStatus.WithLabelValues(nodeID).Set(boolToFloat(isLeader))
+    // Update metrics for leadership status
+    metrics.RaftLeaderStatus.WithLabelValues(nodeID).Set(boolToFloat(isLeader))
 
-	// Parse last contact with leader
-	lastContact, lastContactErr := parseLastContact(stats["last_contact"])
-	communicatesWithLeader := isLeader || (hasLeader && lastContactErr == nil && lastContact <= LeaderElectionTimeout)
+    // Parse last contact with leader
+    lastContact, lastContactErr := parseLastContact(stats["last_contact"])
+    communicatesWithLeader := isLeader || (hasLeader && lastContactErr == nil && lastContact <= LeaderElectionTimeout)
 
-	// Determine health status
-	isHealthy := communicatesWithLeader
-	metrics.RaftHealthStatus.WithLabelValues(nodeID).Set(boolToFloat(isHealthy))
+    // Determine health status
+    isHealthy := communicatesWithLeader
+    metrics.RaftHealthStatus.WithLabelValues(nodeID).Set(boolToFloat(isHealthy))
 
-	// Update latency metric if last contact is valid
-	if lastContactErr == nil && lastContact >= 0 {
-		metrics.RaftLastContactLatency.WithLabelValues(nodeID).Set(float64(lastContact.Milliseconds()))
-	}
+    // Update latency metric if last contact is valid
+    if lastContactErr == nil && lastContact >= 0 {
+        metrics.RaftLastContactLatency.WithLabelValues(nodeID).Set(float64(lastContact.Milliseconds()))
+    }
 
-	return HealthStatus{
-		IsHealthy:   isHealthy,
-		HasLeader:   hasLeader,
-		IsLeader:    isLeader,
-		LastContact: lastContact,
-		Error:       lastContactErr,
-	}
+    return HealthStatus{
+        IsHealthy:   isHealthy,
+        HasLeader:   hasLeader,
+        IsLeader:    isLeader,
+        LastContact: lastContact,
+        Error:       lastContactErr,
+    }
 }
 
 // Helper function to parse last contact time safely.
@@ -737,4 +821,63 @@ func boolToFloat(val bool) float64 {
 		return 1
 	}
 	return 0
+}
+
+// StartGRPCServer starts the gRPC server for peer management
+func (n *Node) StartGRPCServer(certFile, keyFile string) error {
+    creds, err := credentials.NewServerTLSFromFile(certFile, keyFile)
+    if err != nil {
+        return fmt.Errorf("failed to load TLS credentials: %w", err)
+    }
+
+    n.grpcServer = grpc.NewServer(grpc.Creds(creds))
+    pb.RegisterRaftServer(n.grpcServer, n)
+
+    listener, err := net.Listen("tcp", n.config.BindAddress)
+    if err != nil {
+        return fmt.Errorf("failed to listen on %s: %w", n.config.BindAddress, err)
+    }
+
+    go func() {
+        if err := n.grpcServer.Serve(listener); err != nil {
+            fmt.Fprintf(os.Stderr, "failed to serve gRPC server: %v\n", err)
+        }
+    }()
+
+    return nil
+}
+
+// StopGRPCServer stops the gRPC server
+func (n *Node) StopGRPCServer() {
+    if n.grpcServer != nil {
+        n.grpcServer.GracefulStop()
+    }
+}
+
+// AddPeer handles the AddPeer gRPC request
+func (n *Node) AddPeer(ctx context.Context, req *pb.AddPeerRequest) (*pb.AddPeerResponse, error) {
+    err := n.AddPeer(req.PeerId, req.PeerAddress)
+    if err != nil {
+        return &pb.AddPeerResponse{Success: false}, err
+    }
+    return &pb.AddPeerResponse{Success: true}, nil
+}
+
+// RemovePeer handles the RemovePeer gRPC request
+func (n *Node) RemovePeer(ctx context.Context, req *pb.RemovePeerRequest) (*pb.RemovePeerResponse, error) {
+    err := n.RemovePeer(req.PeerId)
+    if err != nil {
+        return &pb.RemovePeerResponse{Success: false}, err
+    }
+    return &pb.RemovePeerResponse{Success: true}, nil
+}
+
+// Status handles the Status gRPC request
+func (n *Node) Status(ctx context.Context, req *pb.StatusRequest) (*pb.StatusResponse, error) {
+    peers := n.raft.GetConfiguration().Configuration().Servers
+    peerIDs := make([]string, len(peers))
+    for i, peer := range peers {
+        peerIDs[i] = string(peer.ID)
+    }
+    return &pb.StatusResponse{Peers: peerIDs}, nil
 }
