@@ -544,9 +544,9 @@ func TestGetHealthStatus(t *testing.T) {
 
 func TestAddPeer(t *testing.T) {
 	logger := setupTestLogger()
-	tempDir := t.TempDir()
 
-	nodeconfig1 := config.Raft{
+	tempDir := t.TempDir()
+	nodeConfig1 := config.Raft{
 		NodeID:      "testAddPeerNode1",
 		Address:     "127.0.0.1:5679",
 		IsBootstrap: true,
@@ -554,7 +554,7 @@ func TestAddPeer(t *testing.T) {
 		GRPCAddress: "127.0.0.1:5680",
 	}
 
-	node1, err := NewRaftNode(logger, nodeconfig1)
+	node1, err := NewRaftNode(logger, nodeConfig1)
 	require.NoError(t, err)
 	defer func() {
 		_ = node1.Shutdown()
@@ -562,11 +562,13 @@ func TestAddPeer(t *testing.T) {
 
 	time.Sleep(2 * time.Second)
 
+	// Add node2 to the cluster when peer is leader
+	tempDir2 := t.TempDir()
 	nodeConfig2 := config.Raft{
 		NodeID:      "testAddPeerNode2",
 		Address:     "127.0.0.1:5689",
 		IsBootstrap: false,
-		Directory:   tempDir,
+		Directory:   tempDir2,
 		GRPCAddress: "127.0.0.1:5690",
 		Peers: []config.RaftPeer{
 			{ID: "testAddPeerNode1", Address: "127.0.0.1:5679", GRPCAddress: "127.0.0.1:5680"},
@@ -579,14 +581,51 @@ func TestAddPeer(t *testing.T) {
 		_ = node2.Shutdown()
 	}()
 
-	for {
+	// Add node3 to the cluster when peer is follower
+	tempDir3 := t.TempDir()
+	nodeConfig3 := config.Raft{
+		NodeID:      "testAddPeerNode3",
+		Address:     "127.0.0.1:5699",
+		IsBootstrap: false,
+		Directory:   tempDir3,
+		GRPCAddress: "127.0.0.1:5700",
+		Peers: []config.RaftPeer{
+			{ID: "testAddPeerNode1", Address: "127.0.0.1:5689", GRPCAddress: "127.0.0.1:5690"},
+		},
+	}
+
+	node3, err := NewRaftNode(logger, nodeConfig3)
+	require.NoError(t, err)
+	defer func() {
+		_ = node3.Shutdown()
+	}()
+
+	// Function to check if a node is in the cluster configuration
+	checkNodeInCluster := func(nodeID string) bool {
 		existingConfig := node1.raft.GetConfiguration().Configuration()
 		for _, server := range existingConfig.Servers {
-			if server.ID == raft.ServerID(nodeConfig2.NodeID) {
-				assert.True(t, true)
-				return
+			if server.ID == raft.ServerID(nodeID) {
+				return true
 			}
 		}
-		time.Sleep(1 * time.Second)
+		return false
 	}
+
+	// Wait and verify that both nodes join the cluster
+	require.Eventually(t, func() bool {
+		return checkNodeInCluster(nodeConfig2.NodeID) && checkNodeInCluster(nodeConfig3.NodeID)
+	}, 30*time.Second, 1*time.Second, "Nodes failed to join the cluster")
+
+	// Verify the cluster has exactly 3 nodes
+	existingConfig := node1.raft.GetConfiguration().Configuration()
+	assert.Equal(t, 3, len(existingConfig.Servers), "Cluster should have exactly 3 nodes")
+
+	// Verify that node2 and node3 recognize node1 as the leader
+	time.Sleep(2 * time.Second) // Give some time for leader recognition
+
+	_, leaderID := node2.raft.LeaderWithID()
+	assert.Equal(t, raft.ServerID(nodeConfig1.NodeID), leaderID, "Node2 should recognize Node1 as leader")
+
+	_, leaderID = node3.raft.LeaderWithID()
+	assert.Equal(t, raft.ServerID(nodeConfig1.NodeID), leaderID, "Node3 should recognize Node1 as leader")
 }
