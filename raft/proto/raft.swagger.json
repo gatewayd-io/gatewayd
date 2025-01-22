@@ -79,6 +79,38 @@
           "RaftService"
         ]
       }
+    },
+    "/v1/raft/remove-peer": {
+      "post": {
+        "operationId": "RaftService_RemovePeer",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/raftRemovePeerResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/raftRemovePeerRequest"
+            }
+          }
+        ],
+        "tags": [
+          "RaftService"
+        ]
+      }
     }
   },
   "definitions": {
@@ -127,6 +159,25 @@
       }
     },
     "raftForwardApplyResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "error": {
+          "type": "string"
+        }
+      }
+    },
+    "raftRemovePeerRequest": {
+      "type": "object",
+      "properties": {
+        "peerId": {
+          "type": "string"
+        }
+      }
+    },
+    "raftRemovePeerResponse": {
       "type": "object",
       "properties": {
         "success": {

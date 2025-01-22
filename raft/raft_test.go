@@ -629,3 +629,135 @@ func TestAddPeer(t *testing.T) {
 	_, leaderID = node3.raft.LeaderWithID()
 	assert.Equal(t, raft.ServerID(nodeConfig1.NodeID), leaderID, "Node3 should recognize Node1 as leader")
 }
+
+func TestRemovePeer(t *testing.T) {
+	logger := setupTestLogger()
+	tempDir := t.TempDir()
+
+	// Configure three nodes
+	nodeConfigs := []config.Raft{
+		{
+			NodeID:      "testRemovePeerNode1",
+			Address:     "127.0.0.1:5779",
+			IsBootstrap: true,
+			Directory:   tempDir,
+			GRPCAddress: "127.0.0.1:5780",
+			Peers: []config.RaftPeer{
+				{ID: "testRemovePeerNode2", Address: "127.0.0.1:5789", GRPCAddress: "127.0.0.1:5790"},
+				{ID: "testRemovePeerNode3", Address: "127.0.0.1:5799", GRPCAddress: "127.0.0.1:5800"},
+			},
+		},
+		{
+			NodeID:      "testRemovePeerNode2",
+			Address:     "127.0.0.1:5789",
+			IsBootstrap: false,
+			Directory:   tempDir,
+			GRPCAddress: "127.0.0.1:5790",
+			Peers: []config.RaftPeer{
+				{ID: "testRemovePeerNode1", Address: "127.0.0.1:5779", GRPCAddress: "127.0.0.1:5780"},
+				{ID: "testRemovePeerNode3", Address: "127.0.0.1:5799", GRPCAddress: "127.0.0.1:5800"},
+			},
+		},
+		{
+			NodeID:      "testRemovePeerNode3",
+			Address:     "127.0.0.1:5799",
+			IsBootstrap: false,
+			Directory:   tempDir,
+			GRPCAddress: "127.0.0.1:5800",
+			Peers: []config.RaftPeer{
+				{ID: "testRemovePeerNode1", Address: "127.0.0.1:5779", GRPCAddress: "127.0.0.1:5780"},
+				{ID: "testRemovePeerNode2", Address: "127.0.0.1:5789", GRPCAddress: "127.0.0.1:5790"},
+			},
+		},
+	}
+
+	// Start all nodes
+	nodes := make([]*Node, len(nodeConfigs))
+	defer func() {
+		for _, node := range nodes {
+			if node != nil {
+				_ = node.Shutdown()
+			}
+		}
+	}()
+
+	// Initialize nodes
+	for i, cfg := range nodeConfigs {
+		node, err := NewRaftNode(logger, cfg)
+		require.NoError(t, err)
+		nodes[i] = node
+	}
+
+	// Wait for cluster to stabilize and leader election
+	require.Eventually(t, func() bool {
+		leaderCount := 0
+		for _, node := range nodes {
+			if node.GetState() == raft.Leader {
+				leaderCount++
+			}
+		}
+		return leaderCount == 1
+	}, 10*time.Second, 100*time.Millisecond, "Failed to elect a leader")
+
+	// Find the leader node
+	var leaderNode *Node
+	for _, node := range nodes {
+		if node.GetState() == raft.Leader {
+			leaderNode = node
+			break
+		}
+	}
+	require.NotNil(t, leaderNode, "Leader node not found")
+
+	// Verify initial cluster configuration
+	initialConfig := leaderNode.raft.GetConfiguration().Configuration()
+	require.Equal(t, 3, len(initialConfig.Servers), "Initial cluster should have 3 nodes")
+
+	// Test removing a follower node
+	followerID := nodeConfigs[1].NodeID // Second node
+	err := leaderNode.RemovePeer(followerID)
+	require.NoError(t, err, "Failed to remove follower node")
+
+	// Wait for the removal to take effect and verify
+	require.Eventually(t, func() bool {
+		config := leaderNode.raft.GetConfiguration().Configuration()
+		return len(config.Servers) == 2
+	}, 5*time.Second, 100*time.Millisecond, "Node removal not reflected in configuration")
+
+	// Verify the removed node is not in the configuration
+	currentConfig := leaderNode.raft.GetConfiguration().Configuration()
+	for _, server := range currentConfig.Servers {
+		require.NotEqual(t, raft.ServerID(followerID), server.ID, "Removed node should not be in configuration")
+	}
+
+	// Test removing the leader node
+	leaderID := leaderNode.config.LocalID
+	err = leaderNode.RemovePeer(string(leaderID))
+	require.NoError(t, err, "Failed to remove leader node")
+
+	// Wait for new leader election and verify cluster size
+	require.Eventually(t, func() bool {
+		// Check remaining node's configuration
+		for _, node := range nodes {
+			if node.GetState() == raft.Leader {
+				config := node.raft.GetConfiguration().Configuration()
+				return len(config.Servers) == 1
+			}
+		}
+		return false
+	}, 10*time.Second, 100*time.Millisecond, "Failed to elect new leader after removing old leader")
+
+	// Verify the final state
+	var newLeaderNode *Node
+	for _, node := range nodes {
+		if node.GetState() == raft.Leader {
+			newLeaderNode = node
+			break
+		}
+	}
+	require.NotNil(t, newLeaderNode, "New leader should be elected")
+
+	finalConfig := newLeaderNode.raft.GetConfiguration().Configuration()
+	require.Equal(t, 1, len(finalConfig.Servers), "Final cluster should have 1 node")
+	require.NotEqual(t, raft.ServerID(leaderID), finalConfig.Servers[0].ID, "Old leader should not be in final configuration")
+}

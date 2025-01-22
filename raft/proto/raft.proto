@@ -19,6 +19,12 @@ service RaftService {
       body: "*"
     };
   }
+  rpc RemovePeer(RemovePeerRequest) returns (RemovePeerResponse) {
+    option (google.api.http) = {
+      post: "/v1/raft/remove-peer"
+      body: "*"
+    };
+  }
 }
 
 message ForwardApplyRequest {
@@ -37,6 +43,15 @@ message AddPeerRequest {
 }
 
 message AddPeerResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+message RemovePeerRequest {
+  string peer_id = 1;
+}
+
+message RemovePeerResponse {
   bool success = 1;
   string error = 2;
 }
