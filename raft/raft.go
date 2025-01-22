@@ -326,9 +326,51 @@ func (n *Node) AddPeerInternal(peerID, peerAddr string) error {
 	return nil
 }
 
-// RemovePeer removes a peer from the Raft cluster.
 func (n *Node) RemovePeer(peerID string) error {
-	if err := n.raft.RemoveServer(raft.ServerID(peerID), 0, 0).Error(); err != nil {
+	if n.raft.State() != raft.Leader {
+		// Find the leader's gRPC address
+		_, leaderID := n.raft.LeaderWithID()
+		if leaderID == "" {
+			return errors.New("no leader available")
+		}
+
+		var leaderGrpcAddr string
+		for _, peer := range n.Peers {
+			if raft.ServerID(peer.ID) == leaderID {
+				leaderGrpcAddr = peer.GRPCAddress
+				break
+			}
+		}
+
+		// Get the RPC client for the leader
+		client, err := n.rpcClient.getClient(leaderGrpcAddr)
+		if err != nil {
+			return fmt.Errorf("failed to get client for leader: %w", err)
+		}
+
+		// Forward the AddPeer request to the leader
+		ctx, cancel := context.WithTimeout(context.Background(), transportTimeout)
+		defer cancel()
+
+		resp, err := client.RemovePeer(ctx, &pb.RemovePeerRequest{
+			PeerId: peerID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to forward RemovePeer request: %w", err)
+		}
+
+		if !resp.GetSuccess() {
+			return fmt.Errorf("leader failed to remove peer: %s", resp.GetError())
+		}
+
+		return nil
+	}
+	return n.RemovePeerInternal(peerID)
+}
+
+// RemovePeer removes a peer from the Raft cluster.
+func (n *Node) RemovePeerInternal(peerID string) error {
+	if err := n.raft.RemoveServer(raft.ServerID(peerID), 0, 2*time.Second).Error(); err != nil {
 		return fmt.Errorf("failed to remove server: %w", err)
 	}
 	return nil

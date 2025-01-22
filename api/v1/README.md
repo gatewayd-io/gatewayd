@@ -19,6 +19,8 @@
     - [AddPeerResponse](#raft-AddPeerResponse)
     - [ForwardApplyRequest](#raft-ForwardApplyRequest)
     - [ForwardApplyResponse](#raft-ForwardApplyResponse)
+    - [RemovePeerRequest](#raft-RemovePeerRequest)
+    - [RemovePeerResponse](#raft-RemovePeerResponse)
   
     - [RaftService](#raft-RaftService)
   
@@ -248,6 +250,37 @@ GatewayDAdminAPIService is the administration API of GatewayD.
 
 
 
+
+<a name="raft-RemovePeerRequest"></a>
+
+### RemovePeerRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| peer_id | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="raft-RemovePeerResponse"></a>
+
+### RemovePeerResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| success | [bool](#bool) |  |  |
+| error | [string](#string) |  |  |
+
+
+
+
+
  
 
  
@@ -264,6 +297,7 @@ GatewayDAdminAPIService is the administration API of GatewayD.
 | ----------- | ------------ | ------------- | ------------|
 | ForwardApply | [ForwardApplyRequest](#raft-ForwardApplyRequest) | [ForwardApplyResponse](#raft-ForwardApplyResponse) |  |
 | AddPeer | [AddPeerRequest](#raft-AddPeerRequest) | [AddPeerResponse](#raft-AddPeerResponse) |  |
+| RemovePeer | [RemovePeerRequest](#raft-RemovePeerRequest) | [RemovePeerResponse](#raft-RemovePeerResponse) |  |
 
  
 
