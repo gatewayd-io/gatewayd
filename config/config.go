@@ -9,6 +9,7 @@ import (
 	"math"
 	"os"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 
@@ -21,7 +22,6 @@ import (
 	"github.com/knadh/koanf/providers/structs"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"golang.org/x/exp/slices"
 )
 
 type IConfig interface {

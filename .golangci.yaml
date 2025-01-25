@@ -56,8 +56,6 @@ linters-settings:
           - "github.com/google/go-cmp"
           - "github.com/google/go-github/v53/github"
           - "github.com/codingsince1985/checksum"
-          - "golang.org/x/exp/maps"
-          - "golang.org/x/exp/slices"
           - "gopkg.in/yaml.v3"
           - "github.com/zenizh/go-capturer"
           - "gopkg.in/natefinch/lumberjack.v2"

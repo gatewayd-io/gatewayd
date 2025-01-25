@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"maps"
 	"net"
 	"net/http"
 	"os"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -21,7 +22,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
-	"golang.org/x/exp/maps"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -190,8 +190,7 @@ func (m *Merger) MergeMetrics(pluginMetrics map[string][]byte) *gerr.GatewayDErr
 		}
 
 		// Sort metrics by name and encode them.
-		metricNames := maps.Keys(metricFamilies)
-		sort.Strings(metricNames)
+		metricNames := slices.Sorted(maps.Keys(metricFamilies))
 		for _, metric := range metricNames {
 			err := enc.Encode(metricFamilies[metric])
 			if err != nil {
@@ -236,7 +235,9 @@ func (m *Merger) Start() {
 		StartAt(startDelay).
 		Do(func() {
 			_, span := otel.Tracer(config.TracerName).Start(ctx, "Merge metrics")
-			span.SetAttributes(attribute.StringSlice("plugins", maps.Keys(m.Addresses)))
+			span.SetAttributes(
+				attribute.StringSlice("plugins", slices.Sorted(maps.Keys(m.Addresses))),
+			)
 			defer span.End()
 
 			m.Logger.Trace().Msg(

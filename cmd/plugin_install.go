@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"os"
 	"path"
@@ -24,7 +25,6 @@ import (
 	"github.com/google/go-github/v53/github"
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
-	"golang.org/x/exp/maps"
 	yamlv3 "gopkg.in/yaml.v3"
 )
 
@@ -162,7 +162,7 @@ var pluginInstallCmd = &cobra.Command{
 
 			// Check if the plugin is already installed and prompt the user to confirm the update.
 			if len(existingPluginURLs) > 0 {
-				pluginNames := strings.Join(maps.Keys[map[string]string](existingPluginURLs), ", ")
+				pluginNames := strings.Join(slices.Sorted(maps.Keys(existingPluginURLs)), ", ")
 				cmd.Printf("The following plugins are already installed: %s\n", pluginNames)
 
 				if noPrompt {

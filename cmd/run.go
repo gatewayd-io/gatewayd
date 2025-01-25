@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"log"
+	"maps"
 	"os"
 	"syscall"
 
@@ -13,7 +14,6 @@ import (
 	"github.com/getsentry/sentry-go"
 	"github.com/spf13/cobra"
 	"go.opentelemetry.io/otel"
-	"golang.org/x/exp/maps"
 )
 
 var (
