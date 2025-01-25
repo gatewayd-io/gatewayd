@@ -22,7 +22,7 @@ import (
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 	"github.com/getsentry/sentry-go"
-	"github.com/google/go-github/v53/github"
+	"github.com/google/go-github/v68/github"
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
 	yamlv3 "gopkg.in/yaml.v3"
