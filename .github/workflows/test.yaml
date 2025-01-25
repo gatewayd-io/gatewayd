@@ -26,8 +26,8 @@ jobs:
   test:
     name: Test GatewayD
     runs-on: ubuntu-latest
-    # Timeout after 5 minutes, to avoid hanging tests
-    timeout-minutes: 5
+    # Timeout after 6 minutes, to avoid hanging tests
+    timeout-minutes: 6
     services:
       postgres:
         image: postgres

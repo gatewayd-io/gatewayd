@@ -171,7 +171,7 @@ func BenchmarkHookRun(b *testing.B) {
 			hookFunction,
 		)
 	}
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		//nolint:errcheck
 		reg.Run(
 			context.Background(),
