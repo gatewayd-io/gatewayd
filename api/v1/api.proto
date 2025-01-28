@@ -173,6 +173,25 @@ service GatewayDAdminAPIService {
       };
     };
   }
+  // Get information about all peers in the Raft cluster
+  rpc GetPeers(google.protobuf.Empty) returns (google.protobuf.Struct) {
+    option (google.api.http) = {
+      get: "/v1/raft/peers"
+    };
+  }
+  // Add a new peer to the Raft cluster
+  rpc AddPeer(AddPeerRequest) returns (AddPeerResponse) {
+    option (google.api.http) = {
+      post: "/v1/raft/peers"
+      body: "*"
+    };
+  }
+  // Remove a peer from the Raft cluster
+  rpc RemovePeer(RemovePeerRequest) returns (RemovePeerResponse) {
+    option (google.api.http) = {
+      delete: "/v1/raft/peers/{peer_id}"
+    };
+  }
 }
 
 // VersionResponse is the response returned by the Version RPC.
@@ -269,4 +288,35 @@ message Group {
     }
     example: '{"groupName":"default"}',
   };
+}
+
+message PeersResponse {
+  map<string, PeerInfo> peers = 1;
+}
+
+message PeerInfo {
+  string id = 1;
+  string address = 2;
+  string state = 3;
+  bool is_leader = 4;
+  bool is_voter = 5;
+}
+
+message AddPeerRequest {
+  string peer_id = 1;
+  string address = 2;
+}
+
+message AddPeerResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+message RemovePeerRequest {
+  string peer_id = 1;
+}
+
+message RemovePeerResponse {
+  bool success = 1;
+  string error = 2;
 }

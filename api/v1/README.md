@@ -4,12 +4,19 @@
 ## Table of Contents
 
 - [api/v1/api.proto](#api_v1_api-proto)
+    - [AddPeerRequest](#api-v1-AddPeerRequest)
+    - [AddPeerResponse](#api-v1-AddPeerResponse)
     - [Group](#api-v1-Group)
+    - [PeerInfo](#api-v1-PeerInfo)
+    - [PeersResponse](#api-v1-PeersResponse)
+    - [PeersResponse.PeersEntry](#api-v1-PeersResponse-PeersEntry)
     - [PluginConfig](#api-v1-PluginConfig)
     - [PluginConfig.ConfigEntry](#api-v1-PluginConfig-ConfigEntry)
     - [PluginConfig.RequiresEntry](#api-v1-PluginConfig-RequiresEntry)
     - [PluginConfigs](#api-v1-PluginConfigs)
     - [PluginID](#api-v1-PluginID)
+    - [RemovePeerRequest](#api-v1-RemovePeerRequest)
+    - [RemovePeerResponse](#api-v1-RemovePeerResponse)
     - [VersionResponse](#api-v1-VersionResponse)
   
     - [GatewayDAdminAPIService](#api-v1-GatewayDAdminAPIService)
@@ -35,6 +42,38 @@
 
 
 
+<a name="api-v1-AddPeerRequest"></a>
+
+### AddPeerRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| peer_id | [string](#string) |  |  |
+| address | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="api-v1-AddPeerResponse"></a>
+
+### AddPeerResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| success | [bool](#bool) |  |  |
+| error | [string](#string) |  |  |
+
+
+
+
+
+
 <a name="api-v1-Group"></a>
 
 ### Group
@@ -44,6 +83,56 @@ Group is the object group to filter the global config by.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | group_name | [string](#string) | optional | GroupName is the name of the group. |
+
+
+
+
+
+
+<a name="api-v1-PeerInfo"></a>
+
+### PeerInfo
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+| address | [string](#string) |  |  |
+| state | [string](#string) |  |  |
+| is_leader | [bool](#bool) |  |  |
+| is_voter | [bool](#bool) |  |  |
+
+
+
+
+
+
+<a name="api-v1-PeersResponse"></a>
+
+### PeersResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| peers | [PeersResponse.PeersEntry](#api-v1-PeersResponse-PeersEntry) | repeated |  |
+
+
+
+
+
+
+<a name="api-v1-PeersResponse-PeersEntry"></a>
+
+### PeersResponse.PeersEntry
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| key | [string](#string) |  |  |
+| value | [PeerInfo](#api-v1-PeerInfo) |  |  |
 
 
 
@@ -139,6 +228,37 @@ PluginID is the identifier that uniquely identifies the plugin.
 
 
 
+<a name="api-v1-RemovePeerRequest"></a>
+
+### RemovePeerRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| peer_id | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="api-v1-RemovePeerResponse"></a>
+
+### RemovePeerResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| success | [bool](#bool) |  |  |
+| error | [string](#string) |  |  |
+
+
+
+
+
+
 <a name="api-v1-VersionResponse"></a>
 
 ### VersionResponse
@@ -175,6 +295,9 @@ GatewayDAdminAPIService is the administration API of GatewayD.
 | GetPools | [.google.protobuf.Empty](#google-protobuf-Empty) | [.google.protobuf.Struct](#google-protobuf-Struct) | GetPools returns the list of pools configured on the GatewayD. |
 | GetProxies | [.google.protobuf.Empty](#google-protobuf-Empty) | [.google.protobuf.Struct](#google-protobuf-Struct) | GetProxies returns the list of proxies configured on the GatewayD. |
 | GetServers | [.google.protobuf.Empty](#google-protobuf-Empty) | [.google.protobuf.Struct](#google-protobuf-Struct) | GetServers returns the list of servers configured on the GatewayD. |
+| GetPeers | [.google.protobuf.Empty](#google-protobuf-Empty) | [.google.protobuf.Struct](#google-protobuf-Struct) | Get information about all peers in the Raft cluster |
+| AddPeer | [AddPeerRequest](#api-v1-AddPeerRequest) | [AddPeerResponse](#api-v1-AddPeerResponse) | Add a new peer to the Raft cluster |
+| RemovePeer | [RemovePeerRequest](#api-v1-RemovePeerRequest) | [RemovePeerResponse](#api-v1-RemovePeerResponse) | Remove a peer from the Raft cluster |
 
  
 

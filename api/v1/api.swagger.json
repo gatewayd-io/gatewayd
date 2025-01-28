@@ -399,6 +399,91 @@
           "GatewayDAdminAPIService"
         ]
       }
+    },
+    "/v1/raft/peers": {
+      "get": {
+        "summary": "Get information about all peers in the Raft cluster",
+        "operationId": "GatewayDAdminAPIService_GetPeers",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "GatewayDAdminAPIService"
+        ]
+      },
+      "post": {
+        "summary": "Add a new peer to the Raft cluster",
+        "operationId": "GatewayDAdminAPIService_AddPeer",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AddPeerResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1AddPeerRequest"
+            }
+          }
+        ],
+        "tags": [
+          "GatewayDAdminAPIService"
+        ]
+      }
+    },
+    "/v1/raft/peers/{peerId}": {
+      "delete": {
+        "summary": "Remove a peer from the Raft cluster",
+        "operationId": "GatewayDAdminAPIService_RemovePeer",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1RemovePeerResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "peerId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "GatewayDAdminAPIService"
+        ]
+      }
     }
   },
   "definitions": {
@@ -446,6 +531,28 @@
             "type": "object",
             "$ref": "#/definitions/protobufAny"
           }
+        }
+      }
+    },
+    "v1AddPeerRequest": {
+      "type": "object",
+      "properties": {
+        "peerId": {
+          "type": "string"
+        },
+        "address": {
+          "type": "string"
+        }
+      }
+    },
+    "v1AddPeerResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "error": {
+          "type": "string"
         }
       }
     },
@@ -632,6 +739,17 @@
       },
       "description": "PluginID is the identifier that uniquely identifies the plugin.",
       "title": "PluginID"
+    },
+    "v1RemovePeerResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "error": {
+          "type": "string"
+        }
+      }
     },
     "v1VersionResponse": {
       "type": "object",
