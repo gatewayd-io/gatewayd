@@ -274,6 +274,11 @@ func (n *Node) monitorLeadership() {
 	}
 }
 
+func (n *Node) GetPeers() []raft.Server {
+	peers := n.raft.GetConfiguration().Configuration().Servers
+	return peers
+}
+
 func (n *Node) AddPeer(peerID, peerAddr string) error {
 	if n.raft.State() != raft.Leader {
 		// Find the leader's gRPC address

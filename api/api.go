@@ -307,3 +307,80 @@ func (a *API) GetServers(context.Context, *emptypb.Empty) (*structpb.Struct, err
 	metrics.APIRequests.WithLabelValues("GET", "/v1/GatewayDPluginService/GetServers").Inc()
 	return serversConfig, nil
 }
+
+// GetPeers returns the raft peers configuration of the GatewayD.
+func (a *API) GetPeers(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
+	_, span := otel.Tracer(config.TracerName).Start(a.ctx, "Get Peers")
+	defer span.End()
+
+	if a.Options.RaftNode == nil {
+		return nil, status.Error(codes.Unavailable, "raft node not initialized")
+	}
+
+	peers := a.Options.RaftNode.GetPeers()
+	peerMap := make(map[string]any)
+	for _, peer := range peers {
+		peerMap[string(peer.ID)] = map[string]any{
+			"id":      string(peer.ID),
+			"address": string(peer.Address),
+		}
+	}
+	raftPeers, err := structpb.NewStruct(peerMap)
+	if err != nil {
+		metrics.APIRequestsErrors.WithLabelValues(
+			"GET", "/v1/raft/peers", codes.Internal.String(),
+		).Inc()
+		a.Options.Logger.Err(err).Msg("Failed to marshal peers config")
+		return nil, status.Errorf(codes.Internal, "failed to marshal peers config: %v", err)
+	}
+
+	metrics.APIRequests.WithLabelValues("GET", "/v1/raft/peers").Inc()
+	return raftPeers, nil
+}
+
+// AddPeer adds a new peer to the raft cluster.
+func (a *API) AddPeer(ctx context.Context, req *v1.AddPeerRequest) (*v1.AddPeerResponse, error) {
+	_, span := otel.Tracer(config.TracerName).Start(a.ctx, "Add Peer")
+	defer span.End()
+
+	if a.Options.RaftNode == nil {
+		return nil, status.Error(codes.Unavailable, "raft node not initialized")
+	}
+
+	if req.PeerId == "" || req.Address == "" {
+		return nil, status.Error(codes.InvalidArgument, "peer id and address are required")
+	}
+
+	err := a.Options.RaftNode.AddPeer(req.PeerId, req.Address)
+	if err != nil {
+		metrics.APIRequestsErrors.WithLabelValues(
+			"POST", "/v1/raft/peers", codes.Internal.String(),
+		).Inc()
+		a.Options.Logger.Err(err).Msg("Failed to add peer")
+		return nil, status.Errorf(codes.Internal, "failed to add peer: %v", err)
+	}
+
+	metrics.APIRequests.WithLabelValues("POST", "/v1/raft/peers").Inc()
+	return &v1.AddPeerResponse{Success: true}, nil
+}
+
+func (a *API) RemovePeer(ctx context.Context, req *v1.RemovePeerRequest) (*v1.RemovePeerResponse, error) {
+	_, span := otel.Tracer(config.TracerName).Start(a.ctx, "Remove Peer")
+	defer span.End()
+
+	if a.Options.RaftNode == nil {
+		return nil, status.Error(codes.Unavailable, "raft node not initialized")
+	}
+
+	err := a.Options.RaftNode.RemovePeer(req.PeerId)
+	if err != nil {
+		metrics.APIRequestsErrors.WithLabelValues(
+			"DELETE", "/v1/raft/peers", codes.Internal.String(),
+		).Inc()
+		a.Options.Logger.Err(err).Msg("Failed to remove peer")
+		return nil, status.Errorf(codes.Internal, "failed to remove peer: %v", err)
+	}
+
+	metrics.APIRequests.WithLabelValues("DELETE", "/v1/raft/peers").Inc()
+	return &v1.RemovePeerResponse{Success: true}, nil
+}

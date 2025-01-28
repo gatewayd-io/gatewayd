@@ -28,6 +28,9 @@ const (
 	GatewayDAdminAPIService_GetPools_FullMethodName        = "/api.v1.GatewayDAdminAPIService/GetPools"
 	GatewayDAdminAPIService_GetProxies_FullMethodName      = "/api.v1.GatewayDAdminAPIService/GetProxies"
 	GatewayDAdminAPIService_GetServers_FullMethodName      = "/api.v1.GatewayDAdminAPIService/GetServers"
+	GatewayDAdminAPIService_GetPeers_FullMethodName        = "/api.v1.GatewayDAdminAPIService/GetPeers"
+	GatewayDAdminAPIService_AddPeer_FullMethodName         = "/api.v1.GatewayDAdminAPIService/AddPeer"
+	GatewayDAdminAPIService_RemovePeer_FullMethodName      = "/api.v1.GatewayDAdminAPIService/RemovePeer"
 )
 
 // GatewayDAdminAPIServiceClient is the client API for GatewayDAdminAPIService service.
@@ -50,6 +53,12 @@ type GatewayDAdminAPIServiceClient interface {
 	GetProxies(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*structpb.Struct, error)
 	// GetServers returns the list of servers configured on the GatewayD.
 	GetServers(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*structpb.Struct, error)
+	// Get information about all peers in the Raft cluster
+	GetPeers(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*structpb.Struct, error)
+	// Add a new peer to the Raft cluster
+	AddPeer(ctx context.Context, in *AddPeerRequest, opts ...grpc.CallOption) (*AddPeerResponse, error)
+	// Remove a peer from the Raft cluster
+	RemovePeer(ctx context.Context, in *RemovePeerRequest, opts ...grpc.CallOption) (*RemovePeerResponse, error)
 }
 
 type gatewayDAdminAPIServiceClient struct {
@@ -130,6 +139,36 @@ func (c *gatewayDAdminAPIServiceClient) GetServers(ctx context.Context, in *empt
 	return out, nil
 }
 
+func (c *gatewayDAdminAPIServiceClient) GetPeers(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*structpb.Struct, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(structpb.Struct)
+	err := c.cc.Invoke(ctx, GatewayDAdminAPIService_GetPeers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *gatewayDAdminAPIServiceClient) AddPeer(ctx context.Context, in *AddPeerRequest, opts ...grpc.CallOption) (*AddPeerResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AddPeerResponse)
+	err := c.cc.Invoke(ctx, GatewayDAdminAPIService_AddPeer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *gatewayDAdminAPIServiceClient) RemovePeer(ctx context.Context, in *RemovePeerRequest, opts ...grpc.CallOption) (*RemovePeerResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RemovePeerResponse)
+	err := c.cc.Invoke(ctx, GatewayDAdminAPIService_RemovePeer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GatewayDAdminAPIServiceServer is the server API for GatewayDAdminAPIService service.
 // All implementations must embed UnimplementedGatewayDAdminAPIServiceServer
 // for forward compatibility.
@@ -150,6 +189,12 @@ type GatewayDAdminAPIServiceServer interface {
 	GetProxies(context.Context, *emptypb.Empty) (*structpb.Struct, error)
 	// GetServers returns the list of servers configured on the GatewayD.
 	GetServers(context.Context, *emptypb.Empty) (*structpb.Struct, error)
+	// Get information about all peers in the Raft cluster
+	GetPeers(context.Context, *emptypb.Empty) (*structpb.Struct, error)
+	// Add a new peer to the Raft cluster
+	AddPeer(context.Context, *AddPeerRequest) (*AddPeerResponse, error)
+	// Remove a peer from the Raft cluster
+	RemovePeer(context.Context, *RemovePeerRequest) (*RemovePeerResponse, error)
 	mustEmbedUnimplementedGatewayDAdminAPIServiceServer()
 }
 
@@ -180,6 +225,15 @@ func (UnimplementedGatewayDAdminAPIServiceServer) GetProxies(context.Context, *e
 }
 func (UnimplementedGatewayDAdminAPIServiceServer) GetServers(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetServers not implemented")
+}
+func (UnimplementedGatewayDAdminAPIServiceServer) GetPeers(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPeers not implemented")
+}
+func (UnimplementedGatewayDAdminAPIServiceServer) AddPeer(context.Context, *AddPeerRequest) (*AddPeerResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddPeer not implemented")
+}
+func (UnimplementedGatewayDAdminAPIServiceServer) RemovePeer(context.Context, *RemovePeerRequest) (*RemovePeerResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RemovePeer not implemented")
 }
 func (UnimplementedGatewayDAdminAPIServiceServer) mustEmbedUnimplementedGatewayDAdminAPIServiceServer() {
 }
@@ -329,6 +383,60 @@ func _GatewayDAdminAPIService_GetServers_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _GatewayDAdminAPIService_GetPeers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GatewayDAdminAPIServiceServer).GetPeers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: GatewayDAdminAPIService_GetPeers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GatewayDAdminAPIServiceServer).GetPeers(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GatewayDAdminAPIService_AddPeer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddPeerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GatewayDAdminAPIServiceServer).AddPeer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: GatewayDAdminAPIService_AddPeer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GatewayDAdminAPIServiceServer).AddPeer(ctx, req.(*AddPeerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GatewayDAdminAPIService_RemovePeer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemovePeerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GatewayDAdminAPIServiceServer).RemovePeer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: GatewayDAdminAPIService_RemovePeer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GatewayDAdminAPIServiceServer).RemovePeer(ctx, req.(*RemovePeerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // GatewayDAdminAPIService_ServiceDesc is the grpc.ServiceDesc for GatewayDAdminAPIService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -363,6 +471,18 @@ var GatewayDAdminAPIService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetServers",
 			Handler:    _GatewayDAdminAPIService_GetServers_Handler,
+		},
+		{
+			MethodName: "GetPeers",
+			Handler:    _GatewayDAdminAPIService_GetPeers_Handler,
+		},
+		{
+			MethodName: "AddPeer",
+			Handler:    _GatewayDAdminAPIService_AddPeer_Handler,
+		},
+		{
+			MethodName: "RemovePeer",
+			Handler:    _GatewayDAdminAPIService_RemovePeer_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
