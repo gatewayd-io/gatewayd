@@ -282,26 +282,37 @@ func (n *Node) GetPeers() []raft.Server {
 	return peers
 }
 
+// getLeaderClient is a helper function that returns a gRPC client connected to the current leader
+func (n *Node) getLeaderClient() (pb.RaftServiceClient, error) {
+	// Find the leader's gRPC address
+	_, leaderID := n.raft.LeaderWithID()
+	if leaderID == "" {
+		return nil, errors.New("no leader available")
+	}
+
+	var leaderGrpcAddr string
+	for _, peer := range n.Peers {
+		if raft.ServerID(peer.ID) == leaderID {
+			leaderGrpcAddr = peer.GRPCAddress
+			break
+		}
+	}
+
+	// Get the RPC client for the leader
+	client, err := n.rpcClient.getClient(leaderGrpcAddr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get client for leader: %w", err)
+	}
+
+	return client, nil
+}
+
 func (n *Node) AddPeer(peerID, peerAddr string) error {
 	if n.raft.State() != raft.Leader {
-		// Find the leader's gRPC address
-		_, leaderID := n.raft.LeaderWithID()
-		if leaderID == "" {
-			return errors.New("no leader available")
-		}
-
-		var leaderGrpcAddr string
-		for _, peer := range n.Peers {
-			if raft.ServerID(peer.ID) == leaderID {
-				leaderGrpcAddr = peer.GRPCAddress
-				break
-			}
-		}
-
-		// Get the RPC client for the leader
-		client, err := n.rpcClient.getClient(leaderGrpcAddr)
+		// Get the leader client
+		client, err := n.getLeaderClient()
 		if err != nil {
-			return fmt.Errorf("failed to get client for leader: %w", err)
+			return err
 		}
 
 		// Forward the AddPeer request to the leader
@@ -344,24 +355,10 @@ func (n *Node) AddPeerInternal(peerID, peerAddress string) error {
 
 func (n *Node) RemovePeer(peerID string) error {
 	if n.raft.State() != raft.Leader {
-		// Find the leader's gRPC address
-		_, leaderID := n.raft.LeaderWithID()
-		if leaderID == "" {
-			return errors.New("no leader available")
-		}
-
-		var leaderGrpcAddr string
-		for _, peer := range n.Peers {
-			if raft.ServerID(peer.ID) == leaderID {
-				leaderGrpcAddr = peer.GRPCAddress
-				break
-			}
-		}
-
-		// Get the RPC client for the leader
-		client, err := n.rpcClient.getClient(leaderGrpcAddr)
+		// Get the leader client
+		client, err := n.getLeaderClient()
 		if err != nil {
-			return fmt.Errorf("failed to get client for leader: %w", err)
+			return err
 		}
 
 		// Forward the RemovePeer request to the leader
