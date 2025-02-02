@@ -17,7 +17,7 @@ services:
       # The architecture of the GatewayD and plugins to install.
       # Default: amd64
       # Possible values: amd64 or arm64
-      # - ARCH=amd64
+      - ARCH=arm64
       - REDIS_URL=redis://redis:6379/0
   write-postgres:
     image: postgres:latest
@@ -47,8 +47,9 @@ services:
       timeout: 5s
       retries: 5
   gatewayd-1:
-    image: gatewaydio/gatewayd:latest
-    pull_policy: always
+    build:
+      context: .
+      dockerfile: Dockerfile
     command:
       [
         "run",
@@ -98,8 +99,9 @@ services:
         condition: service_completed_successfully
 
   gatewayd-2:
-    image: gatewaydio/gatewayd:latest
-    pull_policy: always
+    build:
+      context: .
+      dockerfile: Dockerfile
     command:
       [
         "run",
@@ -149,8 +151,9 @@ services:
         condition: service_completed_successfully
 
   gatewayd-3:
-    image: gatewaydio/gatewayd:latest
-    pull_policy: always
+    build:
+      context: .
+      dockerfile: Dockerfile
     command:
       [
         "run",

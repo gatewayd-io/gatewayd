@@ -20,6 +20,7 @@ import (
 	raftboltdb "github.com/hashicorp/raft-boltdb"
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 // Configuration constants for Raft operations.
@@ -90,6 +91,8 @@ type Node struct {
 	rpcServer     *grpc.Server
 	rpcClient     *rpcClient
 	grpcAddr      string
+	grpcCertFile  string
+	grpcKeyFile   string
 }
 
 // NewRaftNode creates and initializes a new Raft node.
@@ -165,7 +168,7 @@ func NewRaftNode(logger zerolog.Logger, raftConfig config.Raft) (*Node, error) {
 	node.rpcClient = newRPCClient(node)
 
 	// Start RPC server
-	if err := node.startRPCServer(); err != nil {
+	if err := node.startGRPCServer(node.grpcCertFile, node.grpcKeyFile); err != nil {
 		return nil, fmt.Errorf("failed to start RPC server: %w", err)
 	}
 
@@ -261,7 +264,7 @@ func (n *Node) monitorLeadership() {
 				if peerExists {
 					continue
 				}
-				err := n.AddPeer(peer.ID, peer.Address)
+				err := n.AddPeerByLeader(peer.ID, peer.Address)
 				if err != nil {
 					n.Logger.Error().Err(err).Msgf("Failed to add node %s to Raft cluster", peer.ID)
 				}
@@ -279,7 +282,7 @@ func (n *Node) GetPeers() []raft.Server {
 	return peers
 }
 
-func (n *Node) AddPeer(peerID, peerAddr string) error {
+func (n *Node) AddPeerByLeader(peerID, peerAddr string) error {
 	if n.raft.State() != raft.Leader {
 		// Find the leader's gRPC address
 		_, leaderID := n.raft.LeaderWithID()
@@ -323,15 +326,23 @@ func (n *Node) AddPeer(peerID, peerAddr string) error {
 	return n.AddPeerInternal(peerID, peerAddr)
 }
 
-// AddPeer adds a new peer to the Raft cluster.
-func (n *Node) AddPeerInternal(peerID, peerAddr string) error {
-	if err := n.raft.AddVoter(raft.ServerID(peerID), raft.ServerAddress(peerAddr), 0, 0).Error(); err != nil {
-		return fmt.Errorf("failed to add voter: %w", err)
+// AddPeer adds a new peer to the Raft cluster
+func (n *Node) AddPeerInternal(peerID, peerAddress string) error {
+	if n.raft.State() != raft.Leader {
+		return errors.New("only the leader can add peers")
 	}
+
+	future := n.raft.AddVoter(raft.ServerID(peerID), raft.ServerAddress(peerAddress), 0, 0)
+	if err := future.Error(); err != nil {
+		return fmt.Errorf("failed to add peer: %w", err)
+	}
+
+	// Log the addition of the new peer
+	metrics.RaftPeerAdditions.Inc()
 	return nil
 }
 
-func (n *Node) RemovePeer(peerID string) error {
+func (n *Node) RemovePeerByLeader(peerID string) error {
 	if n.raft.State() != raft.Leader {
 		// Find the leader's gRPC address
 		_, leaderID := n.raft.LeaderWithID()
@@ -353,7 +364,7 @@ func (n *Node) RemovePeer(peerID string) error {
 			return fmt.Errorf("failed to get client for leader: %w", err)
 		}
 
-		// Forward the AddPeer request to the leader
+		// Forward the RemovePeer request to the leader
 		ctx, cancel := context.WithTimeout(context.Background(), transportTimeout)
 		defer cancel()
 
@@ -370,15 +381,46 @@ func (n *Node) RemovePeer(peerID string) error {
 
 		return nil
 	}
+
 	return n.RemovePeerInternal(peerID)
 }
 
-// RemovePeer removes a peer from the Raft cluster.
+// RemovePeer removes a peer from the Raft cluster
 func (n *Node) RemovePeerInternal(peerID string) error {
-	if err := n.raft.RemoveServer(raft.ServerID(peerID), 0, 2*time.Second).Error(); err != nil {
-		return fmt.Errorf("failed to remove server: %w", err)
+	if n.raft.State() != raft.Leader {
+		return errors.New("only the leader can remove peers")
 	}
+
+	future := n.raft.RemoveServer(raft.ServerID(peerID), 0, 0)
+	if err := future.Error(); err != nil {
+		return fmt.Errorf("failed to remove peer: %w", err)
+	}
+
+	// Log the removal of the peer
+	metrics.RaftPeerRemovals.Inc()
 	return nil
+}
+
+// DiscoverPeers discovers new peers and adds them to the cluster
+func (n *Node) DiscoverPeers() error {
+	// Implement peer discovery logic here
+	// For example, you can use a service registry or DNS to discover new peers
+
+	// Example: Adding a discovered peer
+	peerID := "new-peer-id"
+	peerAddress := "new-peer-address"
+	return n.AddPeerByLeader(peerID, peerAddress)
+}
+
+// GracefulShutdown gracefully removes the node from the cluster
+func (n *Node) GracefulShutdown() error {
+	if n.raft.State() != raft.Leader {
+		return errors.New("only the leader can initiate graceful shutdown")
+	}
+
+	// Remove the current node from the cluster
+	peerID := string(n.config.LocalID)
+	return n.RemovePeerByLeader(peerID)
 }
 
 // Apply is the public method that handles forwarding if necessary.
@@ -692,13 +734,17 @@ func (n *Node) GetState() raft.RaftState {
 
 // startRPCServer starts a gRPC server on the configured address to handle Raft RPC requests.
 // It returns an error if the server fails to start listening on the configured address.
-func (n *Node) startRPCServer() error {
+func (n *Node) startGRPCServer(certFile, keyFile string) error {
+	creds, err := credentials.NewServerTLSFromFile(certFile, keyFile)
+	if err != nil {
+		return fmt.Errorf("failed to load TLS credentials: %w", err)
+	}
 	listener, err := net.Listen("tcp", n.grpcAddr)
 	if err != nil {
 		return fmt.Errorf("failed to listen on %s: %w", n.grpcAddr, err)
 	}
 
-	n.rpcServer = grpc.NewServer()
+	n.rpcServer = grpc.NewServer(grpc.Creds(creds))
 	pb.RegisterRaftServiceServer(n.rpcServer, &rpcServer{node: n})
 
 	go func() {
@@ -784,4 +830,29 @@ func boolToFloat(val bool) float64 {
 		return 1
 	}
 	return 0
+}
+
+// StopGRPCServer stops the gRPC server
+func (n *Node) StopGRPCServer() {
+	if n.rpcServer != nil {
+		n.rpcServer.GracefulStop()
+	}
+}
+
+// AddPeer handles the AddPeer gRPC request
+func (n *Node) AddPeer(ctx context.Context, req *pb.AddPeerRequest) (*pb.AddPeerResponse, error) {
+	err := n.AddPeerByLeader(req.PeerId, req.PeerAddress)
+	if err != nil {
+		return &pb.AddPeerResponse{Success: false}, err
+	}
+	return &pb.AddPeerResponse{Success: true}, nil
+}
+
+// RemovePeer handles the RemovePeer gRPC request
+func (n *Node) RemovePeer(ctx context.Context, req *pb.RemovePeerRequest) (*pb.RemovePeerResponse, error) {
+	err := n.RemovePeerByLeader(req.PeerId)
+	if err != nil {
+		return &pb.RemovePeerResponse{Success: false}, err
+	}
+	return &pb.RemovePeerResponse{Success: true}, nil
 }
