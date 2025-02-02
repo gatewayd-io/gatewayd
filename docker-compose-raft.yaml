@@ -97,6 +97,8 @@ services:
         condition: service_healthy
       install_plugins:
         condition: service_completed_successfully
+      tempo:
+        condition: service_healthy
 
   gatewayd-2:
     build:
@@ -149,6 +151,8 @@ services:
         condition: service_healthy
       install_plugins:
         condition: service_completed_successfully
+      tempo:
+        condition: service_healthy
 
   gatewayd-3:
     build:
@@ -201,6 +205,8 @@ services:
         condition: service_healthy
       install_plugins:
         condition: service_completed_successfully
+      tempo:
+        condition: service_healthy
   prometheus:
     image: prom/prometheus:latest
     volumes:
@@ -232,6 +238,11 @@ services:
       - "4317:4317" # otlp grpc
     depends_on:
       - tempo_init
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3200/ready"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   grafana:
     image: grafana/grafana:latest
