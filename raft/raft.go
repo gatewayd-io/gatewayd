@@ -91,8 +91,7 @@ type Node struct {
 	rpcServer     *grpc.Server
 	rpcClient     *rpcClient
 	grpcAddr      string
-	grpcCertFile  string
-	grpcKeyFile   string
+	grpcIsSecure  bool
 }
 
 // NewRaftNode creates and initializes a new Raft node.
@@ -162,13 +161,14 @@ func NewRaftNode(logger zerolog.Logger, raftConfig config.Raft) (*Node, error) {
 		Logger:        logger,
 		Peers:         raftConfig.Peers,
 		grpcAddr:      raftConfig.GRPCAddress,
+		grpcIsSecure:  raftConfig.IsSecure,
 	}
 
 	// Initialize RPC client
 	node.rpcClient = newRPCClient(node)
 
 	// Start RPC server
-	if err := node.startGRPCServer(node.grpcCertFile, node.grpcKeyFile); err != nil {
+	if err := node.startGRPCServer(raftConfig.CertFile, raftConfig.KeyFile); err != nil {
 		return nil, fmt.Errorf("failed to start RPC server: %w", err)
 	}
 
@@ -264,7 +264,7 @@ func (n *Node) monitorLeadership() {
 				if peerExists {
 					continue
 				}
-				err := n.AddPeerByLeader(peer.ID, peer.Address)
+				err := n.AddPeer(peer.ID, peer.Address)
 				if err != nil {
 					n.Logger.Error().Err(err).Msgf("Failed to add node %s to Raft cluster", peer.ID)
 				}
@@ -282,7 +282,7 @@ func (n *Node) GetPeers() []raft.Server {
 	return peers
 }
 
-func (n *Node) AddPeerByLeader(peerID, peerAddr string) error {
+func (n *Node) AddPeer(peerID, peerAddr string) error {
 	if n.raft.State() != raft.Leader {
 		// Find the leader's gRPC address
 		_, leaderID := n.raft.LeaderWithID()
@@ -342,7 +342,7 @@ func (n *Node) AddPeerInternal(peerID, peerAddress string) error {
 	return nil
 }
 
-func (n *Node) RemovePeerByLeader(peerID string) error {
+func (n *Node) RemovePeer(peerID string) error {
 	if n.raft.State() != raft.Leader {
 		// Find the leader's gRPC address
 		_, leaderID := n.raft.LeaderWithID()
@@ -409,7 +409,7 @@ func (n *Node) DiscoverPeers() error {
 	// Example: Adding a discovered peer
 	peerID := "new-peer-id"
 	peerAddress := "new-peer-address"
-	return n.AddPeerByLeader(peerID, peerAddress)
+	return n.AddPeer(peerID, peerAddress)
 }
 
 // GracefulShutdown gracefully removes the node from the cluster
@@ -420,7 +420,7 @@ func (n *Node) GracefulShutdown() error {
 
 	// Remove the current node from the cluster
 	peerID := string(n.config.LocalID)
-	return n.RemovePeerByLeader(peerID)
+	return n.RemovePeer(peerID)
 }
 
 // Apply is the public method that handles forwarding if necessary.
@@ -735,21 +735,40 @@ func (n *Node) GetState() raft.RaftState {
 // startRPCServer starts a gRPC server on the configured address to handle Raft RPC requests.
 // It returns an error if the server fails to start listening on the configured address.
 func (n *Node) startGRPCServer(certFile, keyFile string) error {
-	creds, err := credentials.NewServerTLSFromFile(certFile, keyFile)
-	if err != nil {
-		return fmt.Errorf("failed to load TLS credentials: %w", err)
+	var opts []grpc.ServerOption
+
+	// Configure TLS if secure mode is enabled
+	if n.grpcIsSecure {
+		if certFile == "" || keyFile == "" {
+			return fmt.Errorf("TLS certificate and key files are required when secure mode is enabled")
+		}
+
+		creds, err := credentials.NewServerTLSFromFile(certFile, keyFile)
+		if err != nil {
+			return fmt.Errorf("failed to load TLS credentials: %w", err)
+		}
+		opts = append(opts, grpc.Creds(creds))
 	}
+
+	// Create listener
 	listener, err := net.Listen("tcp", n.grpcAddr)
 	if err != nil {
 		return fmt.Errorf("failed to listen on %s: %w", n.grpcAddr, err)
 	}
 
-	n.rpcServer = grpc.NewServer(grpc.Creds(creds))
+	// Create gRPC server with options
+	n.rpcServer = grpc.NewServer(opts...)
 	pb.RegisterRaftServiceServer(n.rpcServer, &rpcServer{node: n})
 
+	// Start server in a goroutine
 	go func() {
-		if err := n.rpcServer.Serve(listener); err != nil {
-			n.Logger.Error().Err(err).Msg("RPC server failed")
+		n.Logger.Info().
+			Str("address", n.grpcAddr).
+			Bool("secure", n.grpcIsSecure).
+			Msg("Starting gRPC server")
+
+		if err := n.rpcServer.Serve(listener); err != nil && !errors.Is(err, grpc.ErrServerStopped) {
+			n.Logger.Error().Err(err).Msg("gRPC server failed unexpectedly")
 		}
 	}()
 
@@ -837,22 +856,4 @@ func (n *Node) StopGRPCServer() {
 	if n.rpcServer != nil {
 		n.rpcServer.GracefulStop()
 	}
-}
-
-// AddPeer handles the AddPeer gRPC request
-func (n *Node) AddPeer(ctx context.Context, req *pb.AddPeerRequest) (*pb.AddPeerResponse, error) {
-	err := n.AddPeerByLeader(req.PeerId, req.PeerAddress)
-	if err != nil {
-		return &pb.AddPeerResponse{Success: false}, err
-	}
-	return &pb.AddPeerResponse{Success: true}, nil
-}
-
-// RemovePeer handles the RemovePeer gRPC request
-func (n *Node) RemovePeer(ctx context.Context, req *pb.RemovePeerRequest) (*pb.RemovePeerResponse, error) {
-	err := n.RemovePeerByLeader(req.PeerId)
-	if err != nil {
-		return &pb.RemovePeerResponse{Success: false}, err
-	}
-	return &pb.RemovePeerResponse{Success: true}, nil
 }

@@ -90,3 +90,17 @@ func (s *rpcServer) AddPeer(ctx context.Context, req *pb.AddPeerRequest) (*pb.Ad
 		Success: true,
 	}, nil
 }
+
+// RemovePeer handles the RemovePeer gRPC request
+func (n *rpcServer) RemovePeer(ctx context.Context, req *pb.RemovePeerRequest) (*pb.RemovePeerResponse, error) {
+	err := n.node.RemovePeer(req.PeerId)
+	if err != nil {
+		return &pb.RemovePeerResponse{
+			Success: false,
+			Error:   err.Error(),
+		}, err
+	}
+	return &pb.RemovePeerResponse{
+		Success: true,
+	}, nil
+}
