@@ -27,16 +27,8 @@ func (h *HealthChecker) Check(
 		}, nil
 	}
 
-	// Raft-specific health checks
-	healthStatus := h.raftNode.GetHealthStatus()
-	if !healthStatus.IsHealthy {
-		return &grpc_health_v1.HealthCheckResponse{
-			Status: grpc_health_v1.HealthCheckResponse_NOT_SERVING,
-		}, nil
-	}
-
 	return &grpc_health_v1.HealthCheckResponse{
-		Status: grpc_health_v1.HealthCheckResponse_SERVING,
+		Status: grpc_health_v1.HealthCheckResponse_NOT_SERVING,
 	}, nil
 }
 
