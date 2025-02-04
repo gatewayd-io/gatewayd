@@ -1,8 +1,17 @@
 package raft
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/json"
+	"encoding/pem"
 	"io"
+	"math/big"
+	"net"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -760,4 +769,151 @@ func TestRemovePeer(t *testing.T) {
 	finalConfig := newLeaderNode.raft.GetConfiguration().Configuration()
 	require.Equal(t, 1, len(finalConfig.Servers), "Final cluster should have 1 node")
 	require.NotEqual(t, raft.ServerID(leaderID), finalConfig.Servers[0].ID, "Old leader should not be in final configuration")
+}
+
+func TestSecureGRPCConfiguration(t *testing.T) {
+	logger := setupTestLogger()
+	tempDir := t.TempDir()
+
+	// Create temporary certificate files
+	certFile := filepath.Join(tempDir, "cert.pem")
+	keyFile := filepath.Join(tempDir, "key.pem")
+
+	// Generate self-signed certificate for testing
+	err := generateTestCertificate(certFile, keyFile)
+	require.NoError(t, err, "Failed to generate test certificates")
+
+	tests := []struct {
+		name       string
+		raftConfig config.Raft
+		wantErr    bool
+		errMsg     string
+	}{
+		{
+			name: "valid secure configuration",
+			raftConfig: config.Raft{
+				NodeID:      "secureNode1",
+				Address:     "127.0.0.1:6101",
+				GRPCAddress: "127.0.0.1:6102",
+				IsBootstrap: true,
+				Directory:   tempDir,
+				IsSecure:    true,
+				CertFile:    certFile,
+				KeyFile:     keyFile,
+			},
+			wantErr: false,
+		},
+		{
+			name: "secure mode without cert files",
+			raftConfig: config.Raft{
+				NodeID:      "secureNode2",
+				Address:     "127.0.0.1:6103",
+				GRPCAddress: "127.0.0.1:6104",
+				IsBootstrap: true,
+				Directory:   tempDir,
+				IsSecure:    true,
+				CertFile:    "",
+				KeyFile:     "",
+			},
+			wantErr: true,
+			errMsg:  "TLS certificate and key files are required when secure mode is enabled",
+		},
+		{
+			name: "secure mode with invalid cert file",
+			raftConfig: config.Raft{
+				NodeID:      "secureNode3",
+				Address:     "127.0.0.1:6105",
+				GRPCAddress: "127.0.0.1:6106",
+				IsBootstrap: true,
+				Directory:   tempDir,
+				IsSecure:    true,
+				CertFile:    "nonexistent.pem",
+				KeyFile:     keyFile,
+			},
+			wantErr: true,
+			errMsg:  "failed to load TLS credentials",
+		},
+		{
+			name: "non-secure configuration",
+			raftConfig: config.Raft{
+				NodeID:      "secureNode4",
+				Address:     "127.0.0.1:6107",
+				GRPCAddress: "127.0.0.1:6108",
+				IsBootstrap: true,
+				Directory:   tempDir,
+				IsSecure:    false,
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			node, err := NewRaftNode(logger, tt.raftConfig)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errMsg)
+				assert.Nil(t, node)
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, node)
+				assert.Equal(t, tt.raftConfig.IsSecure, node.grpcIsSecure)
+
+				// Cleanup
+				err = node.Shutdown()
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+// generateTestCertificate creates a self-signed certificate for testing
+func generateTestCertificate(certFile, keyFile string) error {
+	// Generate private key
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return err
+	}
+
+	// Create certificate template
+	template := x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			Organization: []string{"Test Org"},
+		},
+		NotBefore: time.Now(),
+		NotAfter:  time.Now().Add(time.Hour * 24),
+
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1")},
+	}
+
+	// Create certificate
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &privateKey.PublicKey, privateKey)
+	if err != nil {
+		return err
+	}
+
+	// Write certificate to file
+	certOut, err := os.Create(certFile)
+	if err != nil {
+		return err
+	}
+	defer certOut.Close()
+	if err := pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes}); err != nil {
+		return err
+	}
+
+	// Write private key to file
+	keyOut, err := os.Create(keyFile)
+	if err != nil {
+		return err
+	}
+	defer keyOut.Close()
+	return pem.Encode(keyOut, &pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
+	})
 }
