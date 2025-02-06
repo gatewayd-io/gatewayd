@@ -793,8 +793,8 @@ func TestSecureGRPCConfiguration(t *testing.T) {
 			name: "valid secure configuration",
 			raftConfig: config.Raft{
 				NodeID:      "secureNode1",
-				Address:     "127.0.0.1:6101",
-				GRPCAddress: "127.0.0.1:6102",
+				Address:     "127.0.0.1:0",
+				GRPCAddress: "127.0.0.1:0",
 				IsBootstrap: true,
 				Directory:   tempDir,
 				IsSecure:    true,
@@ -807,8 +807,8 @@ func TestSecureGRPCConfiguration(t *testing.T) {
 			name: "secure mode without cert files",
 			raftConfig: config.Raft{
 				NodeID:      "secureNode2",
-				Address:     "127.0.0.1:6103",
-				GRPCAddress: "127.0.0.1:6104",
+				Address:     "127.0.0.1:0",
+				GRPCAddress: "127.0.0.1:0",
 				IsBootstrap: true,
 				Directory:   tempDir,
 				IsSecure:    true,
@@ -822,8 +822,8 @@ func TestSecureGRPCConfiguration(t *testing.T) {
 			name: "secure mode with invalid cert file",
 			raftConfig: config.Raft{
 				NodeID:      "secureNode3",
-				Address:     "127.0.0.1:6105",
-				GRPCAddress: "127.0.0.1:6106",
+				Address:     "127.0.0.1:0",
+				GRPCAddress: "127.0.0.1:0",
 				IsBootstrap: true,
 				Directory:   tempDir,
 				IsSecure:    true,
@@ -837,8 +837,8 @@ func TestSecureGRPCConfiguration(t *testing.T) {
 			name: "non-secure configuration",
 			raftConfig: config.Raft{
 				NodeID:      "secureNode4",
-				Address:     "127.0.0.1:6107",
-				GRPCAddress: "127.0.0.1:6108",
+				Address:     "127.0.0.1:0",
+				GRPCAddress: "127.0.0.1:0",
 				IsBootstrap: true,
 				Directory:   tempDir,
 				IsSecure:    false,
