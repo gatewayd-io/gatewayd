@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"testing"
@@ -19,19 +20,35 @@ func Test_HTTP_Server(t *testing.T) {
 	healthchecker := &HealthChecker{Servers: api.Servers}
 	grpcServer := NewGRPCServer(
 		context.Background(), GRPCServer{API: api, HealthChecker: healthchecker})
-	assert.NotNil(t, grpcServer)
-	httpServer := NewHTTPServer(api.Options)
-	assert.NotNil(t, httpServer)
+	require.NotNil(t, grpcServer, "gRPC server should not be nil")
 
+	httpServer := NewHTTPServer(api.Options)
+	require.NotNil(t, httpServer, "HTTP server should not be nil")
+
+	// Start gRPC server with error handling
+	errChan := make(chan error, 1)
 	go func(grpcServer *GRPCServer) {
-		grpcServer.Start()
+		errChan <- func() error {
+			defer func() {
+				if r := recover(); r != nil {
+					errChan <- fmt.Errorf("gRPC server panicked: %v", r)
+				}
+			}()
+			grpcServer.Start()
+			return nil
+		}()
 	}(grpcServer)
 
 	go func(httpServer *HTTPServer) {
 		httpServer.Start()
 	}(httpServer)
 
-	time.Sleep(1 * time.Second) // Wait for the servers to start.
+	// Wait for potential startup errors
+	select {
+	case err := <-errChan:
+		require.NoError(t, err, "gRPC server failed to start")
+	case <-time.After(1 * time.Second): // Wait for the servers to start
+	}
 
 	// Check version via the gRPC server.
 	req, err := http.NewRequestWithContext(
