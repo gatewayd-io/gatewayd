@@ -197,8 +197,6 @@ func NewRaftNode(logger zerolog.Logger, raftConfig config.Raft) (*Node, error) {
 		go node.tryConnectToCluster(raftAddr)
 	}
 
-	go node.monitorLeadership()
-
 	return node, nil
 }
 
@@ -246,39 +244,6 @@ func (n *Node) tryConnectToCluster(localAddress string) error {
 					Msg("Failed to join cluster through peer")
 			}
 		}
-	}
-}
-
-// monitorLeadership checks if the node is the Raft leader and logs state changes.
-func (n *Node) monitorLeadership() {
-	for {
-		if n.raft.State() == raft.Leader {
-			n.Logger.Info().Msg("This node is the Raft leader")
-
-			for _, peer := range n.Peers {
-				// Check if peer already exists in cluster configuration
-				existingConfig := n.raft.GetConfiguration().Configuration()
-				peerExists := false
-				for _, server := range existingConfig.Servers {
-					if server.ID == raft.ServerID(peer.ID) {
-						peerExists = true
-						n.Logger.Debug().Msgf("Peer %s already exists in Raft cluster, skipping", peer.ID)
-						break
-					}
-				}
-				if peerExists {
-					continue
-				}
-				err := n.AddPeer(peer.ID, peer.Address)
-				if err != nil {
-					n.Logger.Error().Err(err).Msgf("Failed to add node %s to Raft cluster", peer.ID)
-				}
-			}
-		} else {
-			n.Logger.Debug().Msg("This node is a Raft follower")
-		}
-
-		time.Sleep(leadershipCheckInterval)
 	}
 }
 
