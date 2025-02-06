@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/gatewayd-io/gatewayd/config"
+	"github.com/gatewayd-io/gatewayd/logging"
 	"github.com/gatewayd-io/gatewayd/metrics"
 	pb "github.com/gatewayd-io/gatewayd/raft/proto"
 	"github.com/hashicorp/raft"
@@ -97,6 +98,10 @@ type Node struct {
 // NewRaftNode creates and initializes a new Raft node.
 func NewRaftNode(logger zerolog.Logger, raftConfig config.Raft) (*Node, error) {
 	config := raft.DefaultConfig()
+
+	// Create HcLogAdapter to wrap zerolog logger
+	hcLogger := logging.NewHcLogAdapter(&logger, "raft")
+	config.Logger = hcLogger
 
 	var err error
 	nodeID := raftConfig.NodeID
