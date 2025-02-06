@@ -79,7 +79,7 @@ func (c *rpcClient) close() {
 }
 
 func (s *rpcServer) AddPeer(ctx context.Context, req *pb.AddPeerRequest) (*pb.AddPeerResponse, error) {
-	err := s.node.AddPeer(req.PeerId, req.PeerAddress)
+	err := s.node.AddPeer(req.PeerId, req.PeerAddress, req.GrpcAddress)
 	if err != nil {
 		return &pb.AddPeerResponse{
 			Success: false,

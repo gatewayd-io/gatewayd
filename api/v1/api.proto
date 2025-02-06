@@ -305,6 +305,7 @@ message PeerInfo {
 message AddPeerRequest {
   string peer_id = 1;
   string address = 2;
+  string grpc_address = 3;
 }
 
 message AddPeerResponse {

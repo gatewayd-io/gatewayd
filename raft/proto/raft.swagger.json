@@ -131,6 +131,9 @@
         },
         "peerAddress": {
           "type": "string"
+        },
+        "grpcAddress": {
+          "type": "string"
         }
       }
     },
