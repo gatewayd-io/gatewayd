@@ -533,3 +533,91 @@ func TestRemovePeerAPI(t *testing.T) {
 		})
 	}
 }
+
+func TestGetPeers(t *testing.T) {
+	tempDir := t.TempDir()
+
+	// Configure test nodes
+	nodeConfig := config.Raft{
+		NodeID:      "testGetPeersNode1",
+		Address:     "127.0.0.1:7879",
+		IsBootstrap: true,
+		Directory:   tempDir,
+		GRPCAddress: "127.0.0.1:7880",
+		Peers:       []config.RaftPeer{},
+	}
+
+	// Initialize node
+	node, err := raft.NewRaftNode(zerolog.New(io.Discard).With().Timestamp().Logger(), nodeConfig)
+	require.NoError(t, err)
+	defer func() {
+		if node != nil {
+			_ = node.Shutdown()
+		}
+	}()
+
+	require.Eventually(t, func() bool {
+		return node.GetState() == hcRaft.Leader
+	}, 10*time.Second, 100*time.Millisecond, "Failed to elect a leader")
+
+	tests := []struct {
+		name    string
+		api     *API
+		wantErr bool
+		errCode codes.Code
+	}{
+		{
+			name: "successful get peers",
+			api: &API{
+				ctx: context.Background(),
+				Options: &Options{
+					Logger:   zerolog.New(io.Discard),
+					RaftNode: node,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "raft node not initialized",
+			api: &API{
+				ctx: context.Background(),
+				Options: &Options{
+					Logger:   zerolog.New(io.Discard),
+					RaftNode: nil,
+				},
+			},
+			wantErr: true,
+			errCode: codes.Unavailable,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			peers, err := tt.api.GetPeers(context.Background(), &emptypb.Empty{})
+
+			if tt.wantErr {
+				require.Error(t, err)
+				st, ok := status.FromError(err)
+				require.True(t, ok)
+				assert.Equal(t, tt.errCode, st.Code())
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, peers)
+
+				// Verify the peers map structure
+				peersMap := peers.AsMap()
+				assert.NotEmpty(t, peersMap)
+
+				// Check that configured peers exist in the response
+				for _, peer := range nodeConfig.Peers {
+					peerData, exists := peersMap[string(peer.ID)].(map[string]any)
+					assert.True(t, exists, "Peer %s should exist in response", peer.ID)
+					if exists {
+						assert.Equal(t, string(peer.ID), peerData["id"])
+						assert.Equal(t, peer.Address, peerData["address"])
+					}
+				}
+			}
+		})
+	}
+}
