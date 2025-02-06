@@ -277,7 +277,7 @@ func (n *Node) getLeaderClient() (pb.RaftServiceClient, error) {
 	return client, nil
 }
 
-func (n *Node) AddPeer(peerID, peerAddr string) error {
+func (n *Node) AddPeer(peerID, peerAddr, grpcAddr string) error {
 	if n.raft.State() != raft.Leader {
 		// Get the leader client
 		client, err := n.getLeaderClient()
@@ -292,6 +292,7 @@ func (n *Node) AddPeer(peerID, peerAddr string) error {
 		resp, err := client.AddPeer(ctx, &pb.AddPeerRequest{
 			PeerId:      peerID,
 			PeerAddress: peerAddr,
+			GrpcAddress: grpcAddr,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to forward AddPeer request: %w", err)
@@ -304,21 +305,28 @@ func (n *Node) AddPeer(peerID, peerAddr string) error {
 		return nil
 	}
 
-	return n.AddPeerInternal(peerID, peerAddr)
+	return n.AddPeerInternal(peerID, peerAddr, grpcAddr)
 }
 
 // AddPeer adds a new peer to the Raft cluster
-func (n *Node) AddPeerInternal(peerID, peerAddress string) error {
+func (n *Node) AddPeerInternal(peerID, peerAddress, grpcAddress string) error {
 	if n.raft.State() != raft.Leader {
 		return errors.New("only the leader can add peers")
 	}
 
+	// Add to Raft cluster
 	future := n.raft.AddVoter(raft.ServerID(peerID), raft.ServerAddress(peerAddress), 0, 0)
 	if err := future.Error(); err != nil {
 		return fmt.Errorf("failed to add peer: %w", err)
 	}
 
-	// Log the addition of the new peer
+	// Update local peers list
+	n.Peers = append(n.Peers, config.RaftPeer{
+		ID:          peerID,
+		Address:     peerAddress,
+		GRPCAddress: grpcAddress,
+	})
+
 	metrics.RaftPeerAdditions.Inc()
 	return nil
 }
@@ -376,7 +384,7 @@ func (n *Node) DiscoverPeers() error {
 	// Example: Adding a discovered peer
 	peerID := "new-peer-id"
 	peerAddress := "new-peer-address"
-	return n.AddPeer(peerID, peerAddress)
+	return n.AddPeer(peerID, peerAddress, "")
 }
 
 // GracefulShutdown gracefully removes the node from the cluster

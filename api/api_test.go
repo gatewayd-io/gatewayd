@@ -621,3 +621,137 @@ func TestGetPeers(t *testing.T) {
 		})
 	}
 }
+
+func TestAddPeer(t *testing.T) {
+	tempDir := t.TempDir()
+
+	// Configure test node
+	nodeConfig := config.Raft{
+		NodeID:      "testAddPeerNode1",
+		Address:     "127.0.0.1:8879",
+		IsBootstrap: true,
+		Directory:   tempDir,
+		GRPCAddress: "127.0.0.1:8880",
+		Peers:       []config.RaftPeer{},
+	}
+
+	// Initialize node
+	node, err := raft.NewRaftNode(zerolog.New(io.Discard).With().Timestamp().Logger(), nodeConfig)
+	require.NoError(t, err)
+	defer func() {
+		if node != nil {
+			_ = node.Shutdown()
+		}
+	}()
+
+	require.Eventually(t, func() bool {
+		return node.GetState() == hcRaft.Leader
+	}, 10*time.Second, 100*time.Millisecond, "Failed to elect a leader")
+
+	tests := []struct {
+		name    string
+		api     *API
+		req     *v1.AddPeerRequest
+		wantErr bool
+		errCode codes.Code
+	}{
+		{
+			name: "successful peer addition",
+			api: &API{
+				ctx: context.Background(),
+				Options: &Options{
+					Logger:   zerolog.New(io.Discard),
+					RaftNode: node,
+				},
+			},
+			req: &v1.AddPeerRequest{
+				PeerId:      "testAddPeerNode2",
+				Address:     "127.0.0.1:8889",
+				GrpcAddress: "127.0.0.1:8890",
+			},
+			wantErr: false,
+		},
+		{
+			name: "raft node not initialized",
+			api: &API{
+				ctx: context.Background(),
+				Options: &Options{
+					Logger:   zerolog.New(io.Discard),
+					RaftNode: nil,
+				},
+			},
+			req: &v1.AddPeerRequest{
+				PeerId:      "test-peer",
+				Address:     "127.0.0.1:8891",
+				GrpcAddress: "127.0.0.1:8892",
+			},
+			wantErr: true,
+			errCode: codes.Unavailable,
+		},
+		{
+			name: "missing peer id",
+			api: &API{
+				ctx: context.Background(),
+				Options: &Options{
+					Logger:   zerolog.New(io.Discard),
+					RaftNode: node,
+				},
+			},
+			req: &v1.AddPeerRequest{
+				Address:     "127.0.0.1:8893",
+				GrpcAddress: "127.0.0.1:8894",
+			},
+			wantErr: true,
+			errCode: codes.InvalidArgument,
+		},
+		{
+			name: "missing address",
+			api: &API{
+				ctx: context.Background(),
+				Options: &Options{
+					Logger:   zerolog.New(io.Discard),
+					RaftNode: node,
+				},
+			},
+			req: &v1.AddPeerRequest{
+				PeerId:      "testAddPeerNode3",
+				GrpcAddress: "127.0.0.1:8896",
+			},
+			wantErr: true,
+			errCode: codes.InvalidArgument,
+		},
+		{
+			name: "missing grpc address",
+			api: &API{
+				ctx: context.Background(),
+				Options: &Options{
+					Logger:   zerolog.New(io.Discard),
+					RaftNode: node,
+				},
+			},
+			req: &v1.AddPeerRequest{
+				PeerId:  "testAddPeerNode4",
+				Address: "127.0.0.1:8897",
+			},
+			wantErr: true,
+			errCode: codes.InvalidArgument,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp, err := tt.api.AddPeer(context.Background(), tt.req)
+
+			if tt.wantErr {
+				require.Error(t, err)
+				st, ok := status.FromError(err)
+				require.True(t, ok)
+				assert.Equal(t, tt.errCode, st.Code())
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, resp)
+				assert.True(t, resp.Success)
+			}
+		})
+	}
+}

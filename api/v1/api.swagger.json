@@ -542,6 +542,9 @@
         },
         "address": {
           "type": "string"
+        },
+        "grpcAddress": {
+          "type": "string"
         }
       }
     },

@@ -52,6 +52,7 @@
 | ----- | ---- | ----- | ----------- |
 | peer_id | [string](#string) |  |  |
 | address | [string](#string) |  |  |
+| grpc_address | [string](#string) |  |  |
 
 
 
@@ -320,6 +321,7 @@ GatewayDAdminAPIService is the administration API of GatewayD.
 | ----- | ---- | ----- | ----------- |
 | peer_id | [string](#string) |  |  |
 | peer_address | [string](#string) |  |  |
+| grpc_address | [string](#string) |  |  |
 
 
 

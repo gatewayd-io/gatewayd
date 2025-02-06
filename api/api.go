@@ -347,11 +347,11 @@ func (a *API) AddPeer(ctx context.Context, req *v1.AddPeerRequest) (*v1.AddPeerR
 		return nil, status.Error(codes.Unavailable, "raft node not initialized")
 	}
 
-	if req.PeerId == "" || req.Address == "" {
-		return nil, status.Error(codes.InvalidArgument, "peer id and address are required")
+	if req.PeerId == "" || req.Address == "" || req.GrpcAddress == "" {
+		return nil, status.Error(codes.InvalidArgument, "peer id, address, and grpc address are required")
 	}
 
-	err := a.Options.RaftNode.AddPeer(req.PeerId, req.Address)
+	err := a.Options.RaftNode.AddPeer(req.PeerId, req.Address, req.GrpcAddress)
 	if err != nil {
 		metrics.APIRequestsErrors.WithLabelValues(
 			"POST", "/v1/raft/peers", codes.Internal.String(),
