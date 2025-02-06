@@ -364,6 +364,7 @@ func (a *API) AddPeer(ctx context.Context, req *v1.AddPeerRequest) (*v1.AddPeerR
 	return &v1.AddPeerResponse{Success: true}, nil
 }
 
+// RemovePeer removes a peer from the raft cluster.
 func (a *API) RemovePeer(ctx context.Context, req *v1.RemovePeerRequest) (*v1.RemovePeerResponse, error) {
 	_, span := otel.Tracer(config.TracerName).Start(a.ctx, "Remove Peer")
 	defer span.End()

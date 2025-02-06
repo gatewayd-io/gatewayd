@@ -2,8 +2,10 @@ package api
 
 import (
 	"context"
+	"io"
 	"regexp"
 	"testing"
+	"time"
 
 	sdkPlugin "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin"
 	pluginV1 "github.com/gatewayd-io/gatewayd-plugin-sdk/plugin/v1"
@@ -13,10 +15,14 @@ import (
 	"github.com/gatewayd-io/gatewayd/network"
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
+	"github.com/gatewayd-io/gatewayd/raft"
 	"github.com/gatewayd-io/gatewayd/testhelpers"
+	hcRaft "github.com/hashicorp/raft"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -388,5 +394,142 @@ func TestGetServers(t *testing.T) {
 		assert.Equal(t, config.DefaultLoadBalancerStrategy, loadBalancerMap["strategy"])
 	} else {
 		t.Errorf("servers.default is not found or not a map")
+	}
+}
+
+func TestRemovePeerAPI(t *testing.T) {
+	tempDir := t.TempDir()
+
+	// Configure three nodes
+	nodeConfigs := []config.Raft{
+		{
+			NodeID:      "testRemovePeerNode1",
+			Address:     "127.0.0.1:6879",
+			IsBootstrap: true,
+			Directory:   tempDir,
+			GRPCAddress: "127.0.0.1:6880",
+			Peers: []config.RaftPeer{
+				{ID: "testRemovePeerNode2", Address: "127.0.0.1:6889", GRPCAddress: "127.0.0.1:6890"},
+				{ID: "testRemovePeerNode3", Address: "127.0.0.1:6891", GRPCAddress: "127.0.0.1:6892"},
+			},
+		},
+		{
+			NodeID:      "testRemovePeerNode2",
+			Address:     "127.0.0.1:6889",
+			IsBootstrap: false,
+			Directory:   tempDir,
+			GRPCAddress: "127.0.0.1:6890",
+			Peers: []config.RaftPeer{
+				{ID: "testRemovePeerNode1", Address: "127.0.0.1:6879", GRPCAddress: "127.0.0.1:6880"},
+				{ID: "testRemovePeerNode3", Address: "127.0.0.1:6891", GRPCAddress: "127.0.0.1:6892"},
+			},
+		},
+		{
+			NodeID:      "testRemovePeerNode3",
+			Address:     "127.0.0.1:6891",
+			IsBootstrap: false,
+			Directory:   tempDir,
+			GRPCAddress: "127.0.0.1:6892",
+			Peers: []config.RaftPeer{
+				{ID: "testRemovePeerNode1", Address: "127.0.0.1:6879", GRPCAddress: "127.0.0.1:6880"},
+				{ID: "testRemovePeerNode2", Address: "127.0.0.1:6889", GRPCAddress: "127.0.0.1:6890"},
+			},
+		},
+	}
+
+	// Start all nodes
+	nodes := make([]*raft.Node, len(nodeConfigs))
+	defer func() {
+		for _, node := range nodes {
+			if node != nil {
+				_ = node.Shutdown()
+			}
+		}
+	}()
+
+	// Initialize nodes
+	for i, cfg := range nodeConfigs {
+		node, err := raft.NewRaftNode(zerolog.New(io.Discard).With().Timestamp().Logger(), cfg)
+		require.NoError(t, err)
+		nodes[i] = node
+	}
+
+	// Wait for cluster to stabilize and leader election
+	require.Eventually(t, func() bool {
+		leaderCount := 0
+		followerCount := 0
+		for _, node := range nodes {
+			if node.GetState() == hcRaft.Leader {
+				leaderCount++
+			}
+			if node.GetState() == hcRaft.Follower {
+				followerCount++
+			}
+		}
+		return leaderCount == 1 && followerCount == 2
+	}, 10*time.Second, 100*time.Millisecond, "Failed to elect a leader")
+
+	tests := []struct {
+		name    string
+		api     *API
+		req     *v1.RemovePeerRequest
+		wantErr bool
+		errCode codes.Code
+	}{
+		{
+			name: "successful peer removal",
+			api: &API{
+				ctx: context.Background(),
+				Options: &Options{
+					Logger:   zerolog.New(io.Discard),
+					RaftNode: nodes[0],
+				},
+			},
+			req:     &v1.RemovePeerRequest{PeerId: "testRemovePeerNode1"},
+			wantErr: false,
+		},
+		{
+			name: "raft node not initialized",
+			api: &API{
+				ctx: context.Background(),
+				Options: &Options{
+					Logger:   zerolog.New(io.Discard),
+					RaftNode: nil,
+				},
+			},
+			req:     &v1.RemovePeerRequest{PeerId: "test-peer"},
+			wantErr: true,
+			errCode: codes.Unavailable,
+		},
+		{
+			name: "raft error during removal",
+			api: &API{
+				ctx: context.Background(),
+				Options: &Options{
+					Logger:   zerolog.New(io.Discard),
+					RaftNode: nodes[0],
+				},
+			},
+			req:     &v1.RemovePeerRequest{PeerId: "not-existing-peer"},
+			wantErr: true,
+			errCode: codes.Internal,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp, err := tt.api.RemovePeer(context.Background(), tt.req)
+
+			if tt.wantErr {
+				require.Error(t, err)
+				st, ok := status.FromError(err)
+				require.True(t, ok)
+				assert.Equal(t, tt.errCode, st.Code())
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, resp)
+				assert.True(t, resp.Success)
+			}
+		})
 	}
 }
