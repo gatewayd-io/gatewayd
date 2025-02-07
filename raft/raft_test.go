@@ -1,12 +1,14 @@
 package raft
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/json"
 	"encoding/pem"
+	"fmt"
 	"io"
 	"math/big"
 	"net"
@@ -724,7 +726,7 @@ func TestRemovePeer(t *testing.T) {
 
 	// Test removing a follower node
 	followerID := nodeConfigs[1].NodeID // Second node
-	err := leaderNode.RemovePeer(followerID)
+	err := leaderNode.RemovePeer(context.Background(), followerID)
 	require.NoError(t, err, "Failed to remove follower node")
 
 	// Wait for the removal to take effect and verify
@@ -741,7 +743,7 @@ func TestRemovePeer(t *testing.T) {
 
 	// Test removing the leader node
 	leaderID := leaderNode.config.LocalID
-	err = leaderNode.RemovePeer(string(leaderID))
+	err = leaderNode.RemovePeer(context.Background(), string(leaderID))
 	require.NoError(t, err, "Failed to remove leader node")
 
 	// Wait for new leader election and verify cluster size
@@ -768,7 +770,8 @@ func TestRemovePeer(t *testing.T) {
 
 	finalConfig := newLeaderNode.raft.GetConfiguration().Configuration()
 	require.Equal(t, 1, len(finalConfig.Servers), "Final cluster should have 1 node")
-	require.NotEqual(t, raft.ServerID(leaderID), finalConfig.Servers[0].ID, "Old leader should not be in final configuration")
+	require.NotEqual(t, leaderID, finalConfig.Servers[0].ID,
+		"Old leader should not be in final configuration")
 }
 
 func TestSecureGRPCConfiguration(t *testing.T) {
@@ -847,17 +850,17 @@ func TestSecureGRPCConfiguration(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			node, err := NewRaftNode(logger, tt.raftConfig)
-			if tt.wantErr {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			node, err := NewRaftNode(logger, testCase.raftConfig)
+			if testCase.wantErr {
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), tt.errMsg)
+				assert.Contains(t, err.Error(), testCase.errMsg)
 				assert.Nil(t, node)
 			} else {
 				require.NoError(t, err)
 				require.NotNil(t, node)
-				assert.Equal(t, tt.raftConfig.IsSecure, node.grpcIsSecure)
+				assert.Equal(t, testCase.raftConfig.IsSecure, node.grpcIsSecure)
 
 				// Cleanup
 				err = node.Shutdown()
@@ -867,12 +870,12 @@ func TestSecureGRPCConfiguration(t *testing.T) {
 	}
 }
 
-// generateTestCertificate creates a self-signed certificate for testing
+// generateTestCertificate creates a self-signed certificate for testing.
 func generateTestCertificate(certFile, keyFile string) error {
 	// Generate private key
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to generate private key: %w", err)
 	}
 
 	// Create certificate template
@@ -893,27 +896,31 @@ func generateTestCertificate(certFile, keyFile string) error {
 	// Create certificate
 	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &privateKey.PublicKey, privateKey)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create certificate: %w", err)
 	}
 
 	// Write certificate to file
 	certOut, err := os.Create(certFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create cert file: %w", err)
 	}
 	defer certOut.Close()
 	if err := pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes}); err != nil {
-		return err
+		return fmt.Errorf("failed to encode certificate: %w", err)
 	}
 
 	// Write private key to file
 	keyOut, err := os.Create(keyFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create key file: %w", err)
 	}
 	defer keyOut.Close()
-	return pem.Encode(keyOut, &pem.Block{
+	if err := pem.Encode(keyOut, &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
-	})
+	}); err != nil {
+		return fmt.Errorf("failed to encode private key: %w", err)
+	}
+
+	return nil
 }

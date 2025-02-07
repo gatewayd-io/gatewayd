@@ -194,7 +194,11 @@ func NewRaftNode(logger zerolog.Logger, raftConfig config.Raft) (*Node, error) {
 		})
 		node.raft.BootstrapCluster(configuration)
 	} else {
-		go node.tryConnectToCluster(raftAddr)
+		go func() {
+			if err := node.tryConnectToCluster(raftAddr); err != nil {
+				node.Logger.Error().Err(err).Msg("failed to connect to cluster")
+			}
+		}()
 	}
 
 	return node, nil
@@ -211,7 +215,7 @@ func (n *Node) tryConnectToCluster(localAddress string) error {
 		select {
 		case <-timeoutCh:
 			n.Logger.Error().Msg("timeout while trying to connect to cluster")
-			return fmt.Errorf("timeout while trying to connect to cluster")
+			return errors.New("timeout while trying to connect to cluster")
 		case <-ticker.C:
 			for _, peer := range n.Peers {
 				client, err := n.rpcClient.getClient(peer.GRPCAddress)
@@ -252,7 +256,7 @@ func (n *Node) GetPeers() []raft.Server {
 	return peers
 }
 
-// getLeaderClient is a helper function that returns a gRPC client connected to the current leader
+// getLeaderClient is a helper function that returns a gRPC client connected to the current leader.
 func (n *Node) getLeaderClient() (pb.RaftServiceClient, error) {
 	// Find the leader's gRPC address
 	_, leaderID := n.raft.LeaderWithID()
@@ -277,17 +281,13 @@ func (n *Node) getLeaderClient() (pb.RaftServiceClient, error) {
 	return client, nil
 }
 
-func (n *Node) AddPeer(peerID, peerAddr, grpcAddr string) error {
+func (n *Node) AddPeer(ctx context.Context, peerID, peerAddr, grpcAddr string) error {
 	if n.raft.State() != raft.Leader {
 		// Get the leader client
 		client, err := n.getLeaderClient()
 		if err != nil {
 			return err
 		}
-
-		// Forward the AddPeer request to the leader
-		ctx, cancel := context.WithTimeout(context.Background(), transportTimeout)
-		defer cancel()
 
 		resp, err := client.AddPeer(ctx, &pb.AddPeerRequest{
 			PeerId:      peerID,
@@ -308,7 +308,7 @@ func (n *Node) AddPeer(peerID, peerAddr, grpcAddr string) error {
 	return n.AddPeerInternal(peerID, peerAddr, grpcAddr)
 }
 
-// AddPeer adds a new peer to the Raft cluster
+// AddPeer adds a new peer to the Raft cluster.
 func (n *Node) AddPeerInternal(peerID, peerAddress, grpcAddress string) error {
 	if n.raft.State() != raft.Leader {
 		return errors.New("only the leader can add peers")
@@ -331,17 +331,13 @@ func (n *Node) AddPeerInternal(peerID, peerAddress, grpcAddress string) error {
 	return nil
 }
 
-func (n *Node) RemovePeer(peerID string) error {
+func (n *Node) RemovePeer(ctx context.Context, peerID string) error {
 	if n.raft.State() != raft.Leader {
 		// Get the leader client
 		client, err := n.getLeaderClient()
 		if err != nil {
 			return err
 		}
-
-		// Forward the RemovePeer request to the leader
-		ctx, cancel := context.WithTimeout(context.Background(), transportTimeout)
-		defer cancel()
 
 		resp, err := client.RemovePeer(ctx, &pb.RemovePeerRequest{
 			PeerId: peerID,
@@ -360,7 +356,7 @@ func (n *Node) RemovePeer(peerID string) error {
 	return n.RemovePeerInternal(peerID)
 }
 
-// RemovePeer removes a peer from the Raft cluster
+// RemovePeer removes a peer from the Raft cluster.
 func (n *Node) RemovePeerInternal(peerID string) error {
 	if n.raft.State() != raft.Leader {
 		return errors.New("only the leader can remove peers")
@@ -376,7 +372,7 @@ func (n *Node) RemovePeerInternal(peerID string) error {
 	return nil
 }
 
-// DiscoverPeers discovers new peers and adds them to the cluster
+// DiscoverPeers discovers new peers and adds them to the cluster.
 func (n *Node) DiscoverPeers() error {
 	// Implement peer discovery logic here
 	// For example, you can use a service registry or DNS to discover new peers
@@ -384,10 +380,10 @@ func (n *Node) DiscoverPeers() error {
 	// Example: Adding a discovered peer
 	peerID := "new-peer-id"
 	peerAddress := "new-peer-address"
-	return n.AddPeer(peerID, peerAddress, "")
+	return n.AddPeer(context.Background(), peerID, peerAddress, "")
 }
 
-// GracefulShutdown gracefully removes the node from the cluster
+// GracefulShutdown gracefully removes the node from the cluster.
 func (n *Node) GracefulShutdown() error {
 	if n.raft.State() != raft.Leader {
 		return errors.New("only the leader can initiate graceful shutdown")
@@ -395,7 +391,7 @@ func (n *Node) GracefulShutdown() error {
 
 	// Remove the current node from the cluster
 	peerID := string(n.config.LocalID)
-	return n.RemovePeer(peerID)
+	return n.RemovePeer(context.Background(), peerID)
 }
 
 // Apply is the public method that handles forwarding if necessary.
@@ -715,7 +711,7 @@ func (n *Node) startGRPCServer(certFile, keyFile string) error {
 	// Configure TLS if secure mode is enabled
 	if n.grpcIsSecure {
 		if certFile == "" || keyFile == "" {
-			return fmt.Errorf("TLS certificate and key files are required when secure mode is enabled")
+			return errors.New("TLS certificate and key files are required when secure mode is enabled")
 		}
 
 		creds, err := credentials.NewServerTLSFromFile(certFile, keyFile)
@@ -826,7 +822,7 @@ func boolToFloat(val bool) float64 {
 	return 0
 }
 
-// StopGRPCServer stops the gRPC server
+// StopGRPCServer stops the gRPC server.
 func (n *Node) StopGRPCServer() {
 	if n.rpcServer != nil {
 		n.rpcServer.GracefulStop()
