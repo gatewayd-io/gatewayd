@@ -79,7 +79,7 @@ func (c *rpcClient) close() {
 }
 
 func (s *rpcServer) AddPeer(ctx context.Context, req *pb.AddPeerRequest) (*pb.AddPeerResponse, error) {
-	err := s.node.AddPeer(req.PeerId, req.PeerAddress, req.GrpcAddress)
+	err := s.node.AddPeer(ctx, req.GetPeerId(), req.GetPeerAddress(), req.GetGrpcAddress())
 	if err != nil {
 		return &pb.AddPeerResponse{
 			Success: false,
@@ -91,9 +91,9 @@ func (s *rpcServer) AddPeer(ctx context.Context, req *pb.AddPeerRequest) (*pb.Ad
 	}, nil
 }
 
-// RemovePeer handles the RemovePeer gRPC request
-func (n *rpcServer) RemovePeer(ctx context.Context, req *pb.RemovePeerRequest) (*pb.RemovePeerResponse, error) {
-	err := n.node.RemovePeer(req.PeerId)
+// RemovePeer handles the RemovePeer gRPC request.
+func (s *rpcServer) RemovePeer(ctx context.Context, req *pb.RemovePeerRequest) (*pb.RemovePeerResponse, error) {
+	err := s.node.RemovePeer(ctx, req.GetPeerId())
 	if err != nil {
 		return &pb.RemovePeerResponse{
 			Success: false,

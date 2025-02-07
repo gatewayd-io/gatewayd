@@ -314,7 +314,7 @@ func (a *API) GetPeers(context.Context, *emptypb.Empty) (*structpb.Struct, error
 	defer span.End()
 
 	if a.Options.RaftNode == nil {
-		return nil, status.Error(codes.Unavailable, "raft node not initialized")
+		return nil, status.Errorf(codes.Unavailable, "raft node not initialized")
 	}
 
 	peers := a.Options.RaftNode.GetPeers()
@@ -340,24 +340,24 @@ func (a *API) GetPeers(context.Context, *emptypb.Empty) (*structpb.Struct, error
 
 // AddPeer adds a new peer to the raft cluster.
 func (a *API) AddPeer(ctx context.Context, req *v1.AddPeerRequest) (*v1.AddPeerResponse, error) {
-	_, span := otel.Tracer(config.TracerName).Start(a.ctx, "Add Peer")
+	_, span := otel.Tracer(config.TracerName).Start(ctx, "Add Peer")
 	defer span.End()
 
 	if a.Options.RaftNode == nil {
-		return nil, status.Error(codes.Unavailable, "raft node not initialized")
+		return nil, status.Errorf(codes.Unavailable, "AddPeer: raft node not initialized")
 	}
 
-	if req.PeerId == "" || req.Address == "" || req.GrpcAddress == "" {
-		return nil, status.Error(codes.InvalidArgument, "peer id, address, and grpc address are required")
+	if req.GetPeerId() == "" || req.GetAddress() == "" || req.GetGrpcAddress() == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "AddPeer: peer id, address, and grpc address are required")
 	}
 
-	err := a.Options.RaftNode.AddPeer(req.PeerId, req.Address, req.GrpcAddress)
+	err := a.Options.RaftNode.AddPeer(ctx, req.GetPeerId(), req.GetAddress(), req.GetGrpcAddress())
 	if err != nil {
 		metrics.APIRequestsErrors.WithLabelValues(
 			"POST", "/v1/raft/peers", codes.Internal.String(),
 		).Inc()
 		a.Options.Logger.Err(err).Msg("Failed to add peer")
-		return nil, status.Errorf(codes.Internal, "failed to add peer: %v", err)
+		return nil, status.Errorf(codes.Internal, "AddPeer: failed to add peer: %v", err)
 	}
 
 	metrics.APIRequests.WithLabelValues("POST", "/v1/raft/peers").Inc()
@@ -366,20 +366,24 @@ func (a *API) AddPeer(ctx context.Context, req *v1.AddPeerRequest) (*v1.AddPeerR
 
 // RemovePeer removes a peer from the raft cluster.
 func (a *API) RemovePeer(ctx context.Context, req *v1.RemovePeerRequest) (*v1.RemovePeerResponse, error) {
-	_, span := otel.Tracer(config.TracerName).Start(a.ctx, "Remove Peer")
+	_, span := otel.Tracer(config.TracerName).Start(ctx, "Remove Peer")
 	defer span.End()
 
 	if a.Options.RaftNode == nil {
-		return nil, status.Error(codes.Unavailable, "raft node not initialized")
+		return nil, status.Errorf(codes.Unavailable, "RemovePeer: raft node not initialized")
 	}
 
-	err := a.Options.RaftNode.RemovePeer(req.PeerId)
+	if req.GetPeerId() == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "RemovePeer: peer id is required")
+	}
+
+	err := a.Options.RaftNode.RemovePeer(ctx, req.GetPeerId())
 	if err != nil {
 		metrics.APIRequestsErrors.WithLabelValues(
 			"DELETE", "/v1/raft/peers", codes.Internal.String(),
 		).Inc()
 		a.Options.Logger.Err(err).Msg("Failed to remove peer")
-		return nil, status.Errorf(codes.Internal, "failed to remove peer: %v", err)
+		return nil, status.Errorf(codes.Internal, "RemovePeer: failed to remove peer: %v", err)
 	}
 
 	metrics.APIRequests.WithLabelValues("DELETE", "/v1/raft/peers").Inc()
