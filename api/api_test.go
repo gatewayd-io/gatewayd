@@ -516,19 +516,19 @@ func TestRemovePeerAPI(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			resp, err := tt.api.RemovePeer(context.Background(), tt.req)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			resp, err := testCase.api.RemovePeer(context.Background(), testCase.req)
 
-			if tt.wantErr {
+			if testCase.wantErr {
 				require.Error(t, err)
 				st, ok := status.FromError(err)
 				require.True(t, ok)
-				assert.Equal(t, tt.errCode, st.Code())
+				assert.Equal(t, testCase.errCode, st.Code())
 			} else {
 				require.NoError(t, err)
 				require.NotNil(t, resp)
-				assert.True(t, resp.Success)
+				assert.True(t, resp.GetSuccess())
 			}
 		})
 	}
@@ -591,15 +591,15 @@ func TestGetPeers(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			peers, err := tt.api.GetPeers(context.Background(), &emptypb.Empty{})
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			peers, err := testCase.api.GetPeers(context.Background(), &emptypb.Empty{})
 
-			if tt.wantErr {
+			if testCase.wantErr {
 				require.Error(t, err)
 				st, ok := status.FromError(err)
 				require.True(t, ok)
-				assert.Equal(t, tt.errCode, st.Code())
+				assert.Equal(t, testCase.errCode, st.Code())
 			} else {
 				require.NoError(t, err)
 				require.NotNil(t, peers)
@@ -610,10 +610,10 @@ func TestGetPeers(t *testing.T) {
 
 				// Check that configured peers exist in the response
 				for _, peer := range nodeConfig.Peers {
-					peerData, exists := peersMap[string(peer.ID)].(map[string]any)
+					peerData, exists := peersMap[peer.ID].(map[string]any)
 					assert.True(t, exists, "Peer %s should exist in response", peer.ID)
 					if exists {
-						assert.Equal(t, string(peer.ID), peerData["id"])
+						assert.Equal(t, peer.ID, peerData["id"])
 						assert.Equal(t, peer.Address, peerData["address"])
 					}
 				}
@@ -738,19 +738,19 @@ func TestAddPeer(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			resp, err := tt.api.AddPeer(context.Background(), tt.req)
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			resp, err := testCase.api.AddPeer(context.Background(), testCase.req)
 
-			if tt.wantErr {
+			if testCase.wantErr {
 				require.Error(t, err)
 				st, ok := status.FromError(err)
 				require.True(t, ok)
-				assert.Equal(t, tt.errCode, st.Code())
+				assert.Equal(t, testCase.errCode, st.Code())
 			} else {
 				require.NoError(t, err)
 				require.NotNil(t, resp)
-				assert.True(t, resp.Success)
+				assert.True(t, resp.GetSuccess())
 			}
 		})
 	}
