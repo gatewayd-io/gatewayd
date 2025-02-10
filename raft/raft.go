@@ -97,11 +97,11 @@ type Node struct {
 
 // NewRaftNode creates and initializes a new Raft node.
 func NewRaftNode(logger zerolog.Logger, raftConfig config.Raft) (*Node, error) {
-	config := raft.DefaultConfig()
+	RaftNodeConfig := raft.DefaultConfig()
 
 	// Create HcLogAdapter to wrap zerolog logger
 	hcLogger := logging.NewHcLogAdapter(&logger, "raft")
-	config.Logger = hcLogger
+	RaftNodeConfig.Logger = hcLogger
 
 	var err error
 	nodeID := raftConfig.NodeID
@@ -112,7 +112,7 @@ func NewRaftNode(logger zerolog.Logger, raftConfig config.Raft) (*Node, error) {
 		}
 	}
 	raftAddr := raftConfig.Address
-	config.LocalID = raft.ServerID(nodeID)
+	RaftNodeConfig.LocalID = raft.ServerID(nodeID)
 	raftDir := filepath.Join(raftConfig.Directory, nodeID)
 	err = os.MkdirAll(raftDir, os.ModePerm)
 	if err != nil {
@@ -121,6 +121,15 @@ func NewRaftNode(logger zerolog.Logger, raftConfig config.Raft) (*Node, error) {
 
 	// Create the FSM
 	fsm := NewFSM()
+
+	//Add all peers to FSM if not already present
+	fsm.mu.Lock()
+	for _, peer := range raftConfig.Peers {
+		if _, exists := fsm.raftPeers[peer.ID]; !exists {
+			fsm.raftPeers[peer.ID] = peer
+		}
+	}
+	fsm.mu.Unlock()
 
 	// Create the log store and stable store
 	logStore, err := raftboltdb.NewBoltStore(filepath.Join(raftDir, "raft-log.db"))
@@ -150,14 +159,14 @@ func NewRaftNode(logger zerolog.Logger, raftConfig config.Raft) (*Node, error) {
 	}
 
 	// Create the Raft node
-	raftNode, err := raft.NewRaft(config, fsm, logStore, stableStore, snapshotStore, transport)
+	raftNode, err := raft.NewRaft(RaftNodeConfig, fsm, logStore, stableStore, snapshotStore, transport)
 	if err != nil {
 		return nil, fmt.Errorf("error creating Raft: %w", err)
 	}
 
 	node := &Node{
 		raft:          raftNode,
-		config:        config,
+		config:        RaftNodeConfig,
 		Fsm:           fsm,
 		logStore:      logStore,
 		stableStore:   stableStore,
@@ -188,10 +197,24 @@ func NewRaftNode(logger zerolog.Logger, raftConfig config.Raft) (*Node, error) {
 				Address: raft.ServerAddress(peer.Address),
 			}
 		}
+
+		selfPeer := config.RaftPeer{
+			ID:          string(node.config.LocalID),
+			Address:     raftAddr,
+			GRPCAddress: node.grpcAddr,
+		}
 		configuration.Servers = append(configuration.Servers, raft.Server{
-			ID:      config.LocalID,
+			ID:      RaftNodeConfig.LocalID,
 			Address: transport.LocalAddr(),
 		})
+
+		// Add self to both configuration and FSM
+		fsm.mu.Lock()
+		if _, exists := fsm.raftPeers[string(node.config.LocalID)]; !exists {
+			fsm.raftPeers[string(node.config.LocalID)] = selfPeer
+		}
+		fsm.mu.Unlock()
+
 		node.raft.BootstrapCluster(configuration)
 	} else {
 		go func() {
@@ -232,6 +255,7 @@ func (n *Node) tryConnectToCluster(localAddress string) error {
 				resp, err := client.AddPeer(ctx, &pb.AddPeerRequest{
 					PeerId:      string(n.config.LocalID),
 					PeerAddress: localAddress,
+					GrpcAddress: n.grpcAddr,
 				})
 				cancel()
 

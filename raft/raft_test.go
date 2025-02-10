@@ -724,6 +724,11 @@ func TestRemovePeer(t *testing.T) {
 	initialConfig := leaderNode.raft.GetConfiguration().Configuration()
 	require.Equal(t, 3, len(initialConfig.Servers), "Initial cluster should have 3 nodes")
 
+	// also need to verify that the peers are in the FSM
+	require.Eventually(t, func() bool {
+		return len(leaderNode.Fsm.raftPeers) == 3
+	}, 10*time.Second, 100*time.Millisecond, "Peers not found in FSM")
+
 	// Test removing a follower node
 	followerID := nodeConfigs[1].NodeID // Second node
 	err := leaderNode.RemovePeer(context.Background(), followerID)
@@ -923,4 +928,120 @@ func generateTestCertificate(certFile, keyFile string) error {
 	}
 
 	return nil
+}
+
+func TestFSMPeerOperations(t *testing.T) {
+	logger := setupTestLogger()
+	tempDir := t.TempDir()
+
+	nodeConfigs := []config.Raft{
+		{
+			NodeID:      "testFSMPeerNode1",
+			Address:     "127.0.0.1:6779",
+			IsBootstrap: true,
+			Directory:   tempDir,
+			GRPCAddress: "127.0.0.1:6780",
+			Peers:       []config.RaftPeer{},
+		},
+		{
+			NodeID:      "testFSMPeerNode2",
+			Address:     "127.0.0.1:6789",
+			IsBootstrap: false,
+			Directory:   tempDir,
+			GRPCAddress: "127.0.0.1:6790",
+			Peers: []config.RaftPeer{
+				{ID: "testFSMPeerNode1", Address: "127.0.0.1:6779", GRPCAddress: "127.0.0.1:6780"},
+			},
+		},
+		{
+			NodeID:      "testFSMPeerNode3",
+			Address:     "127.0.0.1:6799",
+			IsBootstrap: false,
+			Directory:   tempDir,
+			GRPCAddress: "127.0.0.1:6800",
+			Peers: []config.RaftPeer{
+				{ID: "testFSMPeerNode1", Address: "127.0.0.1:6779", GRPCAddress: "127.0.0.1:6780"},
+			},
+		},
+	}
+
+	// Create nodes and set up deferred cleanup
+	nodes := make([]*Node, 0, len(nodeConfigs))
+	defer func() {
+		for _, node := range nodes {
+			if node != nil {
+				_ = node.Shutdown()
+			}
+		}
+	}()
+
+	// Initialize node1 (bootstrap node)
+	node1, err := NewRaftNode(logger, nodeConfigs[0])
+	require.NoError(t, err)
+	nodes = append(nodes, node1)
+
+	// Wait for node1 to become leader
+	require.Eventually(t, func() bool {
+		return node1.GetState() == raft.Leader
+	}, 10*time.Second, 100*time.Millisecond, "Node 1 failed to become leader")
+
+	// Initialize node2
+	node2, err := NewRaftNode(logger, nodeConfigs[1])
+	require.NoError(t, err)
+	nodes = append(nodes, node2)
+
+	// Wait for node2 to join the cluster
+	require.Eventually(t, func() bool {
+		return node2.raft.Leader() != "" && len(node2.Fsm.raftPeers) >= 2
+	}, 10*time.Second, 100*time.Millisecond, "Node 2 failed to join the cluster")
+
+	// Initialize node3
+	node3, err := NewRaftNode(logger, nodeConfigs[2])
+	require.NoError(t, err)
+	nodes = append(nodes, node3)
+
+	// Wait for node3 to join the cluster
+	require.Eventually(t, func() bool {
+		return node3.raft.Leader() != "" && len(node3.Fsm.raftPeers) >= 3
+	}, 10*time.Second, 100*time.Millisecond, "Node 3 failed to join the cluster")
+
+	// Wait for FSM state synchronization
+	require.Eventually(t, func() bool {
+		return len(node1.Fsm.raftPeers) == 3 &&
+			len(node2.Fsm.raftPeers) == 3 &&
+			len(node3.Fsm.raftPeers) == 3
+	}, 10*time.Second, 100*time.Millisecond, "Failed to synchronize FSM state across nodes")
+
+	// Verify peer information is consistent across all nodes
+	for _, node := range nodes {
+		peers := node.Fsm.raftPeers
+		require.Equal(t, 3, len(peers), "Node should have exactly 3 peers")
+
+		// Verify each peer has the correct information
+		expectedPeers := map[string]bool{
+			"testFSMPeerNode1": false,
+			"testFSMPeerNode2": false,
+			"testFSMPeerNode3": false,
+		}
+
+		for peerID, peer := range peers {
+			require.Contains(t, expectedPeers, peerID, "Unexpected peer ID found")
+			require.NotEmpty(t, peer.Address, "Peer address should not be empty")
+			require.NotEmpty(t, peer.GRPCAddress, "Peer gRPC address should not be empty")
+			expectedPeers[peerID] = true
+		}
+
+		// Verify all expected peers were found
+		for peerID, found := range expectedPeers {
+			require.True(t, found, "Expected peer %s not found in FSM state", peerID)
+		}
+	}
+
+	// Verify leader is consistent across all nodes
+	leaderAddr := node1.raft.Leader()
+	require.NotEmpty(t, leaderAddr, "Leader address should not be empty")
+	for _, node := range nodes[1:] {
+		require.Equal(t, leaderAddr, node.raft.Leader(),
+			"Leader address should be consistent across all nodes")
+	}
 }
