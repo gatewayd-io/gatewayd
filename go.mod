@@ -13,7 +13,7 @@ require (
 	github.com/getsentry/sentry-go v0.31.1
 	github.com/go-co-op/gocron v1.37.0
 	github.com/google/go-github/v68 v68.0.0
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.0
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.1
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-plugin v1.6.3
 	github.com/hashicorp/raft v1.7.2
@@ -39,10 +39,10 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.34.0
 	go.opentelemetry.io/otel/sdk v1.34.0
 	go.opentelemetry.io/otel/trace v1.34.0
-	golang.org/x/text v0.21.0
-	google.golang.org/genproto/googleapis/api v0.0.0-20250124145028-65684f501c47
+	golang.org/x/text v0.22.0
+	google.golang.org/genproto/googleapis/api v0.0.0-20250204164813-702378808489
 	google.golang.org/grpc v1.70.0
-	google.golang.org/protobuf v1.36.4
+	google.golang.org/protobuf v1.36.5
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -156,9 +156,9 @@ require (
 	go.uber.org/atomic v1.11.0 // indirect
 	golang.org/x/crypto v0.32.0 // indirect
 	golang.org/x/net v0.34.0 // indirect
-	golang.org/x/sync v0.10.0 // indirect
+	golang.org/x/sync v0.11.0 // indirect
 	golang.org/x/sys v0.29.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250124145028-65684f501c47 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250204164813-702378808489 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	oras.land/oras-go/v2 v2.5.0 // indirect
 )
