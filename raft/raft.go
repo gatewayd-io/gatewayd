@@ -30,15 +30,18 @@ const (
 	CommandAddRoundRobinNext      = "ADD_ROUND_ROBIN_NEXT"
 	CommandUpdateWeightedRR       = "UPDATE_WEIGHTED_RR"
 	CommandUpdateWeightedRRBatch  = "UPDATE_WEIGHTED_RR_BATCH"
+	CommandAddPeer                = "ADD_PEER"
+	CommandRemovePeer             = "REMOVE_PEER"
 	RaftLeaderState               = raft.Leader
 	LeaderElectionTimeout         = 3 * time.Second
-	maxSnapshots                  = 3                // Maximum number of snapshots to retain
-	maxPool                       = 3                // Maximum number of connections to pool
-	transportTimeout              = 10 * time.Second // Timeout for transport operations
-	leadershipCheckInterval       = 10 * time.Second // Interval for checking leadership status
-	ApplyTimeout                  = 2 * time.Second  // Timeout for applying commands
-	peerConnectionInterval        = 5 * time.Second  // Interval between peer connection attempts
-	clusterJoinTimeout            = 5 * time.Minute  // Total timeout for trying to join cluster
+	maxSnapshots                  = 3                      // Maximum number of snapshots to retain
+	maxPool                       = 3                      // Maximum number of connections to pool
+	transportTimeout              = 10 * time.Second       // Timeout for transport operations
+	leadershipCheckInterval       = 10 * time.Second       // Interval for checking leadership status
+	ApplyTimeout                  = 2 * time.Second        // Timeout for applying commands
+	peerConnectionInterval        = 5 * time.Second        // Interval between peer connection attempts
+	clusterJoinTimeout            = 5 * time.Minute        // Total timeout for trying to join cluster
+	leaderWaitRetryInterval       = 100 * time.Millisecond // Interval for retrying leader wait
 )
 
 // Command represents a general command structure for all operations.
@@ -76,6 +79,13 @@ type WeightedRRPayload struct {
 type WeightedRRBatchPayload struct {
 	GroupName string                   `json:"groupName"`
 	Updates   map[string]WeightedProxy `json:"updates"`
+}
+
+// PeerPayload represents the payload for peer operations.
+type PeerPayload struct {
+	ID          string `json:"id"`
+	Address     string `json:"address"`
+	GRPCAddress string `json:"grpcAddress"`
 }
 
 // Node represents a node in the Raft cluster.
@@ -282,27 +292,48 @@ func (n *Node) GetPeers() []raft.Server {
 
 // getLeaderClient is a helper function that returns a gRPC client connected to the current leader.
 func (n *Node) getLeaderClient() (pb.RaftServiceClient, error) {
-	// Find the leader's gRPC address
-	_, leaderID := n.raft.LeaderWithID()
-	if leaderID == "" {
-		return nil, errors.New("no leader available")
+	// Wait for leader with timeout
+	leaderID, err := n.waitForLeader()
+	if err != nil {
+		return nil, err
 	}
 
-	var leaderGrpcAddr string
-	for _, peer := range n.Peers {
-		if raft.ServerID(peer.ID) == leaderID {
-			leaderGrpcAddr = peer.GRPCAddress
-			break
-		}
+	n.Fsm.mu.RLock()
+	peer, exists := n.Fsm.raftPeers[string(leaderID)]
+	n.Fsm.mu.RUnlock()
+
+	if !exists {
+		return nil, fmt.Errorf("leader %s not found in peer list", leaderID)
 	}
 
 	// Get the RPC client for the leader
-	client, err := n.rpcClient.getClient(leaderGrpcAddr)
+	client, err := n.rpcClient.getClient(peer.GRPCAddress)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get client for leader: %w", err)
 	}
 
 	return client, nil
+}
+
+// waitForLeader waits for a leader to be elected with a timeout
+func (n *Node) waitForLeader() (raft.ServerID, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), transportTimeout)
+	defer cancel()
+
+	ticker := time.NewTicker(leaderWaitRetryInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return "", fmt.Errorf("timeout waiting for leader: %w", ctx.Err())
+		case <-ticker.C:
+			_, leaderID := n.raft.LeaderWithID()
+			if leaderID != "" {
+				return leaderID, nil
+			}
+		}
+	}
 }
 
 func (n *Node) AddPeer(ctx context.Context, peerID, peerAddr, grpcAddr string) error {
@@ -338,29 +369,72 @@ func (n *Node) AddPeerInternal(peerID, peerAddress, grpcAddress string) error {
 		return errors.New("only the leader can add peers")
 	}
 
+	// there is a chance that that leader changed to the new peer, so need to update FSM raftPeers
+	n.Fsm.mu.Lock()
+	if _, exists := n.Fsm.raftPeers[peerID]; !exists {
+		n.Fsm.raftPeers[peerID] = config.RaftPeer{
+			ID:          peerID,
+			Address:     peerAddress,
+			GRPCAddress: grpcAddress,
+		}
+	}
+	n.Fsm.mu.Unlock()
+
+	// Create and apply peer command
+	cmd := Command{
+		Type: CommandAddPeer,
+		Payload: PeerPayload{
+			ID:          peerID,
+			Address:     peerAddress,
+			GRPCAddress: grpcAddress,
+		},
+	}
+
+	data, err := json.Marshal(cmd)
+	if err != nil {
+		return fmt.Errorf("failed to marshal peer command: %w", err)
+	}
+
+	if err := n.Apply(data, ApplyTimeout); err != nil {
+		return fmt.Errorf("failed to apply peer command: %w", err)
+	}
+
 	// Add to Raft cluster
 	future := n.raft.AddVoter(raft.ServerID(peerID), raft.ServerAddress(peerAddress), 0, 0)
 	if err := future.Error(); err != nil {
+		// need to remove peer from FSM by applying remove peer command
+		cmd := Command{
+			Type: CommandRemovePeer,
+			Payload: PeerPayload{
+				ID: peerID,
+			},
+		}
+
+		data, err := json.Marshal(cmd)
+		if err != nil {
+			return fmt.Errorf("failed to marshal peer command: %w", err)
+		}
+
+		if err := n.Apply(data, ApplyTimeout); err != nil {
+			return fmt.Errorf("failed to apply peer command: %w", err)
+		}
 		return fmt.Errorf("failed to add peer: %w", err)
 	}
-
-	// Update local peers list
-	n.Peers = append(n.Peers, config.RaftPeer{
-		ID:          peerID,
-		Address:     peerAddress,
-		GRPCAddress: grpcAddress,
-	})
 
 	metrics.RaftPeerAdditions.Inc()
 	return nil
 }
 
 func (n *Node) RemovePeer(ctx context.Context, peerID string) error {
+	_, leaderID := n.raft.LeaderWithID()
+	if leaderID == "" {
+		return errors.New("no leader available")
+	}
+
 	if n.raft.State() != raft.Leader {
-		// Get the leader client
 		client, err := n.getLeaderClient()
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to get leader client: %w", err)
 		}
 
 		resp, err := client.RemovePeer(ctx, &pb.RemovePeerRequest{
@@ -386,12 +460,56 @@ func (n *Node) RemovePeerInternal(peerID string) error {
 		return errors.New("only the leader can remove peers")
 	}
 
+	// get peer address and grpc address from FSM
+	n.Fsm.mu.RLock()
+	peer, exists := n.Fsm.raftPeers[peerID]
+	n.Fsm.mu.RUnlock()
+
+	if !exists {
+		return fmt.Errorf("peer %s not found in FSM", peerID)
+	}
+
+	// send remove peer command to peers
+	// need to remove peer from FSM before removing from Raft to handle that leader want to remove itself
+	cmd := Command{
+		Type: CommandRemovePeer,
+		Payload: PeerPayload{
+			ID: peerID,
+		},
+	}
+
+	data, err := json.Marshal(cmd)
+	if err != nil {
+		return fmt.Errorf("failed to marshal peer command: %w", err)
+	}
+
+	if err := n.Apply(data, ApplyTimeout); err != nil {
+		return fmt.Errorf("failed to apply peer command: %w", err)
+	}
+
 	future := n.raft.RemoveServer(raft.ServerID(peerID), 0, 0)
 	if err := future.Error(); err != nil {
+		// need to add again peer to FSM by applying add peer command
+		cmd := Command{
+			Type: CommandAddPeer,
+			Payload: PeerPayload{
+				ID:          peerID,
+				Address:     peer.Address,
+				GRPCAddress: peer.GRPCAddress,
+			},
+		}
+
+		data, err := json.Marshal(cmd)
+		if err != nil {
+			return fmt.Errorf("failed to marshal peer command: %w", err)
+		}
+
+		if err := n.Apply(data, ApplyTimeout); err != nil {
+			return fmt.Errorf("failed to apply peer command: %w", err)
+		}
 		return fmt.Errorf("failed to remove peer: %w", err)
 	}
 
-	// Log the removal of the peer
 	metrics.RaftPeerRemovals.Inc()
 	return nil
 }
@@ -440,47 +558,43 @@ func (n *Node) applyInternal(data []byte, timeout time.Duration) error {
 // a gRPC connection to forward the request. The method handles timeouts and returns any errors
 // that occur during forwarding.
 func (n *Node) forwardToLeader(data []byte, timeout time.Duration) error {
-	leaderAddr, leaderID := n.raft.LeaderWithID()
-	if leaderID == "" {
-		return errors.New("no leader available")
-	}
-
-	n.Logger.Debug().
-		Str("leader_id", string(leaderID)).
-		Str("leader_addr", string(leaderAddr)).
-		Msg("forwarding request to leader")
-
-	var leaderGrpcAddr string
-	for _, peer := range n.Peers {
-		if raft.ServerID(peer.ID) == leaderID {
-			leaderGrpcAddr = peer.GRPCAddress
-			break
-		}
-	}
-	// Get the RPC client for the leader
-	client, err := n.rpcClient.getClient(leaderGrpcAddr)
-	if err != nil {
-		return fmt.Errorf("failed to get client for leader: %w", err)
-	}
-
-	// Create context with timeout
+	// Create deadline-based context for overall operation
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	// Forward the request
-	resp, err := client.ForwardApply(ctx, &pb.ForwardApplyRequest{
-		Data:      data,
-		TimeoutMs: timeout.Milliseconds(),
-	})
-	if err != nil {
-		return fmt.Errorf("failed to forward request: %w", err)
-	}
+	// Try to get leader client with retries until timeout
+	var client pb.RaftServiceClient
+	var err error
+	retryInterval := 100 * time.Millisecond
 
-	if !resp.GetSuccess() {
-		return fmt.Errorf("leader failed to apply: %s", resp.GetError())
-	}
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("timeout while waiting for leader: %w", ctx.Err())
+		default:
+			client, err = n.getLeaderClient()
+			if err == nil {
+				// Successfully got leader client, proceed with forwarding
+				resp, err := client.ForwardApply(ctx, &pb.ForwardApplyRequest{
+					Data:      data,
+					TimeoutMs: timeout.Milliseconds(),
+				})
+				if err != nil {
+					return fmt.Errorf("failed to forward request: %w", err)
+				}
 
-	return nil
+				if !resp.GetSuccess() {
+					return fmt.Errorf("leader failed to apply: %s", resp.GetError())
+				}
+
+				return nil
+			}
+
+			// Log retry attempt at debug level
+			n.Logger.Debug().Err(err).Msg("Failed to get leader client, retrying...")
+			time.Sleep(retryInterval)
+		}
+	}
 }
 
 // Shutdown gracefully stops the Node by stopping the gRPC server, closing RPC client connections,
@@ -546,6 +660,7 @@ func NewFSM() *FSM {
 		lbHashToBlockName: make(map[string]string),
 		roundRobinIndex:   make(map[string]*atomic.Uint32),
 		weightedRRStates:  make(map[string]map[string]WeightedProxy),
+		raftPeers:         make(map[string]config.RaftPeer),
 	}
 }
 
@@ -605,6 +720,31 @@ func (f *FSM) Apply(log *raft.Log) interface{} {
 		for proxyName, weight := range payload.Updates {
 			f.weightedRRStates[payload.GroupName][proxyName] = weight
 		}
+		return nil
+	case CommandAddPeer:
+		f.mu.Lock()
+		defer f.mu.Unlock()
+		payload, err := convertPayload[PeerPayload](cmd.Payload)
+		if err != nil {
+			return fmt.Errorf("failed to convert payload: %w", err)
+		}
+		if f.raftPeers == nil {
+			f.raftPeers = make(map[string]config.RaftPeer)
+		}
+		f.raftPeers[payload.ID] = config.RaftPeer{
+			ID:          payload.ID,
+			Address:     payload.Address,
+			GRPCAddress: payload.GRPCAddress,
+		}
+		return nil
+	case CommandRemovePeer:
+		f.mu.Lock()
+		defer f.mu.Unlock()
+		payload, err := convertPayload[PeerPayload](cmd.Payload)
+		if err != nil {
+			return fmt.Errorf("failed to convert payload: %w", err)
+		}
+		delete(f.raftPeers, payload.ID)
 		return nil
 	default:
 		return fmt.Errorf("unknown command type: %s", cmd.Type)
