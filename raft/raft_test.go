@@ -161,7 +161,7 @@ func TestRaftNodeApply(t *testing.T) {
 	data, err := json.Marshal(cmd)
 	require.NoError(t, err)
 
-	err = node.Apply(data, time.Second)
+	err = node.Apply(context.Background(), data, time.Second)
 	// Note: This will likely fail as the node isn't a leader
 	assert.Error(t, err)
 }
@@ -252,7 +252,7 @@ func TestRaftLeadershipAndFollowers(t *testing.T) {
 	require.NoError(t, err)
 
 	// Apply command through leader
-	err = leaderNode.Apply(data, 5*time.Second)
+	err = leaderNode.Apply(context.Background(), data, 5*time.Second)
 	require.NoError(t, err, "Failed to apply command through leader")
 
 	// Wait for replication

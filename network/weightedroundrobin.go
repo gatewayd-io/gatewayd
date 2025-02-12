@@ -1,6 +1,7 @@
 package network
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"sync"
@@ -107,7 +108,7 @@ func (r *WeightedRoundRobin) NextProxy(_ IConnWrapper) (IProxy, *gerr.GatewayDEr
 	if err != nil {
 		return nil, gerr.ErrNoProxiesAvailable.Wrap(err)
 	}
-	if err := r.raftNode.Apply(data, raft.ApplyTimeout); err != nil {
+	if err := r.raftNode.Apply(context.Background(), data, raft.ApplyTimeout); err != nil {
 		return nil, gerr.ErrNoProxiesAvailable.Wrap(err)
 	}
 

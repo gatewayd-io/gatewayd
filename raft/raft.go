@@ -42,6 +42,7 @@ const (
 	peerConnectionInterval        = 5 * time.Second        // Interval between peer connection attempts
 	clusterJoinTimeout            = 5 * time.Minute        // Total timeout for trying to join cluster
 	leaderWaitRetryInterval       = 100 * time.Millisecond // Interval for retrying leader wait
+	forwardRetryInterval          = 100 * time.Millisecond // Interval for retrying forward requests
 )
 
 // Command represents a general command structure for all operations.
@@ -132,7 +133,7 @@ func NewRaftNode(logger zerolog.Logger, raftConfig config.Raft) (*Node, error) {
 	// Create the FSM
 	fsm := NewFSM()
 
-	//Add all peers to FSM if not already present
+	// Add all peers to FSM if not already present
 	fsm.mu.Lock()
 	for _, peer := range raftConfig.Peers {
 		if _, exists := fsm.raftPeers[peer.ID]; !exists {
@@ -315,7 +316,7 @@ func (n *Node) getLeaderClient() (pb.RaftServiceClient, error) {
 	return client, nil
 }
 
-// waitForLeader waits for a leader to be elected with a timeout
+// waitForLeader waits for a leader to be elected with a timeout.
 func (n *Node) waitForLeader() (raft.ServerID, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), transportTimeout)
 	defer cancel()
@@ -336,6 +337,7 @@ func (n *Node) waitForLeader() (raft.ServerID, error) {
 	}
 }
 
+// AddPeer adds a new peer to the Raft cluster.
 func (n *Node) AddPeer(ctx context.Context, peerID, peerAddr, grpcAddr string) error {
 	if n.raft.State() != raft.Leader {
 		// Get the leader client
@@ -360,16 +362,16 @@ func (n *Node) AddPeer(ctx context.Context, peerID, peerAddr, grpcAddr string) e
 		return nil
 	}
 
-	return n.AddPeerInternal(peerID, peerAddr, grpcAddr)
+	return n.AddPeerInternal(ctx, peerID, peerAddr, grpcAddr)
 }
 
-// AddPeer adds a new peer to the Raft cluster.
-func (n *Node) AddPeerInternal(peerID, peerAddress, grpcAddress string) error {
+// AddPeerInternal adds a new peer to the Raft cluster.
+func (n *Node) AddPeerInternal(ctx context.Context, peerID, peerAddress, grpcAddress string) error {
 	if n.raft.State() != raft.Leader {
 		return errors.New("only the leader can add peers")
 	}
 
-	// there is a chance that that leader changed to the new peer, so need to update FSM raftPeers
+	// there is a chance that leader changed to the new peer, so need to update FSM raftPeers
 	n.Fsm.mu.Lock()
 	if _, exists := n.Fsm.raftPeers[peerID]; !exists {
 		n.Fsm.raftPeers[peerID] = config.RaftPeer{
@@ -395,7 +397,7 @@ func (n *Node) AddPeerInternal(peerID, peerAddress, grpcAddress string) error {
 		return fmt.Errorf("failed to marshal peer command: %w", err)
 	}
 
-	if err := n.Apply(data, ApplyTimeout); err != nil {
+	if err := n.Apply(ctx, data, ApplyTimeout); err != nil {
 		return fmt.Errorf("failed to apply peer command: %w", err)
 	}
 
@@ -415,7 +417,7 @@ func (n *Node) AddPeerInternal(peerID, peerAddress, grpcAddress string) error {
 			return fmt.Errorf("failed to marshal peer command: %w", err)
 		}
 
-		if err := n.Apply(data, ApplyTimeout); err != nil {
+		if err := n.Apply(ctx, data, ApplyTimeout); err != nil {
 			return fmt.Errorf("failed to apply peer command: %w", err)
 		}
 		return fmt.Errorf("failed to add peer: %w", err)
@@ -425,6 +427,7 @@ func (n *Node) AddPeerInternal(peerID, peerAddress, grpcAddress string) error {
 	return nil
 }
 
+// RemovePeer removes a peer from the Raft cluster.
 func (n *Node) RemovePeer(ctx context.Context, peerID string) error {
 	_, leaderID := n.raft.LeaderWithID()
 	if leaderID == "" {
@@ -451,11 +454,11 @@ func (n *Node) RemovePeer(ctx context.Context, peerID string) error {
 		return nil
 	}
 
-	return n.RemovePeerInternal(peerID)
+	return n.RemovePeerInternal(ctx, peerID)
 }
 
-// RemovePeer removes a peer from the Raft cluster.
-func (n *Node) RemovePeerInternal(peerID string) error {
+// RemovePeerInternal removes a peer from the Raft cluster.
+func (n *Node) RemovePeerInternal(ctx context.Context, peerID string) error {
 	if n.raft.State() != raft.Leader {
 		return errors.New("only the leader can remove peers")
 	}
@@ -483,7 +486,7 @@ func (n *Node) RemovePeerInternal(peerID string) error {
 		return fmt.Errorf("failed to marshal peer command: %w", err)
 	}
 
-	if err := n.Apply(data, ApplyTimeout); err != nil {
+	if err := n.Apply(ctx, data, ApplyTimeout); err != nil {
 		return fmt.Errorf("failed to apply peer command: %w", err)
 	}
 
@@ -504,7 +507,7 @@ func (n *Node) RemovePeerInternal(peerID string) error {
 			return fmt.Errorf("failed to marshal peer command: %w", err)
 		}
 
-		if err := n.Apply(data, ApplyTimeout); err != nil {
+		if err := n.Apply(ctx, data, ApplyTimeout); err != nil {
 			return fmt.Errorf("failed to apply peer command: %w", err)
 		}
 		return fmt.Errorf("failed to remove peer: %w", err)
@@ -537,15 +540,15 @@ func (n *Node) GracefulShutdown() error {
 }
 
 // Apply is the public method that handles forwarding if necessary.
-func (n *Node) Apply(data []byte, timeout time.Duration) error {
+func (n *Node) Apply(ctx context.Context, data []byte, timeout time.Duration) error {
 	if n.raft.State() != raft.Leader {
-		return n.forwardToLeader(data, timeout)
+		return n.forwardToLeader(ctx, data, timeout)
 	}
-	return n.applyInternal(data, timeout)
+	return n.applyInternal(ctx, data, timeout)
 }
 
 // applyInternal is the internal method that actually applies the data.
-func (n *Node) applyInternal(data []byte, timeout time.Duration) error {
+func (n *Node) applyInternal(_ context.Context, data []byte, timeout time.Duration) error {
 	future := n.raft.Apply(data, timeout)
 	if err := future.Error(); err != nil {
 		return fmt.Errorf("failed to apply log entry: %w", err)
@@ -557,15 +560,15 @@ func (n *Node) applyInternal(data []byte, timeout time.Duration) error {
 // the leader's gRPC address by matching the leader ID with the peer list. Then it establishes
 // a gRPC connection to forward the request. The method handles timeouts and returns any errors
 // that occur during forwarding.
-func (n *Node) forwardToLeader(data []byte, timeout time.Duration) error {
+func (n *Node) forwardToLeader(ctx context.Context, data []byte, timeout time.Duration) error {
 	// Create deadline-based context for overall operation
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	// Try to get leader client with retries until timeout
 	var client pb.RaftServiceClient
 	var err error
-	retryInterval := 100 * time.Millisecond
+	retryInterval := forwardRetryInterval
 
 	for {
 		select {

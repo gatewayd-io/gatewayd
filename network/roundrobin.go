@@ -1,6 +1,7 @@
 package network
 
 import (
+	"context"
 	"encoding/json"
 	"math"
 	"sync"
@@ -52,7 +53,7 @@ func (r *RoundRobin) NextProxy(_ IConnWrapper) (IProxy, *gerr.GatewayDError) {
 	}
 
 	// Apply through Raft
-	if err := r.server.RaftNode.Apply(data, raft.ApplyTimeout); err != nil {
+	if err := r.server.RaftNode.Apply(context.Background(), data, raft.ApplyTimeout); err != nil {
 		return nil, gerr.ErrNoProxiesAvailable.Wrap(err)
 	}
 
