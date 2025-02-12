@@ -1,6 +1,7 @@
 package network
 
 import (
+	"context"
 	"encoding/json"
 	"net"
 	"sync"
@@ -82,7 +83,7 @@ func TestConsistentHashNextProxyUseSourceIpExists(t *testing.T) {
 	require.NoError(t, marshalErr)
 
 	// Apply the command through Raft
-	if err := server.RaftNode.Apply(cmdBytes, 10*time.Second); err != nil {
+	if err := server.RaftNode.Apply(context.Background(), cmdBytes, 10*time.Second); err != nil {
 		require.NoError(t, err)
 	}
 
