@@ -25,6 +25,7 @@ service RaftService {
       body: "*"
     };
   }
+  rpc GetPeerInfo(GetPeerInfoRequest) returns (GetPeerInfoResponse);
 }
 
 message ForwardApplyRequest {
@@ -55,4 +56,13 @@ message RemovePeerRequest {
 message RemovePeerResponse {
   bool success = 1;
   string error = 2;
+}
+
+message GetPeerInfoRequest {
+  string peer_id = 1;
+}
+
+message GetPeerInfoResponse {
+  bool exists = 1;
+  string grpc_address = 2;
 }
