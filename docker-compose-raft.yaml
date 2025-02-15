@@ -119,7 +119,7 @@ services:
       - GATEWAYD_CLIENTS_DEFAULT_WRITES_ADDRESS=write-postgres:5432
       - GATEWAYD_CLIENTS_DEFAULT_READS_ADDRESS=read-postgres:5432
       - GATEWAYD_RAFT_NODEID=node2
-      - GATEWAYD_RAFT_ISBOOTSTRAP=true
+      - GATEWAYD_RAFT_ISBOOTSTRAP=false
       - GATEWAYD_RAFT_ADDRESS=gatewayd-2:2223
       - GATEWAYD_RAFT_GRPCADDRESS=gatewayd-2:50051
       - GATEWAYD_RAFT_PEERS=[{"id":"node1","address":"gatewayd-1:2223","grpcAddress":"gatewayd-1:50051"},{"id":"node3","address":"gatewayd-3:2223","grpcAddress":"gatewayd-3:50051"}]
