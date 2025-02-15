@@ -14,6 +14,7 @@ import (
 	"github.com/gatewayd-io/gatewayd/plugin"
 	"github.com/gatewayd-io/gatewayd/pool"
 	"github.com/gatewayd-io/gatewayd/raft"
+	hcraft "github.com/hashicorp/raft"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/otel"
 	"google.golang.org/grpc/codes"
@@ -319,12 +320,32 @@ func (a *API) GetPeers(context.Context, *emptypb.Empty) (*structpb.Struct, error
 
 	peers := a.Options.RaftNode.GetPeers()
 	peerMap := make(map[string]any)
+
+	// Get current leader ID for comparison
+	_, leaderID := a.Options.RaftNode.GetState()
+
 	for _, peer := range peers {
+		// Determine peer status
+		var status string
+		switch {
+		case string(peer.ID) == string(leaderID):
+			status = "Leader"
+		case peer.Suffrage == hcraft.Voter:
+			status = "Follower"
+		case peer.Suffrage == hcraft.Nonvoter:
+			status = "NonVoter"
+		default:
+			status = "Unknown"
+		}
+
 		peerMap[string(peer.ID)] = map[string]any{
-			"id":      string(peer.ID),
-			"address": string(peer.Address),
+			"id":       string(peer.ID),
+			"address":  string(peer.Address),
+			"status":   status,
+			"suffrage": peer.Suffrage.String(),
 		}
 	}
+
 	raftPeers, err := structpb.NewStruct(peerMap)
 	if err != nil {
 		metrics.APIRequestsErrors.WithLabelValues(

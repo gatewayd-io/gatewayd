@@ -865,11 +865,6 @@ func (f *FSMSnapshot) Persist(sink raft.SnapshotSink) error {
 
 func (f *FSMSnapshot) Release() {}
 
-// GetState returns the current Raft state.
-func (n *Node) GetState() raft.RaftState {
-	return n.raft.State()
-}
-
 // startRPCServer starts a gRPC server on the configured address to handle Raft RPC requests.
 // It returns an error if the server fails to start listening on the configured address.
 func (n *Node) startGRPCServer(certFile, keyFile string) error {
@@ -995,3 +990,11 @@ func (n *Node) StopGRPCServer() {
 		n.rpcServer.GracefulStop()
 	}
 }
+
+// // GetState returns the current Raft state and leader ID.
+func (n *Node) GetState() (raft.RaftState, raft.ServerID) {
+	state := n.raft.State()
+	_, leaderID := n.raft.LeaderWithID()
+	return state, leaderID
+}
+

@@ -70,13 +70,15 @@ func NewTestRaftNode(t *testing.T) (*TestRaftHelper, error) {
 	// Wait for the node to become leader
 	timeout := time.Now().Add(raft.LeaderElectionTimeout)
 	for time.Now().Before(timeout) {
-		if node.GetState() == raft.RaftLeaderState {
+		state, _ := node.GetState()
+		if state == raft.RaftLeaderState {
 			break
 		}
 		time.Sleep(pollInterval)
 	}
 
-	if node.GetState() != raft.RaftLeaderState {
+	state, _ := node.GetState()
+	if state != raft.RaftLeaderState {
 		return nil, errors.New("timeout waiting for node to become leader")
 	}
 
