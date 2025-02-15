@@ -43,6 +43,7 @@ const (
 	clusterJoinTimeout            = 5 * time.Minute        // Total timeout for trying to join cluster
 	leaderWaitRetryInterval       = 100 * time.Millisecond // Interval for retrying leader wait
 	forwardRetryInterval          = 100 * time.Millisecond // Interval for retrying forward requests
+	peerSyncInterval              = 30 * time.Second       // Interval for peer synchronization checks
 )
 
 // Command represents a general command structure for all operations.
@@ -197,6 +198,9 @@ func NewRaftNode(logger zerolog.Logger, raftConfig config.Raft) (*Node, error) {
 		return nil, fmt.Errorf("failed to start RPC server: %w", err)
 	}
 
+	ctx := context.Background()
+	node.StartPeerSynchronizer(ctx)
+
 	// Handle bootstrapping
 	if raftConfig.IsBootstrap {
 		configuration := raft.Configuration{
@@ -228,6 +232,12 @@ func NewRaftNode(logger zerolog.Logger, raftConfig config.Raft) (*Node, error) {
 
 		node.raft.BootstrapCluster(configuration)
 	} else {
+		// if peers not exists skip tryConnectToCluster
+		if len(node.Peers) == 0 {
+			node.Logger.Info().Msg("no peers found, skipping cluster connection")
+			return node, nil
+		}
+
 		go func() {
 			if err := node.tryConnectToCluster(raftAddr); err != nil {
 				node.Logger.Error().Err(err).Msg("failed to connect to cluster")
@@ -998,3 +1008,112 @@ func (n *Node) GetState() (raft.RaftState, raft.ServerID) {
 	return state, leaderID
 }
 
+// StartPeerSynchronizer starts a goroutine that synchronizes peers between Raft and FSM
+func (n *Node) StartPeerSynchronizer(ctx context.Context) {
+	go func() {
+		ticker := time.NewTicker(peerSyncInterval)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				n.Logger.Info().Msg("Stopping peer synchronizer")
+				return
+			case <-ticker.C:
+				if err := n.syncPeers(ctx); err != nil {
+					n.Logger.Error().Err(err).Msg("Failed to synchronize peers")
+				}
+			}
+		}
+	}()
+}
+
+// syncPeers synchronizes peers between Raft configuration and FSM
+func (n *Node) syncPeers(ctx context.Context) error {
+	n.Logger.Info().Msg("Test syncPeers")
+	// Get current Raft peers
+	raftPeers := n.GetPeers()
+	raftPeerMap := make(map[string]raft.Server)
+	for _, peer := range raftPeers {
+		raftPeerMap[string(peer.ID)] = peer
+	}
+
+	// Get FSM peers
+	n.Fsm.mu.RLock()
+	fsmPeerMap := make(map[string]config.RaftPeer)
+	for id, peer := range n.Fsm.raftPeers {
+		fsmPeerMap[id] = peer
+	}
+	n.Fsm.mu.RUnlock()
+
+	// Check for peers in Raft but not in FSM
+	for id, raftPeer := range raftPeerMap {
+		if _, exists := fsmPeerMap[id]; !exists {
+			n.Logger.Info().Str("peer_id", id).Msg("Found peer in Raft but not in FSM, querying other peers")
+			if err := n.queryPeerInfo(ctx, id, string(raftPeer.Address)); err != nil {
+				n.Logger.Error().Err(err).Str("peer_id", id).Msg("Failed to query peer info")
+			}
+		}
+	}
+
+	// Check for peers in FSM but not in Raft
+	for id := range fsmPeerMap {
+		if _, exists := raftPeerMap[id]; !exists {
+			n.Logger.Info().Str("peer_id", id).Msg("Found peer in FSM but not in Raft, removing from FSM")
+			// remove peer from FSM
+			n.Fsm.mu.Lock()
+			delete(n.Fsm.raftPeers, id)
+			n.Fsm.mu.Unlock()
+		}
+	}
+
+	return nil
+}
+
+// queryPeerInfo queries other peers for information about an unknown peer
+func (n *Node) queryPeerInfo(ctx context.Context, peerID, peerAddr string) error {
+	n.Fsm.mu.RLock()
+	peers := make([]config.RaftPeer, 0, len(n.Fsm.raftPeers))
+	for _, peer := range n.Fsm.raftPeers {
+		if peer.ID != peerID && peer.ID != string(n.config.LocalID) {
+			peers = append(peers, peer)
+		}
+	}
+	n.Fsm.mu.RUnlock()
+
+	for _, peer := range peers {
+		client, err := n.rpcClient.getClient(peer.GRPCAddress)
+		if err != nil {
+			n.Logger.Debug().
+				Err(err).
+				Str("peer_id", peer.ID).
+				Str("grpc_address", peer.GRPCAddress).
+				Msg("Failed to get client for peer")
+			continue
+		}
+
+		resp, err := client.GetPeerInfo(ctx, &pb.GetPeerInfoRequest{
+			PeerId: peerID,
+		})
+		if err != nil {
+			n.Logger.Debug().
+				Err(err).
+				Str("peer_id", peer.ID).
+				Msg("Failed to get peer info")
+			continue
+		}
+
+		if resp.GetExists() {
+			n.Fsm.mu.Lock()
+			n.Fsm.raftPeers[peerID] = config.RaftPeer{
+				ID:          peerID,
+				Address:     peerAddr,
+				GRPCAddress: resp.GetGrpcAddress(),
+			}
+			n.Fsm.mu.Unlock()
+			return nil
+		}
+	}
+
+	return fmt.Errorf("no peers had information about peer %s", peerID)
+}

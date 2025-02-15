@@ -172,6 +172,17 @@
         }
       }
     },
+    "raftGetPeerInfoResponse": {
+      "type": "object",
+      "properties": {
+        "exists": {
+          "type": "boolean"
+        },
+        "grpcAddress": {
+          "type": "string"
+        }
+      }
+    },
     "raftRemovePeerRequest": {
       "type": "object",
       "properties": {
