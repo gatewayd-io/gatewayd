@@ -527,17 +527,6 @@ func (n *Node) RemovePeerInternal(ctx context.Context, peerID string) error {
 	return nil
 }
 
-// DiscoverPeers discovers new peers and adds them to the cluster.
-func (n *Node) DiscoverPeers() error {
-	// Implement peer discovery logic here
-	// For example, you can use a service registry or DNS to discover new peers
-
-	// Example: Adding a discovered peer
-	peerID := "new-peer-id"
-	peerAddress := "new-peer-address"
-	return n.AddPeer(context.Background(), peerID, peerAddress, "")
-}
-
 // GracefulShutdown gracefully removes the node from the cluster.
 func (n *Node) GracefulShutdown() error {
 	if n.raft.State() != raft.Leader {
