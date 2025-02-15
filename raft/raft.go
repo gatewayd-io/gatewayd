@@ -997,7 +997,7 @@ func (n *Node) GetState() (raft.RaftState, raft.ServerID) {
 	return state, leaderID
 }
 
-// StartPeerSynchronizer starts a goroutine that synchronizes peers between Raft and FSM
+// StartPeerSynchronizer starts a goroutine that synchronizes peers between Raft and FSM.
 func (n *Node) StartPeerSynchronizer(ctx context.Context) {
 	go func() {
 		ticker := time.NewTicker(peerSyncInterval)
@@ -1009,17 +1009,14 @@ func (n *Node) StartPeerSynchronizer(ctx context.Context) {
 				n.Logger.Info().Msg("Stopping peer synchronizer")
 				return
 			case <-ticker.C:
-				if err := n.syncPeers(ctx); err != nil {
-					n.Logger.Error().Err(err).Msg("Failed to synchronize peers")
-				}
+				n.syncPeers(ctx)
 			}
 		}
 	}()
 }
 
-// syncPeers synchronizes peers between Raft configuration and FSM
-func (n *Node) syncPeers(ctx context.Context) error {
-	n.Logger.Info().Msg("Test syncPeers")
+// syncPeers synchronizes peers between Raft configuration and FSM.
+func (n *Node) syncPeers(ctx context.Context) {
 	// Get current Raft peers
 	raftPeers := n.GetPeers()
 	raftPeerMap := make(map[string]raft.Server)
@@ -1055,11 +1052,9 @@ func (n *Node) syncPeers(ctx context.Context) error {
 			n.Fsm.mu.Unlock()
 		}
 	}
-
-	return nil
 }
 
-// queryPeerInfo queries other peers for information about an unknown peer
+// queryPeerInfo queries other peers for information about an unknown peer.
 func (n *Node) queryPeerInfo(ctx context.Context, peerID, peerAddr string) error {
 	n.Fsm.mu.RLock()
 	peers := make([]config.RaftPeer, 0, len(n.Fsm.raftPeers))

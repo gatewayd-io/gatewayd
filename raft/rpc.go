@@ -106,9 +106,9 @@ func (s *rpcServer) RemovePeer(ctx context.Context, req *pb.RemovePeerRequest) (
 	}, nil
 }
 
-func (s *rpcServer) GetPeerInfo(ctx context.Context, req *pb.GetPeerInfoRequest) (*pb.GetPeerInfoResponse, error) {
+func (s *rpcServer) GetPeerInfo(_ context.Context, req *pb.GetPeerInfoRequest) (*pb.GetPeerInfoResponse, error) {
 	s.node.Fsm.mu.RLock()
-	peer, exists := s.node.Fsm.raftPeers[req.PeerId]
+	peer, exists := s.node.Fsm.raftPeers[req.GetPeerId()]
 	s.node.Fsm.mu.RUnlock()
 
 	return &pb.GetPeerInfoResponse{
