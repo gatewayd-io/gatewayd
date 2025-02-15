@@ -225,7 +225,8 @@ func TestRaftLeadershipAndFollowers(t *testing.T) {
 	leaderCount := 0
 	var leaderNode *Node
 	for _, node := range nodes {
-		if node.GetState() == raft.Leader {
+		state, _ := node.GetState()
+		if state == raft.Leader {
 			leaderCount++
 			leaderNode = node
 		}
@@ -236,7 +237,8 @@ func TestRaftLeadershipAndFollowers(t *testing.T) {
 	// Test 2: Verify that other nodes are followers
 	for _, node := range nodes {
 		if node != leaderNode {
-			assert.Equal(t, raft.Follower, node.GetState(), "Expected non-leader nodes to be followers")
+			state, _ := node.GetState()
+			assert.Equal(t, raft.Follower, state, "Expected non-leader nodes to be followers")
 		}
 	}
 
@@ -275,7 +277,8 @@ func TestRaftLeadershipAndFollowers(t *testing.T) {
 	// Verify new leader is elected among remaining nodes
 	newLeaderCount := 0
 	for _, node := range nodes {
-		if node != leaderNode && node.GetState() == raft.Leader {
+		state, _ := node.GetState()
+		if node != leaderNode && state == raft.Leader {
 			newLeaderCount++
 		}
 	}
@@ -509,7 +512,8 @@ func TestGetHealthStatus(t *testing.T) {
 	time.Sleep(3 * time.Second)
 
 	// Test 1: Check health status when node1 is the leader
-	if node1.GetState() == raft.Leader {
+	state, _ := node1.GetState()
+	if state == raft.Leader {
 		healthStatus := node1.GetHealthStatus()
 		assert.True(t, healthStatus.IsHealthy, "Leader node should be healthy")
 		assert.True(t, healthStatus.IsLeader, "Node should be the leader")
@@ -519,7 +523,8 @@ func TestGetHealthStatus(t *testing.T) {
 	}
 
 	// Test 2: Check health status when node2 is a follower
-	if node2.GetState() == raft.Follower {
+	state, _ = node2.GetState()
+	if state == raft.Follower {
 		healthStatus := node2.GetHealthStatus()
 		assert.True(t, healthStatus.IsHealthy, "Follower node should be healthy")
 		assert.False(t, healthStatus.IsLeader, "Node should not be the leader")
@@ -703,7 +708,8 @@ func TestRemovePeer(t *testing.T) {
 	require.Eventually(t, func() bool {
 		leaderCount := 0
 		for _, node := range nodes {
-			if node.GetState() == raft.Leader {
+			state, _ := node.GetState()
+			if state == raft.Leader {
 				leaderCount++
 			}
 		}
@@ -713,7 +719,8 @@ func TestRemovePeer(t *testing.T) {
 	// Find the leader node
 	var leaderNode *Node
 	for _, node := range nodes {
-		if node.GetState() == raft.Leader {
+		state, _ := node.GetState()
+		if state == raft.Leader {
 			leaderNode = node
 			break
 		}
@@ -755,7 +762,8 @@ func TestRemovePeer(t *testing.T) {
 	require.Eventually(t, func() bool {
 		// Check remaining node's configuration
 		for _, node := range nodes {
-			if node.GetState() == raft.Leader {
+			state, _ := node.GetState()
+			if state == raft.Leader {
 				config := node.raft.GetConfiguration().Configuration()
 				return len(config.Servers) == 1
 			}
@@ -766,7 +774,8 @@ func TestRemovePeer(t *testing.T) {
 	// Verify the final state
 	var newLeaderNode *Node
 	for _, node := range nodes {
-		if node.GetState() == raft.Leader {
+		state, _ := node.GetState()
+		if state == raft.Leader {
 			newLeaderNode = node
 			break
 		}
@@ -982,7 +991,8 @@ func TestFSMPeerOperations(t *testing.T) {
 
 	// Wait for node1 to become leader
 	require.Eventually(t, func() bool {
-		return node1.GetState() == raft.Leader
+		state, _ := node1.GetState()
+		return state == raft.Leader
 	}, 10*time.Second, 100*time.Millisecond, "Node 1 failed to become leader")
 
 	// Initialize node2

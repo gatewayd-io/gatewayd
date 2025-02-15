@@ -459,10 +459,11 @@ func TestRemovePeerAPI(t *testing.T) {
 		leaderCount := 0
 		followerCount := 0
 		for _, node := range nodes {
-			if node.GetState() == hcRaft.Leader {
+			state, _ := node.GetState()
+			if state == hcRaft.Leader {
 				leaderCount++
 			}
-			if node.GetState() == hcRaft.Follower {
+			if state == hcRaft.Follower {
 				followerCount++
 			}
 		}
@@ -557,7 +558,8 @@ func TestGetPeers(t *testing.T) {
 	}()
 
 	require.Eventually(t, func() bool {
-		return node.GetState() == hcRaft.Leader
+		state, _ := node.GetState()
+		return state == hcRaft.Leader
 	}, 10*time.Second, 100*time.Millisecond, "Failed to elect a leader")
 
 	tests := []struct {
@@ -645,7 +647,8 @@ func TestAddPeer(t *testing.T) {
 	}()
 
 	require.Eventually(t, func() bool {
-		return node.GetState() == hcRaft.Leader
+		state, _ := node.GetState()
+		return state == hcRaft.Leader
 	}, 10*time.Second, 100*time.Millisecond, "Failed to elect a leader")
 
 	tests := []struct {
