@@ -81,13 +81,20 @@ func (c *rpcClient) close() {
 
 // AddPeer handles the AddPeer gRPC request.
 func (s *rpcServer) AddPeer(ctx context.Context, req *pb.AddPeerRequest) (*pb.AddPeerResponse, error) {
-	err := s.node.AddPeer(ctx, req.GetPeerId(), req.GetPeerAddress(), req.GetGrpcAddress())
-	if err != nil {
+	if req == nil || req.GetPeerId() == "" || req.GetPeerAddress() == "" || req.GetGrpcAddress() == "" {
 		return &pb.AddPeerResponse{
 			Success: false,
-			Error:   err.Error(),
-		}, err
+			Error:   "invalid request: missing required fields",
+		}, fmt.Errorf("invalid AddPeer request: missing required fields")
 	}
+
+	if err := s.node.AddPeer(ctx, req.GetPeerId(), req.GetPeerAddress(), req.GetGrpcAddress()); err != nil {
+		return &pb.AddPeerResponse{
+			Success: false,
+			Error:   fmt.Sprintf("failed to add peer: %v", err),
+		}, fmt.Errorf("AddPeer failed: %w", err)
+	}
+
 	return &pb.AddPeerResponse{
 		Success: true,
 	}, nil
@@ -95,13 +102,20 @@ func (s *rpcServer) AddPeer(ctx context.Context, req *pb.AddPeerRequest) (*pb.Ad
 
 // RemovePeer handles the RemovePeer gRPC request.
 func (s *rpcServer) RemovePeer(ctx context.Context, req *pb.RemovePeerRequest) (*pb.RemovePeerResponse, error) {
-	err := s.node.RemovePeer(ctx, req.GetPeerId())
-	if err != nil {
+	if req == nil || req.GetPeerId() == "" {
 		return &pb.RemovePeerResponse{
 			Success: false,
-			Error:   err.Error(),
-		}, err
+			Error:   "invalid request: missing peer ID",
+		}, fmt.Errorf("invalid RemovePeer request: missing peer ID")
 	}
+
+	if err := s.node.RemovePeer(ctx, req.GetPeerId()); err != nil {
+		return &pb.RemovePeerResponse{
+			Success: false,
+			Error:   fmt.Sprintf("failed to remove peer: %v", err),
+		}, fmt.Errorf("RemovePeer failed: %w", err)
+	}
+
 	return &pb.RemovePeerResponse{
 		Success: true,
 	}, nil
@@ -109,12 +123,22 @@ func (s *rpcServer) RemovePeer(ctx context.Context, req *pb.RemovePeerRequest) (
 
 // GetPeerInfo handles the GetPeerInfo gRPC request.
 func (s *rpcServer) GetPeerInfo(_ context.Context, req *pb.GetPeerInfoRequest) (*pb.GetPeerInfoResponse, error) {
+	if req == nil || req.GetPeerId() == "" {
+		return nil, fmt.Errorf("invalid peer ID")
+	}
+
 	s.node.Fsm.mu.RLock()
 	peer, exists := s.node.Fsm.raftPeers[req.GetPeerId()]
 	s.node.Fsm.mu.RUnlock()
 
+	if !exists {
+		return &pb.GetPeerInfoResponse{
+			Exists: false,
+		}, nil
+	}
+
 	return &pb.GetPeerInfoResponse{
-		Exists:      exists,
+		Exists:      true,
 		GrpcAddress: peer.GRPCAddress,
 	}, nil
 }
