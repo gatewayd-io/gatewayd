@@ -1055,3 +1055,209 @@ func TestFSMPeerOperations(t *testing.T) {
 			"Leader address should be consistent across all nodes")
 	}
 }
+
+func TestLeaveCluster(t *testing.T) {
+	logger := setupTestLogger()
+	tempDir := t.TempDir()
+
+	// Test cases for different cluster scenarios
+	tests := []struct {
+		name       string
+		setupNodes func() []*Node
+		testNode   int  // index of node that will leave
+		wantErr    bool // whether we expect an error
+	}{
+		{
+			name: "single node cluster",
+			setupNodes: func() []*Node {
+				node, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "singleNode",
+					Address:     "127.0.0.1:0",
+					GRPCAddress: "127.0.0.1:0",
+					IsBootstrap: true,
+					Directory:   tempDir,
+				})
+				require.NoError(t, err)
+				return []*Node{node}
+			},
+			testNode: 0,
+			wantErr:  false,
+		},
+		{
+			name: "follower leaves multi-node cluster",
+			setupNodes: func() []*Node {
+				// Create a 3-node cluster
+				nodes := make([]*Node, 0, 3)
+
+				// Leader node
+				node1, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "multiNode1",
+					Address:     "127.0.0.1:7011",
+					GRPCAddress: "127.0.0.1:7021",
+					IsBootstrap: true,
+					Directory:   tempDir,
+					Peers: []config.RaftPeer{
+						{ID: "multiNode2", Address: "127.0.0.1:7012", GRPCAddress: "127.0.0.1:7022"},
+						{ID: "multiNode3", Address: "127.0.0.1:7013", GRPCAddress: "127.0.0.1:7023"},
+					},
+				})
+				require.NoError(t, err)
+				nodes = append(nodes, node1)
+
+				// Follower nodes
+				node2, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "multiNode2",
+					Address:     "127.0.0.1:7012",
+					GRPCAddress: "127.0.0.1:7022",
+					IsBootstrap: false,
+					Directory:   tempDir,
+					Peers: []config.RaftPeer{
+						{ID: "multiNode1", Address: "127.0.0.1:7011", GRPCAddress: "127.0.0.1:7021"},
+						{ID: "multiNode3", Address: "127.0.0.1:7013", GRPCAddress: "127.0.0.1:7023"},
+					},
+				})
+				require.NoError(t, err)
+				nodes = append(nodes, node2)
+
+				node3, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "multiNode3",
+					Address:     "127.0.0.1:7013",
+					GRPCAddress: "127.0.0.1:7023",
+					IsBootstrap: false,
+					Directory:   tempDir,
+					Peers: []config.RaftPeer{
+						{ID: "multiNode1", Address: "127.0.0.1:7011", GRPCAddress: "127.0.0.1:7021"},
+						{ID: "multiNode2", Address: "127.0.0.1:7012", GRPCAddress: "127.0.0.1:7022"},
+					},
+				})
+				require.NoError(t, err)
+				nodes = append(nodes, node3)
+
+				// Wait for cluster to stabilize
+				time.Sleep(3 * time.Second)
+				return nodes
+			},
+			testNode: 2, // Test with the last follower
+			wantErr:  false,
+		},
+		{
+			name: "leader leaves multi-node cluster",
+			setupNodes: func() []*Node {
+				// Similar setup to previous test case
+				nodes := make([]*Node, 0, 3)
+
+				node1, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "leaderNode1",
+					Address:     "127.0.0.1:7021",
+					GRPCAddress: "127.0.0.1:7031",
+					IsBootstrap: true,
+					Directory:   tempDir,
+					Peers: []config.RaftPeer{
+						{ID: "leaderNode2", Address: "127.0.0.1:7022", GRPCAddress: "127.0.0.1:7032"},
+						{ID: "leaderNode3", Address: "127.0.0.1:7023", GRPCAddress: "127.0.0.1:7033"},
+					},
+				})
+				require.NoError(t, err)
+				nodes = append(nodes, node1)
+
+				node2, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "leaderNode2",
+					Address:     "127.0.0.1:7022",
+					GRPCAddress: "127.0.0.1:7032",
+					IsBootstrap: false,
+					Directory:   tempDir,
+					Peers: []config.RaftPeer{
+						{ID: "leaderNode1", Address: "127.0.0.1:7021", GRPCAddress: "127.0.0.1:7031"},
+						{ID: "leaderNode3", Address: "127.0.0.1:7023", GRPCAddress: "127.0.0.1:7033"},
+					},
+				})
+				require.NoError(t, err)
+				nodes = append(nodes, node2)
+
+				node3, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "leaderNode3",
+					Address:     "127.0.0.1:7023",
+					GRPCAddress: "127.0.0.1:7033",
+					IsBootstrap: false,
+					Directory:   tempDir,
+					Peers: []config.RaftPeer{
+						{ID: "leaderNode1", Address: "127.0.0.1:7021", GRPCAddress: "127.0.0.1:7031"},
+						{ID: "leaderNode2", Address: "127.0.0.1:7022", GRPCAddress: "127.0.0.1:7032"},
+					},
+				})
+				require.NoError(t, err)
+				nodes = append(nodes, node3)
+
+				// Wait for cluster to stabilize
+				time.Sleep(3 * time.Second)
+				return nodes
+			},
+			testNode: 0, // Test with the leader
+			wantErr:  false,
+		},
+		{
+			name: "nil node",
+			setupNodes: func() []*Node {
+				return []*Node{nil}
+			},
+			testNode: 0,
+			wantErr:  true,
+		},
+	}
+
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			nodes := testCase.setupNodes()
+			defer func() {
+				for _, node := range nodes {
+					if node != nil {
+						_ = node.Shutdown()
+					}
+				}
+			}()
+
+			// For multi-node clusters, verify the initial state
+			if len(nodes) > 1 {
+				require.Eventually(t, func() bool {
+					leaderCount := 0
+					followerCount := 0
+					for _, node := range nodes {
+						if node != nil {
+							state, _ := node.GetState()
+							if state == raft.Leader {
+								leaderCount++
+							} else if state == raft.Follower {
+								followerCount++
+							}
+						}
+					}
+					return leaderCount == 1 && followerCount == len(nodes)-1
+				}, 10*time.Second, 100*time.Millisecond, "Failed to establish initial cluster state")
+			}
+
+			// Execute the leave operation
+			err := nodes[testCase.testNode].LeaveCluster(context.Background())
+
+			// Verify the result
+			if testCase.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+
+				// For multi-node clusters, verify the remaining cluster state
+				if len(nodes) > 1 {
+					// Verify the node is no longer in the cluster configuration
+					for i, node := range nodes {
+						if i != testCase.testNode && node != nil {
+							config := node.GetPeers()
+							for _, server := range config {
+								assert.NotEqual(t, nodes[testCase.testNode].config.LocalID, server.ID,
+									"Departed node should not be in cluster configuration")
+							}
+						}
+					}
+				}
+			}
+		})
+	}
+}
