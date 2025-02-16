@@ -5,21 +5,14 @@ import (
 )
 
 type (
-	Status              uint
-	CompatibilityPolicy string
-	LogOutput           uint
+	Status    uint
+	LogOutput uint
 )
 
 // Status is the status of the server.
 const (
 	Running Status = iota
 	Stopped
-)
-
-// CompatibilityPolicy is the compatibility policy for plugins.
-const (
-	Strict CompatibilityPolicy = "strict" // Expect all required plugins to be loaded and present
-	Loose  CompatibilityPolicy = "loose"  // Load the plugin, even if the requirements are not met
 )
 
 // LogOutput is the output type for the logger.
@@ -117,9 +110,6 @@ const (
 	DefaultGRPCAPIAddress = "localhost:19090"
 
 	// Policies.
-	DefaultCompatibilityPolicy = Strict
-
-	// Act.
 	DefaultPolicy             = "passthrough"
 	DefaultPolicyTimeout      = 30 * time.Second
 	DefaultActionTimeout      = 30 * time.Second

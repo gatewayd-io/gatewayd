@@ -36,9 +36,9 @@ func TestGetVersion(t *testing.T) {
 
 func TestGetGlobalConfig(t *testing.T) {
 	// Load config from the default config file.
-	conf := config.NewConfig(context.TODO(),
+	conf := config.NewConfig(context.Background(),
 		config.Config{GlobalConfigFile: "../gatewayd.yaml", PluginConfigFile: "../gatewayd_plugins.yaml"})
-	gerr := conf.InitConfig(context.TODO())
+	gerr := conf.InitConfig(context.Background())
 	require.Nil(t, gerr)
 	assert.NotEmpty(t, conf.Global)
 
@@ -61,9 +61,9 @@ func TestGetGlobalConfig(t *testing.T) {
 
 func TestGetGlobalConfigWithGroupName(t *testing.T) {
 	// Load config from the default config file.
-	conf := config.NewConfig(context.TODO(),
+	conf := config.NewConfig(context.Background(),
 		config.Config{GlobalConfigFile: "../gatewayd.yaml", PluginConfigFile: "../gatewayd_plugins.yaml"})
-	gerr := conf.InitConfig(context.TODO())
+	gerr := conf.InitConfig(context.Background())
 	require.Nil(t, gerr)
 	assert.NotEmpty(t, conf.Global)
 
@@ -94,9 +94,9 @@ func TestGetGlobalConfigWithGroupName(t *testing.T) {
 
 func TestGetGlobalConfigWithNonExistingGroupName(t *testing.T) {
 	// Load config from the default config file.
-	conf := config.NewConfig(context.TODO(),
+	conf := config.NewConfig(context.Background(),
 		config.Config{GlobalConfigFile: "../gatewayd.yaml", PluginConfigFile: "../gatewayd_plugins.yaml"})
-	gerr := conf.InitConfig(context.TODO())
+	gerr := conf.InitConfig(context.Background())
 	require.Nil(t, gerr)
 	assert.NotEmpty(t, conf.Global)
 
@@ -112,9 +112,9 @@ func TestGetGlobalConfigWithNonExistingGroupName(t *testing.T) {
 
 func TestGetPluginConfig(t *testing.T) {
 	// Load config from the default config file.
-	conf := config.NewConfig(context.TODO(),
+	conf := config.NewConfig(context.Background(),
 		config.Config{GlobalConfigFile: "../gatewayd.yaml", PluginConfigFile: "../gatewayd_plugins.yaml"})
-	gerr := conf.InitConfig(context.TODO())
+	gerr := conf.InitConfig(context.Background())
 	require.Nil(t, gerr)
 	assert.NotEmpty(t, conf.Global)
 
@@ -141,12 +141,11 @@ func TestGetPlugins(t *testing.T) {
 			Logger:               zerolog.Logger{},
 		})
 	pluginRegistry := plugin.NewRegistry(
-		context.TODO(),
+		context.Background(),
 		plugin.Registry{
-			ActRegistry:   actRegistry,
-			Compatibility: config.Loose,
-			Logger:        zerolog.Logger{},
-			DevMode:       true,
+			ActRegistry: actRegistry,
+			Logger:      zerolog.Logger{},
+			DevMode:     true,
 		},
 	)
 	pluginRegistry.Add(&plugin.Plugin{
@@ -196,12 +195,11 @@ func TestGetPluginsWithEmptyPluginRegistry(t *testing.T) {
 			Logger:               zerolog.Logger{},
 		})
 	pluginRegistry := plugin.NewRegistry(
-		context.TODO(),
+		context.Background(),
 		plugin.Registry{
-			ActRegistry:   actRegistry,
-			Compatibility: config.Loose,
-			Logger:        zerolog.Logger{},
-			DevMode:       true,
+			ActRegistry: actRegistry,
+			Logger:      zerolog.Logger{},
+			DevMode:     true,
 		},
 	)
 
@@ -218,7 +216,7 @@ func TestGetPluginsWithEmptyPluginRegistry(t *testing.T) {
 func TestPools(t *testing.T) {
 	api := API{
 		Pools: map[string]map[string]*pool.Pool{
-			config.Default: {config.DefaultConfigurationBlock: pool.NewPool(context.TODO(), config.EmptyPoolCapacity)},
+			config.Default: {config.DefaultConfigurationBlock: pool.NewPool(context.Background(), config.EmptyPoolCapacity)},
 		},
 		ctx: context.Background(),
 	}
@@ -253,13 +251,13 @@ func TestGetProxies(t *testing.T) {
 		Network: config.DefaultNetwork,
 		Address: postgresAddress,
 	}
-	client := network.NewClient(context.TODO(), clientConfig, zerolog.Logger{}, nil)
+	client := network.NewClient(context.Background(), clientConfig, zerolog.Logger{}, nil)
 	require.NotNil(t, client)
-	newPool := pool.NewPool(context.TODO(), 1)
+	newPool := pool.NewPool(context.Background(), 1)
 	assert.Nil(t, newPool.Put(client.ID, client))
 
 	proxy := network.NewProxy(
-		context.TODO(),
+		context.Background(),
 		network.Proxy{
 			AvailableConnections: newPool,
 			HealthCheckPeriod:    config.DefaultHealthCheckPeriod,
@@ -305,13 +303,13 @@ func TestGetServers(t *testing.T) {
 		Network: config.DefaultNetwork,
 		Address: postgresAddress,
 	}
-	client := network.NewClient(context.TODO(), clientConfig, zerolog.Logger{}, nil)
-	newPool := pool.NewPool(context.TODO(), 1)
+	client := network.NewClient(context.Background(), clientConfig, zerolog.Logger{}, nil)
+	newPool := pool.NewPool(context.Background(), 1)
 	require.NotNil(t, newPool)
 	assert.Nil(t, newPool.Put(client.ID, client))
 
 	proxy := network.NewProxy(
-		context.TODO(),
+		context.Background(),
 		network.Proxy{
 			AvailableConnections: newPool,
 			HealthCheckPeriod:    config.DefaultHealthCheckPeriod,
@@ -336,17 +334,16 @@ func TestGetServers(t *testing.T) {
 		})
 
 	pluginRegistry := plugin.NewRegistry(
-		context.TODO(),
+		context.Background(),
 		plugin.Registry{
-			ActRegistry:   actRegistry,
-			Compatibility: config.Loose,
-			Logger:        zerolog.Logger{},
-			DevMode:       true,
+			ActRegistry: actRegistry,
+			Logger:      zerolog.Logger{},
+			DevMode:     true,
 		},
 	)
 
 	server := network.NewServer(
-		context.TODO(),
+		context.Background(),
 		network.Server{
 			Network:      config.DefaultNetwork,
 			Address:      postgresAddress,

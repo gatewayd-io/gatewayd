@@ -59,7 +59,7 @@ func BenchmarkGetID(b *testing.B) {
 	logger := logging.NewLogger(context.Background(), cfg)
 	for _, seed := range seedValues {
 		b.Run(fmt.Sprintf("seed=%d", seed), func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				GetID("tcp", "localhost:5432", seed, logger)
 			}
 		})
@@ -76,7 +76,7 @@ func BenchmarkResolveUDP(b *testing.B) {
 	}
 
 	logger := logging.NewLogger(context.Background(), cfg)
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		Resolve("udp", "localhost:53", logger) //nolint:errcheck
 	}
 }
@@ -91,7 +91,7 @@ func BenchmarkResolveTCP(b *testing.B) {
 	}
 
 	logger := logging.NewLogger(context.Background(), cfg)
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		Resolve("tcp", "localhost:5432", logger) //nolint:errcheck
 	}
 }
@@ -106,7 +106,7 @@ func BenchmarkResolveUnix(b *testing.B) {
 	}
 
 	logger := logging.NewLogger(context.Background(), cfg)
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		Resolve("unix", "/tmp/unix.sock", logger) //nolint:errcheck
 	}
 }
@@ -157,13 +157,13 @@ func BenchmarkTrafficData(b *testing.B) {
 		},
 	}
 	err := "test error"
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		trafficData(conn.Conn(), client, fields, err)
 	}
 }
 
 func BenchmarkExtractFieldValue(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		extractFieldValue(
 			map[string]any{
 				"test": "test",

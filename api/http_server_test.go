@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"testing"
@@ -16,45 +15,27 @@ import (
 
 // Test_HTTP_Server tests the HTTP to gRPC gateway.
 func Test_HTTP_Server(t *testing.T) {
-	api := getAPIConfig()
+	api := getAPIConfig(
+		"localhost:18082",
+		"localhost:19092",
+	)
 	healthchecker := &HealthChecker{Servers: api.Servers}
 	grpcServer := NewGRPCServer(
 		context.Background(), GRPCServer{API: api, HealthChecker: healthchecker})
-	require.NotNil(t, grpcServer, "gRPC server should not be nil")
+	go grpcServer.Start()
+	require.NotNil(t, grpcServer)
 
 	httpServer := NewHTTPServer(api.Options)
-	require.NotNil(t, httpServer, "HTTP server should not be nil")
+	go httpServer.Start()
+	require.NotNil(t, httpServer)
 
-	// Start gRPC server with error handling
-	errChan := make(chan error, 1)
-	go func(grpcServer *GRPCServer) {
-		errChan <- func() error {
-			defer func() {
-				if r := recover(); r != nil {
-					errChan <- fmt.Errorf("gRPC server panicked: %v", r)
-				}
-			}()
-			grpcServer.Start()
-			return nil
-		}()
-	}(grpcServer)
-
-	go func(httpServer *HTTPServer) {
-		httpServer.Start()
-	}(httpServer)
-
-	// Wait for potential startup errors
-	select {
-	case err := <-errChan:
-		require.NoError(t, err, "gRPC server failed to start")
-	case <-time.After(1 * time.Second): // Wait for the servers to start
-	}
+	time.Sleep(time.Second)
 
 	// Check version via the gRPC server.
 	req, err := http.NewRequestWithContext(
 		context.Background(),
 		http.MethodGet,
-		"http://localhost:18080/v1/GatewayDPluginService/Version",
+		"http://localhost:18082/v1/GatewayDPluginService/Version",
 		nil,
 	)
 	require.NoError(t, err)
@@ -73,7 +54,7 @@ func Test_HTTP_Server(t *testing.T) {
 	req, err = http.NewRequestWithContext(
 		context.Background(),
 		http.MethodGet,
-		"http://localhost:18080/healthz",
+		"http://localhost:18082/healthz",
 		nil,
 	)
 	require.NoError(t, err)
@@ -90,7 +71,7 @@ func Test_HTTP_Server(t *testing.T) {
 	req, err = http.NewRequestWithContext(
 		context.Background(),
 		http.MethodGet,
-		"http://localhost:18080/version",
+		"http://localhost:18082/version",
 		nil,
 	)
 	require.NoError(t, err)
@@ -104,6 +85,6 @@ func Test_HTTP_Server(t *testing.T) {
 	assert.Equal(t, len(config.Version), len(respBodyBytes))
 	assert.Equal(t, config.Version, string(respBodyBytes))
 
-	grpcServer.Shutdown(context.Background())
+	grpcServer.Shutdown(nil) //nolint:staticcheck
 	httpServer.Shutdown(context.Background())
 }

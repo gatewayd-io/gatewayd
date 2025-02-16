@@ -14,7 +14,10 @@ import (
 
 // Test_GRPC_Server tests the gRPC server.
 func Test_GRPC_Server(t *testing.T) {
-	api := getAPIConfig()
+	api := getAPIConfig(
+		"localhost:18081",
+		"localhost:19091",
+	)
 	healthchecker := &HealthChecker{Servers: api.Servers}
 	grpcServer := NewGRPCServer(
 		context.Background(), GRPCServer{API: api, HealthChecker: healthchecker})
@@ -25,7 +28,7 @@ func Test_GRPC_Server(t *testing.T) {
 	}(grpcServer)
 
 	grpcClient, err := grpc.NewClient(
-		"localhost:19090", grpc.WithTransportCredentials(insecure.NewCredentials()))
+		"localhost:19091", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	assert.Nil(t, err)
 	defer grpcClient.Close()
 
@@ -36,5 +39,5 @@ func Test_GRPC_Server(t *testing.T) {
 	assert.Equal(t, config.Version, resp.GetVersion())
 	assert.Equal(t, config.VersionInfo(), resp.GetVersionInfo())
 
-	grpcServer.Shutdown(context.Background())
+	grpcServer.Shutdown(nil) //nolint:staticcheck
 }
