@@ -459,6 +459,19 @@ func (n *Node) waitForLeader() (raft.ServerID, error) {
 
 // AddPeer adds a new peer to the Raft cluster.
 func (n *Node) AddPeer(ctx context.Context, peerID, peerAddr, grpcAddr string) error {
+	if err := validatePeerPayload(PeerPayload{
+		ID:          peerID,
+		Address:     peerAddr,
+		GRPCAddress: grpcAddr,
+	}); err != nil {
+		return fmt.Errorf("invalid peer parameters: %w", err)
+	}
+
+	// Check if node is initialized
+	if n == nil || n.raft == nil {
+		return errors.New("raft node not initialized")
+	}
+
 	if n.raft.State() != raft.Leader {
 		// Get the leader client
 		client, err := n.getLeaderClient()
@@ -549,17 +562,22 @@ func (n *Node) AddPeerInternal(ctx context.Context, peerID, peerAddress, grpcAdd
 
 // RemovePeer removes a peer from the Raft cluster.
 func (n *Node) RemovePeer(ctx context.Context, peerID string) error {
-	_, leaderID := n.raft.LeaderWithID()
-	if leaderID == "" {
-		return errors.New("no leader available")
+	if peerID == "" {
+		return errors.New("peer ID cannot be empty")
+	}
+
+	if n == nil || n.raft == nil {
+		return errors.New("raft node not initialized")
 	}
 
 	if n.raft.State() != raft.Leader {
+		// Get the leader client with retry logic
 		client, err := n.getLeaderClient()
 		if err != nil {
 			return fmt.Errorf("failed to get leader client: %w", err)
 		}
 
+		// Forward the request to the leader
 		resp, err := client.RemovePeer(ctx, &pb.RemovePeerRequest{
 			PeerId: peerID,
 		})
@@ -583,52 +601,10 @@ func (n *Node) RemovePeerInternal(ctx context.Context, peerID string) error {
 		return errors.New("only the leader can remove peers")
 	}
 
-	// get peer address and grpc address from FSM
-	n.Fsm.mu.RLock()
-	peer, exists := n.Fsm.raftPeers[peerID]
-	n.Fsm.mu.RUnlock()
-
-	if !exists {
-		return fmt.Errorf("peer %s not found in FSM", peerID)
-	}
-
-	// send remove peer command to peers
-	// need to remove peer from FSM before removing from Raft to handle the case that leader want to remove itself
-	cmd := Command{
-		Type: CommandRemovePeer,
-		Payload: PeerPayload{
-			ID: peerID,
-		},
-	}
-
-	data, err := json.Marshal(cmd)
-	if err != nil {
-		return fmt.Errorf("failed to marshal peer command: %w", err)
-	}
-
-	if err := n.Apply(ctx, data, ApplyTimeout); err != nil {
-		return fmt.Errorf("failed to apply peer command: %w", err)
-	}
-
 	future := n.raft.RemoveServer(raft.ServerID(peerID), 0, 0)
 	if err := future.Error(); err != nil {
-		// need to add again peer to FSM by applying add peer command
-		cmd := Command{
-			Type: CommandAddPeer,
-			Payload: PeerPayload{
-				ID:          peerID,
-				Address:     peer.Address,
-				GRPCAddress: peer.GRPCAddress,
-			},
-		}
-
-		data, err := json.Marshal(cmd)
-		if err != nil {
-			return fmt.Errorf("failed to marshal peer command: %w", err)
-		}
-
-		if err := n.Apply(ctx, data, ApplyTimeout); err != nil {
-			return fmt.Errorf("failed to apply peer command: %w", err)
+		if errors.Is(err, raft.ErrNotLeader) {
+			return n.RemovePeer(ctx, peerID)
 		}
 		return fmt.Errorf("failed to remove peer: %w", err)
 	}
@@ -667,6 +643,11 @@ func (n *Node) LeaveCluster(ctx context.Context) error {
 			n.Logger.Error().Err(err).Msg("failed to remove self from cluster")
 			return fmt.Errorf("failed to leave cluster: %w", err)
 		}
+	}
+
+	if err := n.Shutdown(); err != nil {
+		n.Logger.Error().Err(err).Msg("failed to shutdown raft node")
+		return fmt.Errorf("failed to leave cluster: %w", err)
 	}
 
 	metrics.RaftPeerRemovals.Inc()
@@ -744,11 +725,12 @@ func (n *Node) Shutdown() error {
 		n.peerSyncCancel()
 	}
 
-	if n.rpcServer != nil {
-		n.rpcServer.GracefulStop()
-	}
 	if n.rpcClient != nil {
 		n.rpcClient.close()
+	}
+
+	if n.rpcServer != nil {
+		n.rpcServer.GracefulStop()
 	}
 
 	if err := n.raft.Shutdown().Error(); err != nil && !errors.Is(err, raft.ErrRaftShutdown) {
