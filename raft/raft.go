@@ -44,6 +44,7 @@ const (
 	leaderWaitRetryInterval       = 100 * time.Millisecond // Interval for retrying leader wait
 	forwardRetryInterval          = 100 * time.Millisecond // Interval for retrying forward requests
 	peerSyncInterval              = 30 * time.Second       // Interval for peer synchronization checks
+	leaveClusterTimeout           = 30 * time.Second       // Timeout for leaving cluster operations
 )
 
 // Command represents a general command structure for all operations.
@@ -394,9 +395,20 @@ func (n *Node) tryConnectToCluster(localAddress string) error {
 	}
 }
 
+// GetPeers returns the current list of servers in the Raft configuration.
+// If the Raft node is not initialized, it returns an empty slice.
 func (n *Node) GetPeers() []raft.Server {
-	peers := n.raft.GetConfiguration().Configuration().Servers
-	return peers
+	if n == nil || n.raft == nil {
+		return []raft.Server{}
+	}
+
+	future := n.raft.GetConfiguration()
+	if err := future.Error(); err != nil {
+		n.Logger.Error().Err(err).Msg("failed to get raft configuration")
+		return []raft.Server{}
+	}
+
+	return future.Configuration().Servers
 }
 
 // getLeaderClient is a helper function that returns a gRPC client connected to the current leader.
@@ -581,7 +593,7 @@ func (n *Node) RemovePeerInternal(ctx context.Context, peerID string) error {
 	}
 
 	// send remove peer command to peers
-	// need to remove peer from FSM before removing from Raft to handle that leader want to remove itself
+	// need to remove peer from FSM before removing from Raft to handle the case that leader want to remove itself
 	cmd := Command{
 		Type: CommandRemovePeer,
 		Payload: PeerPayload{
@@ -625,15 +637,41 @@ func (n *Node) RemovePeerInternal(ctx context.Context, peerID string) error {
 	return nil
 }
 
-// GracefulShutdown gracefully removes the node from the cluster.
-func (n *Node) GracefulShutdown() error {
-	if n.raft.State() != raft.Leader {
-		return errors.New("only the leader can initiate graceful shutdown")
+// LeaveCluster gracefully removes the node from the Raft cluster and performs cleanup.
+func (n *Node) LeaveCluster(ctx context.Context) error {
+	if n == nil || n.raft == nil {
+		return errors.New("raft node not initialized")
 	}
 
-	// Remove the current node from the cluster
+	// Create a timeout context for the entire operation
+	ctx, cancel := context.WithTimeout(ctx, leaveClusterTimeout)
+	defer cancel()
+
+	// Get current cluster size
+	peers := n.GetPeers()
+	if len(peers) == 1 {
+		n.Logger.Info().Msg("last node in cluster, skipping removal")
+		return nil
+	}
+
 	peerID := string(n.config.LocalID)
-	return n.RemovePeer(context.Background(), peerID)
+	n.Logger.Info().
+		Str("peer_id", peerID).
+		Int("cluster_size", len(peers)).
+		Msg("initiating graceful cluster departure")
+
+	// Only attempt removal if we're not already shutting down
+	if n.raft.State() != raft.Shutdown {
+		// Attempt to remove self from cluster
+		if err := n.RemovePeer(ctx, peerID); err != nil {
+			n.Logger.Error().Err(err).Msg("failed to remove self from cluster")
+			return fmt.Errorf("failed to leave cluster: %w", err)
+		}
+	}
+
+	metrics.RaftPeerRemovals.Inc()
+	n.Logger.Info().Msg("successfully left raft cluster")
+	return nil
 }
 
 // Apply is the public method that handles forwarding if necessary.
@@ -828,13 +866,35 @@ func (f *FSM) Apply(log *raft.Log) interface{} {
 	case CommandAddPeer:
 		f.mu.Lock()
 		defer f.mu.Unlock()
+
 		payload, err := convertPayload[PeerPayload](cmd.Payload)
 		if err != nil {
-			return fmt.Errorf("failed to convert payload: %w", err)
+			return fmt.Errorf("failed to convert AddPeer payload: %w", err)
 		}
+
+		// Validate payload fields
+		if err := validatePeerPayload(payload); err != nil {
+			return fmt.Errorf("invalid peer payload: %w", err)
+		}
+
+		// Initialize map if nil
 		if f.raftPeers == nil {
-			f.raftPeers = make(map[string]config.RaftPeer)
+			f.raftPeers = make(map[string]config.RaftPeer, 1)
 		}
+
+		// Check if peer already exists
+		if existing, exists := f.raftPeers[payload.ID]; exists {
+			// Only update if there are changes
+			if existing.Address != payload.Address || existing.GRPCAddress != payload.GRPCAddress {
+				metrics.RaftPeerUpdates.Inc()
+			} else {
+				return nil // No changes needed
+			}
+		} else {
+			metrics.RaftPeerAdditions.Inc()
+		}
+
+		// Update peer information
 		f.raftPeers[payload.ID] = config.RaftPeer{
 			ID:          payload.ID,
 			Address:     payload.Address,
@@ -844,11 +904,24 @@ func (f *FSM) Apply(log *raft.Log) interface{} {
 	case CommandRemovePeer:
 		f.mu.Lock()
 		defer f.mu.Unlock()
+
 		payload, err := convertPayload[PeerPayload](cmd.Payload)
 		if err != nil {
-			return fmt.Errorf("failed to convert payload: %w", err)
+			return fmt.Errorf("failed to convert RemovePeer payload: %w", err)
 		}
+
+		// Validate peer ID
+		if payload.ID == "" {
+			return errors.New("peer ID cannot be empty")
+		}
+
+		// Check if peer exists before removal
+		if _, exists := f.raftPeers[payload.ID]; !exists {
+			return fmt.Errorf("peer %s not found in cluster", payload.ID)
+		}
+
 		delete(f.raftPeers, payload.ID)
+		metrics.RaftPeerRemovals.Inc()
 		return nil
 	default:
 		return fmt.Errorf("unknown command type: %s", cmd.Type)
@@ -1085,14 +1158,7 @@ func boolToFloat(val bool) float64 {
 	return 0
 }
 
-// StopGRPCServer stops the gRPC server.
-func (n *Node) StopGRPCServer() {
-	if n.rpcServer != nil {
-		n.rpcServer.GracefulStop()
-	}
-}
-
-// // GetState returns the current Raft state and leader ID.
+// GetState returns the current Raft state and leader ID.
 func (n *Node) GetState() (raft.RaftState, raft.ServerID) {
 	state := n.raft.State()
 	_, leaderID := n.raft.LeaderWithID()
@@ -1202,4 +1268,27 @@ func (n *Node) queryPeerInfo(ctx context.Context, peerID, peerAddr string) error
 	}
 
 	return fmt.Errorf("no peers had information about peer %s", peerID)
+}
+
+// validatePeerPayload validates the peer payload.
+func validatePeerPayload(payload PeerPayload) error {
+	if payload.ID == "" {
+		return errors.New("peer ID cannot be empty")
+	}
+	if payload.Address == "" {
+		return errors.New("peer address cannot be empty")
+	}
+	if payload.GRPCAddress == "" {
+		return errors.New("peer gRPC address cannot be empty")
+	}
+
+	// Validate address format
+	if _, err := net.ResolveTCPAddr("tcp", payload.Address); err != nil {
+		return fmt.Errorf("invalid peer address format: %w", err)
+	}
+	if _, err := net.ResolveTCPAddr("tcp", payload.GRPCAddress); err != nil {
+		return fmt.Errorf("invalid gRPC address format: %w", err)
+	}
+
+	return nil
 }
