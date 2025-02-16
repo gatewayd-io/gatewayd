@@ -36,7 +36,7 @@ func NewConsistentHash(server *Server, originalStrategy LoadBalancerStrategy) *C
 // NextProxy selects the appropriate proxy for a given client connection. It first tries to find an existing
 // proxy in the hash map based on the hashed key (either the source IP or the full address). If no match is found,
 // it falls back to the original load balancing strategy, adds the selected proxy to the hash map, and returns it.
-func (ch *ConsistentHash) NextProxy(conn IConnWrapper) (IProxy, *gerr.GatewayDError) {
+func (ch *ConsistentHash) NextProxy(ctx context.Context, conn IConnWrapper) (IProxy, *gerr.GatewayDError) {
 	ch.mu.Lock()
 	defer ch.mu.Unlock()
 
@@ -65,7 +65,7 @@ func (ch *ConsistentHash) NextProxy(conn IConnWrapper) (IProxy, *gerr.GatewayDEr
 	}
 
 	// If no hash exists or no matching proxy found, fallback to the original strategy
-	proxy, err := ch.originalStrategy.NextProxy(conn)
+	proxy, err := ch.originalStrategy.NextProxy(ctx, conn)
 	if err != nil {
 		return nil, gerr.ErrNoProxiesAvailable.Wrap(err)
 	}
@@ -85,7 +85,7 @@ func (ch *ConsistentHash) NextProxy(conn IConnWrapper) (IProxy, *gerr.GatewayDEr
 	}
 
 	// Apply the command through Raft
-	if err := ch.server.RaftNode.Apply(context.Background(), cmdBytes, raft.ApplyTimeout); err != nil {
+	if err := ch.server.RaftNode.Apply(ctx, cmdBytes, raft.ApplyTimeout); err != nil {
 		return nil, gerr.ErrNoProxiesAvailable.Wrap(err)
 	}
 

@@ -22,7 +22,7 @@ func NewRoundRobin(server *Server) *RoundRobin {
 }
 
 // NextProxy returns the next proxy in the round-robin sequence.
-func (r *RoundRobin) NextProxy(_ IConnWrapper) (IProxy, *gerr.GatewayDError) {
+func (r *RoundRobin) NextProxy(ctx context.Context, _ IConnWrapper) (IProxy, *gerr.GatewayDError) {
 	if len(r.proxies) > math.MaxUint32 {
 		// This should never happen, but if it does, we fall back to the first proxy.
 		return r.proxies[0], nil
@@ -53,7 +53,7 @@ func (r *RoundRobin) NextProxy(_ IConnWrapper) (IProxy, *gerr.GatewayDError) {
 	}
 
 	// Apply through Raft
-	if err := r.server.RaftNode.Apply(context.Background(), data, raft.ApplyTimeout); err != nil {
+	if err := r.server.RaftNode.Apply(ctx, data, raft.ApplyTimeout); err != nil {
 		return nil, gerr.ErrNoProxiesAvailable.Wrap(err)
 	}
 

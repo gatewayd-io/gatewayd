@@ -45,7 +45,7 @@ func NewWeightedRoundRobin(server *Server, loadbalancerRule config.LoadBalancing
 // It adjusts the current weight of each proxy based on its effective weight and selects
 // the proxy with the highest current weight. The selected proxy's current weight is then
 // decreased by the total weight of all proxies to ensure balanced distribution over time.
-func (r *WeightedRoundRobin) NextProxy(_ IConnWrapper) (IProxy, *gerr.GatewayDError) {
+func (r *WeightedRoundRobin) NextProxy(ctx context.Context, _ IConnWrapper) (IProxy, *gerr.GatewayDError) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -108,7 +108,7 @@ func (r *WeightedRoundRobin) NextProxy(_ IConnWrapper) (IProxy, *gerr.GatewayDEr
 	if err != nil {
 		return nil, gerr.ErrNoProxiesAvailable.Wrap(err)
 	}
-	if err := r.raftNode.Apply(context.Background(), data, raft.ApplyTimeout); err != nil {
+	if err := r.raftNode.Apply(ctx, data, raft.ApplyTimeout); err != nil {
 		return nil, gerr.ErrNoProxiesAvailable.Wrap(err)
 	}
 

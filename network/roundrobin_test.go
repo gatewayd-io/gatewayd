@@ -51,7 +51,7 @@ func TestRoundRobin_NextProxy(t *testing.T) {
 	expectedOrder := []string{"proxy2", "proxy3", "proxy1", "proxy2", "proxy3"}
 
 	for testIndex, expected := range expectedOrder {
-		proxy, err := roundRobin.NextProxy(nil)
+		proxy, err := roundRobin.NextProxy(context.Background(), nil)
 		if err != nil {
 			t.Fatalf("test %d: unexpected error from NextProxy: %v", testIndex, err)
 		}
@@ -94,7 +94,7 @@ func TestRoundRobin_ConcurrentAccess(t *testing.T) {
 	for range numGoroutines {
 		go func() {
 			defer waitGroup.Done()
-			_, _ = roundRobin.NextProxy(nil)
+			_, _ = roundRobin.NextProxy(context.Background(), nil)
 		}()
 	}
 
@@ -149,7 +149,7 @@ func TestNextProxyOverflow(t *testing.T) {
 
 	// Call NextProxy multiple times to trigger the overflow
 	for range 4 {
-		proxy, err := roundRobin.NextProxy(nil)
+		proxy, err := roundRobin.NextProxy(context.Background(), nil)
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
