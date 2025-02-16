@@ -337,6 +337,10 @@ func bootstrapCluster(node *Node, nodeConfig *nodeConfig, transport raft.Transpo
 	node.Fsm.mu.Unlock()
 
 	if err := node.raft.BootstrapCluster(configuration).Error(); err != nil {
+		if errors.Is(err, raft.ErrCantBootstrap) {
+			node.Logger.Info().Msg("cluster already bootstrapped, skipping bootstrap")
+			return nil
+		}
 		return fmt.Errorf("failed to bootstrap cluster: %w", err)
 	}
 	return nil
