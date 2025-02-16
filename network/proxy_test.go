@@ -67,9 +67,8 @@ func TestNewProxy(t *testing.T) {
 			PluginRegistry: plugin.NewRegistry(
 				context.Background(),
 				plugin.Registry{
-					ActRegistry:   actRegistry,
-					Compatibility: config.Loose,
-					Logger:        logger,
+					ActRegistry: actRegistry,
+					Logger:      logger,
 				},
 			),
 			HealthCheckPeriod: config.DefaultHealthCheckPeriod,
@@ -116,7 +115,7 @@ func BenchmarkNewProxy(b *testing.B) {
 		})
 
 	// Create a proxy with a fixed buffer newPool
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		proxy := NewProxy(
 			context.Background(),
 			Proxy{
@@ -124,9 +123,8 @@ func BenchmarkNewProxy(b *testing.B) {
 				PluginRegistry: plugin.NewRegistry(
 					context.Background(),
 					plugin.Registry{
-						ActRegistry:   actRegistry,
-						Compatibility: config.Loose,
-						Logger:        logger,
+						ActRegistry: actRegistry,
+						Logger:      logger,
 					},
 				),
 				HealthCheckPeriod: config.DefaultHealthCheckPeriod,
@@ -182,9 +180,8 @@ func BenchmarkProxyConnectDisconnect(b *testing.B) {
 			PluginRegistry: plugin.NewRegistry(
 				context.Background(),
 				plugin.Registry{
-					ActRegistry:   actRegistry,
-					Compatibility: config.Loose,
-					Logger:        logger,
+					ActRegistry: actRegistry,
+					Logger:      logger,
 				},
 			),
 			HealthCheckPeriod: config.DefaultHealthCheckPeriod,
@@ -198,7 +195,7 @@ func BenchmarkProxyConnectDisconnect(b *testing.B) {
 	conn := testConnection{}
 
 	// Connect to the proxy
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		proxy.Connect(conn.ConnWrapper)    //nolint:errcheck
 		proxy.Disconnect(conn.ConnWrapper) //nolint:errcheck
 	}
@@ -248,9 +245,8 @@ func BenchmarkProxyPassThrough(b *testing.B) {
 			PluginRegistry: plugin.NewRegistry(
 				context.Background(),
 				plugin.Registry{
-					ActRegistry:   actRegistry,
-					Compatibility: config.Loose,
-					Logger:        logger,
+					ActRegistry: actRegistry,
+					Logger:      logger,
 				},
 			),
 			HealthCheckPeriod: config.DefaultHealthCheckPeriod,
@@ -268,7 +264,7 @@ func BenchmarkProxyPassThrough(b *testing.B) {
 	stack := NewStack()
 
 	// Connect to the proxy
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		proxy.PassThroughToClient(conn.ConnWrapper, stack) //nolint:errcheck
 		proxy.PassThroughToServer(conn.ConnWrapper, stack) //nolint:errcheck
 	}
@@ -319,9 +315,8 @@ func BenchmarkProxyIsHealthyAndIsExhausted(b *testing.B) {
 			PluginRegistry: plugin.NewRegistry(
 				context.Background(),
 				plugin.Registry{
-					ActRegistry:   actRegistry,
-					Compatibility: config.Loose,
-					Logger:        logger,
+					ActRegistry: actRegistry,
+					Logger:      logger,
 				},
 			),
 			HealthCheckPeriod: config.DefaultHealthCheckPeriod,
@@ -337,7 +332,7 @@ func BenchmarkProxyIsHealthyAndIsExhausted(b *testing.B) {
 	defer proxy.Disconnect(conn.ConnWrapper) //nolint:errcheck
 
 	// Connect to the proxy
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		proxy.IsHealthy(client) //nolint:errcheck
 		proxy.IsExhausted()
 	}
@@ -388,9 +383,8 @@ func BenchmarkProxyAvailableAndBusyConnectionsString(b *testing.B) {
 			PluginRegistry: plugin.NewRegistry(
 				context.Background(),
 				plugin.Registry{
-					ActRegistry:   actRegistry,
-					Compatibility: config.Loose,
-					Logger:        logger,
+					ActRegistry: actRegistry,
+					Logger:      logger,
 				},
 			),
 			HealthCheckPeriod: config.DefaultHealthCheckPeriod,
@@ -406,7 +400,7 @@ func BenchmarkProxyAvailableAndBusyConnectionsString(b *testing.B) {
 	defer proxy.Disconnect(conn.ConnWrapper) //nolint:errcheck
 
 	// Connect to the proxy
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		proxy.AvailableConnectionsString()
 		proxy.BusyConnectionsString()
 	}

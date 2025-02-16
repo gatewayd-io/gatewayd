@@ -151,7 +151,6 @@
             },
             "examples": {
               "application/json": {
-                "compatibilityPolicy": "strict",
                 "enableMetricsMerger": true,
                 "healthCheckPeriod": "5s",
                 "metricsMergerPeriod": "5s",

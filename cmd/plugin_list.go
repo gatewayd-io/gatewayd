@@ -9,13 +9,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var onlyEnabled bool
-
 // pluginListCmd represents the plugin list command.
 var pluginListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List the GatewayD plugins",
 	Run: func(cmd *cobra.Command, _ []string) {
+		pluginConfigFile, _ := cmd.Flags().GetString("plugin-config")
+		onlyEnabled, _ := cmd.Flags().GetBool("only-enabled")
+		enableSentry, _ := cmd.Flags().GetBool("sentry")
+
 		// Enable Sentry.
 		if enableSentry {
 			// Initialize Sentry.
@@ -42,30 +44,27 @@ var pluginListCmd = &cobra.Command{
 func init() {
 	pluginCmd.AddCommand(pluginListCmd)
 
-	pluginListCmd.Flags().StringVarP(
-		&pluginConfigFile, // Already exists in run.go
+	pluginListCmd.Flags().StringP(
 		"plugin-config", "p", config.GetDefaultConfigFilePath(config.PluginsConfigFilename),
 		"Plugin config file")
-	pluginListCmd.Flags().BoolVarP(
-		&onlyEnabled,
+	pluginListCmd.Flags().BoolP(
 		"only-enabled", "e",
 		false, "Only list enabled plugins")
-	pluginListCmd.Flags().BoolVar(
-		&enableSentry, "sentry", true, "Enable Sentry") // Already exists in run.go
+	pluginListCmd.Flags().BoolP("sentry", "s", true, "Enable Sentry")
 }
 
 func listPlugins(cmd *cobra.Command, pluginConfigFile string, onlyEnabled bool) {
 	// Load the plugin config file.
-	conf := config.NewConfig(context.TODO(), config.Config{PluginConfigFile: pluginConfigFile})
-	if err := conf.LoadDefaults(context.TODO()); err != nil {
+	conf := config.NewConfig(context.Background(), config.Config{PluginConfigFile: pluginConfigFile})
+	if err := conf.LoadDefaults(context.Background()); err != nil {
 		cmd.PrintErr(err)
 		return
 	}
-	if err := conf.LoadPluginConfigFile(context.TODO()); err != nil {
+	if err := conf.LoadPluginConfigFile(context.Background()); err != nil {
 		cmd.PrintErr(err)
 		return
 	}
-	if err := conf.UnmarshalPluginConfig(context.TODO()); err != nil {
+	if err := conf.UnmarshalPluginConfig(context.Background()); err != nil {
 		cmd.PrintErr(err)
 		return
 	}

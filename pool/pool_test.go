@@ -226,7 +226,7 @@ func TestPool_Cap(t *testing.T) {
 }
 
 func BenchmarkNewPool(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		NewPool(context.Background(), config.EmptyPoolCapacity)
 	}
 }
@@ -234,7 +234,7 @@ func BenchmarkNewPool(b *testing.B) {
 func BenchmarkPool_PutPop(b *testing.B) {
 	pool := NewPool(context.Background(), config.EmptyPoolCapacity)
 	defer pool.Clear()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		pool.Put("client1.ID", "client1") //nolint:errcheck
 		pool.Pop("client1.ID")
 	}
@@ -242,7 +242,7 @@ func BenchmarkPool_PutPop(b *testing.B) {
 
 func BenchmarkPool_Clear(b *testing.B) {
 	pool := NewPool(context.Background(), config.EmptyPoolCapacity)
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		pool.Clear()
 	}
 }
@@ -252,7 +252,7 @@ func BenchmarkPool_ForEach(b *testing.B) {
 	defer pool.Clear()
 	pool.Put("client1.ID", "client1") //nolint:errcheck
 	pool.Put("client2.ID", "client2") //nolint:errcheck
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		pool.ForEach(func(_, _ any) bool {
 			return true
 		})
@@ -264,7 +264,7 @@ func BenchmarkPool_Get(b *testing.B) {
 	defer pool.Clear()
 	pool.Put("client1.ID", "client1") //nolint:errcheck
 	pool.Put("client2.ID", "client2") //nolint:errcheck
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		pool.Get("client1.ID")
 		pool.Get("client2.ID")
 	}
@@ -275,7 +275,7 @@ func BenchmarkPool_GetOrPut(b *testing.B) {
 	defer pool.Clear()
 	pool.Put("client1.ID", "client1") //nolint:errcheck
 	pool.Put("client2.ID", "client2") //nolint:errcheck
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		pool.GetOrPut("client1.ID", "client1") //nolint:errcheck
 		pool.GetOrPut("client2.ID", "client2") //nolint:errcheck
 	}
@@ -284,7 +284,7 @@ func BenchmarkPool_GetOrPut(b *testing.B) {
 func BenchmarkPool_Remove(b *testing.B) {
 	pool := NewPool(context.Background(), config.EmptyPoolCapacity)
 	defer pool.Clear()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		pool.Put("client1.ID", "client1") //nolint:errcheck
 		pool.Remove("client1.ID")
 	}
@@ -293,7 +293,7 @@ func BenchmarkPool_Remove(b *testing.B) {
 func BenchmarkPool_Size(b *testing.B) {
 	pool := NewPool(context.Background(), config.EmptyPoolCapacity)
 	defer pool.Clear()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		pool.Size()
 	}
 }
@@ -301,7 +301,7 @@ func BenchmarkPool_Size(b *testing.B) {
 func BenchmarkPool_Cap(b *testing.B) {
 	pool := NewPool(context.Background(), config.EmptyPoolCapacity)
 	defer pool.Clear()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		pool.Cap()
 	}
 }

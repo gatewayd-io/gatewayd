@@ -120,7 +120,7 @@ func BenchmarkNewClient(b *testing.B) {
 	}
 
 	logger := logging.NewLogger(context.Background(), cfg)
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		client := NewClient(context.Background(), &config.Client{
 			Network:            "tcp",
 			Address:            "localhost:5432",
@@ -160,7 +160,7 @@ func BenchmarkSend(b *testing.B) {
 	defer client.Close()
 
 	packet := CreatePgStartupPacket()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		client.Send(packet) //nolint:errcheck
 	}
 }
@@ -192,7 +192,7 @@ func BenchmarkReceive(b *testing.B) {
 
 	packet := CreatePgStartupPacket()
 	client.Send(packet) //nolint:errcheck
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		client.Receive() //nolint:errcheck
 	}
 }
@@ -221,7 +221,7 @@ func BenchmarkIsConnected(b *testing.B) {
 		logger, nil)
 	defer client.Close()
 
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		client.IsConnected()
 	}
 }

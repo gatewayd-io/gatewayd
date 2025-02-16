@@ -1,14 +1,5 @@
 # GatewayD Plugin Configuration
 
-# The compatibility policy controls how GatewayD treats plugins' requirements. If a plugin
-# requires a specific version of another plugin, the compatibility policy controls whether to
-# allow or reject the plugin.
-# - "strict" (default): the plugin is rejected if it requires a specific version of another
-#   plugin and that version is not the one currently loaded.
-# - "loose": the plugin is allowed to run even if it requires a specific version of another
-#   plugin and that version is not the one currently loaded.
-compatibilityPolicy: "strict"
-
 # The metrics policy controls whether to collect and merge metrics from plugins or not.
 # The Prometheus metrics are collected from the plugins via a Unix domain socket. The metrics
 # are merged and exposed via the GatewayD metrics endpoint via HTTP.
