@@ -53,11 +53,11 @@ type GatewayDAdminAPIServiceClient interface {
 	GetProxies(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*structpb.Struct, error)
 	// GetServers returns the list of servers configured on the GatewayD.
 	GetServers(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*structpb.Struct, error)
-	// Get information about all peers in the Raft cluster
+	// GetPeers returns information about all peers in the Raft cluster
 	GetPeers(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*structpb.Struct, error)
-	// Add a new peer to the Raft cluster
+	// AddPeer adds a new peer to the Raft cluster
 	AddPeer(ctx context.Context, in *AddPeerRequest, opts ...grpc.CallOption) (*AddPeerResponse, error)
-	// Remove a peer from the Raft cluster
+	// RemovePeer removes an existing peer from the Raft cluster
 	RemovePeer(ctx context.Context, in *RemovePeerRequest, opts ...grpc.CallOption) (*RemovePeerResponse, error)
 }
 
@@ -189,11 +189,11 @@ type GatewayDAdminAPIServiceServer interface {
 	GetProxies(context.Context, *emptypb.Empty) (*structpb.Struct, error)
 	// GetServers returns the list of servers configured on the GatewayD.
 	GetServers(context.Context, *emptypb.Empty) (*structpb.Struct, error)
-	// Get information about all peers in the Raft cluster
+	// GetPeers returns information about all peers in the Raft cluster
 	GetPeers(context.Context, *emptypb.Empty) (*structpb.Struct, error)
-	// Add a new peer to the Raft cluster
+	// AddPeer adds a new peer to the Raft cluster
 	AddPeer(context.Context, *AddPeerRequest) (*AddPeerResponse, error)
-	// Remove a peer from the Raft cluster
+	// RemovePeer removes an existing peer from the Raft cluster
 	RemovePeer(context.Context, *RemovePeerRequest) (*RemovePeerResponse, error)
 	mustEmbedUnimplementedGatewayDAdminAPIServiceServer()
 }
