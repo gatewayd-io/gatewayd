@@ -52,9 +52,9 @@
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| peer_id | [string](#string) |  |  |
-| address | [string](#string) |  |  |
-| grpc_address | [string](#string) |  |  |
+| peer_id | [string](#string) |  | Unique identifier for the new peer |
+| address | [string](#string) |  | Network address for Raft communication |
+| grpc_address | [string](#string) |  | gRPC address for API communication |
 
 
 
@@ -69,8 +69,8 @@
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| success | [bool](#bool) |  |  |
-| error | [string](#string) |  |  |
+| success | [bool](#bool) |  | Indicates if the operation was successful |
+| error | [string](#string) |  | Error message if the operation failed |
 
 
 
@@ -100,11 +100,11 @@ Group is the object group to filter the global config by.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| id | [string](#string) |  |  |
-| address | [string](#string) |  |  |
-| state | [string](#string) |  |  |
-| is_leader | [bool](#bool) |  |  |
-| is_voter | [bool](#bool) |  |  |
+| id | [string](#string) |  | Unique identifier of the peer |
+| address | [string](#string) |  | Network address of the peer |
+| state | [string](#string) |  | Current state of the peer in the Raft cluster |
+| is_leader | [bool](#bool) |  | Indicates if this peer is the current leader |
+| is_voter | [bool](#bool) |  | Indicates if this peer has voting rights |
 
 
 
@@ -119,7 +119,7 @@ Group is the object group to filter the global config by.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| peers | [PeersResponse.PeersEntry](#api-v1-PeersResponse-PeersEntry) | repeated |  |
+| peers | [PeersResponse.PeersEntry](#api-v1-PeersResponse-PeersEntry) | repeated | Map of peer IDs to their information |
 
 
 
@@ -239,7 +239,7 @@ PluginID is the identifier that uniquely identifies the plugin.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| peer_id | [string](#string) |  |  |
+| peer_id | [string](#string) |  | ID of the peer to remove |
 
 
 
@@ -254,8 +254,8 @@ PluginID is the identifier that uniquely identifies the plugin.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| success | [bool](#bool) |  |  |
-| error | [string](#string) |  |  |
+| success | [bool](#bool) |  | Indicates if the operation was successful |
+| error | [string](#string) |  | Error message if the operation failed |
 
 
 
@@ -298,9 +298,9 @@ GatewayDAdminAPIService is the administration API of GatewayD.
 | GetPools | [.google.protobuf.Empty](#google-protobuf-Empty) | [.google.protobuf.Struct](#google-protobuf-Struct) | GetPools returns the list of pools configured on the GatewayD. |
 | GetProxies | [.google.protobuf.Empty](#google-protobuf-Empty) | [.google.protobuf.Struct](#google-protobuf-Struct) | GetProxies returns the list of proxies configured on the GatewayD. |
 | GetServers | [.google.protobuf.Empty](#google-protobuf-Empty) | [.google.protobuf.Struct](#google-protobuf-Struct) | GetServers returns the list of servers configured on the GatewayD. |
-| GetPeers | [.google.protobuf.Empty](#google-protobuf-Empty) | [.google.protobuf.Struct](#google-protobuf-Struct) | Get information about all peers in the Raft cluster |
-| AddPeer | [AddPeerRequest](#api-v1-AddPeerRequest) | [AddPeerResponse](#api-v1-AddPeerResponse) | Add a new peer to the Raft cluster |
-| RemovePeer | [RemovePeerRequest](#api-v1-RemovePeerRequest) | [RemovePeerResponse](#api-v1-RemovePeerResponse) | Remove a peer from the Raft cluster |
+| GetPeers | [.google.protobuf.Empty](#google-protobuf-Empty) | [.google.protobuf.Struct](#google-protobuf-Struct) | GetPeers returns information about all peers in the Raft cluster |
+| AddPeer | [AddPeerRequest](#api-v1-AddPeerRequest) | [AddPeerResponse](#api-v1-AddPeerResponse) | AddPeer adds a new peer to the Raft cluster |
+| RemovePeer | [RemovePeerRequest](#api-v1-RemovePeerRequest) | [RemovePeerResponse](#api-v1-RemovePeerResponse) | RemovePeer removes an existing peer from the Raft cluster |
 
  
 
