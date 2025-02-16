@@ -79,6 +79,7 @@ func (c *rpcClient) close() {
 	}
 }
 
+// AddPeer handles the AddPeer gRPC request.
 func (s *rpcServer) AddPeer(ctx context.Context, req *pb.AddPeerRequest) (*pb.AddPeerResponse, error) {
 	err := s.node.AddPeer(ctx, req.GetPeerId(), req.GetPeerAddress(), req.GetGrpcAddress())
 	if err != nil {
@@ -106,6 +107,7 @@ func (s *rpcServer) RemovePeer(ctx context.Context, req *pb.RemovePeerRequest) (
 	}, nil
 }
 
+// GetPeerInfo handles the GetPeerInfo gRPC request.
 func (s *rpcServer) GetPeerInfo(_ context.Context, req *pb.GetPeerInfoRequest) (*pb.GetPeerInfoResponse, error) {
 	s.node.Fsm.mu.RLock()
 	peer, exists := s.node.Fsm.raftPeers[req.GetPeerId()]
