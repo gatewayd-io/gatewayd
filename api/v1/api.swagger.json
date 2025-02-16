@@ -401,13 +401,29 @@
     },
     "/v1/raft/peers": {
       "get": {
-        "summary": "Get information about all peers in the Raft cluster",
-        "operationId": "GatewayDAdminAPIService_GetPeers",
+        "summary": "GetPeers returns information about all peers in the Raft cluster",
+        "operationId": "GetPeers",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "A JSON object containing information about all peers in the Raft cluster, including their status and suffrage rights.",
             "schema": {
-              "type": "object"
+              "$ref": "#/definitions/protobufStruct"
+            },
+            "examples": {
+              "application/json": {
+                "node1": {
+                  "id": "node1",
+                  "address": "localhost:8080",
+                  "status": "Leader",
+                  "suffrage": "Voter"
+                },
+                "node2": {
+                  "id": "node2",
+                  "address": "localhost:8081",
+                  "status": "Follower",
+                  "suffrage": "Voter"
+                }
+              }
             }
           },
           "default": {
@@ -422,13 +438,18 @@
         ]
       },
       "post": {
-        "summary": "Add a new peer to the Raft cluster",
-        "operationId": "GatewayDAdminAPIService_AddPeer",
+        "summary": "AddPeer adds a new peer to the Raft cluster",
+        "operationId": "AddPeer",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "Response indicating success or failure of adding a peer to the Raft cluster. Returns error if peer_id, address, or grpc_address are missing.",
             "schema": {
               "$ref": "#/definitions/v1AddPeerResponse"
+            },
+            "examples": {
+              "application/json": {
+                "success": true
+              }
             }
           },
           "default": {
@@ -441,6 +462,7 @@
         "parameters": [
           {
             "name": "body",
+            "description": "Request to add a new peer to the Raft cluster. All fields are required.",
             "in": "body",
             "required": true,
             "schema": {
@@ -455,13 +477,18 @@
     },
     "/v1/raft/peers/{peerId}": {
       "delete": {
-        "summary": "Remove a peer from the Raft cluster",
-        "operationId": "GatewayDAdminAPIService_RemovePeer",
+        "summary": "RemovePeer removes an existing peer from the Raft cluster",
+        "operationId": "RemovePeer",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "Response indicating success or failure of removing a peer from the Raft cluster. Returns error if peer_id is missing.",
             "schema": {
               "$ref": "#/definitions/v1RemovePeerResponse"
+            },
+            "examples": {
+              "application/json": {
+                "success": true
+              }
             }
           },
           "default": {
@@ -474,6 +501,7 @@
         "parameters": [
           {
             "name": "peerId",
+            "description": "ID of the peer to remove",
             "in": "path",
             "required": true,
             "type": "string"
@@ -535,28 +563,46 @@
     },
     "v1AddPeerRequest": {
       "type": "object",
+      "example": {
+        "peer_id": "node3",
+        "address": "localhost:8082",
+        "grpc_address": "localhost:9082"
+      },
       "properties": {
         "peerId": {
-          "type": "string"
+          "type": "string",
+          "title": "Unique identifier for the new peer"
         },
         "address": {
-          "type": "string"
+          "type": "string",
+          "title": "Network address for Raft communication"
         },
         "grpcAddress": {
-          "type": "string"
+          "type": "string",
+          "title": "gRPC address for API communication"
         }
-      }
+      },
+      "description": "Request to add a new peer to the Raft cluster. All fields are required.",
+      "title": "AddPeerRequest"
     },
     "v1AddPeerResponse": {
       "type": "object",
+      "example": {
+        "success": true,
+        "error": ""
+      },
       "properties": {
         "success": {
-          "type": "boolean"
+          "type": "boolean",
+          "title": "Indicates if the operation was successful"
         },
         "error": {
-          "type": "string"
+          "type": "string",
+          "title": "Error message if the operation failed"
         }
-      }
+      },
+      "description": "Response indicating the result of adding a peer to the Raft cluster.",
+      "title": "AddPeerResponse"
     },
     "v1PluginConfig": {
       "type": "object",
@@ -744,14 +790,22 @@
     },
     "v1RemovePeerResponse": {
       "type": "object",
+      "example": {
+        "success": true,
+        "error": ""
+      },
       "properties": {
         "success": {
-          "type": "boolean"
+          "type": "boolean",
+          "title": "Indicates if the operation was successful"
         },
         "error": {
-          "type": "string"
+          "type": "string",
+          "title": "Error message if the operation failed"
         }
-      }
+      },
+      "description": "Response indicating the result of removing a peer from the Raft cluster.",
+      "title": "RemovePeerResponse"
     },
     "v1VersionResponse": {
       "type": "object",
