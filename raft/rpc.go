@@ -2,6 +2,7 @@ package raft
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -85,7 +86,7 @@ func (s *rpcServer) AddPeer(ctx context.Context, req *pb.AddPeerRequest) (*pb.Ad
 		return &pb.AddPeerResponse{
 			Success: false,
 			Error:   "invalid request: missing required fields",
-		}, fmt.Errorf("invalid AddPeer request: missing required fields")
+		}, errors.New("invalid AddPeer request: missing required fields")
 	}
 
 	if err := s.node.AddPeer(ctx, req.GetPeerId(), req.GetPeerAddress(), req.GetGrpcAddress()); err != nil {
@@ -106,7 +107,7 @@ func (s *rpcServer) RemovePeer(ctx context.Context, req *pb.RemovePeerRequest) (
 		return &pb.RemovePeerResponse{
 			Success: false,
 			Error:   "invalid request: missing peer ID",
-		}, fmt.Errorf("invalid RemovePeer request: missing peer ID")
+		}, errors.New("invalid RemovePeer request: missing peer ID")
 	}
 
 	if err := s.node.RemovePeer(ctx, req.GetPeerId()); err != nil {
@@ -124,7 +125,7 @@ func (s *rpcServer) RemovePeer(ctx context.Context, req *pb.RemovePeerRequest) (
 // GetPeerInfo handles the GetPeerInfo gRPC request.
 func (s *rpcServer) GetPeerInfo(_ context.Context, req *pb.GetPeerInfoRequest) (*pb.GetPeerInfoResponse, error) {
 	if req == nil || req.GetPeerId() == "" {
-		return nil, fmt.Errorf("invalid peer ID")
+		return nil, errors.New("invalid peer ID")
 	}
 
 	s.node.Fsm.mu.RLock()
