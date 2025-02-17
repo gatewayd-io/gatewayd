@@ -1261,3 +1261,356 @@ func TestLeaveCluster(t *testing.T) {
 		})
 	}
 }
+
+func TestGetPeers(t *testing.T) {
+	logger := setupTestLogger()
+	tempDir := t.TempDir()
+
+	tests := []struct {
+		name          string
+		setupNode     func() *Node
+		expectedPeers int
+	}{
+		{
+			name: "uninitialized raft",
+			setupNode: func() *Node {
+				return &Node{
+					raft:   nil,
+					Logger: logger,
+				}
+			},
+			expectedPeers: 0,
+		},
+		{
+			name: "single node cluster",
+			setupNode: func() *Node {
+				node, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "singleNode",
+					Address:     "127.0.0.1:0",
+					GRPCAddress: "127.0.0.1:0",
+					IsBootstrap: true,
+					Directory:   tempDir,
+				})
+				require.NoError(t, err)
+				time.Sleep(1 * time.Second) // Wait for initialization
+				return node
+			},
+			expectedPeers: 1,
+		},
+		{
+			name: "multi-node cluster",
+			setupNode: func() *Node {
+				// Create a 3-node cluster configuration
+				node1, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "multiNode1",
+					Address:     "127.0.0.1:6002",
+					GRPCAddress: "127.0.0.1:6012",
+					IsBootstrap: true,
+					Directory:   tempDir,
+					Peers: []config.RaftPeer{
+						{ID: "multiNode2", Address: "127.0.0.1:6003", GRPCAddress: "127.0.0.1:6013"},
+						{ID: "multiNode3", Address: "127.0.0.1:6004", GRPCAddress: "127.0.0.1:6014"},
+					},
+				})
+				require.NoError(t, err)
+
+				// Create and start other nodes
+				node2, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "multiNode2",
+					Address:     "127.0.0.1:6003",
+					GRPCAddress: "127.0.0.1:6013",
+					IsBootstrap: false,
+					Directory:   tempDir,
+					Peers: []config.RaftPeer{
+						{ID: "multiNode1", Address: "127.0.0.1:6002", GRPCAddress: "127.0.0.1:6012"},
+						{ID: "multiNode3", Address: "127.0.0.1:6004", GRPCAddress: "127.0.0.1:6014"},
+					},
+				})
+				require.NoError(t, err)
+				defer func() {
+					require.NoError(t, node2.Shutdown())
+				}()
+
+				node3, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "multiNode3",
+					Address:     "127.0.0.1:6004",
+					GRPCAddress: "127.0.0.1:6014",
+					IsBootstrap: false,
+					Directory:   tempDir,
+					Peers: []config.RaftPeer{
+						{ID: "multiNode1", Address: "127.0.0.1:6002", GRPCAddress: "127.0.0.1:6012"},
+						{ID: "multiNode2", Address: "127.0.0.1:6003", GRPCAddress: "127.0.0.1:6013"},
+					},
+				})
+				require.NoError(t, err)
+				defer func() {
+					require.NoError(t, node3.Shutdown())
+				}()
+
+				// Wait for cluster to stabilize
+				time.Sleep(3 * time.Second)
+				return node1
+			},
+			expectedPeers: 3,
+		},
+	}
+
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			node := testCase.setupNode()
+			if node != nil && node.raft != nil {
+				defer func() {
+					require.NoError(t, node.Shutdown())
+				}()
+			}
+
+			peers := node.GetPeers()
+			assert.Equal(t, testCase.expectedPeers, len(peers), "Unexpected number of peers")
+
+			if testCase.expectedPeers > 0 {
+				// Verify peer information
+				for _, peer := range peers {
+					assert.NotEmpty(t, peer.ID, "Peer ID should not be empty")
+					assert.NotEmpty(t, peer.Address, "Peer address should not be empty")
+				}
+			}
+		})
+	}
+}
+
+func TestGetLeaderClient(t *testing.T) {
+	logger := setupTestLogger()
+	tempDir := t.TempDir()
+
+	tests := []struct {
+		name       string
+		setupNodes func() []*Node
+		testNode   int
+		wantErr    bool
+		errMsg     string
+	}{
+		{
+			name: "successful leader client retrieval",
+			setupNodes: func() []*Node {
+				nodes := make([]*Node, 0, 2)
+
+				// Create leader node
+				node1, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "leaderClientNode1",
+					Address:     "127.0.0.1:7101",
+					GRPCAddress: "127.0.0.1:7201",
+					IsBootstrap: true,
+					Directory:   tempDir,
+					Peers: []config.RaftPeer{
+						{ID: "leaderClientNode2", Address: "127.0.0.1:7102", GRPCAddress: "127.0.0.1:7202"},
+					},
+				})
+				require.NoError(t, err)
+				nodes = append(nodes, node1)
+
+				// Create follower node
+				node2, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "leaderClientNode2",
+					Address:     "127.0.0.1:7102",
+					GRPCAddress: "127.0.0.1:7202",
+					IsBootstrap: false,
+					Directory:   tempDir,
+					Peers: []config.RaftPeer{
+						{ID: "leaderClientNode1", Address: "127.0.0.1:7101", GRPCAddress: "127.0.0.1:7201"},
+					},
+				})
+				require.NoError(t, err)
+				nodes = append(nodes, node2)
+
+				// Wait for cluster to stabilize
+				time.Sleep(3 * time.Second)
+				return nodes
+			},
+			testNode: 1, // Test from follower node
+			wantErr:  false,
+		},
+		{
+			name: "single node cluster",
+			setupNodes: func() []*Node {
+				node, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "singleLeaderNode",
+					Address:     "127.0.0.1:7103",
+					GRPCAddress: "127.0.0.1:7203",
+					IsBootstrap: true,
+					Directory:   tempDir,
+				})
+				require.NoError(t, err)
+				time.Sleep(1 * time.Second) // Wait for initialization
+				return []*Node{node}
+			},
+			testNode: 0,
+			wantErr:  false,
+		},
+		{
+			name: "no leader available",
+			setupNodes: func() []*Node {
+				node, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "noLeaderNode",
+					Address:     "127.0.0.1:7104",
+					GRPCAddress: "127.0.0.1:7204",
+					IsBootstrap: false, // Non-bootstrap node without peers
+					Directory:   tempDir,
+				})
+				require.NoError(t, err)
+				return []*Node{node}
+			},
+			testNode: 0,
+			wantErr:  true,
+			errMsg:   "timeout waiting for leader:",
+		},
+	}
+
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			nodes := testCase.setupNodes()
+			defer func() {
+				for _, node := range nodes {
+					if node != nil {
+						_ = node.Shutdown()
+					}
+				}
+			}()
+
+			client, err := nodes[testCase.testNode].getLeaderClient()
+
+			if testCase.wantErr {
+				assert.Error(t, err)
+				if testCase.errMsg != "" {
+					assert.Contains(t, err.Error(), testCase.errMsg)
+				}
+				assert.Nil(t, client)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, client)
+			}
+		})
+	}
+}
+
+func TestShutdown(t *testing.T) {
+	logger := setupTestLogger()
+	tempDir := t.TempDir()
+
+	tests := []struct {
+		name       string
+		setupNode  func() *Node
+		wantErr    bool
+		errMsg     string
+		setupExtra func(*Node) // Additional setup for specific test cases
+	}{
+		{
+			name: "successful shutdown",
+			setupNode: func() *Node {
+				node, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "shutdown-node1",
+					Address:     "127.0.0.1:0",
+					IsBootstrap: true,
+					Directory:   tempDir,
+				})
+				require.NoError(t, err)
+				return node
+			},
+			wantErr: false,
+		},
+		{
+			name: "shutdown already shutdown node",
+			setupNode: func() *Node {
+				node, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "shutdown-node2",
+					Address:     "127.0.0.1:0",
+					IsBootstrap: true,
+					Directory:   tempDir,
+				})
+				require.NoError(t, err)
+				return node
+			},
+			setupExtra: func(n *Node) {
+				err := n.Shutdown()
+				require.NoError(t, err)
+			},
+			wantErr: false, // Should not error as ErrRaftShutdown is ignored
+		},
+		{
+			name: "shutdown nil node",
+			setupNode: func() *Node {
+				return nil
+			},
+			wantErr: false, // Should not panic, gracefully handle nil node
+		},
+		{
+			name: "shutdown with active peer synchronization",
+			setupNode: func() *Node {
+				node, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "shutdown-node3",
+					Address:     "127.0.0.1:0",
+					IsBootstrap: true,
+					Directory:   tempDir,
+				})
+				require.NoError(t, err)
+				// Start peer synchronization
+				ctx, cancel := context.WithCancel(context.Background())
+				node.peerSyncCancel = cancel
+				node.StartPeerSynchronizer(ctx)
+				return node
+			},
+			wantErr: false,
+		},
+		{
+			name: "shutdown with active gRPC server",
+			setupNode: func() *Node {
+				node, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "shutdown-node4",
+					Address:     "127.0.0.1:0",
+					GRPCAddress: "127.0.0.1:0",
+					IsBootstrap: true,
+					Directory:   tempDir,
+				})
+				require.NoError(t, err)
+				return node
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			node := testCase.setupNode()
+			if testCase.setupExtra != nil {
+				testCase.setupExtra(node)
+			}
+
+			err := node.Shutdown()
+
+			if testCase.wantErr {
+				assert.Error(t, err)
+				if testCase.errMsg != "" {
+					assert.Contains(t, err.Error(), testCase.errMsg)
+				}
+			} else {
+				assert.NoError(t, err)
+			}
+
+			// Additional verification for non-nil nodes
+			if node != nil {
+				// Verify that a second shutdown doesn't cause issues
+				err = node.Shutdown()
+				assert.NoError(t, err, "Second shutdown should not error")
+
+				// Verify all components are properly shut down
+				// assert.Nil(t, node.peerSyncCancel, "peerSyncCancel should be nil after shutdown")
+				if node.rpcServer != nil {
+					// Check if the gRPC server is stopped
+					// This is a bit tricky to verify directly, but we can try to use the server
+					assert.NotPanics(t, func() {
+						node.rpcServer.GracefulStop() // Should not block if already stopped
+					})
+				}
+			}
+		})
+	}
+}

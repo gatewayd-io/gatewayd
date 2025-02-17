@@ -721,6 +721,10 @@ func (n *Node) forwardToLeader(ctx context.Context, data []byte, timeout time.Du
 // shutdown properly, ignoring the ErrRaftShutdown error which indicates the node was already
 // shutdown.
 func (n *Node) Shutdown() error {
+	if n == nil {
+		return nil
+	}
+
 	if n.peerSyncCancel != nil {
 		n.peerSyncCancel()
 	}
