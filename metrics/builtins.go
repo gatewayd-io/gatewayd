@@ -129,4 +129,19 @@ var (
 		},
 		[]string{"node_id"},
 	)
+	RaftPeerRemovals = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: "gatewayd",
+		Name:      "raft_peer_removals_total",
+		Help:      "Number of Raft peer removals",
+	})
+	RaftPeerAdditions = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: "gatewayd",
+		Name:      "raft_peer_additions_total",
+		Help:      "Number of Raft peer additions",
+	})
+	RaftPeerUpdates = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: "gatewayd",
+		Name:      "raft_peer_updates_total",
+		Help:      "Number of Raft peer updates",
+	})
 )

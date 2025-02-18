@@ -1,6 +1,7 @@
 package network
 
 import (
+	"context"
 	"encoding/json"
 	"net"
 	"sync"
@@ -82,11 +83,11 @@ func TestConsistentHashNextProxyUseSourceIpExists(t *testing.T) {
 	require.NoError(t, marshalErr)
 
 	// Apply the command through Raft
-	if err := server.RaftNode.Apply(cmdBytes, 10*time.Second); err != nil {
+	if err := server.RaftNode.Apply(context.Background(), cmdBytes, 10*time.Second); err != nil {
 		require.NoError(t, err)
 	}
 
-	proxy, err := consistentHash.NextProxy(mockConn)
+	proxy, err := consistentHash.NextProxy(context.Background(), mockConn)
 	assert.Nil(t, err)
 	assert.Equal(t, proxies[2], proxy)
 
@@ -132,7 +133,7 @@ func TestConsistentHashNextProxyUseFullAddress(t *testing.T) {
 
 	consistentHash := NewConsistentHash(server, mockStrategy)
 
-	proxy, err := consistentHash.NextProxy(mockConn)
+	proxy, err := consistentHash.NextProxy(context.Background(), mockConn)
 	assert.Nil(t, err)
 	assert.NotNil(t, proxy)
 	assert.Equal(t, proxies[1], proxy)
@@ -198,7 +199,7 @@ func TestConsistentHashNextProxyConcurrency(t *testing.T) {
 		waitGroup.Add(1)
 		go func() {
 			defer waitGroup.Done()
-			p, err := consistentHash.NextProxy(conn1)
+			p, err := consistentHash.NextProxy(context.Background(), conn1)
 			assert.Nil(t, err)
 			assert.Equal(t, proxies[1], p)
 		}()
@@ -207,12 +208,12 @@ func TestConsistentHashNextProxyConcurrency(t *testing.T) {
 	waitGroup.Wait()
 
 	// Ensure that the proxy is consistently the same
-	proxy, err := consistentHash.NextProxy(conn1)
+	proxy, err := consistentHash.NextProxy(context.Background(), conn1)
 	assert.Nil(t, err)
 	assert.Equal(t, proxies[1], proxy)
 
 	// Ensure that connecting from a different address returns a different proxy
-	proxy, err = consistentHash.NextProxy(conn2)
+	proxy, err = consistentHash.NextProxy(context.Background(), conn2)
 	assert.Nil(t, err)
 	assert.Equal(t, proxies[2], proxy)
 }

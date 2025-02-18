@@ -18,7 +18,7 @@ type HealthChecker struct {
 }
 
 func (h *HealthChecker) Check(
-	context.Context, *grpc_health_v1.HealthCheckRequest,
+	_ context.Context, _ *grpc_health_v1.HealthCheckRequest,
 ) (*grpc_health_v1.HealthCheckResponse, error) {
 	// Check if all servers are running
 	if liveness(h.Servers, h.raftNode) {

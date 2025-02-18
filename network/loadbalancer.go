@@ -1,12 +1,14 @@
 package network
 
 import (
+	"context"
+
 	"github.com/gatewayd-io/gatewayd/config"
 	gerr "github.com/gatewayd-io/gatewayd/errors"
 )
 
 type LoadBalancerStrategy interface {
-	NextProxy(conn IConnWrapper) (IProxy, *gerr.GatewayDError)
+	NextProxy(ctx context.Context, conn IConnWrapper) (IProxy, *gerr.GatewayDError)
 }
 
 // NewLoadBalancerStrategy returns a LoadBalancerStrategy based on the server's load balancer strategy name.

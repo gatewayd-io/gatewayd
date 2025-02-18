@@ -176,6 +176,84 @@ func local_request_GatewayDAdminAPIService_GetServers_0(ctx context.Context, mar
 	return msg, metadata, err
 }
 
+func request_GatewayDAdminAPIService_GetPeers_0(ctx context.Context, marshaler runtime.Marshaler, client GatewayDAdminAPIServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq emptypb.Empty
+		metadata runtime.ServerMetadata
+	)
+	msg, err := client.GetPeers(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_GatewayDAdminAPIService_GetPeers_0(ctx context.Context, marshaler runtime.Marshaler, server GatewayDAdminAPIServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq emptypb.Empty
+		metadata runtime.ServerMetadata
+	)
+	msg, err := server.GetPeers(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+func request_GatewayDAdminAPIService_AddPeer_0(ctx context.Context, marshaler runtime.Marshaler, client GatewayDAdminAPIServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq AddPeerRequest
+		metadata runtime.ServerMetadata
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := client.AddPeer(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_GatewayDAdminAPIService_AddPeer_0(ctx context.Context, marshaler runtime.Marshaler, server GatewayDAdminAPIServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq AddPeerRequest
+		metadata runtime.ServerMetadata
+	)
+	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := server.AddPeer(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+func request_GatewayDAdminAPIService_RemovePeer_0(ctx context.Context, marshaler runtime.Marshaler, client GatewayDAdminAPIServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq RemovePeerRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	val, ok := pathParams["peer_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "peer_id")
+	}
+	protoReq.PeerId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "peer_id", err)
+	}
+	msg, err := client.RemovePeer(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_GatewayDAdminAPIService_RemovePeer_0(ctx context.Context, marshaler runtime.Marshaler, server GatewayDAdminAPIServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq RemovePeerRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	val, ok := pathParams["peer_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "peer_id")
+	}
+	protoReq.PeerId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "peer_id", err)
+	}
+	msg, err := server.RemovePeer(ctx, &protoReq)
+	return msg, metadata, err
+}
+
 // RegisterGatewayDAdminAPIServiceHandlerServer registers the http handlers for service GatewayDAdminAPIService to "mux".
 // UnaryRPC     :call GatewayDAdminAPIServiceServer directly.
 // StreamingRPC :currently unsupported pending https://github.com/grpc/grpc-go/issues/906.
@@ -321,6 +399,66 @@ func RegisterGatewayDAdminAPIServiceHandlerServer(ctx context.Context, mux *runt
 			return
 		}
 		forward_GatewayDAdminAPIService_GetServers_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_GatewayDAdminAPIService_GetPeers_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/api.v1.GatewayDAdminAPIService/GetPeers", runtime.WithHTTPPathPattern("/v1/raft/peers"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_GatewayDAdminAPIService_GetPeers_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_GatewayDAdminAPIService_GetPeers_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodPost, pattern_GatewayDAdminAPIService_AddPeer_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/api.v1.GatewayDAdminAPIService/AddPeer", runtime.WithHTTPPathPattern("/v1/raft/peers"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_GatewayDAdminAPIService_AddPeer_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_GatewayDAdminAPIService_AddPeer_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodDelete, pattern_GatewayDAdminAPIService_RemovePeer_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/api.v1.GatewayDAdminAPIService/RemovePeer", runtime.WithHTTPPathPattern("/v1/raft/peers/{peer_id}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_GatewayDAdminAPIService_RemovePeer_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_GatewayDAdminAPIService_RemovePeer_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
 
 	return nil
@@ -481,6 +619,57 @@ func RegisterGatewayDAdminAPIServiceHandlerClient(ctx context.Context, mux *runt
 		}
 		forward_GatewayDAdminAPIService_GetServers_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
+	mux.Handle(http.MethodGet, pattern_GatewayDAdminAPIService_GetPeers_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/api.v1.GatewayDAdminAPIService/GetPeers", runtime.WithHTTPPathPattern("/v1/raft/peers"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_GatewayDAdminAPIService_GetPeers_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_GatewayDAdminAPIService_GetPeers_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodPost, pattern_GatewayDAdminAPIService_AddPeer_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/api.v1.GatewayDAdminAPIService/AddPeer", runtime.WithHTTPPathPattern("/v1/raft/peers"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_GatewayDAdminAPIService_AddPeer_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_GatewayDAdminAPIService_AddPeer_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodDelete, pattern_GatewayDAdminAPIService_RemovePeer_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/api.v1.GatewayDAdminAPIService/RemovePeer", runtime.WithHTTPPathPattern("/v1/raft/peers/{peer_id}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_GatewayDAdminAPIService_RemovePeer_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_GatewayDAdminAPIService_RemovePeer_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
 	return nil
 }
 
@@ -492,6 +681,9 @@ var (
 	pattern_GatewayDAdminAPIService_GetPools_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "GatewayDPluginService", "GetPools"}, ""))
 	pattern_GatewayDAdminAPIService_GetProxies_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "GatewayDPluginService", "GetProxies"}, ""))
 	pattern_GatewayDAdminAPIService_GetServers_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "GatewayDPluginService", "GetServers"}, ""))
+	pattern_GatewayDAdminAPIService_GetPeers_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "raft", "peers"}, ""))
+	pattern_GatewayDAdminAPIService_AddPeer_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v1", "raft", "peers"}, ""))
+	pattern_GatewayDAdminAPIService_RemovePeer_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3}, []string{"v1", "raft", "peers", "peer_id"}, ""))
 )
 
 var (
@@ -502,4 +694,7 @@ var (
 	forward_GatewayDAdminAPIService_GetPools_0        = runtime.ForwardResponseMessage
 	forward_GatewayDAdminAPIService_GetProxies_0      = runtime.ForwardResponseMessage
 	forward_GatewayDAdminAPIService_GetServers_0      = runtime.ForwardResponseMessage
+	forward_GatewayDAdminAPIService_GetPeers_0        = runtime.ForwardResponseMessage
+	forward_GatewayDAdminAPIService_AddPeer_0         = runtime.ForwardResponseMessage
+	forward_GatewayDAdminAPIService_RemovePeer_0      = runtime.ForwardResponseMessage
 )

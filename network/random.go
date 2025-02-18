@@ -1,6 +1,7 @@
 package network
 
 import (
+	"context"
 	"crypto/rand"
 	"errors"
 	"fmt"
@@ -24,7 +25,7 @@ func NewRandom(server *Server) *Random {
 }
 
 // NextProxy returns a random proxy from the list.
-func (r *Random) NextProxy(_ IConnWrapper) (IProxy, *gerr.GatewayDError) {
+func (r *Random) NextProxy(_ context.Context, _ IConnWrapper) (IProxy, *gerr.GatewayDError) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 

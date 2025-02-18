@@ -1,8 +1,19 @@
 package raft
 
 import (
+	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/json"
+	"encoding/pem"
+	"fmt"
 	"io"
+	"math/big"
+	"net"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -150,7 +161,7 @@ func TestRaftNodeApply(t *testing.T) {
 	data, err := json.Marshal(cmd)
 	require.NoError(t, err)
 
-	err = node.Apply(data, time.Second)
+	err = node.Apply(context.Background(), data, time.Second)
 	// Note: This will likely fail as the node isn't a leader
 	assert.Error(t, err)
 }
@@ -214,7 +225,8 @@ func TestRaftLeadershipAndFollowers(t *testing.T) {
 	leaderCount := 0
 	var leaderNode *Node
 	for _, node := range nodes {
-		if node.GetState() == raft.Leader {
+		state, _ := node.GetState()
+		if state == raft.Leader {
 			leaderCount++
 			leaderNode = node
 		}
@@ -225,7 +237,8 @@ func TestRaftLeadershipAndFollowers(t *testing.T) {
 	// Test 2: Verify that other nodes are followers
 	for _, node := range nodes {
 		if node != leaderNode {
-			assert.Equal(t, raft.Follower, node.GetState(), "Expected non-leader nodes to be followers")
+			state, _ := node.GetState()
+			assert.Equal(t, raft.Follower, state, "Expected non-leader nodes to be followers")
 		}
 	}
 
@@ -241,7 +254,7 @@ func TestRaftLeadershipAndFollowers(t *testing.T) {
 	require.NoError(t, err)
 
 	// Apply command through leader
-	err = leaderNode.Apply(data, 5*time.Second)
+	err = leaderNode.Apply(context.Background(), data, 5*time.Second)
 	require.NoError(t, err, "Failed to apply command through leader")
 
 	// Wait for replication
@@ -264,7 +277,8 @@ func TestRaftLeadershipAndFollowers(t *testing.T) {
 	// Verify new leader is elected among remaining nodes
 	newLeaderCount := 0
 	for _, node := range nodes {
-		if node != leaderNode && node.GetState() == raft.Leader {
+		state, _ := node.GetState()
+		if node != leaderNode && state == raft.Leader {
 			newLeaderCount++
 		}
 	}
@@ -498,7 +512,8 @@ func TestGetHealthStatus(t *testing.T) {
 	time.Sleep(3 * time.Second)
 
 	// Test 1: Check health status when node1 is the leader
-	if node1.GetState() == raft.Leader {
+	state, _ := node1.GetState()
+	if state == raft.Leader {
 		healthStatus := node1.GetHealthStatus()
 		assert.True(t, healthStatus.IsHealthy, "Leader node should be healthy")
 		assert.True(t, healthStatus.IsLeader, "Node should be the leader")
@@ -508,7 +523,8 @@ func TestGetHealthStatus(t *testing.T) {
 	}
 
 	// Test 2: Check health status when node2 is a follower
-	if node2.GetState() == raft.Follower {
+	state, _ = node2.GetState()
+	if state == raft.Follower {
 		healthStatus := node2.GetHealthStatus()
 		assert.True(t, healthStatus.IsHealthy, "Follower node should be healthy")
 		assert.False(t, healthStatus.IsLeader, "Node should not be the leader")
@@ -540,4 +556,1061 @@ func TestGetHealthStatus(t *testing.T) {
 	assert.False(t, healthStatus.HasLeader, "Node should not have a leader")
 	assert.Error(t, healthStatus.Error, "There should be an error indicating no leader")
 	assert.Equal(t, healthStatus.LastContact, time.Duration(-1), "Last contact should be -1")
+}
+
+func TestAddPeer(t *testing.T) {
+	logger := setupTestLogger()
+
+	tempDir := t.TempDir()
+	nodeConfig1 := config.Raft{
+		NodeID:      "testAddPeerNode1",
+		Address:     "127.0.0.1:5679",
+		IsBootstrap: true,
+		Directory:   tempDir,
+		GRPCAddress: "127.0.0.1:5680",
+	}
+
+	node1, err := NewRaftNode(logger, nodeConfig1)
+	require.NoError(t, err)
+	defer func() {
+		_ = node1.Shutdown()
+	}()
+
+	time.Sleep(2 * time.Second)
+
+	// Add node2 to the cluster when peer is leader
+	tempDir2 := t.TempDir()
+	nodeConfig2 := config.Raft{
+		NodeID:      "testAddPeerNode2",
+		Address:     "127.0.0.1:5689",
+		IsBootstrap: false,
+		Directory:   tempDir2,
+		GRPCAddress: "127.0.0.1:5690",
+		Peers: []config.RaftPeer{
+			{ID: "testAddPeerNode1", Address: "127.0.0.1:5679", GRPCAddress: "127.0.0.1:5680"},
+		},
+	}
+
+	node2, err := NewRaftNode(logger, nodeConfig2)
+	require.NoError(t, err)
+	defer func() {
+		_ = node2.Shutdown()
+	}()
+
+	// Add node3 to the cluster when peer is follower
+	tempDir3 := t.TempDir()
+	nodeConfig3 := config.Raft{
+		NodeID:      "testAddPeerNode3",
+		Address:     "127.0.0.1:5699",
+		IsBootstrap: false,
+		Directory:   tempDir3,
+		GRPCAddress: "127.0.0.1:5700",
+		Peers: []config.RaftPeer{
+			{ID: "testAddPeerNode1", Address: "127.0.0.1:5689", GRPCAddress: "127.0.0.1:5690"},
+		},
+	}
+
+	node3, err := NewRaftNode(logger, nodeConfig3)
+	require.NoError(t, err)
+	defer func() {
+		_ = node3.Shutdown()
+	}()
+
+	// Function to check if a node is in the cluster configuration
+	checkNodeInCluster := func(nodeID string) bool {
+		existingConfig := node1.raft.GetConfiguration().Configuration()
+		for _, server := range existingConfig.Servers {
+			if server.ID == raft.ServerID(nodeID) {
+				return true
+			}
+		}
+		return false
+	}
+
+	// Wait and verify that both nodes join the cluster
+	require.Eventually(t, func() bool {
+		return checkNodeInCluster(nodeConfig2.NodeID) && checkNodeInCluster(nodeConfig3.NodeID)
+	}, 30*time.Second, 1*time.Second, "Nodes failed to join the cluster")
+
+	// Verify the cluster has exactly 3 nodes
+	existingConfig := node1.raft.GetConfiguration().Configuration()
+	assert.Equal(t, 3, len(existingConfig.Servers), "Cluster should have exactly 3 nodes")
+
+	// Verify that node2 and node3 recognize node1 as the leader
+	time.Sleep(2 * time.Second) // Give some time for leader recognition
+
+	_, leaderID := node2.raft.LeaderWithID()
+	assert.Equal(t, raft.ServerID(nodeConfig1.NodeID), leaderID, "Node2 should recognize Node1 as leader")
+
+	_, leaderID = node3.raft.LeaderWithID()
+	assert.Equal(t, raft.ServerID(nodeConfig1.NodeID), leaderID, "Node3 should recognize Node1 as leader")
+}
+
+func TestRemovePeer(t *testing.T) {
+	logger := setupTestLogger()
+	tempDir := t.TempDir()
+
+	// Configure three nodes
+	nodeConfigs := []config.Raft{
+		{
+			NodeID:      "testRemovePeerNode1",
+			Address:     "127.0.0.1:5779",
+			IsBootstrap: true,
+			Directory:   tempDir,
+			GRPCAddress: "127.0.0.1:5780",
+			Peers: []config.RaftPeer{
+				{ID: "testRemovePeerNode2", Address: "127.0.0.1:5789", GRPCAddress: "127.0.0.1:5790"},
+				{ID: "testRemovePeerNode3", Address: "127.0.0.1:5799", GRPCAddress: "127.0.0.1:5800"},
+			},
+		},
+		{
+			NodeID:      "testRemovePeerNode2",
+			Address:     "127.0.0.1:5789",
+			IsBootstrap: false,
+			Directory:   tempDir,
+			GRPCAddress: "127.0.0.1:5790",
+			Peers: []config.RaftPeer{
+				{ID: "testRemovePeerNode1", Address: "127.0.0.1:5779", GRPCAddress: "127.0.0.1:5780"},
+				{ID: "testRemovePeerNode3", Address: "127.0.0.1:5799", GRPCAddress: "127.0.0.1:5800"},
+			},
+		},
+		{
+			NodeID:      "testRemovePeerNode3",
+			Address:     "127.0.0.1:5799",
+			IsBootstrap: false,
+			Directory:   tempDir,
+			GRPCAddress: "127.0.0.1:5800",
+			Peers: []config.RaftPeer{
+				{ID: "testRemovePeerNode1", Address: "127.0.0.1:5779", GRPCAddress: "127.0.0.1:5780"},
+				{ID: "testRemovePeerNode2", Address: "127.0.0.1:5789", GRPCAddress: "127.0.0.1:5790"},
+			},
+		},
+	}
+
+	// Start all nodes
+	nodes := make([]*Node, len(nodeConfigs))
+	defer func() {
+		for _, node := range nodes {
+			if node != nil {
+				_ = node.Shutdown()
+			}
+		}
+	}()
+
+	// Initialize nodes
+	for i, cfg := range nodeConfigs {
+		node, err := NewRaftNode(logger, cfg)
+		require.NoError(t, err)
+		nodes[i] = node
+	}
+
+	// Wait for cluster to stabilize and leader election
+	require.Eventually(t, func() bool {
+		leaderCount := 0
+		for _, node := range nodes {
+			state, _ := node.GetState()
+			if state == raft.Leader {
+				leaderCount++
+			}
+		}
+		return leaderCount == 1
+	}, 10*time.Second, 100*time.Millisecond, "Failed to elect a leader")
+
+	// Find the leader node
+	var leaderNode *Node
+	for _, node := range nodes {
+		state, _ := node.GetState()
+		if state == raft.Leader {
+			leaderNode = node
+			break
+		}
+	}
+	require.NotNil(t, leaderNode, "Leader node not found")
+
+	// Verify initial cluster configuration
+	initialConfig := leaderNode.raft.GetConfiguration().Configuration()
+	require.Equal(t, 3, len(initialConfig.Servers), "Initial cluster should have 3 nodes")
+
+	// also need to verify that the peers are in the FSM
+	require.Eventually(t, func() bool {
+		return len(leaderNode.Fsm.raftPeers) == 3
+	}, 10*time.Second, 100*time.Millisecond, "Peers not found in FSM")
+
+	// Test removing a follower node
+	followerID := nodeConfigs[1].NodeID // Second node
+	err := leaderNode.RemovePeer(context.Background(), followerID)
+	require.NoError(t, err, "Failed to remove follower node")
+
+	// Wait for the removal to take effect and verify
+	require.Eventually(t, func() bool {
+		config := leaderNode.raft.GetConfiguration().Configuration()
+		return len(config.Servers) == 2
+	}, 5*time.Second, 100*time.Millisecond, "Node removal not reflected in configuration")
+
+	// Verify the removed node is not in the configuration
+	currentConfig := leaderNode.raft.GetConfiguration().Configuration()
+	for _, server := range currentConfig.Servers {
+		require.NotEqual(t, raft.ServerID(followerID), server.ID, "Removed node should not be in configuration")
+	}
+
+	// Test removing the leader node
+	leaderID := leaderNode.config.LocalID
+	err = leaderNode.RemovePeer(context.Background(), string(leaderID))
+	require.NoError(t, err, "Failed to remove leader node")
+
+	// Wait for new leader election and verify cluster size
+	require.Eventually(t, func() bool {
+		// Check remaining node's configuration
+		for _, node := range nodes {
+			state, _ := node.GetState()
+			if state == raft.Leader {
+				config := node.raft.GetConfiguration().Configuration()
+				return len(config.Servers) == 1
+			}
+		}
+		return false
+	}, 10*time.Second, 100*time.Millisecond, "Failed to elect new leader after removing old leader")
+
+	// Verify the final state
+	var newLeaderNode *Node
+	for _, node := range nodes {
+		state, _ := node.GetState()
+		if state == raft.Leader {
+			newLeaderNode = node
+			break
+		}
+	}
+	require.NotNil(t, newLeaderNode, "New leader should be elected")
+
+	finalConfig := newLeaderNode.raft.GetConfiguration().Configuration()
+	require.Equal(t, 1, len(finalConfig.Servers), "Final cluster should have 1 node")
+	require.NotEqual(t, leaderID, finalConfig.Servers[0].ID,
+		"Old leader should not be in final configuration")
+}
+
+func TestSecureGRPCConfiguration(t *testing.T) {
+	logger := setupTestLogger()
+	tempDir := t.TempDir()
+
+	// Create temporary certificate files
+	certFile := filepath.Join(tempDir, "cert.pem")
+	keyFile := filepath.Join(tempDir, "key.pem")
+
+	// Generate self-signed certificate for testing
+	err := generateTestCertificate(certFile, keyFile)
+	require.NoError(t, err, "Failed to generate test certificates")
+
+	tests := []struct {
+		name       string
+		raftConfig config.Raft
+		wantErr    bool
+		errMsg     string
+	}{
+		{
+			name: "valid secure configuration",
+			raftConfig: config.Raft{
+				NodeID:      "secureNode1",
+				Address:     "127.0.0.1:0",
+				GRPCAddress: "127.0.0.1:0",
+				IsBootstrap: true,
+				Directory:   tempDir,
+				IsSecure:    true,
+				CertFile:    certFile,
+				KeyFile:     keyFile,
+			},
+			wantErr: false,
+		},
+		{
+			name: "secure mode without cert files",
+			raftConfig: config.Raft{
+				NodeID:      "secureNode2",
+				Address:     "127.0.0.1:0",
+				GRPCAddress: "127.0.0.1:0",
+				IsBootstrap: true,
+				Directory:   tempDir,
+				IsSecure:    true,
+				CertFile:    "",
+				KeyFile:     "",
+			},
+			wantErr: true,
+			errMsg:  "TLS certificate and key files are required when secure mode is enabled",
+		},
+		{
+			name: "secure mode with invalid cert file",
+			raftConfig: config.Raft{
+				NodeID:      "secureNode3",
+				Address:     "127.0.0.1:0",
+				GRPCAddress: "127.0.0.1:0",
+				IsBootstrap: true,
+				Directory:   tempDir,
+				IsSecure:    true,
+				CertFile:    "nonexistent.pem",
+				KeyFile:     keyFile,
+			},
+			wantErr: true,
+			errMsg:  "failed to load TLS credentials",
+		},
+		{
+			name: "non-secure configuration",
+			raftConfig: config.Raft{
+				NodeID:      "secureNode4",
+				Address:     "127.0.0.1:0",
+				GRPCAddress: "127.0.0.1:0",
+				IsBootstrap: true,
+				Directory:   tempDir,
+				IsSecure:    false,
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			node, err := NewRaftNode(logger, testCase.raftConfig)
+			if testCase.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), testCase.errMsg)
+				assert.Nil(t, node)
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, node)
+				assert.Equal(t, testCase.raftConfig.IsSecure, node.grpcIsSecure)
+
+				// Cleanup
+				err = node.Shutdown()
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+// generateTestCertificate creates a self-signed certificate for testing.
+func generateTestCertificate(certFile, keyFile string) error {
+	// Generate private key
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return fmt.Errorf("failed to generate private key: %w", err)
+	}
+
+	// Create certificate template
+	template := x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			Organization: []string{"Test Org"},
+		},
+		NotBefore: time.Now(),
+		NotAfter:  time.Now().Add(time.Hour * 24),
+
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1")},
+	}
+
+	// Create certificate
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &privateKey.PublicKey, privateKey)
+	if err != nil {
+		return fmt.Errorf("failed to create certificate: %w", err)
+	}
+
+	// Write certificate to file
+	certOut, err := os.Create(certFile)
+	if err != nil {
+		return fmt.Errorf("failed to create cert file: %w", err)
+	}
+	defer certOut.Close()
+	if err := pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes}); err != nil {
+		return fmt.Errorf("failed to encode certificate: %w", err)
+	}
+
+	// Write private key to file
+	keyOut, err := os.Create(keyFile)
+	if err != nil {
+		return fmt.Errorf("failed to create key file: %w", err)
+	}
+	defer keyOut.Close()
+	if err := pem.Encode(keyOut, &pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
+	}); err != nil {
+		return fmt.Errorf("failed to encode private key: %w", err)
+	}
+
+	return nil
+}
+
+func TestFSMPeerOperations(t *testing.T) {
+	logger := setupTestLogger()
+	tempDir := t.TempDir()
+
+	nodeConfigs := []config.Raft{
+		{
+			NodeID:      "testFSMPeerNode1",
+			Address:     "127.0.0.1:6779",
+			IsBootstrap: true,
+			Directory:   tempDir,
+			GRPCAddress: "127.0.0.1:6780",
+			Peers:       []config.RaftPeer{},
+		},
+		{
+			NodeID:      "testFSMPeerNode2",
+			Address:     "127.0.0.1:6789",
+			IsBootstrap: false,
+			Directory:   tempDir,
+			GRPCAddress: "127.0.0.1:6790",
+			Peers: []config.RaftPeer{
+				{ID: "testFSMPeerNode1", Address: "127.0.0.1:6779", GRPCAddress: "127.0.0.1:6780"},
+			},
+		},
+		{
+			NodeID:      "testFSMPeerNode3",
+			Address:     "127.0.0.1:6799",
+			IsBootstrap: false,
+			Directory:   tempDir,
+			GRPCAddress: "127.0.0.1:6800",
+			Peers: []config.RaftPeer{
+				{ID: "testFSMPeerNode1", Address: "127.0.0.1:6779", GRPCAddress: "127.0.0.1:6780"},
+			},
+		},
+	}
+
+	// Create nodes and set up deferred cleanup
+	nodes := make([]*Node, 0, len(nodeConfigs))
+	defer func() {
+		for _, node := range nodes {
+			if node != nil {
+				_ = node.Shutdown()
+			}
+		}
+	}()
+
+	// Initialize node1 (bootstrap node)
+	node1, err := NewRaftNode(logger, nodeConfigs[0])
+	require.NoError(t, err)
+	nodes = append(nodes, node1)
+
+	// Wait for node1 to become leader
+	require.Eventually(t, func() bool {
+		state, _ := node1.GetState()
+		return state == raft.Leader
+	}, 10*time.Second, 100*time.Millisecond, "Node 1 failed to become leader")
+
+	// Initialize node2
+	node2, err := NewRaftNode(logger, nodeConfigs[1])
+	require.NoError(t, err)
+	nodes = append(nodes, node2)
+
+	// Wait for node2 to join the cluster
+	require.Eventually(t, func() bool {
+		return node2.raft.Leader() != "" && len(node2.Fsm.raftPeers) >= 2
+	}, 10*time.Second, 100*time.Millisecond, "Node 2 failed to join the cluster")
+
+	// Initialize node3
+	node3, err := NewRaftNode(logger, nodeConfigs[2])
+	require.NoError(t, err)
+	nodes = append(nodes, node3)
+
+	// Wait for node3 to join the cluster
+	require.Eventually(t, func() bool {
+		return node3.raft.Leader() != "" && len(node3.Fsm.raftPeers) >= 3
+	}, 10*time.Second, 100*time.Millisecond, "Node 3 failed to join the cluster")
+
+	// Wait for FSM state synchronization
+	require.Eventually(t, func() bool {
+		return len(node1.Fsm.raftPeers) == 3 &&
+			len(node2.Fsm.raftPeers) == 3 &&
+			len(node3.Fsm.raftPeers) == 3
+	}, 10*time.Second, 100*time.Millisecond, "Failed to synchronize FSM state across nodes")
+
+	// Verify peer information is consistent across all nodes
+	for _, node := range nodes {
+		peers := node.Fsm.raftPeers
+		require.Equal(t, 3, len(peers), "Node should have exactly 3 peers")
+
+		// Verify each peer has the correct information
+		expectedPeers := map[string]bool{
+			"testFSMPeerNode1": false,
+			"testFSMPeerNode2": false,
+			"testFSMPeerNode3": false,
+		}
+
+		for peerID, peer := range peers {
+			require.Contains(t, expectedPeers, peerID, "Unexpected peer ID found")
+			require.NotEmpty(t, peer.Address, "Peer address should not be empty")
+			require.NotEmpty(t, peer.GRPCAddress, "Peer gRPC address should not be empty")
+			expectedPeers[peerID] = true
+		}
+
+		// Verify all expected peers were found
+		for peerID, found := range expectedPeers {
+			require.True(t, found, "Expected peer %s not found in FSM state", peerID)
+		}
+	}
+
+	// Verify leader is consistent across all nodes
+	leaderAddr := node1.raft.Leader()
+	require.NotEmpty(t, leaderAddr, "Leader address should not be empty")
+	for _, node := range nodes[1:] {
+		require.Equal(t, leaderAddr, node.raft.Leader(),
+			"Leader address should be consistent across all nodes")
+	}
+}
+
+func TestLeaveCluster(t *testing.T) {
+	logger := setupTestLogger()
+	tempDir := t.TempDir()
+
+	// Test cases for different cluster scenarios
+	tests := []struct {
+		name       string
+		setupNodes func() []*Node
+		testNode   int  // index of node that will leave
+		wantErr    bool // whether we expect an error
+	}{
+		{
+			name: "single node cluster",
+			setupNodes: func() []*Node {
+				node, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "singleNode",
+					Address:     "127.0.0.1:0",
+					GRPCAddress: "127.0.0.1:0",
+					IsBootstrap: true,
+					Directory:   tempDir,
+				})
+				require.NoError(t, err)
+				return []*Node{node}
+			},
+			testNode: 0,
+			wantErr:  false,
+		},
+		{
+			name: "follower leaves multi-node cluster",
+			setupNodes: func() []*Node {
+				// Create a 3-node cluster
+				nodes := make([]*Node, 0, 3)
+
+				// Leader node
+				node1, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "multiNode1",
+					Address:     "127.0.0.1:7011",
+					GRPCAddress: "127.0.0.1:7021",
+					IsBootstrap: true,
+					Directory:   tempDir,
+					Peers: []config.RaftPeer{
+						{ID: "multiNode2", Address: "127.0.0.1:7012", GRPCAddress: "127.0.0.1:7022"},
+						{ID: "multiNode3", Address: "127.0.0.1:7013", GRPCAddress: "127.0.0.1:7023"},
+					},
+				})
+				require.NoError(t, err)
+				nodes = append(nodes, node1)
+
+				// Follower nodes
+				node2, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "multiNode2",
+					Address:     "127.0.0.1:7012",
+					GRPCAddress: "127.0.0.1:7022",
+					IsBootstrap: false,
+					Directory:   tempDir,
+					Peers: []config.RaftPeer{
+						{ID: "multiNode1", Address: "127.0.0.1:7011", GRPCAddress: "127.0.0.1:7021"},
+						{ID: "multiNode3", Address: "127.0.0.1:7013", GRPCAddress: "127.0.0.1:7023"},
+					},
+				})
+				require.NoError(t, err)
+				nodes = append(nodes, node2)
+
+				node3, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "multiNode3",
+					Address:     "127.0.0.1:7013",
+					GRPCAddress: "127.0.0.1:7023",
+					IsBootstrap: false,
+					Directory:   tempDir,
+					Peers: []config.RaftPeer{
+						{ID: "multiNode1", Address: "127.0.0.1:7011", GRPCAddress: "127.0.0.1:7021"},
+						{ID: "multiNode2", Address: "127.0.0.1:7012", GRPCAddress: "127.0.0.1:7022"},
+					},
+				})
+				require.NoError(t, err)
+				nodes = append(nodes, node3)
+
+				// Wait for cluster to stabilize
+				time.Sleep(3 * time.Second)
+				return nodes
+			},
+			testNode: 2, // Test with the last follower
+			wantErr:  false,
+		},
+		{
+			name: "leader leaves multi-node cluster",
+			setupNodes: func() []*Node {
+				// Similar setup to previous test case
+				nodes := make([]*Node, 0, 3)
+
+				node1, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "leaderNode1",
+					Address:     "127.0.0.1:7021",
+					GRPCAddress: "127.0.0.1:7031",
+					IsBootstrap: true,
+					Directory:   tempDir,
+					Peers: []config.RaftPeer{
+						{ID: "leaderNode2", Address: "127.0.0.1:7022", GRPCAddress: "127.0.0.1:7032"},
+						{ID: "leaderNode3", Address: "127.0.0.1:7023", GRPCAddress: "127.0.0.1:7033"},
+					},
+				})
+				require.NoError(t, err)
+				nodes = append(nodes, node1)
+
+				node2, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "leaderNode2",
+					Address:     "127.0.0.1:7022",
+					GRPCAddress: "127.0.0.1:7032",
+					IsBootstrap: false,
+					Directory:   tempDir,
+					Peers: []config.RaftPeer{
+						{ID: "leaderNode1", Address: "127.0.0.1:7021", GRPCAddress: "127.0.0.1:7031"},
+						{ID: "leaderNode3", Address: "127.0.0.1:7023", GRPCAddress: "127.0.0.1:7033"},
+					},
+				})
+				require.NoError(t, err)
+				nodes = append(nodes, node2)
+
+				node3, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "leaderNode3",
+					Address:     "127.0.0.1:7023",
+					GRPCAddress: "127.0.0.1:7033",
+					IsBootstrap: false,
+					Directory:   tempDir,
+					Peers: []config.RaftPeer{
+						{ID: "leaderNode1", Address: "127.0.0.1:7021", GRPCAddress: "127.0.0.1:7031"},
+						{ID: "leaderNode2", Address: "127.0.0.1:7022", GRPCAddress: "127.0.0.1:7032"},
+					},
+				})
+				require.NoError(t, err)
+				nodes = append(nodes, node3)
+
+				// Wait for cluster to stabilize
+				time.Sleep(3 * time.Second)
+				return nodes
+			},
+			testNode: 0, // Test with the leader
+			wantErr:  false,
+		},
+		{
+			name: "nil node",
+			setupNodes: func() []*Node {
+				return []*Node{nil}
+			},
+			testNode: 0,
+			wantErr:  true,
+		},
+	}
+
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			nodes := testCase.setupNodes()
+			defer func() {
+				for _, node := range nodes {
+					if node != nil {
+						_ = node.Shutdown()
+					}
+				}
+			}()
+
+			// For multi-node clusters, verify the initial state
+			if len(nodes) > 1 {
+				require.Eventually(t, func() bool {
+					leaderCount := 0
+					followerCount := 0
+					for _, node := range nodes {
+						if node != nil {
+							state, _ := node.GetState()
+							if state == raft.Leader {
+								leaderCount++
+							} else if state == raft.Follower {
+								followerCount++
+							}
+						}
+					}
+					return leaderCount == 1 && followerCount == len(nodes)-1
+				}, 10*time.Second, 100*time.Millisecond, "Failed to establish initial cluster state")
+			}
+
+			// Execute the leave operation
+			err := nodes[testCase.testNode].LeaveCluster(context.Background())
+
+			// Verify the result
+			if testCase.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+
+				// For multi-node clusters, verify the remaining cluster state
+				if len(nodes) > 1 {
+					// Verify the node is no longer in the cluster configuration
+					for i, node := range nodes {
+						if i != testCase.testNode && node != nil {
+							config := node.GetPeers()
+							for _, server := range config {
+								assert.NotEqual(t, nodes[testCase.testNode].config.LocalID, server.ID,
+									"Departed node should not be in cluster configuration")
+							}
+						}
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestGetPeers(t *testing.T) {
+	logger := setupTestLogger()
+	tempDir := t.TempDir()
+
+	tests := []struct {
+		name          string
+		setupNode     func() *Node
+		expectedPeers int
+	}{
+		{
+			name: "uninitialized raft",
+			setupNode: func() *Node {
+				return &Node{
+					raft:   nil,
+					Logger: logger,
+				}
+			},
+			expectedPeers: 0,
+		},
+		{
+			name: "single node cluster",
+			setupNode: func() *Node {
+				node, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "singleNode",
+					Address:     "127.0.0.1:0",
+					GRPCAddress: "127.0.0.1:0",
+					IsBootstrap: true,
+					Directory:   tempDir,
+				})
+				require.NoError(t, err)
+				time.Sleep(1 * time.Second) // Wait for initialization
+				return node
+			},
+			expectedPeers: 1,
+		},
+		{
+			name: "multi-node cluster",
+			setupNode: func() *Node {
+				// Create a 3-node cluster configuration
+				node1, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "multiNode1",
+					Address:     "127.0.0.1:6002",
+					GRPCAddress: "127.0.0.1:6012",
+					IsBootstrap: true,
+					Directory:   tempDir,
+					Peers: []config.RaftPeer{
+						{ID: "multiNode2", Address: "127.0.0.1:6003", GRPCAddress: "127.0.0.1:6013"},
+						{ID: "multiNode3", Address: "127.0.0.1:6004", GRPCAddress: "127.0.0.1:6014"},
+					},
+				})
+				require.NoError(t, err)
+
+				// Create and start other nodes
+				node2, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "multiNode2",
+					Address:     "127.0.0.1:6003",
+					GRPCAddress: "127.0.0.1:6013",
+					IsBootstrap: false,
+					Directory:   tempDir,
+					Peers: []config.RaftPeer{
+						{ID: "multiNode1", Address: "127.0.0.1:6002", GRPCAddress: "127.0.0.1:6012"},
+						{ID: "multiNode3", Address: "127.0.0.1:6004", GRPCAddress: "127.0.0.1:6014"},
+					},
+				})
+				require.NoError(t, err)
+				defer func() {
+					require.NoError(t, node2.Shutdown())
+				}()
+
+				node3, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "multiNode3",
+					Address:     "127.0.0.1:6004",
+					GRPCAddress: "127.0.0.1:6014",
+					IsBootstrap: false,
+					Directory:   tempDir,
+					Peers: []config.RaftPeer{
+						{ID: "multiNode1", Address: "127.0.0.1:6002", GRPCAddress: "127.0.0.1:6012"},
+						{ID: "multiNode2", Address: "127.0.0.1:6003", GRPCAddress: "127.0.0.1:6013"},
+					},
+				})
+				require.NoError(t, err)
+				defer func() {
+					require.NoError(t, node3.Shutdown())
+				}()
+
+				// Wait for cluster to stabilize
+				time.Sleep(3 * time.Second)
+				return node1
+			},
+			expectedPeers: 3,
+		},
+	}
+
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			node := testCase.setupNode()
+			if node != nil && node.raft != nil {
+				defer func() {
+					require.NoError(t, node.Shutdown())
+				}()
+			}
+
+			peers := node.GetPeers()
+			assert.Equal(t, testCase.expectedPeers, len(peers), "Unexpected number of peers")
+
+			if testCase.expectedPeers > 0 {
+				// Verify peer information
+				for _, peer := range peers {
+					assert.NotEmpty(t, peer.ID, "Peer ID should not be empty")
+					assert.NotEmpty(t, peer.Address, "Peer address should not be empty")
+				}
+			}
+		})
+	}
+}
+
+func TestGetLeaderClient(t *testing.T) {
+	logger := setupTestLogger()
+	tempDir := t.TempDir()
+
+	tests := []struct {
+		name       string
+		setupNodes func() []*Node
+		testNode   int
+		wantErr    bool
+		errMsg     string
+	}{
+		{
+			name: "successful leader client retrieval",
+			setupNodes: func() []*Node {
+				nodes := make([]*Node, 0, 2)
+
+				// Create leader node
+				node1, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "leaderClientNode1",
+					Address:     "127.0.0.1:7101",
+					GRPCAddress: "127.0.0.1:7201",
+					IsBootstrap: true,
+					Directory:   tempDir,
+					Peers: []config.RaftPeer{
+						{ID: "leaderClientNode2", Address: "127.0.0.1:7102", GRPCAddress: "127.0.0.1:7202"},
+					},
+				})
+				require.NoError(t, err)
+				nodes = append(nodes, node1)
+
+				// Create follower node
+				node2, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "leaderClientNode2",
+					Address:     "127.0.0.1:7102",
+					GRPCAddress: "127.0.0.1:7202",
+					IsBootstrap: false,
+					Directory:   tempDir,
+					Peers: []config.RaftPeer{
+						{ID: "leaderClientNode1", Address: "127.0.0.1:7101", GRPCAddress: "127.0.0.1:7201"},
+					},
+				})
+				require.NoError(t, err)
+				nodes = append(nodes, node2)
+
+				// Wait for cluster to stabilize
+				time.Sleep(3 * time.Second)
+				return nodes
+			},
+			testNode: 1, // Test from follower node
+			wantErr:  false,
+		},
+		{
+			name: "single node cluster",
+			setupNodes: func() []*Node {
+				node, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "singleLeaderNode",
+					Address:     "127.0.0.1:7103",
+					GRPCAddress: "127.0.0.1:7203",
+					IsBootstrap: true,
+					Directory:   tempDir,
+				})
+				require.NoError(t, err)
+				time.Sleep(1 * time.Second) // Wait for initialization
+				return []*Node{node}
+			},
+			testNode: 0,
+			wantErr:  false,
+		},
+		{
+			name: "no leader available",
+			setupNodes: func() []*Node {
+				node, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "noLeaderNode",
+					Address:     "127.0.0.1:7104",
+					GRPCAddress: "127.0.0.1:7204",
+					IsBootstrap: false, // Non-bootstrap node without peers
+					Directory:   tempDir,
+				})
+				require.NoError(t, err)
+				return []*Node{node}
+			},
+			testNode: 0,
+			wantErr:  true,
+			errMsg:   "timeout waiting for leader:",
+		},
+	}
+
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			nodes := testCase.setupNodes()
+			defer func() {
+				for _, node := range nodes {
+					if node != nil {
+						_ = node.Shutdown()
+					}
+				}
+			}()
+
+			client, err := nodes[testCase.testNode].getLeaderClient()
+
+			if testCase.wantErr {
+				assert.Error(t, err)
+				if testCase.errMsg != "" {
+					assert.Contains(t, err.Error(), testCase.errMsg)
+				}
+				assert.Nil(t, client)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, client)
+			}
+		})
+	}
+}
+
+func TestShutdown(t *testing.T) {
+	logger := setupTestLogger()
+	tempDir := t.TempDir()
+
+	tests := []struct {
+		name       string
+		setupNode  func() *Node
+		wantErr    bool
+		errMsg     string
+		setupExtra func(*Node) // Additional setup for specific test cases
+	}{
+		{
+			name: "successful shutdown",
+			setupNode: func() *Node {
+				node, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "shutdown-node1",
+					Address:     "127.0.0.1:0",
+					IsBootstrap: true,
+					Directory:   tempDir,
+				})
+				require.NoError(t, err)
+				return node
+			},
+			wantErr: false,
+		},
+		{
+			name: "shutdown already shutdown node",
+			setupNode: func() *Node {
+				node, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "shutdown-node2",
+					Address:     "127.0.0.1:0",
+					IsBootstrap: true,
+					Directory:   tempDir,
+				})
+				require.NoError(t, err)
+				return node
+			},
+			setupExtra: func(n *Node) {
+				err := n.Shutdown()
+				require.NoError(t, err)
+			},
+			wantErr: false, // Should not error as ErrRaftShutdown is ignored
+		},
+		{
+			name: "shutdown nil node",
+			setupNode: func() *Node {
+				return nil
+			},
+			wantErr: false, // Should not panic, gracefully handle nil node
+		},
+		{
+			name: "shutdown with active peer synchronization",
+			setupNode: func() *Node {
+				node, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "shutdown-node3",
+					Address:     "127.0.0.1:0",
+					IsBootstrap: true,
+					Directory:   tempDir,
+				})
+				require.NoError(t, err)
+				// Start peer synchronization
+				ctx, cancel := context.WithCancel(context.Background())
+				node.peerSyncCancel = cancel
+				node.StartPeerSynchronizer(ctx)
+				return node
+			},
+			wantErr: false,
+		},
+		{
+			name: "shutdown with active gRPC server",
+			setupNode: func() *Node {
+				node, err := NewRaftNode(logger, config.Raft{
+					NodeID:      "shutdown-node4",
+					Address:     "127.0.0.1:0",
+					GRPCAddress: "127.0.0.1:0",
+					IsBootstrap: true,
+					Directory:   tempDir,
+				})
+				require.NoError(t, err)
+				return node
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			node := testCase.setupNode()
+			if testCase.setupExtra != nil {
+				testCase.setupExtra(node)
+			}
+
+			err := node.Shutdown()
+
+			if testCase.wantErr {
+				assert.Error(t, err)
+				if testCase.errMsg != "" {
+					assert.Contains(t, err.Error(), testCase.errMsg)
+				}
+			} else {
+				assert.NoError(t, err)
+			}
+
+			// Additional verification for non-nil nodes
+			if node != nil {
+				// Verify that a second shutdown doesn't cause issues
+				err = node.Shutdown()
+				assert.NoError(t, err, "Second shutdown should not error")
+
+				// Verify all components are properly shut down
+				// assert.Nil(t, node.peerSyncCancel, "peerSyncCancel should be nil after shutdown")
+				if node.rpcServer != nil {
+					// Check if the gRPC server is stopped
+					// This is a bit tricky to verify directly, but we can try to use the server
+					assert.NotPanics(t, func() {
+						node.rpcServer.GracefulStop() // Should not block if already stopped
+					})
+				}
+			}
+		})
+	}
 }
