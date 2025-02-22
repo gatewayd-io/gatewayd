@@ -17,7 +17,7 @@ services:
       # The architecture of the GatewayD and plugins to install.
       # Default: amd64
       # Possible values: amd64 or arm64
-      # - ARCH=arm64
+      # - ARCH=amd64
       - REDIS_URL=redis://redis:6379/0
   write-postgres:
     image: postgres:latest
