@@ -28,7 +28,6 @@ func (s *rpcServer) ForwardApply(
 	if err != nil {
 		return &pb.ForwardApplyResponse{
 			Success: false,
-			Error:   err.Error(),
 		}, err
 	}
 
@@ -85,14 +84,12 @@ func (s *rpcServer) AddPeer(ctx context.Context, req *pb.AddPeerRequest) (*pb.Ad
 	if req == nil || req.GetPeerId() == "" || req.GetPeerAddress() == "" || req.GetGrpcAddress() == "" {
 		return &pb.AddPeerResponse{
 			Success: false,
-			Error:   "invalid request: missing required fields",
 		}, errors.New("invalid AddPeer request: missing required fields")
 	}
 
 	if err := s.node.AddPeer(ctx, req.GetPeerId(), req.GetPeerAddress(), req.GetGrpcAddress()); err != nil {
 		return &pb.AddPeerResponse{
 			Success: false,
-			Error:   fmt.Sprintf("failed to add peer: %v", err),
 		}, fmt.Errorf("AddPeer failed: %w", err)
 	}
 
@@ -106,14 +103,12 @@ func (s *rpcServer) RemovePeer(ctx context.Context, req *pb.RemovePeerRequest) (
 	if req == nil || req.GetPeerId() == "" {
 		return &pb.RemovePeerResponse{
 			Success: false,
-			Error:   "invalid request: missing peer ID",
 		}, errors.New("invalid RemovePeer request: missing peer ID")
 	}
 
 	if err := s.node.RemovePeer(ctx, req.GetPeerId()); err != nil {
 		return &pb.RemovePeerResponse{
 			Success: false,
-			Error:   fmt.Sprintf("failed to remove peer: %v", err),
 		}, fmt.Errorf("RemovePeer failed: %w", err)
 	}
 

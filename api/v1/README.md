@@ -339,7 +339,6 @@ GatewayDAdminAPIService is the administration API of GatewayD.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | success | [bool](#bool) |  |  |
-| error | [string](#string) |  |  |
 
 
 
@@ -371,7 +370,6 @@ GatewayDAdminAPIService is the administration API of GatewayD.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | success | [bool](#bool) |  |  |
-| error | [string](#string) |  |  |
 
 
 
@@ -433,7 +431,6 @@ GatewayDAdminAPIService is the administration API of GatewayD.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | success | [bool](#bool) |  |  |
-| error | [string](#string) |  |  |
 
 
 

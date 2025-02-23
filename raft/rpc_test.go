@@ -309,14 +309,12 @@ func TestRPCServer_AddPeer(t *testing.T) {
 				assert.Error(t, err)
 				if resp != nil {
 					assert.False(t, resp.GetSuccess())
-					assert.NotEmpty(t, resp.GetError())
 				}
 				return
 			}
 
 			require.NoError(t, err)
 			assert.True(t, resp.GetSuccess())
-			assert.Empty(t, resp.GetError())
 		})
 	}
 }
@@ -380,14 +378,12 @@ func TestRPCServer_RemovePeer(t *testing.T) {
 				assert.Error(t, err)
 				if resp != nil {
 					assert.False(t, resp.GetSuccess())
-					assert.NotEmpty(t, resp.GetError())
 				}
 				return
 			}
 
 			require.NoError(t, err)
 			assert.True(t, resp.GetSuccess())
-			assert.Empty(t, resp.GetError())
 		})
 	}
 }

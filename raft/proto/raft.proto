@@ -35,7 +35,6 @@ message ForwardApplyRequest {
 
 message ForwardApplyResponse {
   bool success = 1;
-  string error = 2;
 }
 
 message AddPeerRequest {
@@ -46,7 +45,6 @@ message AddPeerRequest {
 
 message AddPeerResponse {
   bool success = 1;
-  string error = 2;
 }
 
 message RemovePeerRequest {
@@ -55,7 +53,6 @@ message RemovePeerRequest {
 
 message RemovePeerResponse {
   bool success = 1;
-  string error = 2;
 }
 
 message GetPeerInfoRequest {

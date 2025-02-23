@@ -484,12 +484,8 @@ func (n *Node) AddPeer(ctx context.Context, peerID, peerAddr, grpcAddr string) e
 			PeerAddress: peerAddr,
 			GrpcAddress: grpcAddr,
 		})
-		if err != nil {
+		if err != nil && !resp.GetSuccess() {
 			return fmt.Errorf("failed to forward AddPeer request: %w", err)
-		}
-
-		if !resp.GetSuccess() {
-			return fmt.Errorf("leader failed to add peer: %s", resp.GetError())
 		}
 
 		return nil
@@ -581,12 +577,8 @@ func (n *Node) RemovePeer(ctx context.Context, peerID string) error {
 		resp, err := client.RemovePeer(ctx, &pb.RemovePeerRequest{
 			PeerId: peerID,
 		})
-		if err != nil {
+		if err != nil && !resp.GetSuccess() {
 			return fmt.Errorf("failed to forward RemovePeer request: %w", err)
-		}
-
-		if !resp.GetSuccess() {
-			return fmt.Errorf("leader failed to remove peer: %s", resp.GetError())
 		}
 
 		return nil
@@ -698,12 +690,8 @@ func (n *Node) forwardToLeader(ctx context.Context, data []byte, timeout time.Du
 					Data:      data,
 					TimeoutMs: timeout.Milliseconds(),
 				})
-				if err != nil {
+				if err != nil && !resp.GetSuccess() {
 					return fmt.Errorf("failed to forward request: %w", err)
-				}
-
-				if !resp.GetSuccess() {
-					return fmt.Errorf("leader failed to apply: %s", resp.GetError())
 				}
 
 				return nil
