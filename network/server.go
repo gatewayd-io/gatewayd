@@ -35,10 +35,6 @@ const (
 	Shutdown
 )
 
-const (
-	FindProxyTimeout = 5 * time.Second
-)
-
 //nolint:interfacebloat
 type IServer interface {
 	OnBoot() Action
@@ -181,7 +177,7 @@ func (s *Server) OnOpen(conn *ConnWrapper) ([]byte, Action) {
 	}
 	span.AddEvent("Ran the OnOpening hooks")
 
-	findProxyCtx, cancel := context.WithTimeout(context.Background(), FindProxyTimeout)
+	findProxyCtx, cancel := context.WithTimeout(context.Background(), config.FindProxyTimeout)
 	defer cancel()
 
 	// Attempt to retrieve the next proxy.
