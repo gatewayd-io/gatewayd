@@ -177,8 +177,11 @@ func (s *Server) OnOpen(conn *ConnWrapper) ([]byte, Action) {
 	}
 	span.AddEvent("Ran the OnOpening hooks")
 
+	findProxyCtx, cancel := context.WithTimeout(context.Background(), config.FindProxyTimeout)
+	defer cancel()
+
 	// Attempt to retrieve the next proxy.
-	proxy, err := s.loadbalancerStrategy.NextProxy(conn)
+	proxy, err := s.loadbalancerStrategy.NextProxy(findProxyCtx, conn)
 	if err != nil {
 		span.RecordError(err)
 		s.Logger.Error().Err(err).Msg("failed to retrieve next proxy")

@@ -45,30 +45,55 @@ func setupNodes(t *testing.T, logger zerolog.Logger, ports []int, tempDir string
 		{
 			NodeID:      "testRaftLeadershipnode1",
 			Address:     "127.0.0.1:" + strconv.Itoa(ports[0]),
+			GRPCAddress: "127.0.0.1:" + strconv.Itoa(ports[0]+10),
 			IsBootstrap: true,
 			Peers: []config.RaftPeer{
-				{ID: "testRaftLeadershipnode2", Address: "127.0.0.1:" + strconv.Itoa(ports[1])},
-				{ID: "testRaftLeadershipnode3", Address: "127.0.0.1:" + strconv.Itoa(ports[2])},
+				{
+					ID:          "testRaftLeadershipnode2",
+					Address:     "127.0.0.1:" + strconv.Itoa(ports[1]),
+					GRPCAddress: "127.0.0.1:" + strconv.Itoa(ports[1]+10),
+				},
+				{
+					ID:          "testRaftLeadershipnode3",
+					Address:     "127.0.0.1:" + strconv.Itoa(ports[2]),
+					GRPCAddress: "127.0.0.1:" + strconv.Itoa(ports[2]+10),
+				},
 			},
 			Directory: tempDir,
 		},
 		{
 			NodeID:      "testRaftLeadershipnode2",
 			Address:     "127.0.0.1:" + strconv.Itoa(ports[1]),
+			GRPCAddress: "127.0.0.1:" + strconv.Itoa(ports[1]+10),
 			IsBootstrap: false,
 			Peers: []config.RaftPeer{
-				{ID: "testRaftLeadershipnode1", Address: "127.0.0.1:" + strconv.Itoa(ports[0])},
-				{ID: "testRaftLeadershipnode3", Address: "127.0.0.1:" + strconv.Itoa(ports[2])},
+				{
+					ID:          "testRaftLeadershipnode1",
+					Address:     "127.0.0.1:" + strconv.Itoa(ports[0]),
+					GRPCAddress: "127.0.0.1:" + strconv.Itoa(ports[0]+10),
+				},
+				{
+					ID:      "testRaftLeadershipnode3",
+					Address: "127.0.0.1:" + strconv.Itoa(ports[2]), GRPCAddress: "127.0.0.1:" + strconv.Itoa(ports[2]+10),
+				},
 			},
 			Directory: tempDir,
 		},
 		{
 			NodeID:      "testRaftLeadershipnode3",
 			Address:     "127.0.0.1:" + strconv.Itoa(ports[2]),
+			GRPCAddress: "127.0.0.1:" + strconv.Itoa(ports[2]+10),
 			IsBootstrap: false,
 			Peers: []config.RaftPeer{
-				{ID: "testRaftLeadershipnode1", Address: "127.0.0.1:" + strconv.Itoa(ports[0])},
-				{ID: "testRaftLeadershipnode2", Address: "127.0.0.1:" + strconv.Itoa(ports[1])},
+				{
+					ID:          "testRaftLeadershipnode1",
+					Address:     "127.0.0.1:" + strconv.Itoa(ports[0]),
+					GRPCAddress: "127.0.0.1:" + strconv.Itoa(ports[0]+10),
+				},
+				{
+					ID:      "testRaftLeadershipnode2",
+					Address: "127.0.0.1:" + strconv.Itoa(ports[1]), GRPCAddress: "127.0.0.1:" + strconv.Itoa(ports[1]+10),
+				},
 			},
 			Directory: tempDir,
 		},
@@ -202,4 +227,245 @@ func TestRPCClient(t *testing.T) {
 
 		assert.NotEqual(t, "READY", conn.GetState().String())
 	})
+}
+
+func TestRPCServer_AddPeer(t *testing.T) {
+	tests := []struct {
+		name        string
+		request     *pb.AddPeerRequest
+		wantSuccess bool
+		wantErr     bool
+	}{
+		{
+			name: "successful peer addition",
+			request: &pb.AddPeerRequest{
+				PeerId:      "newPeer1",
+				PeerAddress: "127.0.0.1:6100",
+				GrpcAddress: "127.0.0.1:6101",
+			},
+			wantSuccess: true,
+			wantErr:     false,
+		},
+		{
+			name:        "nil request",
+			request:     nil,
+			wantSuccess: false,
+			wantErr:     true,
+		},
+		{
+			name: "missing peer ID",
+			request: &pb.AddPeerRequest{
+				PeerAddress: "127.0.0.1:6100",
+				GrpcAddress: "127.0.0.1:6101",
+			},
+			wantSuccess: false,
+			wantErr:     true,
+		},
+		{
+			name: "missing peer address",
+			request: &pb.AddPeerRequest{
+				PeerId:      "newPeer2",
+				GrpcAddress: "127.0.0.1:6101",
+			},
+			wantSuccess: false,
+			wantErr:     true,
+		},
+		{
+			name: "missing gRPC address",
+			request: &pb.AddPeerRequest{
+				PeerId:      "newPeer3",
+				PeerAddress: "127.0.0.1:6100",
+			},
+			wantSuccess: false,
+			wantErr:     true,
+		},
+	}
+
+	for i, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			tempDir := t.TempDir()
+			logger := setupTestLogger()
+			ports := []int{7004 + i, 7005 + i, 7006 + i}
+
+			nodes := setupNodes(t, logger, ports, tempDir)
+
+			// Wait for leader election
+			time.Sleep(3 * time.Second)
+
+			server, lis := setupGRPCServer(t, nodes[0])
+			defer server.Stop()
+
+			conn, err := grpc.NewClient(
+				getListenerAddr(lis),
+				grpc.WithTransportCredentials(insecure.NewCredentials()),
+			)
+			require.NoError(t, err, "Failed to create gRPC client connection")
+			defer conn.Close()
+
+			client := pb.NewRaftServiceClient(conn)
+			resp, err := client.AddPeer(context.Background(), testCase.request)
+
+			if testCase.wantErr {
+				assert.Error(t, err)
+				if resp != nil {
+					assert.False(t, resp.GetSuccess())
+				}
+				return
+			}
+
+			require.NoError(t, err)
+			assert.True(t, resp.GetSuccess())
+		})
+	}
+}
+
+func TestRPCServer_RemovePeer(t *testing.T) {
+	tests := []struct {
+		name        string
+		request     *pb.RemovePeerRequest
+		wantSuccess bool
+		wantErr     bool
+	}{
+		{
+			name: "successful peer removal",
+			request: &pb.RemovePeerRequest{
+				PeerId: "testRaftLeadershipnode2",
+			},
+			wantSuccess: true,
+			wantErr:     false,
+		},
+		{
+			name:        "nil request",
+			request:     nil,
+			wantSuccess: false,
+			wantErr:     true,
+		},
+		{
+			name: "missing peer ID",
+			request: &pb.RemovePeerRequest{
+				PeerId: "",
+			},
+			wantSuccess: false,
+			wantErr:     true,
+		},
+	}
+
+	for i, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			tempDir := t.TempDir()
+			logger := setupTestLogger()
+			ports := []int{8004 + i, 8005 + i, 8006 + i}
+
+			nodes := setupNodes(t, logger, ports, tempDir)
+
+			// Wait for leader election
+			time.Sleep(3 * time.Second)
+
+			server, lis := setupGRPCServer(t, nodes[0])
+			defer server.Stop()
+
+			conn, err := grpc.NewClient(
+				getListenerAddr(lis),
+				grpc.WithTransportCredentials(insecure.NewCredentials()),
+			)
+			require.NoError(t, err, "Failed to create gRPC client connection")
+			defer conn.Close()
+
+			client := pb.NewRaftServiceClient(conn)
+			resp, err := client.RemovePeer(context.Background(), testCase.request)
+
+			if testCase.wantErr {
+				assert.Error(t, err)
+				if resp != nil {
+					assert.False(t, resp.GetSuccess())
+				}
+				return
+			}
+
+			require.NoError(t, err)
+			assert.True(t, resp.GetSuccess())
+		})
+	}
+}
+
+func TestRPCServer_GetPeerInfo(t *testing.T) {
+	tests := []struct {
+		name    string
+		request *pb.GetPeerInfoRequest
+		want    *pb.GetPeerInfoResponse
+		wantErr bool
+	}{
+		{
+			name: "existing peer",
+			request: &pb.GetPeerInfoRequest{
+				PeerId: "testRaftLeadershipnode2",
+			},
+			want: &pb.GetPeerInfoResponse{
+				Exists:      true,
+				GrpcAddress: "127.0.0.1:9015",
+			},
+			wantErr: false,
+		},
+		{
+			name: "non-existent peer",
+			request: &pb.GetPeerInfoRequest{
+				PeerId: "nonexistentPeer",
+			},
+			want: &pb.GetPeerInfoResponse{
+				Exists: false,
+			},
+			wantErr: false,
+		},
+		{
+			name:    "nil request",
+			request: nil,
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "empty peer ID",
+			request: &pb.GetPeerInfoRequest{
+				PeerId: "",
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+
+	for i, testCase := range tests[0:1] {
+		t.Run(testCase.name, func(t *testing.T) {
+			tempDir := t.TempDir()
+			logger := setupTestLogger()
+			ports := []int{9004 + i, 9005 + i, 9006 + i}
+
+			nodes := setupNodes(t, logger, ports, tempDir)
+
+			// Wait for leader election
+			time.Sleep(3 * time.Second)
+
+			server, lis := setupGRPCServer(t, nodes[0])
+			defer server.Stop()
+
+			conn, err := grpc.NewClient(
+				getListenerAddr(lis),
+				grpc.WithTransportCredentials(insecure.NewCredentials()),
+			)
+			require.NoError(t, err, "Failed to create gRPC client connection")
+			defer conn.Close()
+
+			client := pb.NewRaftServiceClient(conn)
+			resp, err := client.GetPeerInfo(context.Background(), testCase.request)
+
+			if testCase.wantErr {
+				assert.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, testCase.want.GetExists(), resp.GetExists())
+			if testCase.want.GetExists() {
+				assert.Equal(t, testCase.want.GetGrpcAddress(), resp.GetGrpcAddress())
+			}
+		})
+	}
 }

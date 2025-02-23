@@ -4,19 +4,32 @@
 ## Table of Contents
 
 - [api/v1/api.proto](#api_v1_api-proto)
+    - [AddPeerRequest](#api-v1-AddPeerRequest)
+    - [AddPeerResponse](#api-v1-AddPeerResponse)
     - [Group](#api-v1-Group)
+    - [PeerInfo](#api-v1-PeerInfo)
+    - [PeersResponse](#api-v1-PeersResponse)
+    - [PeersResponse.PeersEntry](#api-v1-PeersResponse-PeersEntry)
     - [PluginConfig](#api-v1-PluginConfig)
     - [PluginConfig.ConfigEntry](#api-v1-PluginConfig-ConfigEntry)
     - [PluginConfig.RequiresEntry](#api-v1-PluginConfig-RequiresEntry)
     - [PluginConfigs](#api-v1-PluginConfigs)
     - [PluginID](#api-v1-PluginID)
+    - [RemovePeerRequest](#api-v1-RemovePeerRequest)
+    - [RemovePeerResponse](#api-v1-RemovePeerResponse)
     - [VersionResponse](#api-v1-VersionResponse)
   
     - [GatewayDAdminAPIService](#api-v1-GatewayDAdminAPIService)
   
 - [raft/proto/raft.proto](#raft_proto_raft-proto)
+    - [AddPeerRequest](#raft-AddPeerRequest)
+    - [AddPeerResponse](#raft-AddPeerResponse)
     - [ForwardApplyRequest](#raft-ForwardApplyRequest)
     - [ForwardApplyResponse](#raft-ForwardApplyResponse)
+    - [GetPeerInfoRequest](#raft-GetPeerInfoRequest)
+    - [GetPeerInfoResponse](#raft-GetPeerInfoResponse)
+    - [RemovePeerRequest](#raft-RemovePeerRequest)
+    - [RemovePeerResponse](#raft-RemovePeerResponse)
   
     - [RaftService](#raft-RaftService)
   
@@ -31,6 +44,39 @@
 
 
 
+<a name="api-v1-AddPeerRequest"></a>
+
+### AddPeerRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| peer_id | [string](#string) |  | Unique identifier for the new peer |
+| address | [string](#string) |  | Network address for Raft communication |
+| grpc_address | [string](#string) |  | gRPC address for API communication |
+
+
+
+
+
+
+<a name="api-v1-AddPeerResponse"></a>
+
+### AddPeerResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| success | [bool](#bool) |  | Indicates if the operation was successful |
+| error | [string](#string) |  | Error message if the operation failed |
+
+
+
+
+
+
 <a name="api-v1-Group"></a>
 
 ### Group
@@ -40,6 +86,56 @@ Group is the object group to filter the global config by.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | group_name | [string](#string) | optional | GroupName is the name of the group. |
+
+
+
+
+
+
+<a name="api-v1-PeerInfo"></a>
+
+### PeerInfo
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  | Unique identifier of the peer |
+| address | [string](#string) |  | Network address of the peer |
+| state | [string](#string) |  | Current state of the peer in the Raft cluster |
+| is_leader | [bool](#bool) |  | Indicates if this peer is the current leader |
+| is_voter | [bool](#bool) |  | Indicates if this peer has voting rights |
+
+
+
+
+
+
+<a name="api-v1-PeersResponse"></a>
+
+### PeersResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| peers | [PeersResponse.PeersEntry](#api-v1-PeersResponse-PeersEntry) | repeated | Map of peer IDs to their information |
+
+
+
+
+
+
+<a name="api-v1-PeersResponse-PeersEntry"></a>
+
+### PeersResponse.PeersEntry
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| key | [string](#string) |  |  |
+| value | [PeerInfo](#api-v1-PeerInfo) |  |  |
 
 
 
@@ -135,6 +231,37 @@ PluginID is the identifier that uniquely identifies the plugin.
 
 
 
+<a name="api-v1-RemovePeerRequest"></a>
+
+### RemovePeerRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| peer_id | [string](#string) |  | ID of the peer to remove |
+
+
+
+
+
+
+<a name="api-v1-RemovePeerResponse"></a>
+
+### RemovePeerResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| success | [bool](#bool) |  | Indicates if the operation was successful |
+| error | [string](#string) |  | Error message if the operation failed |
+
+
+
+
+
+
 <a name="api-v1-VersionResponse"></a>
 
 ### VersionResponse
@@ -171,6 +298,9 @@ GatewayDAdminAPIService is the administration API of GatewayD.
 | GetPools | [.google.protobuf.Empty](#google-protobuf-Empty) | [.google.protobuf.Struct](#google-protobuf-Struct) | GetPools returns the list of pools configured on the GatewayD. |
 | GetProxies | [.google.protobuf.Empty](#google-protobuf-Empty) | [.google.protobuf.Struct](#google-protobuf-Struct) | GetProxies returns the list of proxies configured on the GatewayD. |
 | GetServers | [.google.protobuf.Empty](#google-protobuf-Empty) | [.google.protobuf.Struct](#google-protobuf-Struct) | GetServers returns the list of servers configured on the GatewayD. |
+| GetPeers | [.google.protobuf.Empty](#google-protobuf-Empty) | [.google.protobuf.Struct](#google-protobuf-Struct) | GetPeers returns information about all peers in the Raft cluster |
+| AddPeer | [AddPeerRequest](#api-v1-AddPeerRequest) | [AddPeerResponse](#api-v1-AddPeerResponse) | AddPeer adds a new peer to the Raft cluster |
+| RemovePeer | [RemovePeerRequest](#api-v1-RemovePeerRequest) | [RemovePeerResponse](#api-v1-RemovePeerResponse) | RemovePeer removes an existing peer from the Raft cluster |
 
  
 
@@ -180,6 +310,38 @@ GatewayDAdminAPIService is the administration API of GatewayD.
 <p align="right"><a href="#top">Top</a></p>
 
 ## raft/proto/raft.proto
+
+
+
+<a name="raft-AddPeerRequest"></a>
+
+### AddPeerRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| peer_id | [string](#string) |  |  |
+| peer_address | [string](#string) |  |  |
+| grpc_address | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="raft-AddPeerResponse"></a>
+
+### AddPeerResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| success | [bool](#bool) |  |  |
+
+
+
 
 
 
@@ -208,7 +370,67 @@ GatewayDAdminAPIService is the administration API of GatewayD.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | success | [bool](#bool) |  |  |
-| error | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="raft-GetPeerInfoRequest"></a>
+
+### GetPeerInfoRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| peer_id | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="raft-GetPeerInfoResponse"></a>
+
+### GetPeerInfoResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| exists | [bool](#bool) |  |  |
+| grpc_address | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="raft-RemovePeerRequest"></a>
+
+### RemovePeerRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| peer_id | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="raft-RemovePeerResponse"></a>
+
+### RemovePeerResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| success | [bool](#bool) |  |  |
 
 
 
@@ -229,6 +451,9 @@ GatewayDAdminAPIService is the administration API of GatewayD.
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
 | ForwardApply | [ForwardApplyRequest](#raft-ForwardApplyRequest) | [ForwardApplyResponse](#raft-ForwardApplyResponse) |  |
+| AddPeer | [AddPeerRequest](#raft-AddPeerRequest) | [AddPeerResponse](#raft-AddPeerResponse) |  |
+| RemovePeer | [RemovePeerRequest](#raft-RemovePeerRequest) | [RemovePeerResponse](#raft-RemovePeerResponse) |  |
+| GetPeerInfo | [GetPeerInfoRequest](#raft-GetPeerInfoRequest) | [GetPeerInfoResponse](#raft-GetPeerInfoResponse) |  |
 
  
 

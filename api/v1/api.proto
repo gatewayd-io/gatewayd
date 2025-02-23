@@ -173,6 +173,71 @@ service GatewayDAdminAPIService {
       };
     };
   }
+  // GetPeers returns information about all peers in the Raft cluster
+  rpc GetPeers(google.protobuf.Empty) returns (google.protobuf.Struct) {
+    option (google.api.http) = {get: "/v1/raft/peers"};
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      operation_id: "GetPeers";
+      responses: {
+        key: "200";
+        value: {
+          description: "A JSON object containing information about all peers in the Raft cluster, including their status and suffrage rights.";
+          schema: {
+            json_schema: {ref: ".google.protobuf.Struct"}
+          },
+          examples: {
+            key: "application/json"
+            value: '{"node1":{"id":"node1","address":"localhost:8080","status":"Leader","suffrage":"Voter"},"node2":{"id":"node2","address":"localhost:8081","status":"Follower","suffrage":"Voter"}}'
+          }
+        };
+      };
+    };
+  }
+  // AddPeer adds a new peer to the Raft cluster
+  rpc AddPeer(AddPeerRequest) returns (AddPeerResponse) {
+    option (google.api.http) = {
+      post: "/v1/raft/peers"
+      body: "*"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      operation_id: "AddPeer";
+      responses: {
+        key: "200";
+        value: {
+          description: "Response indicating success or failure of adding a peer to the Raft cluster. Returns error if peer_id, address, or grpc_address are missing.";
+          schema: {
+            json_schema: {ref: ".api.v1.AddPeerResponse"}
+          },
+          examples: {
+            key: "application/json"
+            value: '{"success":true}'
+          }
+        };
+      };
+    };
+  }
+  // RemovePeer removes an existing peer from the Raft cluster
+  rpc RemovePeer(RemovePeerRequest) returns (RemovePeerResponse) {
+    option (google.api.http) = {
+      delete: "/v1/raft/peers/{peer_id}"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      operation_id: "RemovePeer";
+      responses: {
+        key: "200";
+        value: {
+          description: "Response indicating success or failure of removing a peer from the Raft cluster. Returns error if peer_id is missing.";
+          schema: {
+            json_schema: {ref: ".api.v1.RemovePeerResponse"}
+          },
+          examples: {
+            key: "application/json"
+            value: '{"success":true}'
+          }
+        };
+      };
+    };
+  }
 }
 
 // VersionResponse is the response returned by the Version RPC.
@@ -268,5 +333,99 @@ message Group {
       description: "Group is the object group to filter the global config by.";
     }
     example: '{"groupName":"default"}',
+  };
+}
+
+message PeersResponse {
+  // Map of peer IDs to their information
+  map<string, PeerInfo> peers = 1;
+
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+    json_schema: {
+      title: "PeersResponse";
+      description: "Response containing information about all peers in the Raft cluster.";
+    }
+    example: '{"peers":{"node1":{"id":"node1","address":"localhost:8080","state":"Leader","is_leader":true,"is_voter":true},"node2":{"id":"node2","address":"localhost:8081","state":"Follower","is_leader":false,"is_voter":true}}}';
+  };
+}
+
+message PeerInfo {
+  // Unique identifier of the peer
+  string id = 1;
+  // Network address of the peer
+  string address = 2;
+  // Current state of the peer in the Raft cluster
+  string state = 3;
+  // Indicates if this peer is the current leader
+  bool is_leader = 4;
+  // Indicates if this peer has voting rights
+  bool is_voter = 5;
+
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+    json_schema: {
+      title: "PeerInfo";
+      description: "Information about a single peer in the Raft cluster.";
+    }
+    example: '{"id":"node1","address":"localhost:8080","state":"Leader","is_leader":true,"is_voter":true}';
+  };
+}
+
+message AddPeerRequest {
+  // Unique identifier for the new peer
+  string peer_id = 1;
+  // Network address for Raft communication
+  string address = 2;
+  // gRPC address for API communication
+  string grpc_address = 3;
+
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+    json_schema: {
+      title: "AddPeerRequest";
+      description: "Request to add a new peer to the Raft cluster. All fields are required.";
+    }
+    example: '{"peer_id":"node3","address":"localhost:8082","grpc_address":"localhost:9082"}';
+  };
+}
+
+message AddPeerResponse {
+  // Indicates if the operation was successful
+  bool success = 1;
+  // Error message if the operation failed
+  string error = 2;
+
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+    json_schema: {
+      title: "AddPeerResponse";
+      description: "Response indicating the result of adding a peer to the Raft cluster.";
+    }
+    example: '{"success":true,"error":""}';
+  };
+}
+
+message RemovePeerRequest {
+  // ID of the peer to remove
+  string peer_id = 1;
+
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+    json_schema: {
+      title: "RemovePeerRequest";
+      description: "Request to remove a peer from the Raft cluster.";
+    }
+    example: '{"peer_id":"node3"}';
+  };
+}
+
+message RemovePeerResponse {
+  // Indicates if the operation was successful
+  bool success = 1;
+  // Error message if the operation failed
+  string error = 2;
+
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+    json_schema: {
+      title: "RemovePeerResponse";
+      description: "Response indicating the result of removing a peer from the Raft cluster.";
+    }
+    example: '{"success":true,"error":""}';
   };
 }

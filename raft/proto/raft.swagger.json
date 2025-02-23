@@ -16,6 +16,38 @@
     "application/json"
   ],
   "paths": {
+    "/v1/raft/add-peer": {
+      "post": {
+        "operationId": "RaftService_AddPeer",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/raftAddPeerResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/raftAddPeerRequest"
+            }
+          }
+        ],
+        "tags": [
+          "RaftService"
+        ]
+      }
+    },
     "/v1/raft/forward-apply": {
       "post": {
         "operationId": "RaftService_ForwardApply",
@@ -47,6 +79,38 @@
           "RaftService"
         ]
       }
+    },
+    "/v1/raft/remove-peer": {
+      "post": {
+        "operationId": "RaftService_RemovePeer",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/raftRemovePeerResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/raftRemovePeerRequest"
+            }
+          }
+        ],
+        "tags": [
+          "RaftService"
+        ]
+      }
     }
   },
   "definitions": {
@@ -58,6 +122,28 @@
         }
       },
       "additionalProperties": {}
+    },
+    "raftAddPeerRequest": {
+      "type": "object",
+      "properties": {
+        "peerId": {
+          "type": "string"
+        },
+        "peerAddress": {
+          "type": "string"
+        },
+        "grpcAddress": {
+          "type": "string"
+        }
+      }
+    },
+    "raftAddPeerResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        }
+      }
     },
     "raftForwardApplyRequest": {
       "type": "object",
@@ -77,9 +163,33 @@
       "properties": {
         "success": {
           "type": "boolean"
+        }
+      }
+    },
+    "raftGetPeerInfoResponse": {
+      "type": "object",
+      "properties": {
+        "exists": {
+          "type": "boolean"
         },
-        "error": {
+        "grpcAddress": {
           "type": "string"
+        }
+      }
+    },
+    "raftRemovePeerRequest": {
+      "type": "object",
+      "properties": {
+        "peerId": {
+          "type": "string"
+        }
+      }
+    },
+    "raftRemovePeerResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
         }
       }
     },

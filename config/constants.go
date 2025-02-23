@@ -89,6 +89,7 @@ const (
 	DefaultHandshakeTimeout      = 5 * time.Second
 	DefaultLoadBalancerStrategy  = "ROUND_ROBIN"
 	DefaultLoadBalancerCondition = "DEFAULT"
+	FindProxyTimeout             = 5 * time.Second
 
 	// Utility constants.
 	DefaultSeed = 1000
@@ -121,6 +122,7 @@ const (
 	DefaultRaftAddress     = "127.0.0.1:2223"
 	DefaultRaftNodeID      = "node1"
 	DefaultRaftIsBootstrap = true
+	DefaultRaftIsSecure    = false
 	DefaultRaftDirectory   = "raft"
 	DefaultRaftGRPCAddress = "127.0.0.1:50051"
 )

@@ -141,6 +141,9 @@ type Raft struct {
 	Address     string     `json:"address"`
 	NodeID      string     `json:"nodeId"`
 	IsBootstrap bool       `json:"isBootstrap"`
+	IsSecure    bool       `json:"isSecure"`
+	CertFile    string     `json:"certFile"`
+	KeyFile     string     `json:"keyFile"`
 	Peers       []RaftPeer `json:"peers"`
 	Directory   string     `json:"directory" jsonschema:"default=raft"`
 	GRPCAddress string     `json:"grpcAddress"`

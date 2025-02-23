@@ -47,8 +47,9 @@ services:
       timeout: 5s
       retries: 5
   gatewayd-1:
-    image: gatewaydio/gatewayd:latest
-    pull_policy: always
+    build:
+      context: .
+      dockerfile: Dockerfile
     command:
       [
         "run",
@@ -96,10 +97,13 @@ services:
         condition: service_healthy
       install_plugins:
         condition: service_completed_successfully
+      tempo:
+        condition: service_healthy
 
   gatewayd-2:
-    image: gatewaydio/gatewayd:latest
-    pull_policy: always
+    build:
+      context: .
+      dockerfile: Dockerfile
     command:
       [
         "run",
@@ -115,7 +119,7 @@ services:
       - GATEWAYD_CLIENTS_DEFAULT_WRITES_ADDRESS=write-postgres:5432
       - GATEWAYD_CLIENTS_DEFAULT_READS_ADDRESS=read-postgres:5432
       - GATEWAYD_RAFT_NODEID=node2
-      - GATEWAYD_RAFT_ISBOOTSTRAP=true
+      - GATEWAYD_RAFT_ISBOOTSTRAP=false
       - GATEWAYD_RAFT_ADDRESS=gatewayd-2:2223
       - GATEWAYD_RAFT_GRPCADDRESS=gatewayd-2:50051
       - GATEWAYD_RAFT_PEERS=[{"id":"node1","address":"gatewayd-1:2223","grpcAddress":"gatewayd-1:50051"},{"id":"node3","address":"gatewayd-3:2223","grpcAddress":"gatewayd-3:50051"}]
@@ -147,10 +151,13 @@ services:
         condition: service_healthy
       install_plugins:
         condition: service_completed_successfully
+      tempo:
+        condition: service_healthy
 
   gatewayd-3:
-    image: gatewaydio/gatewayd:latest
-    pull_policy: always
+    build:
+      context: .
+      dockerfile: Dockerfile
     command:
       [
         "run",
@@ -198,6 +205,8 @@ services:
         condition: service_healthy
       install_plugins:
         condition: service_completed_successfully
+      tempo:
+        condition: service_healthy
   prometheus:
     image: prom/prometheus:latest
     volumes:
@@ -229,6 +238,11 @@ services:
       - "4317:4317" # otlp grpc
     depends_on:
       - tempo_init
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3200/ready"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   grafana:
     image: grafana/grafana:latest

@@ -111,6 +111,9 @@ raft:
   address: 127.0.0.1:2222
   nodeId: node1
   isBootstrap: True
+  isSecure: False
+  certFile: ""
+  keyFile: ""
   grpcAddress: 127.0.0.1:50051
   peers: []
   # - id: node2

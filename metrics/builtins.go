@@ -129,4 +129,14 @@ var (
 		},
 		[]string{"node_id"},
 	)
+	RaftPeerRemovals = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "gatewayd",
+		Name:      "raft_peer_removals_total",
+		Help:      "Number of Raft peer removals",
+	}, []string{"node_id"})
+	RaftPeerAdditions = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "gatewayd",
+		Name:      "raft_peer_additions_total",
+		Help:      "Number of Raft peer additions",
+	}, []string{"node_id"})
 )

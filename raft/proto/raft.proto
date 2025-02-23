@@ -13,6 +13,19 @@ service RaftService {
       body: "*"
     };
   }
+  rpc AddPeer(AddPeerRequest) returns (AddPeerResponse) {
+    option (google.api.http) = {
+      post: "/v1/raft/add-peer"
+      body: "*"
+    };
+  }
+  rpc RemovePeer(RemovePeerRequest) returns (RemovePeerResponse) {
+    option (google.api.http) = {
+      post: "/v1/raft/remove-peer"
+      body: "*"
+    };
+  }
+  rpc GetPeerInfo(GetPeerInfoRequest) returns (GetPeerInfoResponse);
 }
 
 message ForwardApplyRequest {
@@ -22,5 +35,31 @@ message ForwardApplyRequest {
 
 message ForwardApplyResponse {
   bool success = 1;
-  string error = 2;
+}
+
+message AddPeerRequest {
+  string peer_id = 1;
+  string peer_address = 2;
+  string grpc_address = 3;
+}
+
+message AddPeerResponse {
+  bool success = 1;
+}
+
+message RemovePeerRequest {
+  string peer_id = 1;
+}
+
+message RemovePeerResponse {
+  bool success = 1;
+}
+
+message GetPeerInfoRequest {
+  string peer_id = 1;
+}
+
+message GetPeerInfoResponse {
+  bool exists = 1;
+  string grpc_address = 2;
 }
