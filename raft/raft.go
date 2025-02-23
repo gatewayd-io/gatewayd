@@ -552,7 +552,7 @@ func (n *Node) AddPeerInternal(ctx context.Context, peerID, peerAddress, grpcAdd
 		return fmt.Errorf("failed to add peer: %w", err)
 	}
 
-	metrics.RaftPeerAdditions.Inc()
+	metrics.RaftPeerAdditions.WithLabelValues(string(n.config.LocalID)).Inc()
 	return nil
 }
 
@@ -601,7 +601,7 @@ func (n *Node) RemovePeerInternal(ctx context.Context, peerID string) error {
 		return fmt.Errorf("failed to remove peer: %w", err)
 	}
 
-	metrics.RaftPeerRemovals.Inc()
+	metrics.RaftPeerRemovals.WithLabelValues(string(n.config.LocalID)).Inc()
 	return nil
 }
 
@@ -642,7 +642,6 @@ func (n *Node) LeaveCluster(ctx context.Context) error {
 		return fmt.Errorf("failed to leave cluster: %w", err)
 	}
 
-	metrics.RaftPeerRemovals.Inc()
 	n.Logger.Info().Msg("successfully left raft cluster")
 	return nil
 }
@@ -853,27 +852,25 @@ func (f *FSM) Apply(log *raft.Log) interface{} {
 
 		// Initialize map if nil
 		if f.raftPeers == nil {
-			f.raftPeers = make(map[string]config.RaftPeer, 1)
+			f.raftPeers = make(map[string]config.RaftPeer)
 		}
 
-		// Check if peer already exists
-		if existing, exists := f.raftPeers[payload.ID]; exists {
-			// Only update if there are changes
-			if existing.Address != payload.Address || existing.GRPCAddress != payload.GRPCAddress {
-				metrics.RaftPeerUpdates.Inc()
-			} else {
-				return nil // No changes needed
-			}
-		} else {
-			metrics.RaftPeerAdditions.Inc()
-		}
-
-		// Update peer information
-		f.raftPeers[payload.ID] = config.RaftPeer{
+		// Create new peer entry
+		newPeer := config.RaftPeer{
 			ID:          payload.ID,
 			Address:     payload.Address,
 			GRPCAddress: payload.GRPCAddress,
 		}
+
+		// Check for existing peer and only update if necessary
+		if existing, exists := f.raftPeers[payload.ID]; exists {
+			if existing == newPeer {
+				return nil // No changes needed
+			}
+		}
+
+		// Update or add the peer
+		f.raftPeers[payload.ID] = newPeer
 		return nil
 	case CommandRemovePeer:
 		f.mu.Lock()
@@ -895,7 +892,6 @@ func (f *FSM) Apply(log *raft.Log) interface{} {
 		}
 
 		delete(f.raftPeers, payload.ID)
-		metrics.RaftPeerRemovals.Inc()
 		return nil
 	default:
 		return fmt.Errorf("unknown command type: %s", cmd.Type)
