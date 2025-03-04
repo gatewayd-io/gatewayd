@@ -5,6 +5,7 @@ import (
 	"log"
 	"maps"
 	"os"
+	"slices"
 	"syscall"
 
 	"github.com/gatewayd-io/gatewayd/config"
@@ -145,7 +146,7 @@ var runCmd = &cobra.Command{
 		}
 
 		logger.Info().Fields(map[string]any{
-			"policies": maps.Keys(app.actRegistry.Policies),
+			"policies": slices.Collect(maps.Keys(app.actRegistry.Policies)),
 		}).Msg("Policies are loaded")
 
 		// Create the plugin registry.
