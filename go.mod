@@ -1,6 +1,6 @@
 module github.com/gatewayd-io/gatewayd
 
-go 1.23.5
+go 1.24
 
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
@@ -9,7 +9,7 @@ require (
 	github.com/cybercyst/go-scaffold v0.0.0-20240606114431-816e6211c151
 	github.com/docker/go-connections v0.5.0
 	github.com/envoyproxy/protoc-gen-validate v1.2.1
-	github.com/gatewayd-io/gatewayd-plugin-sdk v0.4.0
+	github.com/gatewayd-io/gatewayd-plugin-sdk v0.4.1
 	github.com/getsentry/sentry-go v0.31.1
 	github.com/go-co-op/gocron v1.37.0
 	github.com/google/go-github/v68 v68.0.0
@@ -22,10 +22,10 @@ require (
 	github.com/jackc/pgx/v5 v5.7.2
 	github.com/knadh/koanf v1.5.0
 	github.com/mitchellh/mapstructure v1.5.0
-	github.com/prometheus/client_golang v1.20.5
+	github.com/prometheus/client_golang v1.21.1
 	github.com/prometheus/client_model v0.6.1
 	github.com/prometheus/common v0.62.0
-	github.com/redis/go-redis/v9 v9.7.0
+	github.com/redis/go-redis/v9 v9.7.1
 	github.com/rs/zerolog v1.33.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/spaolacci/murmur3 v1.1.0
@@ -41,8 +41,8 @@ require (
 	go.opentelemetry.io/otel/trace v1.34.0
 	golang.org/x/text v0.21.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20250124145028-65684f501c47
-	google.golang.org/grpc v1.70.0
-	google.golang.org/protobuf v1.36.4
+	google.golang.org/grpc v1.71.0
+	google.golang.org/protobuf v1.36.5
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -141,10 +141,10 @@ require (
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
-	github.com/tetratelabs/wazero v1.8.2 // indirect
+	github.com/tetratelabs/wazero v1.9.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.14 // indirect
 	github.com/tklauser/numcpus v0.8.0 // indirect
-	github.com/wasilibs/go-pgquery v0.0.0-20241226024732-8bfaa0ac5969 // indirect
+	github.com/wasilibs/go-pgquery v0.0.0-20250219053243-148840c597e6 // indirect
 	github.com/wasilibs/wazero-helpers v0.0.0-20250123031827-cd30c44769bb // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
