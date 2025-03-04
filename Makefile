@@ -113,7 +113,7 @@ gen:
 	@buf generate
 
 update:
-	@buf mod update
+	@buf dep update
 
 gen-docs:
 	@go run main.go gen-docs
