@@ -101,10 +101,10 @@ func NewGatewayDApp(cmd *cobra.Command) *GatewayDApp {
 		stopChan:             make(chan struct{}),
 		ranStopGracefully:    &atomic.Bool{},
 	}
-	app.EnableTracing, _ = cmd.Flags().GetBool("enable-tracing")
-	app.EnableSentry, _ = cmd.Flags().GetBool("enable-sentry")
-	app.EnableUsageReport, _ = cmd.Flags().GetBool("enable-usage-report")
-	app.EnableLinting, _ = cmd.Flags().GetBool("enable-linting")
+	app.EnableTracing, _ = cmd.Flags().GetBool("tracing")
+	app.EnableSentry, _ = cmd.Flags().GetBool("sentry")
+	app.EnableUsageReport, _ = cmd.Flags().GetBool("usage-report")
+	app.EnableLinting, _ = cmd.Flags().GetBool("lint")
 	app.DevMode, _ = cmd.Flags().GetBool("dev")
 	app.CollectorURL, _ = cmd.Flags().GetString("collector-url")
 	app.GlobalConfigFile, _ = cmd.Flags().GetString("config")

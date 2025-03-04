@@ -259,5 +259,4 @@ func init() {
 	runCmd.Flags().Bool("sentry", true, "Enable Sentry")
 	runCmd.Flags().Bool("usage-report", true, "Enable usage report")
 	runCmd.Flags().Bool("lint", true, "Enable linting of configuration files")
-	runCmd.Flags().Bool("metrics-merger", true, "Enable metrics merger")
 }
