@@ -25,7 +25,7 @@ import (
 
 // TestRunServer tests an entire server run with a single client connection and hooks.
 func TestRunServer(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	// Reset Prometheus metrics.
 	prometheus.DefaultRegisterer = prometheus.NewRegistry()

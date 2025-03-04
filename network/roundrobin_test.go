@@ -1,7 +1,6 @@
 package network
 
 import (
-	"context"
 	"encoding/json"
 	"math"
 	"sync"
@@ -51,7 +50,7 @@ func TestRoundRobin_NextProxy(t *testing.T) {
 	expectedOrder := []string{"proxy2", "proxy3", "proxy1", "proxy2", "proxy3"}
 
 	for testIndex, expected := range expectedOrder {
-		proxy, err := roundRobin.NextProxy(context.Background(), nil)
+		proxy, err := roundRobin.NextProxy(t.Context(), nil)
 		if err != nil {
 			t.Fatalf("test %d: unexpected error from NextProxy: %v", testIndex, err)
 		}
@@ -94,7 +93,7 @@ func TestRoundRobin_ConcurrentAccess(t *testing.T) {
 	for range numGoroutines {
 		go func() {
 			defer waitGroup.Done()
-			_, _ = roundRobin.NextProxy(context.Background(), nil)
+			_, _ = roundRobin.NextProxy(t.Context(), nil)
 		}()
 	}
 
@@ -145,11 +144,11 @@ func TestNextProxyOverflow(t *testing.T) {
 	data, err := json.Marshal(cmd)
 	require.NoError(t, err)
 
-	require.NoError(t, raftHelper.Node.Apply(context.Background(), data, raft.ApplyTimeout))
+	require.NoError(t, raftHelper.Node.Apply(t.Context(), data, raft.ApplyTimeout))
 
 	// Call NextProxy multiple times to trigger the overflow
 	for range 4 {
-		proxy, err := roundRobin.NextProxy(context.Background(), nil)
+		proxy, err := roundRobin.NextProxy(t.Context(), nil)
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}

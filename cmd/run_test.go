@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"os"
 	"sync"
 	"testing"
@@ -24,7 +23,7 @@ func Test_runCmd(t *testing.T) {
 		testApp = nil
 	}()
 
-	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(context.Background(), t)
+	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(t.Context(), t)
 	postgresAddress := postgresHostIP + ":" + postgresMappedPort.Port()
 	t.Setenv("GATEWAYD_CLIENTS_DEFAULT_WRITES_ADDRESS", postgresAddress)
 
@@ -68,7 +67,7 @@ func Test_runCmd(t *testing.T) {
 	waitGroup.Add(1)
 	go func(waitGroup *sync.WaitGroup) {
 		time.Sleep(waitBeforeStop)
-		testApp.stopGracefully(context.Background(), os.Interrupt)
+		testApp.stopGracefully(t.Context(), os.Interrupt)
 		waitGroup.Done()
 	}(&waitGroup)
 
@@ -86,7 +85,7 @@ func Test_runCmdWithTLS(t *testing.T) {
 		testApp = nil
 	}()
 
-	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(context.Background(), t)
+	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(t.Context(), t)
 	postgresAddress := postgresHostIP + ":" + postgresMappedPort.Port()
 	t.Setenv("GATEWAYD_CLIENTS_DEFAULT_WRITES_ADDRESS", postgresAddress)
 
@@ -126,7 +125,7 @@ func Test_runCmdWithTLS(t *testing.T) {
 	waitGroup.Add(1)
 	go func(waitGroup *sync.WaitGroup) {
 		time.Sleep(waitBeforeStop)
-		testApp.stopGracefully(context.Background(), os.Interrupt)
+		testApp.stopGracefully(t.Context(), os.Interrupt)
 		waitGroup.Done()
 	}(&waitGroup)
 
@@ -143,10 +142,10 @@ func Test_runCmdWithMultiTenancy(t *testing.T) {
 		testApp = nil
 	}()
 
-	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(context.Background(), t)
+	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(t.Context(), t)
 	postgresAddress := postgresHostIP + ":" + postgresMappedPort.Port()
 	t.Setenv("GATEWAYD_CLIENTS_DEFAULT_WRITES_ADDRESS", postgresAddress)
-	postgresHostIP2, postgresMappedPort2 := testhelpers.SetupPostgreSQLTestContainer(context.Background(), t)
+	postgresHostIP2, postgresMappedPort2 := testhelpers.SetupPostgreSQLTestContainer(t.Context(), t)
 	postgresAddress2 := postgresHostIP2 + ":" + postgresMappedPort2.Port()
 	t.Setenv("GATEWAYD_CLIENTS_TEST_WRITE_ADDRESS", postgresAddress2)
 
@@ -188,7 +187,7 @@ func Test_runCmdWithMultiTenancy(t *testing.T) {
 	waitGroup.Add(1)
 	go func(waitGroup *sync.WaitGroup) {
 		time.Sleep(waitBeforeStop)
-		testApp.stopGracefully(context.Background(), os.Interrupt)
+		testApp.stopGracefully(t.Context(), os.Interrupt)
 		waitGroup.Done()
 	}(&waitGroup)
 
@@ -204,7 +203,7 @@ func Test_runCmdWithCachePlugin(t *testing.T) {
 		testApp = nil
 	}()
 
-	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(context.Background(), t)
+	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(t.Context(), t)
 	postgresAddress := postgresHostIP + ":" + postgresMappedPort.Port()
 	t.Setenv("GATEWAYD_CLIENTS_DEFAULT_WRITES_ADDRESS", postgresAddress)
 
@@ -268,7 +267,7 @@ func Test_runCmdWithCachePlugin(t *testing.T) {
 	waitGroup.Add(1)
 	go func(waitGroup *sync.WaitGroup) {
 		time.Sleep(waitBeforeStop)
-		testApp.stopGracefully(context.Background(), os.Interrupt)
+		testApp.stopGracefully(t.Context(), os.Interrupt)
 		waitGroup.Done()
 	}(&waitGroup)
 

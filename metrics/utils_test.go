@@ -1,7 +1,6 @@
 package metrics
 
 import (
-	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -24,7 +23,7 @@ func Test_HeaderBypassResponseWriter(t *testing.T) {
 	defer testServer.Close()
 
 	req, err := http.NewRequestWithContext(
-		context.Background(), http.MethodGet, testServer.URL, nil)
+		t.Context(), http.MethodGet, testServer.URL, nil)
 	require.NoError(t, err)
 	assert.NotNil(t, req)
 	resp, err := http.DefaultClient.Do(req)

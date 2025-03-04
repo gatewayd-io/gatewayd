@@ -1,7 +1,6 @@
 package act
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -57,7 +56,7 @@ func createWaitActEntities(async bool) (
 
 func createTestRedis(t *testing.T) string {
 	t.Helper()
-	ctx := context.Background()
+	ctx := t.Context()
 
 	req := testcontainers.ContainerRequest{
 		Image:        "redis:6",

@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -21,7 +20,7 @@ func Test_HTTP_Server(t *testing.T) {
 	)
 	healthchecker := &HealthChecker{Servers: api.Servers}
 	grpcServer := NewGRPCServer(
-		context.Background(), GRPCServer{API: api, HealthChecker: healthchecker})
+		t.Context(), GRPCServer{API: api, HealthChecker: healthchecker})
 	go grpcServer.Start()
 	require.NotNil(t, grpcServer)
 
@@ -33,7 +32,7 @@ func Test_HTTP_Server(t *testing.T) {
 
 	// Check version via the gRPC server.
 	req, err := http.NewRequestWithContext(
-		context.Background(),
+		t.Context(),
 		http.MethodGet,
 		"http://localhost:18082/v1/GatewayDPluginService/Version",
 		nil,
@@ -52,7 +51,7 @@ func Test_HTTP_Server(t *testing.T) {
 
 	// Check health via the gRPC gateway.
 	req, err = http.NewRequestWithContext(
-		context.Background(),
+		t.Context(),
 		http.MethodGet,
 		"http://localhost:18082/healthz",
 		nil,
@@ -69,7 +68,7 @@ func Test_HTTP_Server(t *testing.T) {
 
 	// Check version via the gRPC gateway.
 	req, err = http.NewRequestWithContext(
-		context.Background(),
+		t.Context(),
 		http.MethodGet,
 		"http://localhost:18082/version",
 		nil,
@@ -86,5 +85,5 @@ func Test_HTTP_Server(t *testing.T) {
 	assert.Equal(t, config.Version, string(respBodyBytes))
 
 	grpcServer.Shutdown(nil) //nolint:staticcheck
-	httpServer.Shutdown(context.Background())
+	httpServer.Shutdown(t.Context())
 }

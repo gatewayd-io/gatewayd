@@ -1,7 +1,6 @@
 package pool
 
 import (
-	"context"
 	"testing"
 
 	"github.com/gatewayd-io/gatewayd/config"
@@ -10,7 +9,7 @@ import (
 
 // TestNewPool tests the NewPool function.
 func TestNewPool(t *testing.T) {
-	pool := NewPool(context.Background(), config.EmptyPoolCapacity)
+	pool := NewPool(t.Context(), config.EmptyPoolCapacity)
 	defer pool.Clear()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
@@ -19,7 +18,7 @@ func TestNewPool(t *testing.T) {
 
 // TestPool_Put tests the Put function.
 func TestPool_Put(t *testing.T) {
-	pool := NewPool(context.Background(), config.EmptyPoolCapacity)
+	pool := NewPool(t.Context(), config.EmptyPoolCapacity)
 	defer pool.Clear()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
@@ -36,7 +35,7 @@ func TestPool_Put(t *testing.T) {
 //
 //nolint:dupl
 func TestPool_Pop(t *testing.T) {
-	pool := NewPool(context.Background(), config.EmptyPoolCapacity)
+	pool := NewPool(t.Context(), config.EmptyPoolCapacity)
 	defer pool.Clear()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
@@ -63,7 +62,7 @@ func TestPool_Pop(t *testing.T) {
 
 // TestPool_Clear tests the Clear function.
 func TestPool_Clear(t *testing.T) {
-	pool := NewPool(context.Background(), config.EmptyPoolCapacity)
+	pool := NewPool(t.Context(), config.EmptyPoolCapacity)
 	defer pool.Clear()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
@@ -80,7 +79,7 @@ func TestPool_Clear(t *testing.T) {
 
 // TestPool_ForEach tests the ForEach function.
 func TestPool_ForEach(t *testing.T) {
-	pool := NewPool(context.Background(), config.EmptyPoolCapacity)
+	pool := NewPool(t.Context(), config.EmptyPoolCapacity)
 	defer pool.Clear()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
@@ -103,7 +102,7 @@ func TestPool_ForEach(t *testing.T) {
 //
 //nolint:dupl
 func TestPool_Get(t *testing.T) {
-	pool := NewPool(context.Background(), config.EmptyPoolCapacity)
+	pool := NewPool(t.Context(), config.EmptyPoolCapacity)
 	defer pool.Clear()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
@@ -130,7 +129,7 @@ func TestPool_Get(t *testing.T) {
 
 // TestPool_GetOrPut tests the GetOrPut function.
 func TestPool_GetOrPut(t *testing.T) {
-	pool := NewPool(context.Background(), config.EmptyPoolCapacity)
+	pool := NewPool(t.Context(), config.EmptyPoolCapacity)
 	defer pool.Clear()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
@@ -163,7 +162,7 @@ func TestPool_GetOrPut(t *testing.T) {
 
 // TestPool_Remove tests the Remove function.
 func TestPool_Remove(t *testing.T) {
-	pool := NewPool(context.Background(), config.EmptyPoolCapacity)
+	pool := NewPool(t.Context(), config.EmptyPoolCapacity)
 	defer pool.Clear()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
@@ -182,7 +181,7 @@ func TestPool_Remove(t *testing.T) {
 
 // TestPool_GetClientIDs tests the GetClientIDs function.
 func TestPool_GetClientIDs(t *testing.T) {
-	pool := NewPool(context.Background(), config.EmptyPoolCapacity)
+	pool := NewPool(t.Context(), config.EmptyPoolCapacity)
 	defer pool.Clear()
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
@@ -208,7 +207,7 @@ func TestPool_GetClientIDs(t *testing.T) {
 }
 
 func TestPool_Cap(t *testing.T) {
-	pool := NewPool(context.Background(), 1)
+	pool := NewPool(t.Context(), 1)
 	assert.NotNil(t, pool)
 	assert.NotNil(t, pool.Pool())
 	assert.Equal(t, 0, pool.Size())
@@ -227,12 +226,12 @@ func TestPool_Cap(t *testing.T) {
 
 func BenchmarkNewPool(b *testing.B) {
 	for range b.N {
-		NewPool(context.Background(), config.EmptyPoolCapacity)
+		NewPool(b.Context(), config.EmptyPoolCapacity)
 	}
 }
 
 func BenchmarkPool_PutPop(b *testing.B) {
-	pool := NewPool(context.Background(), config.EmptyPoolCapacity)
+	pool := NewPool(b.Context(), config.EmptyPoolCapacity)
 	defer pool.Clear()
 	for range b.N {
 		pool.Put("client1.ID", "client1") //nolint:errcheck
@@ -241,14 +240,14 @@ func BenchmarkPool_PutPop(b *testing.B) {
 }
 
 func BenchmarkPool_Clear(b *testing.B) {
-	pool := NewPool(context.Background(), config.EmptyPoolCapacity)
+	pool := NewPool(b.Context(), config.EmptyPoolCapacity)
 	for range b.N {
 		pool.Clear()
 	}
 }
 
 func BenchmarkPool_ForEach(b *testing.B) {
-	pool := NewPool(context.Background(), config.EmptyPoolCapacity)
+	pool := NewPool(b.Context(), config.EmptyPoolCapacity)
 	defer pool.Clear()
 	pool.Put("client1.ID", "client1") //nolint:errcheck
 	pool.Put("client2.ID", "client2") //nolint:errcheck
@@ -260,7 +259,7 @@ func BenchmarkPool_ForEach(b *testing.B) {
 }
 
 func BenchmarkPool_Get(b *testing.B) {
-	pool := NewPool(context.Background(), config.EmptyPoolCapacity)
+	pool := NewPool(b.Context(), config.EmptyPoolCapacity)
 	defer pool.Clear()
 	pool.Put("client1.ID", "client1") //nolint:errcheck
 	pool.Put("client2.ID", "client2") //nolint:errcheck
@@ -271,7 +270,7 @@ func BenchmarkPool_Get(b *testing.B) {
 }
 
 func BenchmarkPool_GetOrPut(b *testing.B) {
-	pool := NewPool(context.Background(), config.EmptyPoolCapacity)
+	pool := NewPool(b.Context(), config.EmptyPoolCapacity)
 	defer pool.Clear()
 	pool.Put("client1.ID", "client1") //nolint:errcheck
 	pool.Put("client2.ID", "client2") //nolint:errcheck
@@ -282,7 +281,7 @@ func BenchmarkPool_GetOrPut(b *testing.B) {
 }
 
 func BenchmarkPool_Remove(b *testing.B) {
-	pool := NewPool(context.Background(), config.EmptyPoolCapacity)
+	pool := NewPool(b.Context(), config.EmptyPoolCapacity)
 	defer pool.Clear()
 	for range b.N {
 		pool.Put("client1.ID", "client1") //nolint:errcheck
@@ -291,7 +290,7 @@ func BenchmarkPool_Remove(b *testing.B) {
 }
 
 func BenchmarkPool_Size(b *testing.B) {
-	pool := NewPool(context.Background(), config.EmptyPoolCapacity)
+	pool := NewPool(b.Context(), config.EmptyPoolCapacity)
 	defer pool.Clear()
 	for range b.N {
 		pool.Size()
@@ -299,7 +298,7 @@ func BenchmarkPool_Size(b *testing.B) {
 }
 
 func BenchmarkPool_Cap(b *testing.B) {
-	pool := NewPool(context.Background(), config.EmptyPoolCapacity)
+	pool := NewPool(b.Context(), config.EmptyPoolCapacity)
 	defer pool.Clear()
 	for range b.N {
 		pool.Cap()

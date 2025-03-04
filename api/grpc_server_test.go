@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"testing"
 
 	v1 "github.com/gatewayd-io/gatewayd/api/v1"
@@ -20,7 +19,7 @@ func Test_GRPC_Server(t *testing.T) {
 	)
 	healthchecker := &HealthChecker{Servers: api.Servers}
 	grpcServer := NewGRPCServer(
-		context.Background(), GRPCServer{API: api, HealthChecker: healthchecker})
+		t.Context(), GRPCServer{API: api, HealthChecker: healthchecker})
 	assert.NotNil(t, grpcServer)
 
 	go func(grpcServer *GRPCServer) {
@@ -33,7 +32,7 @@ func Test_GRPC_Server(t *testing.T) {
 	defer grpcClient.Close()
 
 	client := v1.NewGatewayDAdminAPIServiceClient(grpcClient)
-	resp, err := client.Version(context.Background(), &emptypb.Empty{})
+	resp, err := client.Version(t.Context(), &emptypb.Empty{})
 	assert.Nil(t, err)
 	assert.NotNil(t, resp)
 	assert.Equal(t, config.Version, resp.GetVersion())

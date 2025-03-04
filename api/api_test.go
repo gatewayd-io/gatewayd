@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"io"
 	"regexp"
 	"testing"
@@ -27,8 +26,8 @@ import (
 )
 
 func TestGetVersion(t *testing.T) {
-	api := API{ctx: context.Background()}
-	version, err := api.Version(context.Background(), &emptypb.Empty{})
+	api := API{ctx: t.Context()}
+	version, err := api.Version(t.Context(), &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.Regexp(t, regexp.MustCompile(`^\d+\.\d+\.\d+$`), version.GetVersion())
 	assert.Regexp(t, regexp.MustCompile(`^GatewayD \d+\.\d+\.\d+ \(, go\d+\.\d+\.\d+, \w+/\w+\)$`), version.GetVersionInfo()) //nolint:lll
@@ -36,17 +35,17 @@ func TestGetVersion(t *testing.T) {
 
 func TestGetGlobalConfig(t *testing.T) {
 	// Load config from the default config file.
-	conf := config.NewConfig(context.Background(),
+	conf := config.NewConfig(t.Context(),
 		config.Config{GlobalConfigFile: "../gatewayd.yaml", PluginConfigFile: "../gatewayd_plugins.yaml"})
-	gerr := conf.InitConfig(context.Background())
+	gerr := conf.InitConfig(t.Context())
 	require.Nil(t, gerr)
 	assert.NotEmpty(t, conf.Global)
 
 	api := API{
 		Config: conf,
-		ctx:    context.Background(),
+		ctx:    t.Context(),
 	}
-	globalConfig, err := api.GetGlobalConfig(context.Background(), &v1.Group{GroupName: nil})
+	globalConfig, err := api.GetGlobalConfig(t.Context(), &v1.Group{GroupName: nil})
 	require.NoError(t, err)
 	globalconf := globalConfig.AsMap()
 	assert.NotEmpty(t, globalconf)
@@ -61,19 +60,19 @@ func TestGetGlobalConfig(t *testing.T) {
 
 func TestGetGlobalConfigWithGroupName(t *testing.T) {
 	// Load config from the default config file.
-	conf := config.NewConfig(context.Background(),
+	conf := config.NewConfig(t.Context(),
 		config.Config{GlobalConfigFile: "../gatewayd.yaml", PluginConfigFile: "../gatewayd_plugins.yaml"})
-	gerr := conf.InitConfig(context.Background())
+	gerr := conf.InitConfig(t.Context())
 	require.Nil(t, gerr)
 	assert.NotEmpty(t, conf.Global)
 
 	api := API{
 		Config: conf,
-		ctx:    context.Background(),
+		ctx:    t.Context(),
 	}
 	defaultGroup := config.Default
 	globalConfig, err := api.GetGlobalConfig(
-		context.Background(),
+		t.Context(),
 		&v1.Group{GroupName: &defaultGroup},
 	)
 	require.NoError(t, err)
@@ -94,35 +93,35 @@ func TestGetGlobalConfigWithGroupName(t *testing.T) {
 
 func TestGetGlobalConfigWithNonExistingGroupName(t *testing.T) {
 	// Load config from the default config file.
-	conf := config.NewConfig(context.Background(),
+	conf := config.NewConfig(t.Context(),
 		config.Config{GlobalConfigFile: "../gatewayd.yaml", PluginConfigFile: "../gatewayd_plugins.yaml"})
-	gerr := conf.InitConfig(context.Background())
+	gerr := conf.InitConfig(t.Context())
 	require.Nil(t, gerr)
 	assert.NotEmpty(t, conf.Global)
 
 	api := API{
 		Config: conf,
-		ctx:    context.Background(),
+		ctx:    t.Context(),
 	}
 	nonExistingGroupName := "non-existing-group"
-	_, err := api.GetGlobalConfig(context.Background(), &v1.Group{GroupName: &nonExistingGroupName})
+	_, err := api.GetGlobalConfig(t.Context(), &v1.Group{GroupName: &nonExistingGroupName})
 	require.Error(t, err)
 	assert.Errorf(t, err, "group not found")
 }
 
 func TestGetPluginConfig(t *testing.T) {
 	// Load config from the default config file.
-	conf := config.NewConfig(context.Background(),
+	conf := config.NewConfig(t.Context(),
 		config.Config{GlobalConfigFile: "../gatewayd.yaml", PluginConfigFile: "../gatewayd_plugins.yaml"})
-	gerr := conf.InitConfig(context.Background())
+	gerr := conf.InitConfig(t.Context())
 	require.Nil(t, gerr)
 	assert.NotEmpty(t, conf.Global)
 
 	api := API{
 		Config: conf,
-		ctx:    context.Background(),
+		ctx:    t.Context(),
 	}
-	pluginConfig, err := api.GetPluginConfig(context.Background(), &emptypb.Empty{})
+	pluginConfig, err := api.GetPluginConfig(t.Context(), &emptypb.Empty{})
 	require.NoError(t, err)
 	pluginconf := pluginConfig.AsMap()
 	assert.NotEmpty(t, pluginconf)
@@ -141,7 +140,7 @@ func TestGetPlugins(t *testing.T) {
 			Logger:               zerolog.Logger{},
 		})
 	pluginRegistry := plugin.NewRegistry(
-		context.Background(),
+		t.Context(),
 		plugin.Registry{
 			ActRegistry: actRegistry,
 			Logger:      zerolog.Logger{},
@@ -170,9 +169,9 @@ func TestGetPlugins(t *testing.T) {
 
 	api := API{
 		PluginRegistry: pluginRegistry,
-		ctx:            context.Background(),
+		ctx:            t.Context(),
 	}
-	plugins, err := api.GetPlugins(context.Background(), &emptypb.Empty{})
+	plugins, err := api.GetPlugins(t.Context(), &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.NotEmpty(t, plugins)
 	assert.NotEmpty(t, plugins.GetConfigs())
@@ -195,7 +194,7 @@ func TestGetPluginsWithEmptyPluginRegistry(t *testing.T) {
 			Logger:               zerolog.Logger{},
 		})
 	pluginRegistry := plugin.NewRegistry(
-		context.Background(),
+		t.Context(),
 		plugin.Registry{
 			ActRegistry: actRegistry,
 			Logger:      zerolog.Logger{},
@@ -205,9 +204,9 @@ func TestGetPluginsWithEmptyPluginRegistry(t *testing.T) {
 
 	api := API{
 		PluginRegistry: pluginRegistry,
-		ctx:            context.Background(),
+		ctx:            t.Context(),
 	}
-	plugins, err := api.GetPlugins(context.Background(), &emptypb.Empty{})
+	plugins, err := api.GetPlugins(t.Context(), &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.NotEmpty(t, plugins)
 	assert.Empty(t, plugins.GetConfigs())
@@ -216,11 +215,11 @@ func TestGetPluginsWithEmptyPluginRegistry(t *testing.T) {
 func TestPools(t *testing.T) {
 	api := API{
 		Pools: map[string]map[string]*pool.Pool{
-			config.Default: {config.DefaultConfigurationBlock: pool.NewPool(context.Background(), config.EmptyPoolCapacity)},
+			config.Default: {config.DefaultConfigurationBlock: pool.NewPool(t.Context(), config.EmptyPoolCapacity)},
 		},
-		ctx: context.Background(),
+		ctx: t.Context(),
 	}
-	pools, err := api.GetPools(context.Background(), &emptypb.Empty{})
+	pools, err := api.GetPools(t.Context(), &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.NotEmpty(t, pools)
 	assert.NotEmpty(t, pools.AsMap())
@@ -235,29 +234,29 @@ func TestPools(t *testing.T) {
 func TestPoolsWithEmptyPools(t *testing.T) {
 	api := API{
 		Pools: map[string]map[string]*pool.Pool{},
-		ctx:   context.Background(),
+		ctx:   t.Context(),
 	}
-	pools, err := api.GetPools(context.Background(), &emptypb.Empty{})
+	pools, err := api.GetPools(t.Context(), &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.NotEmpty(t, pools)
 	assert.Empty(t, pools.AsMap())
 }
 
 func TestGetProxies(t *testing.T) {
-	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(context.Background(), t)
+	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(t.Context(), t)
 	postgresAddress := postgresHostIP + ":" + postgresMappedPort.Port()
 
 	clientConfig := &config.Client{
 		Network: config.DefaultNetwork,
 		Address: postgresAddress,
 	}
-	client := network.NewClient(context.Background(), clientConfig, zerolog.Logger{}, nil)
+	client := network.NewClient(t.Context(), clientConfig, zerolog.Logger{}, nil)
 	require.NotNil(t, client)
-	newPool := pool.NewPool(context.Background(), 1)
+	newPool := pool.NewPool(t.Context(), 1)
 	assert.Nil(t, newPool.Put(client.ID, client))
 
 	proxy := network.NewProxy(
-		context.Background(),
+		t.Context(),
 		network.Proxy{
 			AvailableConnections: newPool,
 			HealthCheckPeriod:    config.DefaultHealthCheckPeriod,
@@ -274,9 +273,9 @@ func TestGetProxies(t *testing.T) {
 		Proxies: map[string]map[string]*network.Proxy{
 			config.Default: {config.DefaultConfigurationBlock: proxy},
 		},
-		ctx: context.Background(),
+		ctx: t.Context(),
 	}
-	proxies, err := api.GetProxies(context.Background(), &emptypb.Empty{})
+	proxies, err := api.GetProxies(t.Context(), &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.NotEmpty(t, proxies)
 	assert.NotEmpty(t, proxies.AsMap())
@@ -297,19 +296,19 @@ func TestGetProxies(t *testing.T) {
 }
 
 func TestGetServers(t *testing.T) {
-	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(context.Background(), t)
+	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(t.Context(), t)
 	postgresAddress := postgresHostIP + ":" + postgresMappedPort.Port()
 	clientConfig := &config.Client{
 		Network: config.DefaultNetwork,
 		Address: postgresAddress,
 	}
-	client := network.NewClient(context.Background(), clientConfig, zerolog.Logger{}, nil)
-	newPool := pool.NewPool(context.Background(), 1)
+	client := network.NewClient(t.Context(), clientConfig, zerolog.Logger{}, nil)
+	newPool := pool.NewPool(t.Context(), 1)
 	require.NotNil(t, newPool)
 	assert.Nil(t, newPool.Put(client.ID, client))
 
 	proxy := network.NewProxy(
-		context.Background(),
+		t.Context(),
 		network.Proxy{
 			AvailableConnections: newPool,
 			HealthCheckPeriod:    config.DefaultHealthCheckPeriod,
@@ -334,7 +333,7 @@ func TestGetServers(t *testing.T) {
 		})
 
 	pluginRegistry := plugin.NewRegistry(
-		context.Background(),
+		t.Context(),
 		plugin.Registry{
 			ActRegistry: actRegistry,
 			Logger:      zerolog.Logger{},
@@ -343,7 +342,7 @@ func TestGetServers(t *testing.T) {
 	)
 
 	server := network.NewServer(
-		context.Background(),
+		t.Context(),
 		network.Server{
 			Network:      config.DefaultNetwork,
 			Address:      postgresAddress,
@@ -370,9 +369,9 @@ func TestGetServers(t *testing.T) {
 		Servers: map[string]*network.Server{
 			config.Default: server,
 		},
-		ctx: context.Background(),
+		ctx: t.Context(),
 	}
-	servers, err := api.GetServers(context.Background(), &emptypb.Empty{})
+	servers, err := api.GetServers(t.Context(), &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.NotEmpty(t, servers)
 	assert.NotEmpty(t, servers.AsMap())
@@ -477,7 +476,7 @@ func TestRemovePeerAPI(t *testing.T) {
 		{
 			name: "successful peer removal",
 			api: &API{
-				ctx: context.Background(),
+				ctx: t.Context(),
 				Options: &Options{
 					Logger:   zerolog.New(io.Discard),
 					RaftNode: nodes[0],
@@ -489,7 +488,7 @@ func TestRemovePeerAPI(t *testing.T) {
 		{
 			name: "raft node not initialized",
 			api: &API{
-				ctx: context.Background(),
+				ctx: t.Context(),
 				Options: &Options{
 					Logger:   zerolog.New(io.Discard),
 					RaftNode: nil,
@@ -502,7 +501,7 @@ func TestRemovePeerAPI(t *testing.T) {
 		{
 			name: "raft error during removal",
 			api: &API{
-				ctx: context.Background(),
+				ctx: t.Context(),
 				Options: &Options{
 					Logger:   zerolog.New(io.Discard),
 					RaftNode: nodes[0],
@@ -516,7 +515,7 @@ func TestRemovePeerAPI(t *testing.T) {
 
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			resp, err := testCase.api.RemovePeer(context.Background(), testCase.req)
+			resp, err := testCase.api.RemovePeer(t.Context(), testCase.req)
 
 			if testCase.wantErr {
 				require.Error(t, err)
@@ -568,7 +567,7 @@ func TestGetPeers(t *testing.T) {
 		{
 			name: "successful get peers",
 			api: &API{
-				ctx: context.Background(),
+				ctx: t.Context(),
 				Options: &Options{
 					Logger:   zerolog.New(io.Discard),
 					RaftNode: node,
@@ -579,7 +578,7 @@ func TestGetPeers(t *testing.T) {
 		{
 			name: "raft node not initialized",
 			api: &API{
-				ctx: context.Background(),
+				ctx: t.Context(),
 				Options: &Options{
 					Logger:   zerolog.New(io.Discard),
 					RaftNode: nil,
@@ -592,7 +591,7 @@ func TestGetPeers(t *testing.T) {
 
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			peers, err := testCase.api.GetPeers(context.Background(), &emptypb.Empty{})
+			peers, err := testCase.api.GetPeers(t.Context(), &emptypb.Empty{})
 
 			if testCase.wantErr {
 				require.Error(t, err)
@@ -658,7 +657,7 @@ func TestAddPeer(t *testing.T) {
 		{
 			name: "successful peer addition",
 			api: &API{
-				ctx: context.Background(),
+				ctx: t.Context(),
 				Options: &Options{
 					Logger:   zerolog.New(io.Discard),
 					RaftNode: node,
@@ -674,7 +673,7 @@ func TestAddPeer(t *testing.T) {
 		{
 			name: "raft node not initialized",
 			api: &API{
-				ctx: context.Background(),
+				ctx: t.Context(),
 				Options: &Options{
 					Logger:   zerolog.New(io.Discard),
 					RaftNode: nil,
@@ -691,7 +690,7 @@ func TestAddPeer(t *testing.T) {
 		{
 			name: "missing peer id",
 			api: &API{
-				ctx: context.Background(),
+				ctx: t.Context(),
 				Options: &Options{
 					Logger:   zerolog.New(io.Discard),
 					RaftNode: node,
@@ -707,7 +706,7 @@ func TestAddPeer(t *testing.T) {
 		{
 			name: "missing address",
 			api: &API{
-				ctx: context.Background(),
+				ctx: t.Context(),
 				Options: &Options{
 					Logger:   zerolog.New(io.Discard),
 					RaftNode: node,
@@ -723,7 +722,7 @@ func TestAddPeer(t *testing.T) {
 		{
 			name: "missing grpc address",
 			api: &API{
-				ctx: context.Background(),
+				ctx: t.Context(),
 				Options: &Options{
 					Logger:   zerolog.New(io.Discard),
 					RaftNode: node,
@@ -740,7 +739,7 @@ func TestAddPeer(t *testing.T) {
 
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			resp, err := testCase.api.AddPeer(context.Background(), testCase.req)
+			resp, err := testCase.api.AddPeer(t.Context(), testCase.req)
 
 			if testCase.wantErr {
 				require.Error(t, err)

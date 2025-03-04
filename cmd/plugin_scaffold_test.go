@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"sync"
@@ -25,7 +24,7 @@ func Test_pluginScaffoldCmd(t *testing.T) {
 	}()
 
 	// Start the test containers.
-	ctx := context.Background()
+	ctx := t.Context()
 	postgresHostIP1, postgresMappedPort1 := testhelpers.SetupPostgreSQLTestContainer(ctx, t)
 	postgresHostIP2, postgresMappedPort2 := testhelpers.SetupPostgreSQLTestContainer(ctx, t)
 	postgresAddress1 := postgresHostIP1 + ":" + postgresMappedPort1.Port()
@@ -112,7 +111,7 @@ func Test_pluginScaffoldCmd(t *testing.T) {
 
 	go func(waitGroup *sync.WaitGroup) {
 		time.Sleep(waitBeforeStop)
-		testApp.stopGracefully(context.Background(), os.Interrupt)
+		testApp.stopGracefully(t.Context(), os.Interrupt)
 		waitGroup.Done()
 	}(&waitGroup)
 

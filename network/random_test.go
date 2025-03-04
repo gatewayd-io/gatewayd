@@ -1,7 +1,6 @@
 package network
 
 import (
-	"context"
 	"sync"
 	"testing"
 
@@ -35,7 +34,7 @@ func TestGetNextProxy(t *testing.T) {
 		server := &Server{Proxies: proxies}
 		random := NewRandom(server)
 
-		proxy, err := random.NextProxy(context.Background(), nil)
+		proxy, err := random.NextProxy(t.Context(), nil)
 
 		assert.Nil(t, err)
 		assert.Contains(t, proxies, proxy)
@@ -45,7 +44,7 @@ func TestGetNextProxy(t *testing.T) {
 		server := &Server{Proxies: []IProxy{}}
 		random := NewRandom(server)
 
-		proxy, err := random.NextProxy(context.Background(), nil)
+		proxy, err := random.NextProxy(t.Context(), nil)
 
 		assert.Nil(t, proxy)
 		assert.Equal(t, gerr.ErrNoProxiesAvailable.Message, err.Message)
@@ -55,8 +54,8 @@ func TestGetNextProxy(t *testing.T) {
 		server := &Server{Proxies: proxies}
 		random := NewRandom(server)
 
-		proxy1, _ := random.NextProxy(context.Background(), nil)
-		proxy2, _ := random.NextProxy(context.Background(), nil)
+		proxy1, _ := random.NextProxy(t.Context(), nil)
+		proxy2, _ := random.NextProxy(t.Context(), nil)
 
 		assert.Contains(t, proxies, proxy1)
 		assert.Contains(t, proxies, proxy2)
@@ -82,7 +81,7 @@ func TestConcurrencySafety(t *testing.T) {
 		waitGroup.Add(1)
 		go func() {
 			defer waitGroup.Done()
-			proxy, _ := random.NextProxy(context.Background(), nil)
+			proxy, _ := random.NextProxy(t.Context(), nil)
 			proxyChan <- proxy
 		}()
 	}
