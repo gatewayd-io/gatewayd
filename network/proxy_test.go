@@ -1,7 +1,6 @@
 package network
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -17,9 +16,9 @@ import (
 
 // TestNewProxy tests the creation of a new proxy with a fixed connection pool.
 func TestNewProxy(t *testing.T) {
-	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(context.Background(), t)
+	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(t.Context(), t)
 
-	logger := logging.NewLogger(context.Background(), logging.LoggerConfig{
+	logger := logging.NewLogger(t.Context(), logging.LoggerConfig{
 		Output:            []config.LogOutput{config.Console},
 		TimeFormat:        zerolog.TimeFormatUnix,
 		ConsoleTimeFormat: time.RFC3339,
@@ -28,10 +27,10 @@ func TestNewProxy(t *testing.T) {
 	})
 
 	// Create a connection newPool
-	newPool := pool.NewPool(context.Background(), config.EmptyPoolCapacity)
+	newPool := pool.NewPool(t.Context(), config.EmptyPoolCapacity)
 
 	client := NewClient(
-		context.Background(),
+		t.Context(),
 		&config.Client{
 			Network:            "tcp",
 			Address:            postgresHostIP + ":" + postgresMappedPort.Port(),
@@ -61,11 +60,11 @@ func TestNewProxy(t *testing.T) {
 
 	// Create a proxy with a fixed buffer newPool
 	proxy := NewProxy(
-		context.Background(),
+		t.Context(),
 		Proxy{
 			AvailableConnections: newPool,
 			PluginRegistry: plugin.NewRegistry(
-				context.Background(),
+				t.Context(),
 				plugin.Registry{
 					ActRegistry: actRegistry,
 					Logger:      logger,
@@ -91,7 +90,7 @@ func TestNewProxy(t *testing.T) {
 }
 
 func BenchmarkNewProxy(b *testing.B) {
-	logger := logging.NewLogger(context.Background(), logging.LoggerConfig{
+	logger := logging.NewLogger(b.Context(), logging.LoggerConfig{
 		Output:            []config.LogOutput{config.Console},
 		TimeFormat:        zerolog.TimeFormatUnix,
 		ConsoleTimeFormat: time.RFC3339,
@@ -100,7 +99,7 @@ func BenchmarkNewProxy(b *testing.B) {
 	})
 
 	// Create a connection newPool
-	newPool := pool.NewPool(context.Background(), config.EmptyPoolCapacity)
+	newPool := pool.NewPool(b.Context(), config.EmptyPoolCapacity)
 
 	// Create a new act registry
 	actRegistry := act.NewActRegistry(
@@ -117,11 +116,11 @@ func BenchmarkNewProxy(b *testing.B) {
 	// Create a proxy with a fixed buffer newPool
 	for range b.N {
 		proxy := NewProxy(
-			context.Background(),
+			b.Context(),
 			Proxy{
 				AvailableConnections: newPool,
 				PluginRegistry: plugin.NewRegistry(
-					context.Background(),
+					b.Context(),
 					plugin.Registry{
 						ActRegistry: actRegistry,
 						Logger:      logger,
@@ -137,7 +136,7 @@ func BenchmarkNewProxy(b *testing.B) {
 }
 
 func BenchmarkProxyConnectDisconnect(b *testing.B) {
-	logger := logging.NewLogger(context.Background(), logging.LoggerConfig{
+	logger := logging.NewLogger(b.Context(), logging.LoggerConfig{
 		Output:            []config.LogOutput{config.Console},
 		TimeFormat:        zerolog.TimeFormatUnix,
 		ConsoleTimeFormat: time.RFC3339,
@@ -146,7 +145,7 @@ func BenchmarkProxyConnectDisconnect(b *testing.B) {
 	})
 
 	// Create a connection newPool
-	newPool := pool.NewPool(context.Background(), 1)
+	newPool := pool.NewPool(b.Context(), 1)
 
 	clientConfig := config.Client{
 		Network:            "tcp",
@@ -158,7 +157,7 @@ func BenchmarkProxyConnectDisconnect(b *testing.B) {
 		TCPKeepAlive:       false,
 		TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 	}
-	newPool.Put("client", NewClient(context.Background(), &clientConfig, logger, nil)) //nolint:errcheck
+	newPool.Put("client", NewClient(b.Context(), &clientConfig, logger, nil)) //nolint:errcheck
 
 	// Create a new act registry
 	actRegistry := act.NewActRegistry(
@@ -174,11 +173,11 @@ func BenchmarkProxyConnectDisconnect(b *testing.B) {
 
 	// Create a proxy with a fixed buffer newPool
 	proxy := NewProxy(
-		context.Background(),
+		b.Context(),
 		Proxy{
 			AvailableConnections: newPool,
 			PluginRegistry: plugin.NewRegistry(
-				context.Background(),
+				b.Context(),
 				plugin.Registry{
 					ActRegistry: actRegistry,
 					Logger:      logger,
@@ -202,7 +201,7 @@ func BenchmarkProxyConnectDisconnect(b *testing.B) {
 }
 
 func BenchmarkProxyPassThrough(b *testing.B) {
-	logger := logging.NewLogger(context.Background(), logging.LoggerConfig{
+	logger := logging.NewLogger(b.Context(), logging.LoggerConfig{
 		Output:            []config.LogOutput{config.Console},
 		TimeFormat:        zerolog.TimeFormatUnix,
 		ConsoleTimeFormat: time.RFC3339,
@@ -211,7 +210,7 @@ func BenchmarkProxyPassThrough(b *testing.B) {
 	})
 
 	// Create a connection newPool
-	newPool := pool.NewPool(context.Background(), 1)
+	newPool := pool.NewPool(b.Context(), 1)
 
 	clientConfig := config.Client{
 		Network:            "tcp",
@@ -223,7 +222,7 @@ func BenchmarkProxyPassThrough(b *testing.B) {
 		TCPKeepAlive:       false,
 		TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 	}
-	newPool.Put("client", NewClient(context.Background(), &clientConfig, logger, nil)) //nolint:errcheck
+	newPool.Put("client", NewClient(b.Context(), &clientConfig, logger, nil)) //nolint:errcheck
 
 	// Create a new act registry
 	actRegistry := act.NewActRegistry(
@@ -239,11 +238,11 @@ func BenchmarkProxyPassThrough(b *testing.B) {
 
 	// Create a proxy with a fixed buffer newPool
 	proxy := NewProxy(
-		context.Background(),
+		b.Context(),
 		Proxy{
 			AvailableConnections: newPool,
 			PluginRegistry: plugin.NewRegistry(
-				context.Background(),
+				b.Context(),
 				plugin.Registry{
 					ActRegistry: actRegistry,
 					Logger:      logger,
@@ -271,7 +270,7 @@ func BenchmarkProxyPassThrough(b *testing.B) {
 }
 
 func BenchmarkProxyIsHealthyAndIsExhausted(b *testing.B) {
-	logger := logging.NewLogger(context.Background(), logging.LoggerConfig{
+	logger := logging.NewLogger(b.Context(), logging.LoggerConfig{
 		Output:            []config.LogOutput{config.Console},
 		TimeFormat:        zerolog.TimeFormatUnix,
 		ConsoleTimeFormat: time.RFC3339,
@@ -280,7 +279,7 @@ func BenchmarkProxyIsHealthyAndIsExhausted(b *testing.B) {
 	})
 
 	// Create a connection newPool
-	newPool := pool.NewPool(context.Background(), 1)
+	newPool := pool.NewPool(b.Context(), 1)
 
 	clientConfig := config.Client{
 		Network:            "tcp",
@@ -292,7 +291,7 @@ func BenchmarkProxyIsHealthyAndIsExhausted(b *testing.B) {
 		TCPKeepAlive:       false,
 		TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 	}
-	client := NewClient(context.Background(), &clientConfig, logger, nil)
+	client := NewClient(b.Context(), &clientConfig, logger, nil)
 	newPool.Put("client", client) //nolint:errcheck
 
 	// Create a new act registry
@@ -309,11 +308,11 @@ func BenchmarkProxyIsHealthyAndIsExhausted(b *testing.B) {
 
 	// Create a proxy with a fixed buffer newPool
 	proxy := NewProxy(
-		context.Background(),
+		b.Context(),
 		Proxy{
 			AvailableConnections: newPool,
 			PluginRegistry: plugin.NewRegistry(
-				context.Background(),
+				b.Context(),
 				plugin.Registry{
 					ActRegistry: actRegistry,
 					Logger:      logger,
@@ -339,7 +338,7 @@ func BenchmarkProxyIsHealthyAndIsExhausted(b *testing.B) {
 }
 
 func BenchmarkProxyAvailableAndBusyConnectionsString(b *testing.B) {
-	logger := logging.NewLogger(context.Background(), logging.LoggerConfig{
+	logger := logging.NewLogger(b.Context(), logging.LoggerConfig{
 		Output:            []config.LogOutput{config.Console},
 		TimeFormat:        zerolog.TimeFormatUnix,
 		ConsoleTimeFormat: time.RFC3339,
@@ -348,7 +347,7 @@ func BenchmarkProxyAvailableAndBusyConnectionsString(b *testing.B) {
 	})
 
 	// Create a connection newPool
-	newPool := pool.NewPool(context.Background(), 1)
+	newPool := pool.NewPool(b.Context(), 1)
 
 	clientConfig := config.Client{
 		Network:            "tcp",
@@ -360,7 +359,7 @@ func BenchmarkProxyAvailableAndBusyConnectionsString(b *testing.B) {
 		TCPKeepAlive:       false,
 		TCPKeepAlivePeriod: config.DefaultTCPKeepAlivePeriod,
 	}
-	client := NewClient(context.Background(), &clientConfig, logger, nil)
+	client := NewClient(b.Context(), &clientConfig, logger, nil)
 	newPool.Put("client", client) //nolint:errcheck
 
 	// Create a new act registry
@@ -377,11 +376,11 @@ func BenchmarkProxyAvailableAndBusyConnectionsString(b *testing.B) {
 
 	// Create a proxy with a fixed buffer newPool
 	proxy := NewProxy(
-		context.Background(),
+		b.Context(),
 		Proxy{
 			AvailableConnections: newPool,
 			PluginRegistry: plugin.NewRegistry(
-				context.Background(),
+				b.Context(),
 				plugin.Registry{
 					ActRegistry: actRegistry,
 					Logger:      logger,

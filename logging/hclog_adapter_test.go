@@ -2,7 +2,6 @@ package logging
 
 import (
 	"bytes"
-	"context"
 	"testing"
 	"time"
 
@@ -16,7 +15,7 @@ import (
 func TestNewHcLogAdapter(t *testing.T) {
 	out := &bytes.Buffer{}
 	logger := NewLogger(
-		context.Background(),
+		t.Context(),
 		LoggerConfig{
 			Output:            []config.LogOutput{config.Console},
 			Level:             zerolog.TraceLevel,
@@ -57,7 +56,7 @@ func TestNewHcLogAdapter(t *testing.T) {
 func TestNewHcLogAdapter_LogLevel_Difference(t *testing.T) {
 	out := &bytes.Buffer{}
 	logger := NewLogger(
-		context.Background(),
+		t.Context(),
 		LoggerConfig{
 			Output:     []config.LogOutput{config.Console},
 			ConsoleOut: out,
@@ -92,7 +91,7 @@ func TestNewHcLogAdapter_LogLevel_Difference(t *testing.T) {
 func TestNewHcLogAdapter_Log(t *testing.T) {
 	out := &bytes.Buffer{}
 	logger := NewLogger(
-		context.Background(),
+		t.Context(),
 		LoggerConfig{
 			Output:     []config.LogOutput{config.Console},
 			ConsoleOut: out,
@@ -138,7 +137,7 @@ func TestNewHcLogAdapter_GetLevel(t *testing.T) {
 
 	for zerologLevel, hclogLevel := range levels {
 		logger := NewLogger(
-			context.Background(),
+			t.Context(),
 			LoggerConfig{
 				Output:     []config.LogOutput{config.Console},
 				Level:      zerologLevel,

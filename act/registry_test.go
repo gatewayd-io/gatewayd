@@ -747,7 +747,7 @@ func Test_Run_Async_Redis(t *testing.T) {
 	consumer, err := sdkAct.NewConsumer(hclogger, rdb, 5, "test-async-chan")
 	require.NoError(t, err)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 	defer cancel()
 
 	require.NoError(t, consumer.Subscribe(ctx, func(ctx context.Context, task []byte) error {

@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -18,19 +17,19 @@ import (
 )
 
 func Test_Healthchecker(t *testing.T) {
-	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(context.Background(), t)
+	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(t.Context(), t)
 	postgresAddress := postgresHostIP + ":" + postgresMappedPort.Port()
 	clientConfig := &config.Client{
 		Network: config.DefaultNetwork,
 		Address: postgresAddress,
 	}
-	client := network.NewClient(context.Background(), clientConfig, zerolog.Logger{}, nil)
-	newPool := pool.NewPool(context.Background(), 1)
+	client := network.NewClient(t.Context(), clientConfig, zerolog.Logger{}, nil)
+	newPool := pool.NewPool(t.Context(), 1)
 	require.NotNil(t, newPool)
 	assert.Nil(t, newPool.Put(client.ID, client))
 
 	proxy := network.NewProxy(
-		context.Background(),
+		t.Context(),
 		network.Proxy{
 			AvailableConnections: newPool,
 			HealthCheckPeriod:    config.DefaultHealthCheckPeriod,
@@ -55,7 +54,7 @@ func Test_Healthchecker(t *testing.T) {
 		})
 
 	pluginRegistry := plugin.NewRegistry(
-		context.Background(),
+		t.Context(),
 		plugin.Registry{
 			ActRegistry: actRegistry,
 			Logger:      zerolog.Logger{},
@@ -74,7 +73,7 @@ func Test_Healthchecker(t *testing.T) {
 	}()
 
 	server := network.NewServer(
-		context.Background(),
+		t.Context(),
 		network.Server{
 			Network:      config.DefaultNetwork,
 			Address:      "127.0.0.1:15432",
@@ -98,7 +97,7 @@ func Test_Healthchecker(t *testing.T) {
 		raftNode: raftHelper.Node,
 	}
 	assert.NotNil(t, healthchecker)
-	hcr, err := healthchecker.Check(context.Background(), &grpc_health_v1.HealthCheckRequest{})
+	hcr, err := healthchecker.Check(t.Context(), &grpc_health_v1.HealthCheckRequest{})
 	assert.NoError(t, err)
 	assert.NotNil(t, hcr)
 	assert.Equal(t, grpc_health_v1.HealthCheckResponse_NOT_SERVING, hcr.GetStatus())
@@ -113,7 +112,7 @@ func Test_Healthchecker(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 	// Test for SERVING status
-	hcr, err = healthchecker.Check(context.Background(), &grpc_health_v1.HealthCheckRequest{})
+	hcr, err = healthchecker.Check(t.Context(), &grpc_health_v1.HealthCheckRequest{})
 	assert.NoError(t, err)
 	assert.NotNil(t, hcr)
 	assert.Equal(t, grpc_health_v1.HealthCheckResponse_SERVING, hcr.GetStatus())

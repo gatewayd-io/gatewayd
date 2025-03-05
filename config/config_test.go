@@ -16,7 +16,7 @@ var parentDir = "../"
 // TestNewConfig tests the NewConfig function.
 func TestNewConfig(t *testing.T) {
 	config := NewConfig(
-		context.Background(), Config{GlobalConfigFile: GlobalConfigFilename, PluginConfigFile: PluginsConfigFilename})
+		t.Context(), Config{GlobalConfigFile: GlobalConfigFilename, PluginConfigFile: PluginsConfigFilename})
 	assert.NotNil(t, config)
 	assert.Equal(t, GlobalConfigFilename, config.GlobalConfigFile)
 	assert.Equal(t, PluginsConfigFilename, config.PluginConfigFile)
@@ -31,7 +31,7 @@ func TestNewConfig(t *testing.T) {
 // TestInitConfig tests the InitConfig function, which practically tests all
 // the other functions.
 func TestInitConfig(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	config := NewConfig(ctx,
 		Config{
 			GlobalConfigFile: parentDir + "cmd/testdata/gatewayd.yaml",
@@ -63,7 +63,7 @@ func TestInitConfig(t *testing.T) {
 
 // TestInitConfigMultiTenant tests the InitConfig function with a multi-tenant configuration.
 func TestInitConfigMultiTenant(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	config := NewConfig(ctx,
 		Config{GlobalConfigFile: parentDir + GlobalConfigFilename, PluginConfigFile: parentDir + PluginsConfigFilename})
 	err := config.InitConfig(ctx)
@@ -89,7 +89,7 @@ func TestInitConfigMultiTenant(t *testing.T) {
 
 // TestInitConfigMissingFile tests the InitConfig function with a missing file.
 func TestInitConfigMissingKeys(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	config := NewConfig(ctx,
 		Config{
 			GlobalConfigFile: "./testdata/missing_keys.yaml",
@@ -104,7 +104,7 @@ func TestInitConfigMissingKeys(t *testing.T) {
 
 // TestInitConfigMissingFile tests the InitConfig function with a missing file.
 func TestInitConfigMissingFile(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	config := NewConfig(ctx,
 		Config{
 			GlobalConfigFile: "./testdata/missing_file.yaml",
@@ -122,7 +122,7 @@ func TestInitConfigMissingFile(t *testing.T) {
 
 // TestMergeGlobalConfig tests the MergeGlobalConfig function.
 func TestMergeGlobalConfig(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	config := NewConfig(ctx,
 		Config{GlobalConfigFile: parentDir + GlobalConfigFilename, PluginConfigFile: parentDir + PluginsConfigFilename})
 	err := config.InitConfig(ctx)
@@ -163,7 +163,7 @@ func initializeConfig(ctx context.Context, t *testing.T) *Config {
 // and verifies that the configuration is correctly loaded with the expected value.
 func ServerLoadBalancerStrategyOverwrite(t *testing.T) {
 	t.Helper()
-	ctx := context.Background()
+	ctx := t.Context()
 	// Convert to uppercase
 	upperDefaultGroup := strings.ToUpper(Default)
 
@@ -180,7 +180,7 @@ func ServerLoadBalancerStrategyOverwrite(t *testing.T) {
 // and verifies that the configuration is correctly loaded with the expected value.
 func pluginDefaultPolicyOverwrite(t *testing.T) {
 	t.Helper()
-	ctx := context.Background()
+	ctx := t.Context()
 
 	// Set the environment variable
 	t.Setenv("GATEWAYD_DEFAULTPOLICY", "test")
@@ -192,7 +192,7 @@ func pluginDefaultPolicyOverwrite(t *testing.T) {
 // and verifies that the configuration is correctly loaded with the expected value.
 func clientNetworkOverwrite(t *testing.T) {
 	t.Helper()
-	ctx := context.Background()
+	ctx := t.Context()
 	// Convert to uppercase
 	upperDefaultGroup := strings.ToUpper(Default)
 	upperDefaultBlock := strings.ToUpper(DefaultConfigurationBlock)
@@ -210,7 +210,7 @@ func clientNetworkOverwrite(t *testing.T) {
 // and verifies that the configuration is correctly loaded with the expected value.
 func serverNetworkOverwrite(t *testing.T) {
 	t.Helper()
-	ctx := context.Background()
+	ctx := t.Context()
 	// Convert to uppercase
 	upperDefaultGroup := strings.ToUpper(Default)
 
@@ -244,7 +244,7 @@ func TestLoadEnvVariables(t *testing.T) {
 // TestConvertKeysToLowercaseSuccess verifies that after calling ConvertKeysToLowercase,
 // all keys in the config.Global.Clients map are converted to lowercase.
 func TestConvertKeysToLowercaseSuccess(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	config := NewConfig(ctx,
 		Config{GlobalConfigFile: parentDir + GlobalConfigFilename, PluginConfigFile: parentDir + PluginsConfigFilename})
 

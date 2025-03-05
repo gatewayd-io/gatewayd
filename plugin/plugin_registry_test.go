@@ -25,7 +25,7 @@ func NewPluginRegistry(t *testing.T) *Registry {
 		Level:             zerolog.InfoLevel,
 		NoColor:           true,
 	}
-	logger := logging.NewLogger(context.Background(), cfg)
+	logger := logging.NewLogger(t.Context(), cfg)
 	actRegistry := act.NewActRegistry(
 		act.Registry{
 			Signals:              act.BuiltinSignals(),
@@ -37,7 +37,7 @@ func NewPluginRegistry(t *testing.T) *Registry {
 			Logger:               logger,
 		})
 	reg := NewRegistry(
-		context.Background(),
+		t.Context(),
 		Registry{
 			ActRegistry: actRegistry,
 			Logger:      logger,
@@ -128,7 +128,7 @@ func Test_PluginRegistry_Run(t *testing.T) {
 	) (*v1.Struct, error) {
 		return args, nil
 	})
-	result, err := reg.Run(context.Background(), map[string]any{}, v1.HookName_HOOK_NAME_ON_NEW_LOGGER)
+	result, err := reg.Run(t.Context(), map[string]any{}, v1.HookName_HOOK_NAME_ON_NEW_LOGGER)
 	assert.NotNil(t, result)
 	assert.Nil(t, err)
 }
@@ -141,7 +141,7 @@ func BenchmarkHookRun(b *testing.B) {
 		Level:             zerolog.DebugLevel,
 		NoColor:           true,
 	}
-	logger := logging.NewLogger(context.Background(), cfg)
+	logger := logging.NewLogger(b.Context(), cfg)
 	actRegistry := act.NewActRegistry(
 		act.Registry{
 			Signals:              act.BuiltinSignals(),
@@ -154,7 +154,7 @@ func BenchmarkHookRun(b *testing.B) {
 		})
 
 	reg := NewRegistry(
-		context.Background(),
+		b.Context(),
 		Registry{
 			ActRegistry: actRegistry,
 			Logger:      logger,
@@ -174,7 +174,7 @@ func BenchmarkHookRun(b *testing.B) {
 	for range b.N {
 		//nolint:errcheck
 		reg.Run(
-			context.Background(),
+			b.Context(),
 			map[string]any{
 				"test": "test",
 			},

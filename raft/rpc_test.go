@@ -1,7 +1,6 @@
 package raft
 
 import (
-	"context"
 	"net"
 	"strconv"
 	"testing"
@@ -153,7 +152,7 @@ func TestRPCServer_ForwardApply(t *testing.T) {
 
 			client := pb.NewRaftServiceClient(conn)
 			resp, err := client.ForwardApply(
-				context.Background(),
+				t.Context(),
 				&pb.ForwardApplyRequest{
 					Data:      testCase.data,
 					TimeoutMs: testCase.timeoutMs,
@@ -303,7 +302,7 @@ func TestRPCServer_AddPeer(t *testing.T) {
 			defer conn.Close()
 
 			client := pb.NewRaftServiceClient(conn)
-			resp, err := client.AddPeer(context.Background(), testCase.request)
+			resp, err := client.AddPeer(t.Context(), testCase.request)
 
 			if testCase.wantErr {
 				assert.Error(t, err)
@@ -372,7 +371,7 @@ func TestRPCServer_RemovePeer(t *testing.T) {
 			defer conn.Close()
 
 			client := pb.NewRaftServiceClient(conn)
-			resp, err := client.RemovePeer(context.Background(), testCase.request)
+			resp, err := client.RemovePeer(t.Context(), testCase.request)
 
 			if testCase.wantErr {
 				assert.Error(t, err)
@@ -454,7 +453,7 @@ func TestRPCServer_GetPeerInfo(t *testing.T) {
 			defer conn.Close()
 
 			client := pb.NewRaftServiceClient(conn)
-			resp, err := client.GetPeerInfo(context.Background(), testCase.request)
+			resp, err := client.GetPeerInfo(t.Context(), testCase.request)
 
 			if testCase.wantErr {
 				assert.Error(t, err)

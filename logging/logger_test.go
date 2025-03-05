@@ -2,7 +2,6 @@ package logging
 
 import (
 	"bytes"
-	"context"
 	"os"
 	"testing"
 	"time"
@@ -17,7 +16,7 @@ import (
 func TestNewLogger_Console(t *testing.T) {
 	consoleStdout := capturer.CaptureStdout(func() {
 		logger := NewLogger(
-			context.Background(),
+			t.Context(),
 			LoggerConfig{
 				Output:     []config.LogOutput{config.Console},
 				Level:      zerolog.DebugLevel,
@@ -38,7 +37,7 @@ func TestNewLogger_Console(t *testing.T) {
 // TestNewLogger_File tests the creation of a new logger with the file output.
 func TestNewLogger_File(t *testing.T) {
 	logger := NewLogger(
-		context.Background(),
+		t.Context(),
 		LoggerConfig{
 			Output:            []config.LogOutput{config.File},
 			FileName:          "gatewayd.log",
@@ -67,7 +66,7 @@ func TestNewLogger_File(t *testing.T) {
 func TestNewLogger_Stdout(t *testing.T) {
 	stdout := capturer.CaptureStdout(func() {
 		logger := NewLogger(
-			context.Background(),
+			t.Context(),
 			LoggerConfig{
 				Output:     []config.LogOutput{config.Stdout},
 				Level:      zerolog.DebugLevel,
@@ -89,7 +88,7 @@ func TestNewLogger_Stdout(t *testing.T) {
 func TestNewLogger_Stderr(t *testing.T) {
 	stderr := capturer.CaptureStderr(func() {
 		logger := NewLogger(
-			context.Background(),
+			t.Context(),
 			LoggerConfig{
 				Output:     []config.LogOutput{config.Stderr},
 				Level:      zerolog.DebugLevel,
@@ -111,7 +110,7 @@ func TestNewLogger_Stderr(t *testing.T) {
 func TestNewLogger_ConsoleOut(t *testing.T) {
 	out := &bytes.Buffer{}
 	logger := NewLogger(
-		context.Background(),
+		t.Context(),
 		LoggerConfig{
 			Output:     []config.LogOutput{config.Console},
 			ConsoleOut: out,
@@ -133,7 +132,7 @@ func TestNewLogger_MultipleOutputs(t *testing.T) {
 	stderr := capturer.CaptureStderr(func() {
 		stdout := capturer.CaptureStdout(func() {
 			logger := NewLogger(
-				context.Background(),
+				t.Context(),
 				LoggerConfig{
 					Output:     []config.LogOutput{config.Stdout, config.Stderr},
 					Level:      zerolog.DebugLevel,

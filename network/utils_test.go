@@ -1,7 +1,6 @@
 package network
 
 import (
-	"context"
 	"fmt"
 	"math/big"
 	"net"
@@ -24,7 +23,7 @@ func TestGetID(t *testing.T) {
 		NoColor:           true,
 	}
 
-	logger := logging.NewLogger(context.Background(), cfg)
+	logger := logging.NewLogger(t.Context(), cfg)
 	id := GetID("tcp", "localhost:5432", 1, logger)
 	assert.Equal(t, "0cf47ee4e436ecb40dbd1d2d9a47179d1f6d98e2ea18d6fbd1cdfa85d3cec94f", id)
 }
@@ -39,7 +38,7 @@ func TestResolve(t *testing.T) {
 		NoColor:           true,
 	}
 
-	logger := logging.NewLogger(context.Background(), cfg)
+	logger := logging.NewLogger(t.Context(), cfg)
 	address, err := Resolve("udp", "localhost:53", logger)
 	assert.Nil(t, err)
 	assert.Equal(t, "127.0.0.1:53", address)
@@ -56,7 +55,7 @@ func BenchmarkGetID(b *testing.B) {
 		NoColor:           true,
 	}
 
-	logger := logging.NewLogger(context.Background(), cfg)
+	logger := logging.NewLogger(b.Context(), cfg)
 	for _, seed := range seedValues {
 		b.Run(fmt.Sprintf("seed=%d", seed), func(b *testing.B) {
 			for range b.N {
@@ -75,7 +74,7 @@ func BenchmarkResolveUDP(b *testing.B) {
 		NoColor:           true,
 	}
 
-	logger := logging.NewLogger(context.Background(), cfg)
+	logger := logging.NewLogger(b.Context(), cfg)
 	for range b.N {
 		Resolve("udp", "localhost:53", logger) //nolint:errcheck
 	}
@@ -90,7 +89,7 @@ func BenchmarkResolveTCP(b *testing.B) {
 		NoColor:           true,
 	}
 
-	logger := logging.NewLogger(context.Background(), cfg)
+	logger := logging.NewLogger(b.Context(), cfg)
 	for range b.N {
 		Resolve("tcp", "localhost:5432", logger) //nolint:errcheck
 	}
@@ -105,7 +104,7 @@ func BenchmarkResolveUnix(b *testing.B) {
 		NoColor:           true,
 	}
 
-	logger := logging.NewLogger(context.Background(), cfg)
+	logger := logging.NewLogger(b.Context(), cfg)
 	for range b.N {
 		Resolve("unix", "/tmp/unix.sock", logger) //nolint:errcheck
 	}
@@ -130,7 +129,7 @@ func (c *testConnection) RemoteAddr() net.Addr {
 }
 
 func BenchmarkTrafficData(b *testing.B) {
-	logger := logging.NewLogger(context.Background(), logging.LoggerConfig{
+	logger := logging.NewLogger(b.Context(), logging.LoggerConfig{
 		Output:            []config.LogOutput{config.Console},
 		TimeFormat:        zerolog.TimeFormatUnix,
 		ConsoleTimeFormat: time.RFC3339,
@@ -139,7 +138,7 @@ func BenchmarkTrafficData(b *testing.B) {
 	})
 
 	conn := &testConnection{}
-	client := NewClient(context.Background(), &config.Client{
+	client := NewClient(b.Context(), &config.Client{
 		Network:            "tcp",
 		Address:            "localhost:5432",
 		TCPKeepAlive:       false,

@@ -1,7 +1,6 @@
 package network
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -15,7 +14,7 @@ import (
 
 // TestNewClient tests the NewClient function.
 func TestNewClient(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(ctx, t)
 	client, _ := CreateNewClient(ctx, t, postgresHostIP, postgresMappedPort.Port(), nil)
 	defer client.Close()
@@ -29,7 +28,7 @@ func TestNewClient(t *testing.T) {
 
 // TestSend tests the Send function.
 func TestSend(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(ctx, t)
 	client, _ := CreateNewClient(ctx, t, postgresHostIP, postgresMappedPort.Port(), nil)
 	defer client.Close()
@@ -43,7 +42,7 @@ func TestSend(t *testing.T) {
 
 // TestReceive tests the Receive function.
 func TestReceive(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(ctx, t)
 	client, _ := CreateNewClient(ctx, t, postgresHostIP, postgresMappedPort.Port(), nil)
 	defer client.Close()
@@ -68,7 +67,7 @@ func TestReceive(t *testing.T) {
 
 // TestClose tests the Close function.
 func TestClose(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(ctx, t)
 	client, _ := CreateNewClient(ctx, t, postgresHostIP, postgresMappedPort.Port(), nil)
 
@@ -82,8 +81,8 @@ func TestClose(t *testing.T) {
 
 // TestIsConnected tests the IsConnected function.
 func TestIsConnected(t *testing.T) {
-	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(context.Background(), t)
-	client, _ := CreateNewClient(context.Background(), t, postgresHostIP, postgresMappedPort.Port(), nil)
+	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(t.Context(), t)
+	client, _ := CreateNewClient(t.Context(), t, postgresHostIP, postgresMappedPort.Port(), nil)
 
 	assert.True(t, client.IsConnected())
 	client.Close()
@@ -91,7 +90,7 @@ func TestIsConnected(t *testing.T) {
 }
 
 func TestReconnect(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(ctx, t)
 	client, _ := CreateNewClient(ctx, t, postgresHostIP, postgresMappedPort.Port(), nil)
 	defer client.Close()
@@ -119,9 +118,9 @@ func BenchmarkNewClient(b *testing.B) {
 		NoColor:           true,
 	}
 
-	logger := logging.NewLogger(context.Background(), cfg)
+	logger := logging.NewLogger(b.Context(), cfg)
 	for range b.N {
-		client := NewClient(context.Background(), &config.Client{
+		client := NewClient(b.Context(), &config.Client{
 			Network:            "tcp",
 			Address:            "localhost:5432",
 			ReceiveChunkSize:   config.DefaultChunkSize,
@@ -136,7 +135,7 @@ func BenchmarkNewClient(b *testing.B) {
 }
 
 func BenchmarkSend(b *testing.B) {
-	logger := logging.NewLogger(context.Background(), logging.LoggerConfig{
+	logger := logging.NewLogger(b.Context(), logging.LoggerConfig{
 		Output:            []config.LogOutput{config.Console},
 		TimeFormat:        zerolog.TimeFormatUnix,
 		ConsoleTimeFormat: time.RFC3339,
@@ -145,7 +144,7 @@ func BenchmarkSend(b *testing.B) {
 	})
 
 	client := NewClient(
-		context.Background(),
+		b.Context(),
 		&config.Client{
 			Network:            "tcp",
 			Address:            "localhost:5432",
@@ -166,7 +165,7 @@ func BenchmarkSend(b *testing.B) {
 }
 
 func BenchmarkReceive(b *testing.B) {
-	logger := logging.NewLogger(context.Background(), logging.LoggerConfig{
+	logger := logging.NewLogger(b.Context(), logging.LoggerConfig{
 		Output:            []config.LogOutput{config.Console},
 		TimeFormat:        zerolog.TimeFormatUnix,
 		ConsoleTimeFormat: time.RFC3339,
@@ -175,7 +174,7 @@ func BenchmarkReceive(b *testing.B) {
 	})
 
 	client := NewClient(
-		context.Background(),
+		b.Context(),
 		&config.Client{
 			Network:            "tcp",
 			Address:            "localhost:5432",
@@ -198,7 +197,7 @@ func BenchmarkReceive(b *testing.B) {
 }
 
 func BenchmarkIsConnected(b *testing.B) {
-	logger := logging.NewLogger(context.Background(), logging.LoggerConfig{
+	logger := logging.NewLogger(b.Context(), logging.LoggerConfig{
 		Output:            []config.LogOutput{config.Console},
 		TimeFormat:        zerolog.TimeFormatUnix,
 		ConsoleTimeFormat: time.RFC3339,
@@ -207,7 +206,7 @@ func BenchmarkIsConnected(b *testing.B) {
 	})
 
 	client := NewClient(
-		context.Background(),
+		b.Context(),
 		&config.Client{
 			Network:            "tcp",
 			Address:            "localhost:5432",

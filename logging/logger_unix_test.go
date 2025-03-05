@@ -4,7 +4,6 @@
 package logging
 
 import (
-	"context"
 	"log/syslog"
 	"testing"
 	"time"
@@ -22,7 +21,7 @@ func TestSyslogAndRsyslog(t *testing.T) {
 	time.Sleep(1 * time.Second) // wait for the test server to start
 
 	logger := NewLogger(
-		context.Background(),
+		t.Context(),
 		LoggerConfig{
 			Output:            []config.LogOutput{config.Syslog, config.RSyslog},
 			TimeFormat:        zerolog.TimeFormatUnix,

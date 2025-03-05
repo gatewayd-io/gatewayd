@@ -1,7 +1,6 @@
 package network
 
 import (
-	"context"
 	"net"
 	"testing"
 	"time"
@@ -14,9 +13,9 @@ import (
 )
 
 func TestRetry(t *testing.T) {
-	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(context.Background(), t)
+	postgresHostIP, postgresMappedPort := testhelpers.SetupPostgreSQLTestContainer(t.Context(), t)
 
-	logger := logging.NewLogger(context.Background(), logging.LoggerConfig{
+	logger := logging.NewLogger(t.Context(), logging.LoggerConfig{
 		Output:            []config.LogOutput{config.Console},
 		TimeFormat:        zerolog.TimeFormatUnix,
 		ConsoleTimeFormat: time.RFC3339,

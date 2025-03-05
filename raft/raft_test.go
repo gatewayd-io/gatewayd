@@ -161,7 +161,7 @@ func TestRaftNodeApply(t *testing.T) {
 	data, err := json.Marshal(cmd)
 	require.NoError(t, err)
 
-	err = node.Apply(context.Background(), data, time.Second)
+	err = node.Apply(t.Context(), data, time.Second)
 	// Note: This will likely fail as the node isn't a leader
 	assert.Error(t, err)
 }
@@ -254,7 +254,7 @@ func TestRaftLeadershipAndFollowers(t *testing.T) {
 	require.NoError(t, err)
 
 	// Apply command through leader
-	err = leaderNode.Apply(context.Background(), data, 5*time.Second)
+	err = leaderNode.Apply(t.Context(), data, 5*time.Second)
 	require.NoError(t, err, "Failed to apply command through leader")
 
 	// Wait for replication
@@ -738,7 +738,7 @@ func TestRemovePeer(t *testing.T) {
 
 	// Test removing a follower node
 	followerID := nodeConfigs[1].NodeID // Second node
-	err := leaderNode.RemovePeer(context.Background(), followerID)
+	err := leaderNode.RemovePeer(t.Context(), followerID)
 	require.NoError(t, err, "Failed to remove follower node")
 
 	// Wait for the removal to take effect and verify
@@ -755,7 +755,7 @@ func TestRemovePeer(t *testing.T) {
 
 	// Test removing the leader node
 	leaderID := leaderNode.config.LocalID
-	err = leaderNode.RemovePeer(context.Background(), string(leaderID))
+	err = leaderNode.RemovePeer(t.Context(), string(leaderID))
 	require.NoError(t, err, "Failed to remove leader node")
 
 	// Wait for new leader election and verify cluster size
@@ -1236,7 +1236,7 @@ func TestLeaveCluster(t *testing.T) {
 			}
 
 			// Execute the leave operation
-			err := nodes[testCase.testNode].LeaveCluster(context.Background())
+			err := nodes[testCase.testNode].LeaveCluster(t.Context())
 
 			// Verify the result
 			if testCase.wantErr {
@@ -1553,7 +1553,7 @@ func TestShutdown(t *testing.T) {
 				})
 				require.NoError(t, err)
 				// Start peer synchronization
-				ctx, cancel := context.WithCancel(context.Background())
+				ctx, cancel := context.WithCancel(t.Context())
 				node.peerSyncCancel = cancel
 				node.StartPeerSynchronizer(ctx)
 				return node

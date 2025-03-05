@@ -1,7 +1,6 @@
 package config
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -35,9 +34,9 @@ func TestGetDefaultConfigFilePath(t *testing.T) {
 // TestFilter tests the Filter function.
 func TestFilter(t *testing.T) {
 	// Load config from the default config file.
-	conf := NewConfig(context.Background(),
+	conf := NewConfig(t.Context(),
 		Config{GlobalConfigFile: "../gatewayd.yaml", PluginConfigFile: "../gatewayd_plugins.yaml"})
-	err := conf.InitConfig(context.Background())
+	err := conf.InitConfig(t.Context())
 	require.Nil(t, err)
 	assert.NotEmpty(t, conf.Global)
 
@@ -55,9 +54,9 @@ func TestFilter(t *testing.T) {
 // TestFilterWithMissingGroupName tests the Filter function with a missing group name.
 func TestFilterWithMissingGroupName(t *testing.T) {
 	// Load config from the default config file.
-	conf := NewConfig(context.Background(),
+	conf := NewConfig(t.Context(),
 		Config{GlobalConfigFile: "../gatewayd.yaml", PluginConfigFile: "../gatewayd_plugins.yaml"})
-	err := conf.InitConfig(context.Background())
+	err := conf.InitConfig(t.Context())
 	require.Nil(t, err)
 	assert.NotEmpty(t, conf.Global)
 
