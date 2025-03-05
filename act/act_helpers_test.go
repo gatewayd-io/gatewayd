@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/docker/go-connections/nat"
 	sdkAct "github.com/gatewayd-io/gatewayd-plugin-sdk/act"
 	"github.com/stretchr/testify/assert"
 	"github.com/testcontainers/testcontainers-go"
@@ -58,27 +59,28 @@ func createTestRedis(t *testing.T) string {
 	t.Helper()
 	ctx := t.Context()
 
-	req := testcontainers.ContainerRequest{
-		Image:        "redis:6",
-		ExposedPorts: []string{"6379/tcp"},
-		WaitingFor: wait.ForAll(
-			wait.ForLog("Ready to accept connections"),
-			wait.ForListeningPort("6379/tcp"),
-		),
-	}
+	redisPort := "6379"
+
 	redisContainer, err := testcontainers.GenericContainer(
 		ctx, testcontainers.GenericContainerRequest{
-			ContainerRequest: req,
-			Started:          true,
+			ContainerRequest: testcontainers.ContainerRequest{
+				Image:        "redis:7",
+				ExposedPorts: []string{redisPort + "/tcp"},
+				WaitingFor: wait.ForAll(
+					wait.ForLog("Ready to accept connections"),
+					wait.ForListeningPort(nat.Port(redisPort+"/tcp")),
+				),
+			},
+			Started: true,
 		},
 	)
 	assert.NoError(t, err)
-	t.Cleanup(func() {
-		assert.NoError(t, redisContainer.Terminate(ctx))
-	})
+
 	host, err := redisContainer.Host(ctx)
 	assert.NoError(t, err)
-	port, err := redisContainer.MappedPort(ctx, "6379/tcp")
+
+	port, err := redisContainer.MappedPort(ctx, nat.Port(redisPort+"/tcp"))
 	assert.NoError(t, err)
+
 	return host + ":" + port.Port()
 }
