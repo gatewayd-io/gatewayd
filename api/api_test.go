@@ -30,7 +30,7 @@ func TestGetVersion(t *testing.T) {
 	version, err := api.Version(t.Context(), &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.Regexp(t, regexp.MustCompile(`^\d+\.\d+\.\d+$`), version.GetVersion())
-	assert.Regexp(t, regexp.MustCompile(`^GatewayD \d+\.\d+\.\d+ \(, go\d+\.\d+\.\d+, \w+/\w+\)$`), version.GetVersionInfo()) //nolint:lll
+	assert.Regexp(t, regexp.MustCompile(`^GatewayD v?\d+\.\d+\.\d+ \(\(([^,()]*)\), go\d+\.\d+\.\d+, \w+\/\w+\)$`), version.GetVersionInfo()) //nolint:lll
 }
 
 func TestGetGlobalConfig(t *testing.T) {
