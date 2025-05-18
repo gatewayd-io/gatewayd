@@ -70,6 +70,7 @@ linters-settings:
           - "github.com/stretchr/testify/require"
           - "github.com/docker/go-connections/nat"
           - "github.com/hashicorp/raft"
+          - "go.opentelemetry.io/otel"
       test:
         files:
           - $test
@@ -93,6 +94,9 @@ linters-settings:
           - "github.com/docker/go-connections/nat"
           - "github.com/codingsince1985/checksum"
           - "github.com/hashicorp/raft"
+          - "google.golang.org/grpc"
+          - "google.golang.org/protobuf/types/known/emptypb"
+          - "gopkg.in/yaml.v3"
   tagalign:
     align: false
     sort: false
