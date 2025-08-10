@@ -107,6 +107,7 @@ type Node struct {
 	grpcAddr       string
 	grpcIsSecure   bool
 	peerSyncCancel context.CancelFunc
+	restoreLogFunc func() // Function to restore original log output
 }
 
 type nodeConfig struct {
@@ -124,9 +125,13 @@ type stores struct {
 
 // NewRaftNode creates and initializes a new Raft node.
 func NewRaftNode(logger zerolog.Logger, raftConfig config.Raft) (*Node, error) {
+	// Set up global log capture for raftboltdb logs
+	restoreLogFunc := logging.CaptureStandardLogs(logger, "raftboltdb")
+
 	// Initialize basic configuration
 	nodeConfig, err := initializeNodeConfig(logger, raftConfig)
 	if err != nil {
+		restoreLogFunc() // Restore log output on error
 		return nil, fmt.Errorf("failed to initialize node config: %w", err)
 	}
 
@@ -136,12 +141,14 @@ func NewRaftNode(logger zerolog.Logger, raftConfig config.Raft) (*Node, error) {
 	// Initialize storage components
 	stores, err := initializeStores(nodeConfig.raftDir)
 	if err != nil {
+		restoreLogFunc() // Restore log output on error
 		return nil, fmt.Errorf("failed to initialize stores: %w", err)
 	}
 
 	// Setup transport
 	transport, err := setupTransport(nodeConfig.raftAddr)
 	if err != nil {
+		restoreLogFunc() // Restore log output on error
 		return nil, fmt.Errorf("failed to setup transport: %w", err)
 	}
 
@@ -155,31 +162,35 @@ func NewRaftNode(logger zerolog.Logger, raftConfig config.Raft) (*Node, error) {
 		transport,
 	)
 	if err != nil {
+		restoreLogFunc() // Restore log output on error
 		return nil, fmt.Errorf("failed to create raft instance: %w", err)
 	}
 
 	// Create and initialize node
 	node := &Node{
-		raft:          raftNode,
-		config:        nodeConfig.config,
-		Fsm:           fsm,
-		logStore:      stores.logStore,
-		stableStore:   stores.stableStore,
-		snapshotStore: stores.snapshotStore,
-		transport:     transport,
-		Logger:        logger,
-		Peers:         raftConfig.Peers,
-		grpcAddr:      raftConfig.GRPCAddress,
-		grpcIsSecure:  raftConfig.IsSecure,
+		raft:           raftNode,
+		config:         nodeConfig.config,
+		Fsm:            fsm,
+		logStore:       stores.logStore,
+		stableStore:    stores.stableStore,
+		snapshotStore:  stores.snapshotStore,
+		transport:      transport,
+		Logger:         logger,
+		Peers:          raftConfig.Peers,
+		grpcAddr:       raftConfig.GRPCAddress,
+		grpcIsSecure:   raftConfig.IsSecure,
+		restoreLogFunc: restoreLogFunc, // Store the restore function for cleanup
 	}
 
 	// Initialize networking
 	if err := initializeNetworking(node, raftConfig); err != nil {
+		restoreLogFunc() // Restore log output on error
 		return nil, fmt.Errorf("failed to initialize networking: %w", err)
 	}
 
 	// Handle cluster configuration
 	if err := configureCluster(node, raftConfig, nodeConfig, transport); err != nil {
+		restoreLogFunc() // Restore log output on error
 		return nil, fmt.Errorf("failed to configure cluster: %w", err)
 	}
 
@@ -710,6 +721,12 @@ func (n *Node) forwardToLeader(ctx context.Context, data []byte, timeout time.Du
 func (n *Node) Shutdown() error {
 	if n == nil {
 		return nil
+	}
+
+	// Restore original log output to prevent affecting other parts of the application
+	if n.restoreLogFunc != nil {
+		n.restoreLogFunc()
+		n.restoreLogFunc = nil // Prevent double restoration
 	}
 
 	if n.peerSyncCancel != nil {
