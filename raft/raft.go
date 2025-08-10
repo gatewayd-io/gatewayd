@@ -127,11 +127,15 @@ type stores struct {
 func NewRaftNode(logger zerolog.Logger, raftConfig config.Raft) (*Node, error) {
 	// Set up global log capture for raftboltdb logs
 	restoreLogFunc := logging.CaptureStandardLogs(logger, "raftboltdb")
+	defer func() {
+		if restoreLogFunc != nil {
+			restoreLogFunc()
+		}
+	}()
 
 	// Initialize basic configuration
 	nodeConfig, err := initializeNodeConfig(logger, raftConfig)
 	if err != nil {
-		restoreLogFunc() // Restore log output on error
 		return nil, fmt.Errorf("failed to initialize node config: %w", err)
 	}
 
@@ -141,14 +145,12 @@ func NewRaftNode(logger zerolog.Logger, raftConfig config.Raft) (*Node, error) {
 	// Initialize storage components
 	stores, err := initializeStores(nodeConfig.raftDir)
 	if err != nil {
-		restoreLogFunc() // Restore log output on error
 		return nil, fmt.Errorf("failed to initialize stores: %w", err)
 	}
 
 	// Setup transport
 	transport, err := setupTransport(nodeConfig.raftAddr)
 	if err != nil {
-		restoreLogFunc() // Restore log output on error
 		return nil, fmt.Errorf("failed to setup transport: %w", err)
 	}
 
@@ -162,7 +164,6 @@ func NewRaftNode(logger zerolog.Logger, raftConfig config.Raft) (*Node, error) {
 		transport,
 	)
 	if err != nil {
-		restoreLogFunc() // Restore log output on error
 		return nil, fmt.Errorf("failed to create raft instance: %w", err)
 	}
 
@@ -179,20 +180,21 @@ func NewRaftNode(logger zerolog.Logger, raftConfig config.Raft) (*Node, error) {
 		Peers:          raftConfig.Peers,
 		grpcAddr:       raftConfig.GRPCAddress,
 		grpcIsSecure:   raftConfig.IsSecure,
-		restoreLogFunc: restoreLogFunc, // Store the restore function for cleanup
+		restoreLogFunc: nil, // will set after successful initialization
 	}
 
 	// Initialize networking
 	if err := initializeNetworking(node, raftConfig); err != nil {
-		restoreLogFunc() // Restore log output on error
 		return nil, fmt.Errorf("failed to initialize networking: %w", err)
 	}
 
 	// Handle cluster configuration
 	if err := configureCluster(node, raftConfig, nodeConfig, transport); err != nil {
-		restoreLogFunc() // Restore log output on error
 		return nil, fmt.Errorf("failed to configure cluster: %w", err)
 	}
+
+	node.restoreLogFunc = restoreLogFunc
+	restoreLogFunc = nil
 
 	return node, nil
 }
