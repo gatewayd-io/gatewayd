@@ -28,8 +28,8 @@ func NewStandardLogWriter(logger zerolog.Logger, component string) *StandardLogW
 }
 
 // Write implements io.Writer interface and redirects log output to zerolog.
-func (w *StandardLogWriter) Write(p []byte) (int, error) {
-	message := string(p)
+func (w *StandardLogWriter) Write(logLine []byte) (int, error) {
+	message := string(logLine)
 
 	// Remove any stdlib log timestamps as defensive measure first.
 	message = stdlibLogTimestampRegex.ReplaceAllString(message, "")
@@ -37,7 +37,7 @@ func (w *StandardLogWriter) Write(p []byte) (int, error) {
 	// Then trim whitespace.
 	message = strings.TrimSpace(message)
 	if message == "" {
-		return len(p), nil
+		return len(logLine), nil
 	}
 
 	logger := w.logger.With().Str("component", w.component).Logger()
@@ -46,7 +46,7 @@ func (w *StandardLogWriter) Write(p []byte) (int, error) {
 	// until we find a better way to handle log levels.
 	logger.Debug().Msg(message)
 
-	return len(p), nil
+	return len(logLine), nil
 }
 
 // CaptureStandardLogs redirects standard log output to zerolog and returns a restore function.
