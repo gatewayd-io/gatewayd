@@ -107,6 +107,7 @@ type Node struct {
 	grpcAddr       string
 	grpcIsSecure   bool
 	peerSyncCancel context.CancelFunc
+	restoreLogFunc func() // Function to restore original log output
 }
 
 type nodeConfig struct {
@@ -124,6 +125,14 @@ type stores struct {
 
 // NewRaftNode creates and initializes a new Raft node.
 func NewRaftNode(logger zerolog.Logger, raftConfig config.Raft) (*Node, error) {
+	// Set up global log capture for raftboltdb logs
+	restoreLogFunc := logging.CaptureStandardLogs(logger, "raftboltdb")
+	defer func() {
+		if restoreLogFunc != nil {
+			restoreLogFunc()
+		}
+	}()
+
 	// Initialize basic configuration
 	nodeConfig, err := initializeNodeConfig(logger, raftConfig)
 	if err != nil {
@@ -160,17 +169,18 @@ func NewRaftNode(logger zerolog.Logger, raftConfig config.Raft) (*Node, error) {
 
 	// Create and initialize node
 	node := &Node{
-		raft:          raftNode,
-		config:        nodeConfig.config,
-		Fsm:           fsm,
-		logStore:      stores.logStore,
-		stableStore:   stores.stableStore,
-		snapshotStore: stores.snapshotStore,
-		transport:     transport,
-		Logger:        logger,
-		Peers:         raftConfig.Peers,
-		grpcAddr:      raftConfig.GRPCAddress,
-		grpcIsSecure:  raftConfig.IsSecure,
+		raft:           raftNode,
+		config:         nodeConfig.config,
+		Fsm:            fsm,
+		logStore:       stores.logStore,
+		stableStore:    stores.stableStore,
+		snapshotStore:  stores.snapshotStore,
+		transport:      transport,
+		Logger:         logger,
+		Peers:          raftConfig.Peers,
+		grpcAddr:       raftConfig.GRPCAddress,
+		grpcIsSecure:   raftConfig.IsSecure,
+		restoreLogFunc: nil, // will set after successful initialization
 	}
 
 	// Initialize networking
@@ -182,6 +192,9 @@ func NewRaftNode(logger zerolog.Logger, raftConfig config.Raft) (*Node, error) {
 	if err := configureCluster(node, raftConfig, nodeConfig, transport); err != nil {
 		return nil, fmt.Errorf("failed to configure cluster: %w", err)
 	}
+
+	node.restoreLogFunc = restoreLogFunc
+	restoreLogFunc = nil
 
 	return node, nil
 }
@@ -710,6 +723,12 @@ func (n *Node) forwardToLeader(ctx context.Context, data []byte, timeout time.Du
 func (n *Node) Shutdown() error {
 	if n == nil {
 		return nil
+	}
+
+	// Restore original log output to prevent affecting other parts of the application
+	if n.restoreLogFunc != nil {
+		n.restoreLogFunc()
+		n.restoreLogFunc = nil // Prevent double restoration
 	}
 
 	if n.peerSyncCancel != nil {
