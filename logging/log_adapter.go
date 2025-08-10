@@ -14,12 +14,12 @@ type StandardLogWriter struct {
 	component string
 }
 
-var (
-	// stdlibLogTimestampRegex matches Go stdlib log timestamp format: "2009/01/23 01:23:23 "
-	stdlibLogTimestampRegex = regexp.MustCompile(`^\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}(\.\d{6})?\s`)
-)
+// stdlibLogTimestampRegex matches Go stdlib log timestamp format:
+// "2009/01/23 01:23:23 ".
+var stdlibLogTimestampRegex = regexp.MustCompile(`^\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}(\.\d{6})?\s`)
 
-// NewStandardLogWriter creates a new StandardLogWriter that redirects standard log output to zerolog.
+// NewStandardLogWriter creates a new StandardLogWriter that
+// redirects standard log output to zerolog.
 func NewStandardLogWriter(logger zerolog.Logger, component string) *StandardLogWriter {
 	return &StandardLogWriter{
 		logger:    logger,
@@ -28,13 +28,13 @@ func NewStandardLogWriter(logger zerolog.Logger, component string) *StandardLogW
 }
 
 // Write implements io.Writer interface and redirects log output to zerolog.
-func (w *StandardLogWriter) Write(p []byte) (n int, err error) {
+func (w *StandardLogWriter) Write(p []byte) (int, error) {
 	message := string(p)
 
-	// Remove any stdlib log timestamps as defensive measure first
+	// Remove any stdlib log timestamps as defensive measure first.
 	message = stdlibLogTimestampRegex.ReplaceAllString(message, "")
 
-	// Then trim whitespace
+	// Then trim whitespace.
 	message = strings.TrimSpace(message)
 	if message == "" {
 		return len(p), nil

@@ -63,8 +63,8 @@ func TestStandardLogWriter_Write(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
 			// Create a buffer to capture the log output
 			var buf bytes.Buffer
 			logger := zerolog.New(&buf).Level(zerolog.DebugLevel)
@@ -73,21 +73,21 @@ func TestStandardLogWriter_Write(t *testing.T) {
 			writer := NewStandardLogWriter(logger, "test-component")
 
 			// Write the test input
-			n, err := writer.Write([]byte(tt.input))
+			n, err := writer.Write([]byte(testCase.input))
 
 			// Verify no error and correct byte count
 			require.NoError(t, err)
-			assert.Equal(t, len(tt.input), n)
+			assert.Equal(t, len(testCase.input), n)
 
 			// Parse the output
 			output := buf.String()
 
-			if tt.expected == "" {
+			if testCase.expected == "" {
 				// If we expect empty, the logger shouldn't have written anything
 				assert.Empty(t, output)
 			} else {
 				// Verify the message was logged correctly
-				assert.Contains(t, output, tt.expected)
+				assert.Contains(t, output, testCase.expected)
 				assert.Contains(t, output, `"component":"test-component"`)
 				assert.Contains(t, output, `"level":"debug"`)
 			}
@@ -143,11 +143,11 @@ func TestStdlibLogTimestampRegex(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := stdlibLogTimestampRegex.ReplaceAllString(tt.input, "")
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			result := stdlibLogTimestampRegex.ReplaceAllString(testCase.input, "")
 			result = strings.TrimSpace(result)
-			assert.Equal(t, tt.expected, result)
+			assert.Equal(t, testCase.expected, result)
 		})
 	}
 }
