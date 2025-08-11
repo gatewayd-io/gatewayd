@@ -191,12 +191,14 @@ func ToMap(keyValues []any) map[string]any {
 	}
 
 	for i := 0; i < len(keyValues); i += 2 {
-		if formatString, ok := keyValues[i+1].(hclog.Format); ok {
-			merge(mapped, keyValues[i], fmt.Sprintf(formatString[0].(string), formatString[1:]...))
-			continue
+		key := keyValues[i]
+		value := keyValues[i+1]
+
+		if formatString, ok := value.(hclog.Format); ok {
+			value = fmt.Sprintf(formatString[0].(string), formatString[1:]...)
 		}
 
-		merge(mapped, keyValues[i], keyValues[i+1])
+		merge(mapped, key, value)
 	}
 
 	return mapped
