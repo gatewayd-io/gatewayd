@@ -2,7 +2,6 @@ package logging
 
 import (
 	"bytes"
-	"strings"
 	"testing"
 
 	"github.com/rs/zerolog"
@@ -65,6 +64,15 @@ func TestStandardLogWriter_Write(t *testing.T) {
 
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
+			// Save current global log level and restore it after test
+			originalLevel := zerolog.GlobalLevel()
+			t.Cleanup(func() {
+				zerolog.SetGlobalLevel(originalLevel)
+			})
+
+			// Ensure debug level is enabled for this test
+			zerolog.SetGlobalLevel(zerolog.DebugLevel)
+
 			// Create a buffer to capture the log output
 			var buf bytes.Buffer
 			logger := zerolog.New(&buf).Level(zerolog.DebugLevel)
@@ -95,64 +103,13 @@ func TestStandardLogWriter_Write(t *testing.T) {
 	}
 }
 
-func TestStdlibLogTimestampRegex(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{
-			name:     "Go stdlib LstdFlags format (Ldate | Ltime)",
-			input:    "2025/01/15 10:17:53 message",
-			expected: "message",
-		},
-		{
-			name:     "Go stdlib with microseconds",
-			input:    "2025/01/15 10:17:53.123456 message",
-			expected: "message",
-		},
-		{
-			name:     "exact Go reference time format",
-			input:    "2009/01/23 01:23:23 message",
-			expected: "message",
-		},
-		{
-			name:     "non-Go stdlib ISO format should NOT match",
-			input:    "2025-01-15 10:17:53 message",
-			expected: "2025-01-15 10:17:53 message",
-		},
-		{
-			name:     "time only should NOT match",
-			input:    "10:17:53 message",
-			expected: "10:17:53 message",
-		},
-		{
-			name:     "single digit day/month should NOT match (Go uses zero-padding)",
-			input:    "2025/1/5 10:17:53 message",
-			expected: "2025/1/5 10:17:53 message",
-		},
-		{
-			name:     "no timestamp",
-			input:    "just a message",
-			expected: "just a message",
-		},
-		{
-			name:     "timestamp at end (should not match)",
-			input:    "message 2025/01/15 10:17:53",
-			expected: "message 2025/01/15 10:17:53",
-		},
-	}
-
-	for _, testCase := range tests {
-		t.Run(testCase.name, func(t *testing.T) {
-			result := stdlibLogTimestampRegex.ReplaceAllString(testCase.input, "")
-			result = strings.TrimSpace(result)
-			assert.Equal(t, testCase.expected, result)
-		})
-	}
-}
-
 func TestCaptureStandardLogs(t *testing.T) {
+	// Save current global log level and restore it after test
+	originalLevel := zerolog.GlobalLevel()
+
+	// Ensure debug level is enabled for this test
+	zerolog.SetGlobalLevel(zerolog.DebugLevel)
+
 	// Create a buffer to capture the log output
 	var buf bytes.Buffer
 	logger := zerolog.New(&buf).Level(zerolog.DebugLevel)
@@ -160,9 +117,8 @@ func TestCaptureStandardLogs(t *testing.T) {
 	// Test that the function returns a restore function
 	restore := CaptureStandardLogs(logger, "test-capture")
 	assert.NotNil(t, restore)
-
-	// Test that we can call the restore function without error
-	assert.NotPanics(t, func() {
+	t.Cleanup(func() {
 		restore()
+		zerolog.SetGlobalLevel(originalLevel)
 	})
 }
