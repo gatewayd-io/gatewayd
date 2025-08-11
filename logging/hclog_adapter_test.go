@@ -35,6 +35,10 @@ func TestNewHcLogAdapter(t *testing.T) {
 	hcLogAdapter.Warn("This is a warn message")
 	hcLogAdapter.Error("This is an error message")
 	hcLogAdapter.Log(hclog.Debug, "This is a log message")
+	hcLogAdapter.Log(hclog.Info,
+		"This is an info message with a format string",
+		"test", hclog.Format{"%+v", []struct{ Key string }{{Key: "value"}}},
+	)
 
 	hcLogAdapter.SetLevel(hclog.Warn)
 	hcLogAdapter.Trace("This is a trace message, but it should not be logged")
@@ -47,6 +51,8 @@ func TestNewHcLogAdapter(t *testing.T) {
 	assert.Contains(t, consoleOutput, "WRN This is a warn message")
 	assert.Contains(t, consoleOutput, "ERR This is an error message")
 	assert.Contains(t, consoleOutput, "DBG This is a log message")
+	assert.Contains(t, consoleOutput, "INF This is an info message with a format string")
+	assert.Contains(t, consoleOutput, "[{Key:value}]")
 
 	assert.NotContains(t, consoleOutput, "TRC This is a trace message, but it should not be logged")
 }

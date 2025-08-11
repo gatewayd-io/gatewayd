@@ -179,6 +179,11 @@ func convertLevel(level hclog.Level) zerolog.Level {
 	return zerolog.NoLevel
 }
 
+// isFormatString checks if a string looks like a printf-style format string
+func isFormatString(s string) bool {
+	return len(s) >= 2 && s[0] == '%' && s[1] != '%'
+}
+
 func ToMap(keyValues []any) map[string]any {
 	mapped := map[string]any{}
 
@@ -191,6 +196,11 @@ func ToMap(keyValues []any) map[string]any {
 	}
 
 	for i := 0; i < len(keyValues); i += 2 {
+		if formatString, ok := keyValues[i+1].(hclog.Format); ok {
+			merge(mapped, keyValues[i], fmt.Sprintf(formatString[0].(string), formatString[1:]...))
+			continue
+		}
+
 		merge(mapped, keyValues[i], keyValues[i+1])
 	}
 
