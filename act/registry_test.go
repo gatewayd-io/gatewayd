@@ -20,7 +20,7 @@ import (
 
 // Test_NewRegistry tests the NewRegistry function.
 func Test_NewRegistry(t *testing.T) {
-	logger := zerolog.Logger{}
+	logger := zerolog.Nop()
 
 	actRegistry := NewActRegistry(
 		Registry{
@@ -129,7 +129,7 @@ func Test_Add(t *testing.T) {
 			DefaultPolicyName:    config.DefaultPolicy,
 			PolicyTimeout:        config.DefaultPolicyTimeout,
 			DefaultActionTimeout: config.DefaultActionTimeout,
-			Logger:               zerolog.Logger{},
+			Logger:               zerolog.Nop(),
 		})
 	assert.NotNil(t, actRegistry)
 
@@ -196,7 +196,7 @@ func Test_Apply(t *testing.T) {
 			DefaultPolicyName:    config.DefaultPolicy,
 			PolicyTimeout:        config.DefaultPolicyTimeout,
 			DefaultActionTimeout: config.DefaultActionTimeout,
-			Logger:               zerolog.Logger{},
+			Logger:               zerolog.Nop(),
 		})
 	assert.NotNil(t, actRegistry)
 
@@ -593,7 +593,7 @@ func Test_Apply_Hook(t *testing.T) {
 
 // Test_Run tests the Run function of the act registry with a non-terminal action.
 func Test_Run(t *testing.T) {
-	logger := zerolog.Logger{}
+	logger := zerolog.Nop()
 	actRegistry := NewActRegistry(
 		Registry{
 			Signals:              BuiltinSignals(),
@@ -623,7 +623,7 @@ func Test_Run(t *testing.T) {
 
 // Test_Run_Terminate tests the Run function of the act registry with a terminal action.
 func Test_Run_Terminate(t *testing.T) {
-	logger := zerolog.Logger{}
+	logger := zerolog.Nop()
 	actRegistry := NewActRegistry(
 		Registry{
 			Signals:              BuiltinSignals(),

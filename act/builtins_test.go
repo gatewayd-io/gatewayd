@@ -47,7 +47,7 @@ func Test_Terminate_Action(t *testing.T) {
 			params: []sdkAct.Parameter{
 				{
 					Key:   LoggerKey,
-					Value: zerolog.New(nil),
+					Value: zerolog.Nop(),
 				},
 			},
 			result: true,
@@ -56,7 +56,7 @@ func Test_Terminate_Action(t *testing.T) {
 			params: []sdkAct.Parameter{
 				{
 					Key:   LoggerKey,
-					Value: zerolog.New(nil),
+					Value: zerolog.Nop(),
 				},
 				{
 					Key:   ResultKey,
@@ -69,7 +69,7 @@ func Test_Terminate_Action(t *testing.T) {
 			params: []sdkAct.Parameter{
 				{
 					Key:   LoggerKey,
-					Value: zerolog.New(nil),
+					Value: zerolog.Nop(),
 				},
 				{
 					Key:   ResultKey,
@@ -114,7 +114,7 @@ func Test_Log_Action(t *testing.T) {
 			params: []sdkAct.Parameter{
 				{
 					Key:   LoggerKey,
-					Value: zerolog.New(nil),
+					Value: zerolog.Nop(),
 				},
 			},
 			result: true,
