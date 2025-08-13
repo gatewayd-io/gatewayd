@@ -13,7 +13,7 @@ import (
 
 // getAPIConfig returns a new API configuration with all the necessary components.
 func getAPIConfig(httpAddr, grpcAddr string) *API {
-	logger := zerolog.New(nil)
+	logger := zerolog.Nop()
 	defaultPool := pool.NewPool(context.Background(), config.DefaultPoolSize)
 	pluginReg := plugin.NewRegistry(
 		context.Background(),

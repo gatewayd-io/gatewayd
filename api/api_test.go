@@ -1,7 +1,6 @@
 package api
 
 import (
-	"io"
 	"regexp"
 	"testing"
 	"time"
@@ -137,13 +136,13 @@ func TestGetPlugins(t *testing.T) {
 			DefaultPolicyName:    config.DefaultPolicy,
 			PolicyTimeout:        config.DefaultPolicyTimeout,
 			DefaultActionTimeout: config.DefaultActionTimeout,
-			Logger:               zerolog.Logger{},
+			Logger:               zerolog.Nop(),
 		})
 	pluginRegistry := plugin.NewRegistry(
 		t.Context(),
 		plugin.Registry{
 			ActRegistry: actRegistry,
-			Logger:      zerolog.Logger{},
+			Logger:      zerolog.Nop(),
 			DevMode:     true,
 		},
 	)
@@ -191,13 +190,13 @@ func TestGetPluginsWithEmptyPluginRegistry(t *testing.T) {
 			DefaultPolicyName:    config.DefaultPolicy,
 			PolicyTimeout:        config.DefaultPolicyTimeout,
 			DefaultActionTimeout: config.DefaultActionTimeout,
-			Logger:               zerolog.Logger{},
+			Logger:               zerolog.Nop(),
 		})
 	pluginRegistry := plugin.NewRegistry(
 		t.Context(),
 		plugin.Registry{
 			ActRegistry: actRegistry,
-			Logger:      zerolog.Logger{},
+			Logger:      zerolog.Nop(),
 			DevMode:     true,
 		},
 	)
@@ -250,7 +249,7 @@ func TestGetProxies(t *testing.T) {
 		Network: config.DefaultNetwork,
 		Address: postgresAddress,
 	}
-	client := network.NewClient(t.Context(), clientConfig, zerolog.Logger{}, nil)
+	client := network.NewClient(t.Context(), clientConfig, zerolog.Nop(), nil)
 	require.NotNil(t, client)
 	newPool := pool.NewPool(t.Context(), 1)
 	assert.Nil(t, newPool.Put(client.ID, client))
@@ -264,7 +263,7 @@ func TestGetProxies(t *testing.T) {
 				Network: config.DefaultNetwork,
 				Address: postgresAddress,
 			},
-			Logger:        zerolog.Logger{},
+			Logger:        zerolog.Nop(),
 			PluginTimeout: config.DefaultPluginTimeout,
 		},
 	)
@@ -302,7 +301,7 @@ func TestGetServers(t *testing.T) {
 		Network: config.DefaultNetwork,
 		Address: postgresAddress,
 	}
-	client := network.NewClient(t.Context(), clientConfig, zerolog.Logger{}, nil)
+	client := network.NewClient(t.Context(), clientConfig, zerolog.Nop(), nil)
 	newPool := pool.NewPool(t.Context(), 1)
 	require.NotNil(t, newPool)
 	assert.Nil(t, newPool.Put(client.ID, client))
@@ -316,7 +315,7 @@ func TestGetServers(t *testing.T) {
 				Network: config.DefaultNetwork,
 				Address: postgresAddress,
 			},
-			Logger:        zerolog.Logger{},
+			Logger:        zerolog.Nop(),
 			PluginTimeout: config.DefaultPluginTimeout,
 		},
 	)
@@ -329,14 +328,14 @@ func TestGetServers(t *testing.T) {
 			DefaultPolicyName:    config.DefaultPolicy,
 			PolicyTimeout:        config.DefaultPolicyTimeout,
 			DefaultActionTimeout: config.DefaultActionTimeout,
-			Logger:               zerolog.Logger{},
+			Logger:               zerolog.Nop(),
 		})
 
 	pluginRegistry := plugin.NewRegistry(
 		t.Context(),
 		plugin.Registry{
 			ActRegistry: actRegistry,
-			Logger:      zerolog.Logger{},
+			Logger:      zerolog.Nop(),
 			DevMode:     true,
 		},
 	)
@@ -351,7 +350,7 @@ func TestGetServers(t *testing.T) {
 				EnableTicker: false,
 			},
 			Proxies:                  []network.IProxy{proxy},
-			Logger:                   zerolog.Logger{},
+			Logger:                   zerolog.Nop(),
 			PluginRegistry:           pluginRegistry,
 			PluginTimeout:            config.DefaultPluginTimeout,
 			HandshakeTimeout:         config.DefaultHandshakeTimeout,
@@ -445,7 +444,7 @@ func TestRemovePeerAPI(t *testing.T) {
 
 	// Initialize nodes
 	for i, cfg := range nodeConfigs {
-		node, err := raft.NewRaftNode(zerolog.New(io.Discard).With().Timestamp().Logger(), cfg)
+		node, err := raft.NewRaftNode(zerolog.Nop().With().Timestamp().Logger(), cfg)
 		require.NoError(t, err)
 		nodes[i] = node
 	}
@@ -478,7 +477,7 @@ func TestRemovePeerAPI(t *testing.T) {
 			api: &API{
 				ctx: t.Context(),
 				Options: &Options{
-					Logger:   zerolog.New(io.Discard),
+					Logger:   zerolog.Nop(),
 					RaftNode: nodes[0],
 				},
 			},
@@ -490,7 +489,7 @@ func TestRemovePeerAPI(t *testing.T) {
 			api: &API{
 				ctx: t.Context(),
 				Options: &Options{
-					Logger:   zerolog.New(io.Discard),
+					Logger:   zerolog.Nop(),
 					RaftNode: nil,
 				},
 			},
@@ -503,7 +502,7 @@ func TestRemovePeerAPI(t *testing.T) {
 			api: &API{
 				ctx: t.Context(),
 				Options: &Options{
-					Logger:   zerolog.New(io.Discard),
+					Logger:   zerolog.Nop(),
 					RaftNode: nodes[0],
 				},
 			},
@@ -545,7 +544,7 @@ func TestGetPeers(t *testing.T) {
 	}
 
 	// Initialize node
-	node, err := raft.NewRaftNode(zerolog.New(io.Discard).With().Timestamp().Logger(), nodeConfig)
+	node, err := raft.NewRaftNode(zerolog.Nop().With().Timestamp().Logger(), nodeConfig)
 	require.NoError(t, err)
 	defer func() {
 		if node != nil {
@@ -569,7 +568,7 @@ func TestGetPeers(t *testing.T) {
 			api: &API{
 				ctx: t.Context(),
 				Options: &Options{
-					Logger:   zerolog.New(io.Discard),
+					Logger:   zerolog.Nop(),
 					RaftNode: node,
 				},
 			},
@@ -580,7 +579,7 @@ func TestGetPeers(t *testing.T) {
 			api: &API{
 				ctx: t.Context(),
 				Options: &Options{
-					Logger:   zerolog.New(io.Discard),
+					Logger:   zerolog.Nop(),
 					RaftNode: nil,
 				},
 			},
@@ -634,7 +633,7 @@ func TestAddPeer(t *testing.T) {
 	}
 
 	// Initialize node
-	node, err := raft.NewRaftNode(zerolog.New(io.Discard).With().Timestamp().Logger(), nodeConfig)
+	node, err := raft.NewRaftNode(zerolog.Nop().With().Timestamp().Logger(), nodeConfig)
 	require.NoError(t, err)
 	defer func() {
 		if node != nil {
@@ -659,7 +658,7 @@ func TestAddPeer(t *testing.T) {
 			api: &API{
 				ctx: t.Context(),
 				Options: &Options{
-					Logger:   zerolog.New(io.Discard),
+					Logger:   zerolog.Nop(),
 					RaftNode: node,
 				},
 			},
@@ -675,7 +674,7 @@ func TestAddPeer(t *testing.T) {
 			api: &API{
 				ctx: t.Context(),
 				Options: &Options{
-					Logger:   zerolog.New(io.Discard),
+					Logger:   zerolog.Nop(),
 					RaftNode: nil,
 				},
 			},
@@ -692,7 +691,7 @@ func TestAddPeer(t *testing.T) {
 			api: &API{
 				ctx: t.Context(),
 				Options: &Options{
-					Logger:   zerolog.New(io.Discard),
+					Logger:   zerolog.Nop(),
 					RaftNode: node,
 				},
 			},
@@ -708,7 +707,7 @@ func TestAddPeer(t *testing.T) {
 			api: &API{
 				ctx: t.Context(),
 				Options: &Options{
-					Logger:   zerolog.New(io.Discard),
+					Logger:   zerolog.Nop(),
 					RaftNode: node,
 				},
 			},
@@ -724,7 +723,7 @@ func TestAddPeer(t *testing.T) {
 			api: &API{
 				ctx: t.Context(),
 				Options: &Options{
-					Logger:   zerolog.New(io.Discard),
+					Logger:   zerolog.Nop(),
 					RaftNode: node,
 				},
 			},

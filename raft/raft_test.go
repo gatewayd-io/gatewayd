@@ -25,7 +25,7 @@ import (
 )
 
 func setupTestLogger() zerolog.Logger {
-	return zerolog.New(io.Discard).With().Timestamp().Logger()
+	return zerolog.Nop().With().Timestamp().Logger()
 }
 
 func TestNewRaftNode(t *testing.T) {

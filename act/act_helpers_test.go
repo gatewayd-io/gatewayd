@@ -1,6 +1,8 @@
 package act
 
 import (
+	"io"
+	"log"
 	"testing"
 	"time"
 
@@ -72,6 +74,7 @@ func createTestRedis(t *testing.T) string {
 				),
 			},
 			Started: true,
+			Logger:  log.New(io.Discard, "", 0),
 		},
 	)
 	assert.NoError(t, err)

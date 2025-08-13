@@ -23,7 +23,7 @@ func Test_Healthchecker(t *testing.T) {
 		Network: config.DefaultNetwork,
 		Address: postgresAddress,
 	}
-	client := network.NewClient(t.Context(), clientConfig, zerolog.Logger{}, nil)
+	client := network.NewClient(t.Context(), clientConfig, zerolog.Nop(), nil)
 	newPool := pool.NewPool(t.Context(), 1)
 	require.NotNil(t, newPool)
 	assert.Nil(t, newPool.Put(client.ID, client))
@@ -37,7 +37,7 @@ func Test_Healthchecker(t *testing.T) {
 				Network: config.DefaultNetwork,
 				Address: postgresAddress,
 			},
-			Logger:        zerolog.Logger{},
+			Logger:        zerolog.Nop(),
 			PluginTimeout: config.DefaultPluginTimeout,
 		},
 	)
@@ -50,14 +50,14 @@ func Test_Healthchecker(t *testing.T) {
 			DefaultPolicyName:    config.DefaultPolicy,
 			PolicyTimeout:        config.DefaultPolicyTimeout,
 			DefaultActionTimeout: config.DefaultActionTimeout,
-			Logger:               zerolog.Logger{},
+			Logger:               zerolog.Nop(),
 		})
 
 	pluginRegistry := plugin.NewRegistry(
 		t.Context(),
 		plugin.Registry{
 			ActRegistry: actRegistry,
-			Logger:      zerolog.Logger{},
+			Logger:      zerolog.Nop(),
 			DevMode:     true,
 		},
 	)
@@ -82,7 +82,7 @@ func Test_Healthchecker(t *testing.T) {
 				EnableTicker: false,
 			},
 			Proxies:          []network.IProxy{proxy},
-			Logger:           zerolog.Logger{},
+			Logger:           zerolog.Nop(),
 			PluginRegistry:   pluginRegistry,
 			PluginTimeout:    config.DefaultPluginTimeout,
 			HandshakeTimeout: config.DefaultHandshakeTimeout,

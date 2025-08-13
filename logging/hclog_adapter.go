@@ -190,8 +190,22 @@ func ToMap(keyValues []any) map[string]any {
 		keyValues = append(keyValues, nil)
 	}
 
-	for i := 0; i < len(keyValues); i += 2 {
-		merge(mapped, keyValues[i], keyValues[i+1])
+	for idx := 0; idx < len(keyValues); idx += 2 {
+		key := keyValues[idx]
+		value := keyValues[idx+1]
+
+		if formatted, ok := value.(hclog.Format); ok {
+			formatStr, ok := formatted[0].(string)
+			if !ok {
+				// Default to %+v if the format string is not a string
+				// This should never happen, but we'll handle it just in case.
+				formatStr = "%+v"
+			}
+
+			value = fmt.Sprintf(formatStr, formatted[1:]...)
+		}
+
+		merge(mapped, key, value)
 	}
 
 	return mapped
