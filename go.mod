@@ -1,6 +1,6 @@
 module github.com/gatewayd-io/gatewayd
 
-go 1.24
+go 1.24.0
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
@@ -13,7 +13,7 @@ require (
 	github.com/getsentry/sentry-go v0.35.0
 	github.com/go-co-op/gocron v1.37.0
 	github.com/google/go-github/v68 v68.0.0
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.3
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-plugin v1.6.3
 	github.com/hashicorp/raft v1.7.3
@@ -39,10 +39,10 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.37.0
 	go.opentelemetry.io/otel/sdk v1.37.0
 	go.opentelemetry.io/otel/trace v1.37.0
-	golang.org/x/text v0.27.0
-	google.golang.org/genproto/googleapis/api v0.0.0-20250804133106-a7a43d27e69b
-	google.golang.org/grpc v1.74.2
-	google.golang.org/protobuf v1.36.7
+	golang.org/x/text v0.29.0
+	google.golang.org/genproto/googleapis/api v0.0.0-20250929231259-57b25ae835d4
+	google.golang.org/grpc v1.75.1
+	google.golang.org/protobuf v1.36.10
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -159,9 +159,9 @@ require (
 	go.uber.org/atomic v1.11.0 // indirect
 	golang.org/x/crypto v0.39.0 // indirect
 	golang.org/x/net v0.41.0 // indirect
-	golang.org/x/sync v0.16.0 // indirect
+	golang.org/x/sync v0.17.0 // indirect
 	golang.org/x/sys v0.33.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250728155136-f173205681a0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250929231259-57b25ae835d4 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	oras.land/oras-go/v2 v2.5.0 // indirect
 )
