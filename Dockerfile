@@ -18,7 +18,7 @@ RUN apk --no-cache add \
     make build-platform GOOS=${TARGETOS} GOARCH=${TARGETARCH} OUTPUT_DIR=dist/${TARGETOS}-${TARGETARCH}
 
 # Use alpine to create a minimal image to run the gatewayd binary.
-FROM alpine:3.21 AS runner
+FROM alpine:3.23 AS runner
 
 ARG TARGETOS
 ARG TARGETARCH
