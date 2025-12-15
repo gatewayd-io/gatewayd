@@ -22,7 +22,7 @@ jobs:
       - name: Set up Go 1.24
         uses: actions/setup-go@v5
         with:
-          go-version: "1.24"
+          go-version: "1.25"
           cache: true
       - name: Install nfpm for building Linux packages
         run: go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
