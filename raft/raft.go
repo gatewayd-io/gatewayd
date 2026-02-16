@@ -272,7 +272,7 @@ func setupTransport(raftAddr string) (raft.Transport, error) {
 		return nil, fmt.Errorf("error resolving TCP address: %w", err)
 	}
 
-	transport, err := raft.NewTCPTransport(raftAddr, addr, maxPool, transportTimeout, os.Stderr)
+	transport, err := raft.NewTCPTransport(raftAddr, addr, maxPool, transportTimeout, io.Discard)
 	if err != nil {
 		return nil, fmt.Errorf("error creating TCP transport: %w", err)
 	}
