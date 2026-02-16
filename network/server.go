@@ -286,8 +286,14 @@ func (s *Server) OnClose(conn *ConnWrapper, err error) Action {
 	// the incoming and the server connections in the pool of the busy connections and either
 	// recycles or disconnects the connections.
 	if err := proxy.Disconnect(conn); err != nil {
-		s.Logger.Error().Err(err).Msg("Failed to disconnect the server connection")
-		span.RecordError(err)
+		// During shutdown, proxy.Shutdown() already cleans up busy connections,
+		// so Disconnect will fail with ErrClientNotFound. This is expected.
+		if err == gerr.ErrClientNotFound && !s.IsRunning() {
+			s.Logger.Debug().Msg("Connection already cleaned up during shutdown")
+		} else {
+			s.Logger.Error().Err(err).Msg("Failed to disconnect the server connection")
+			span.RecordError(err)
+		}
 		return Close
 	}
 
@@ -688,19 +694,21 @@ func (s *Server) Shutdown() {
 	_, span := otel.Tracer("gatewayd").Start(s.ctx, "Shutdown")
 	defer span.End()
 
+	// Set the server status to stopped before shutting down proxies, so that
+	// OnClose (triggered by proxy.Shutdown closing connections) can detect the
+	// shutdown-in-progress state and avoid spurious error logs.
+	s.mu.Lock()
+	s.Status = config.Stopped
+	s.mu.Unlock()
+	s.running.Store(false)
+
 	for _, proxy := range s.Proxies {
 		// Shutdown the proxy.
 		proxy.Shutdown()
 	}
 
-	// Set the server status to stopped. This is used to shutdown the server gracefully in OnClose.
-	s.mu.Lock()
-	s.Status = config.Stopped
-	s.mu.Unlock()
-
 	// Shutdown the server.
 	var err error
-	s.running.Store(false)
 	if s.listener != nil {
 		if err = s.listener.Close(); err != nil {
 			s.Logger.Error().Err(err).Msg("Failed to close listener")

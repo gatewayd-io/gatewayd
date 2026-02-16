@@ -745,7 +745,13 @@ func (pr *Proxy) ExpireBackendReadDeadline(conn *ConnWrapper) {
 func (pr *Proxy) ClearBackendDeadline(conn *ConnWrapper) {
 	if cl, ok := pr.busyConnections.Get(conn).(*Client); ok && cl != nil && cl.conn != nil {
 		if err := cl.conn.SetDeadline(time.Time{}); err != nil {
-			pr.Logger.Error().Err(err).Msg("Failed to clear backend deadline")
+			// During shutdown, the backend connection may already be closed by
+			// proxy.Shutdown(), so SetDeadline will fail with net.ErrClosed.
+			if errors.Is(err, net.ErrClosed) {
+				pr.Logger.Debug().Err(err).Msg("Backend connection already closed, skipping deadline clear")
+			} else {
+				pr.Logger.Error().Err(err).Msg("Failed to clear backend deadline")
+			}
 		}
 	}
 }
