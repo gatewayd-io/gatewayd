@@ -48,3 +48,4 @@ raft/node*/
 
 # Accidental installation of plugin
 plugins/gatewayd-plugin-cache
+plugins/
