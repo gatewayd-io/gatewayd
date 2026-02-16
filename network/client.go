@@ -193,7 +193,7 @@ func NewClient(
 			client.Close()
 			return nil
 		}
-		logger.Info().
+		logger.Debug().
 			Str("user", client.StartupParams.User).
 			Str("database", client.StartupParams.Database).
 			Msg("Backend connection pre-authenticated")
@@ -214,6 +214,16 @@ func (c *Client) Send(data []byte) (int, *gerr.GatewayDError) {
 		return 0, gerr.ErrClientNotConnected
 	}
 
+	// Snapshot the connection under the lock to avoid a race with Close(),
+	// which sets c.conn = nil.
+	c.mu.Lock()
+	conn := c.conn
+	c.mu.Unlock()
+	if conn == nil {
+		span.RecordError(gerr.ErrClientNotConnected)
+		return 0, gerr.ErrClientNotConnected
+	}
+
 	sent := 0
 	dataSize := len(data)
 	for {
@@ -222,7 +232,7 @@ func (c *Client) Send(data []byte) (int, *gerr.GatewayDError) {
 			break
 		}
 
-		written, err := c.conn.Write(data)
+		written, err := conn.Write(data)
 		if err != nil {
 			c.logger.Error().Err(err).Msg("Couldn't send data to the server")
 			span.RecordError(err)
@@ -254,6 +264,16 @@ func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 		return 0, nil, gerr.ErrClientNotConnected
 	}
 
+	// Snapshot the connection under the lock to avoid a race with Close(),
+	// which sets c.conn = nil.
+	c.mu.Lock()
+	conn := c.conn
+	c.mu.Unlock()
+	if conn == nil {
+		span.RecordError(gerr.ErrClientNotConnected)
+		return 0, nil, gerr.ErrClientNotConnected
+	}
+
 	var ctx context.Context
 	var cancel context.CancelFunc
 	if c.ReceiveTimeout > 0 {
@@ -268,7 +288,7 @@ func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 	// Read the data in chunks.
 	for ctx.Err() == nil {
 		chunk := make([]byte, c.ReceiveChunkSize)
-		read, err := c.conn.Read(chunk)
+		read, err := conn.Read(chunk)
 		if read > 0 {
 			total += read
 			buffer.Write(chunk[:read])

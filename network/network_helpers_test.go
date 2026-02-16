@@ -302,6 +302,12 @@ func (m MockProxy) GetGroupName() string {
 	return m.groupName
 }
 
+// ExpireBackendReadDeadline is a mock (no-op) implementation.
+func (m MockProxy) ExpireBackendReadDeadline(_ *ConnWrapper) {}
+
+// ClearBackendDeadline is a mock (no-op) implementation.
+func (m MockProxy) ClearBackendDeadline(_ *ConnWrapper) {}
+
 // Mock implementation of IConnWrapper.
 type MockConnWrapper struct {
 	mock.Mock

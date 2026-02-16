@@ -336,7 +336,11 @@ func (s *Server) OnClose(conn *ConnWrapper, err error) Action {
 }
 
 // OnTraffic is called when data is received from the client. It calls the OnTraffic hooks.
-// It then passes the traffic to the proxied connection.
+// It then passes the traffic to the proxied connection via two goroutines (client->server
+// and server->client). When either goroutine exits (e.g. client disconnect or backend error),
+// it interrupts the other by expiring its read deadline. OnTraffic waits for BOTH goroutines
+// to finish before returning, ensuring the backend connection is idle and can be safely
+// reused for session reset (DISCARD ALL) without concurrent reader conflicts.
 func (s *Server) OnTraffic(conn *ConnWrapper, stopConnection chan struct{}) Action {
 	_, span := otel.Tracer("gatewayd").Start(s.ctx, "OnTraffic")
 	defer span.End()
@@ -364,52 +368,73 @@ func (s *Server) OnTraffic(conn *ConnWrapper, stopConnection chan struct{}) Acti
 
 	stack := NewStack()
 
+	var wg sync.WaitGroup
+	wg.Add(2)
+
 	// Pass the traffic from the client to server.
-	// If there is an error, log it and close the connection.
-	go func(server *Server, conn *ConnWrapper, stopConnection chan struct{}, stack *Stack) {
+	// When this goroutine exits it expires the backend read deadline to
+	// unblock the server->client goroutine's Receive() call.
+	go func(server *Server, conn *ConnWrapper, stack *Stack) {
+		defer wg.Done()
 		for {
 			server.Logger.Trace().Msg("Passing through traffic from client to server")
 
-			// Find the proxy associated with the given connection
+			// Find the proxy associated with the given connection.
 			proxy, exists := server.GetProxyForConnection(conn)
 			if !exists {
 				server.Logger.Error().Msg("Failed to find proxy that matches the connection")
-				stopConnection <- struct{}{}
 				break
 			}
 
 			if err := proxy.PassThroughToServer(conn, stack); err != nil {
 				server.Logger.Trace().Err(err).Msg("Failed to pass through traffic")
 				span.RecordError(err)
-				stopConnection <- struct{}{}
 				break
 			}
 		}
-	}(s, conn, stopConnection, stack)
+		// Unblock the server->client goroutine by expiring the backend read deadline.
+		if proxy, exists := s.GetProxyForConnection(conn); exists {
+			proxy.ExpireBackendReadDeadline(conn)
+		}
+	}(s, conn, stack)
 
 	// Pass the traffic from the server to client.
-	// If there is an error, log it and close the connection.
-	go func(server *Server, conn *ConnWrapper, stopConnection chan struct{}, stack *Stack) {
+	// When this goroutine exits it expires the frontend read deadline to
+	// unblock the client->server goroutine's Read() call.
+	go func(server *Server, conn *ConnWrapper, stack *Stack) {
+		defer wg.Done()
 		for {
 			server.Logger.Trace().Msg("Passing through traffic from server to client")
 
-			// Find the proxy associated with the given connection
+			// Find the proxy associated with the given connection.
 			proxy, exists := server.GetProxyForConnection(conn)
 			if !exists {
 				server.Logger.Error().Msg("Failed to find proxy that matches the connection")
-				stopConnection <- struct{}{}
 				break
 			}
 			if err := proxy.PassThroughToClient(conn, stack); err != nil {
 				server.Logger.Trace().Err(err).Msg("Failed to pass through traffic")
 				span.RecordError(err)
-				stopConnection <- struct{}{}
 				break
 			}
 		}
-	}(s, conn, stopConnection, stack)
+		// Unblock the client->server goroutine by expiring the frontend read deadline.
+		if err := conn.Conn().SetReadDeadline(time.Now()); err != nil {
+			server.Logger.Error().Err(err).Msg("Failed to expire frontend read deadline")
+		}
+	}(s, conn, stack)
 
-	<-stopConnection
+	// Wait for BOTH goroutines to finish. This guarantees the backend
+	// connection is idle (no concurrent readers/writers) before Disconnect
+	// attempts DISCARD ALL for session reset.
+	wg.Wait()
+
+	// Clear the backend deadline so Disconnect -> ResetSession -> DISCARD ALL
+	// can read/write on the connection without hitting a stale deadline.
+	if proxy, exists := s.GetProxyForConnection(conn); exists {
+		proxy.ClearBackendDeadline(conn)
+	}
+
 	stack.Clear()
 
 	return Close

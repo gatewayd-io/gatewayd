@@ -34,6 +34,12 @@ type IProxy interface {
 	BusyConnectionsString() []string
 	GetGroupName() string
 	GetBlockName() string
+	// ExpireBackendReadDeadline expires the backend connection's read deadline
+	// to unblock any goroutine blocked on Receive().
+	ExpireBackendReadDeadline(conn *ConnWrapper)
+	// ClearBackendDeadline clears all deadlines on the backend connection so
+	// it can be reused for session reset (DISCARD ALL) or other operations.
+	ClearBackendDeadline(conn *ConnWrapper)
 }
 
 type Proxy struct {
@@ -745,6 +751,28 @@ func (pr *Proxy) BusyConnectionsString() []string {
 		return true
 	})
 	return connections
+}
+
+// ExpireBackendReadDeadline sets the backend connection's read deadline to now,
+// causing any pending Receive() call to return immediately with a deadline exceeded error.
+// This is used to unblock the server->client goroutine when the client->server goroutine exits.
+func (pr *Proxy) ExpireBackendReadDeadline(conn *ConnWrapper) {
+	if cl, ok := pr.busyConnections.Get(conn).(*Client); ok && cl != nil && cl.conn != nil {
+		if err := cl.conn.SetReadDeadline(time.Now()); err != nil {
+			pr.Logger.Error().Err(err).Msg("Failed to expire backend read deadline")
+		}
+	}
+}
+
+// ClearBackendDeadline clears any deadline on the backend connection so it can
+// be reused for session reset (DISCARD ALL) or other operations after both
+// traffic goroutines have exited.
+func (pr *Proxy) ClearBackendDeadline(conn *ConnWrapper) {
+	if cl, ok := pr.busyConnections.Get(conn).(*Client); ok && cl != nil && cl.conn != nil {
+		if err := cl.conn.SetDeadline(time.Time{}); err != nil {
+			pr.Logger.Error().Err(err).Msg("Failed to clear backend deadline")
+		}
+	}
 }
 
 // receiveTrafficFromClient is a function that waits to receive data from the client.
