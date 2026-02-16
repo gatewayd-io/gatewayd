@@ -1148,13 +1148,13 @@ func TestLeaveCluster(t *testing.T) {
 
 				node1, err := NewRaftNode(logger, config.Raft{
 					NodeID:      "leaderNode1",
-					Address:     "127.0.0.1:7021",
-					GRPCAddress: "127.0.0.1:7031",
+					Address:     "127.0.0.1:7041",
+					GRPCAddress: "127.0.0.1:7051",
 					IsBootstrap: true,
 					Directory:   tempDir,
 					Peers: []config.RaftPeer{
-						{ID: "leaderNode2", Address: "127.0.0.1:7022", GRPCAddress: "127.0.0.1:7032"},
-						{ID: "leaderNode3", Address: "127.0.0.1:7023", GRPCAddress: "127.0.0.1:7033"},
+						{ID: "leaderNode2", Address: "127.0.0.1:7042", GRPCAddress: "127.0.0.1:7052"},
+						{ID: "leaderNode3", Address: "127.0.0.1:7043", GRPCAddress: "127.0.0.1:7053"},
 					},
 				})
 				require.NoError(t, err)
@@ -1162,13 +1162,13 @@ func TestLeaveCluster(t *testing.T) {
 
 				node2, err := NewRaftNode(logger, config.Raft{
 					NodeID:      "leaderNode2",
-					Address:     "127.0.0.1:7022",
-					GRPCAddress: "127.0.0.1:7032",
+					Address:     "127.0.0.1:7042",
+					GRPCAddress: "127.0.0.1:7052",
 					IsBootstrap: false,
 					Directory:   tempDir,
 					Peers: []config.RaftPeer{
-						{ID: "leaderNode1", Address: "127.0.0.1:7021", GRPCAddress: "127.0.0.1:7031"},
-						{ID: "leaderNode3", Address: "127.0.0.1:7023", GRPCAddress: "127.0.0.1:7033"},
+						{ID: "leaderNode1", Address: "127.0.0.1:7041", GRPCAddress: "127.0.0.1:7051"},
+						{ID: "leaderNode3", Address: "127.0.0.1:7043", GRPCAddress: "127.0.0.1:7053"},
 					},
 				})
 				require.NoError(t, err)
@@ -1176,13 +1176,13 @@ func TestLeaveCluster(t *testing.T) {
 
 				node3, err := NewRaftNode(logger, config.Raft{
 					NodeID:      "leaderNode3",
-					Address:     "127.0.0.1:7023",
-					GRPCAddress: "127.0.0.1:7033",
+					Address:     "127.0.0.1:7043",
+					GRPCAddress: "127.0.0.1:7053",
 					IsBootstrap: false,
 					Directory:   tempDir,
 					Peers: []config.RaftPeer{
-						{ID: "leaderNode1", Address: "127.0.0.1:7021", GRPCAddress: "127.0.0.1:7031"},
-						{ID: "leaderNode2", Address: "127.0.0.1:7022", GRPCAddress: "127.0.0.1:7032"},
+						{ID: "leaderNode1", Address: "127.0.0.1:7041", GRPCAddress: "127.0.0.1:7051"},
+						{ID: "leaderNode2", Address: "127.0.0.1:7042", GRPCAddress: "127.0.0.1:7052"},
 					},
 				})
 				require.NoError(t, err)
