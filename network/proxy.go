@@ -19,6 +19,7 @@ import (
 	"github.com/go-co-op/gocron"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
 //nolint:interfacebloat
@@ -34,6 +35,12 @@ type IProxy interface {
 	BusyConnectionsString() []string
 	GetGroupName() string
 	GetBlockName() string
+	// ExpireBackendReadDeadline expires the backend connection's read deadline
+	// to unblock any goroutine blocked on Receive().
+	ExpireBackendReadDeadline(conn *ConnWrapper)
+	// ClearBackendDeadline clears all deadlines on the backend connection so
+	// it can be reused for session reset (DISCARD ALL) or other operations.
+	ClearBackendDeadline(conn *ConnWrapper)
 }
 
 type Proxy struct {
@@ -245,17 +252,7 @@ func (pr *Proxy) Disconnect(conn *ConnWrapper) *gerr.GatewayDError {
 	}
 
 	if client, ok := client.(*Client); ok {
-		// Recycle the server connection by reconnecting.
-		if err := client.Reconnect(); err != nil {
-			pr.Logger.Error().Err(err).Msg("Failed to reconnect to the client")
-			span.RecordError(err)
-		}
-
-		// If the client is not in the pool, put it back.
-		if err := pr.AvailableConnections.Put(client.ID, client); err != nil {
-			pr.Logger.Error().Err(err).Msg("Failed to put the client back in the pool")
-			span.RecordError(err)
-		}
+		pr.recycleClientConnection(client, span)
 	} else {
 		// This should never happen, but if it does,
 		// then there are some serious issues with the pool.
@@ -729,6 +726,58 @@ func (pr *Proxy) BusyConnectionsString() []string {
 		return true
 	})
 	return connections
+}
+
+// ExpireBackendReadDeadline sets the backend connection's read deadline to now,
+// causing any pending Receive() call to return immediately with a deadline exceeded error.
+// This is used to unblock the server->client goroutine when the client->server goroutine exits.
+func (pr *Proxy) ExpireBackendReadDeadline(conn *ConnWrapper) {
+	if cl, ok := pr.busyConnections.Get(conn).(*Client); ok && cl != nil && cl.conn != nil {
+		if err := cl.conn.SetReadDeadline(time.Now()); err != nil {
+			pr.Logger.Error().Err(err).Msg("Failed to expire backend read deadline")
+		}
+	}
+}
+
+// ClearBackendDeadline clears any deadline on the backend connection so it can
+// be reused for session reset (DISCARD ALL) or other operations after both
+// traffic goroutines have exited.
+func (pr *Proxy) ClearBackendDeadline(conn *ConnWrapper) {
+	if cl, ok := pr.busyConnections.Get(conn).(*Client); ok && cl != nil && cl.conn != nil {
+		if err := cl.conn.SetDeadline(time.Time{}); err != nil {
+			pr.Logger.Error().Err(err).Msg("Failed to clear backend deadline")
+		}
+	}
+}
+
+// recycleClientConnection resets or reconnects the client connection and returns it to the pool.
+func (pr *Proxy) recycleClientConnection(client *Client, span trace.Span) {
+	// Try to reset the session without tearing down the TCP connection.
+	// This sends DISCARD ALL and is much cheaper than a full reconnect.
+	// If it fails (broken pipe, bad state, etc.), fall back to a full reconnect.
+	if client.StartupParams == nil || !client.IsConnected() {
+		// No startup params configured or client disconnected:
+		// use the original reconnect behavior.
+		if err := client.Reconnect(); err != nil {
+			pr.Logger.Error().Err(err).Msg("Failed to reconnect to the client")
+			span.RecordError(err)
+		}
+	} else if err := client.ResetSession(); err != nil {
+		// Reset failed (broken pipe, bad state, etc.), fall back to full reconnect.
+		pr.Logger.Warn().Err(err).Msg(
+			"Session reset failed, falling back to full reconnect")
+		span.RecordError(err)
+		if err := client.Reconnect(); err != nil {
+			pr.Logger.Error().Err(err).Msg("Failed to reconnect to the client")
+			span.RecordError(err)
+		}
+	}
+
+	// If the client is not in the pool, put it back.
+	if err := pr.AvailableConnections.Put(client.ID, client); err != nil {
+		pr.Logger.Error().Err(err).Msg("Failed to put the client back in the pool")
+		span.RecordError(err)
+	}
 }
 
 // receiveTrafficFromClient is a function that waits to receive data from the client.

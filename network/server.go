@@ -40,7 +40,7 @@ type IServer interface {
 	OnBoot() Action
 	OnOpen(conn *ConnWrapper) ([]byte, Action)
 	OnClose(conn *ConnWrapper, err error) Action
-	OnTraffic(conn *ConnWrapper, stopConnection chan struct{}) Action
+	OnTraffic(conn *ConnWrapper) Action
 	OnShutdown()
 	OnTick() (time.Duration, Action)
 	Run() *gerr.GatewayDError
@@ -336,8 +336,12 @@ func (s *Server) OnClose(conn *ConnWrapper, err error) Action {
 }
 
 // OnTraffic is called when data is received from the client. It calls the OnTraffic hooks.
-// It then passes the traffic to the proxied connection.
-func (s *Server) OnTraffic(conn *ConnWrapper, stopConnection chan struct{}) Action {
+// It then passes the traffic to the proxied connection via two goroutines (client->server
+// and server->client). When either goroutine exits (e.g. client disconnect or backend error),
+// it interrupts the other by expiring its read deadline. OnTraffic waits for BOTH goroutines
+// to finish before returning, ensuring the backend connection is idle and can be safely
+// reused for session reset (DISCARD ALL) without concurrent reader conflicts.
+func (s *Server) OnTraffic(conn *ConnWrapper) Action {
 	_, span := otel.Tracer("gatewayd").Start(s.ctx, "OnTraffic")
 	defer span.End()
 
@@ -364,52 +368,73 @@ func (s *Server) OnTraffic(conn *ConnWrapper, stopConnection chan struct{}) Acti
 
 	stack := NewStack()
 
+	var trafficWaitGroup sync.WaitGroup
+	trafficWaitGroup.Add(2) //nolint:mnd
+
 	// Pass the traffic from the client to server.
-	// If there is an error, log it and close the connection.
-	go func(server *Server, conn *ConnWrapper, stopConnection chan struct{}, stack *Stack) {
+	// When this goroutine exits it expires the backend read deadline to
+	// unblock the server->client goroutine's Receive() call.
+	go func(server *Server, conn *ConnWrapper, stack *Stack) {
+		defer trafficWaitGroup.Done()
 		for {
 			server.Logger.Trace().Msg("Passing through traffic from client to server")
 
-			// Find the proxy associated with the given connection
+			// Find the proxy associated with the given connection.
 			proxy, exists := server.GetProxyForConnection(conn)
 			if !exists {
 				server.Logger.Error().Msg("Failed to find proxy that matches the connection")
-				stopConnection <- struct{}{}
 				break
 			}
 
 			if err := proxy.PassThroughToServer(conn, stack); err != nil {
 				server.Logger.Trace().Err(err).Msg("Failed to pass through traffic")
 				span.RecordError(err)
-				stopConnection <- struct{}{}
 				break
 			}
 		}
-	}(s, conn, stopConnection, stack)
+		// Unblock the server->client goroutine by expiring the backend read deadline.
+		if proxy, exists := s.GetProxyForConnection(conn); exists {
+			proxy.ExpireBackendReadDeadline(conn)
+		}
+	}(s, conn, stack)
 
 	// Pass the traffic from the server to client.
-	// If there is an error, log it and close the connection.
-	go func(server *Server, conn *ConnWrapper, stopConnection chan struct{}, stack *Stack) {
+	// When this goroutine exits it expires the frontend read deadline to
+	// unblock the client->server goroutine's Read() call.
+	go func(server *Server, conn *ConnWrapper, stack *Stack) {
+		defer trafficWaitGroup.Done()
 		for {
 			server.Logger.Trace().Msg("Passing through traffic from server to client")
 
-			// Find the proxy associated with the given connection
+			// Find the proxy associated with the given connection.
 			proxy, exists := server.GetProxyForConnection(conn)
 			if !exists {
 				server.Logger.Error().Msg("Failed to find proxy that matches the connection")
-				stopConnection <- struct{}{}
 				break
 			}
 			if err := proxy.PassThroughToClient(conn, stack); err != nil {
 				server.Logger.Trace().Err(err).Msg("Failed to pass through traffic")
 				span.RecordError(err)
-				stopConnection <- struct{}{}
 				break
 			}
 		}
-	}(s, conn, stopConnection, stack)
+		// Unblock the client->server goroutine by expiring the frontend read deadline.
+		if err := conn.Conn().SetReadDeadline(time.Now()); err != nil {
+			server.Logger.Error().Err(err).Msg("Failed to expire frontend read deadline")
+		}
+	}(s, conn, stack)
 
-	<-stopConnection
+	// Wait for BOTH goroutines to finish. This guarantees the backend
+	// connection is idle (no concurrent readers/writers) before Disconnect
+	// attempts DISCARD ALL for session reset.
+	trafficWaitGroup.Wait()
+
+	// Clear the backend deadline so Disconnect -> ResetSession -> DISCARD ALL
+	// can read/write on the connection without hitting a stale deadline.
+	if proxy, exists := s.GetProxyForConnection(conn); exists {
+		proxy.ClearBackendDeadline(conn)
+	}
+
 	stack.Clear()
 
 	return Close
@@ -638,29 +663,22 @@ func (s *Server) Run() *gerr.GatewayDError {
 			s.connections++
 			s.mu.Unlock()
 
-			// For every new connection, a new unbuffered channel is created to help
-			// stop the proxy, recycle the server connection and close stale connections.
-			stopConnection := make(chan struct{})
-			go func(server *Server, conn *ConnWrapper, stopConnection chan struct{}) {
-				if action := server.OnTraffic(conn, stopConnection); action == Close {
-					stopConnection <- struct{}{}
-				}
-			}(s, conn, stopConnection)
+			// OnTraffic blocks until both traffic goroutines (client->server
+			// and server->client) have finished. After it returns, we
+			// decrement the connection counter and run the OnClose hooks.
+			// During shutdown, proxy.Shutdown() closes connections which
+			// unblocks OnTraffic, so this goroutine always completes.
+			go func(server *Server, conn *ConnWrapper) {
+				action := server.OnTraffic(conn)
 
-			go func(server *Server, conn *ConnWrapper, stopConnection chan struct{}) {
-				for {
-					select {
-					case <-stopConnection:
-						server.mu.Lock()
-						server.connections--
-						server.mu.Unlock()
-						server.OnClose(conn, err)
-						return
-					case <-server.stopServer:
-						return
-					}
+				server.mu.Lock()
+				server.connections--
+				server.mu.Unlock()
+
+				if action == Close {
+					server.OnClose(conn, err)
 				}
-			}(s, conn, stopConnection)
+			}(s, conn)
 		}
 	}
 }

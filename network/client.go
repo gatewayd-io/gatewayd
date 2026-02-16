@@ -48,6 +48,10 @@ type Client struct {
 	ID                 string
 	Network            string // tcp/udp/unix
 	Address            string
+
+	// StartupParams, when set, triggers a PostgreSQL startup handshake
+	// (including authentication) right after the TCP connection is established.
+	StartupParams *config.StartupParams
 }
 
 var _ IClient = (*Client)(nil)
@@ -171,6 +175,30 @@ func NewClient(
 		logger,
 	)
 
+	// Store startup params for use during Reconnect.
+	client.StartupParams = clientConfig.StartupParams
+
+	// If startup params are configured, perform the PostgreSQL startup
+	// handshake so the backend connection is pre-authenticated.
+	if client.StartupParams != nil && client.StartupParams.User != "" {
+		if err := pgStartup(
+			client.conn,
+			client.StartupParams.User,
+			client.StartupParams.Database,
+			client.StartupParams.Password,
+			logger,
+		); err != nil {
+			logger.Error().Err(err).Msg("PostgreSQL startup handshake failed")
+			span.RecordError(err)
+			client.Close()
+			return nil
+		}
+		logger.Debug().
+			Str("user", client.StartupParams.User).
+			Str("database", client.StartupParams.Database).
+			Msg("Backend connection pre-authenticated")
+	}
+
 	metrics.ServerConnections.WithLabelValues(clientConfig.GroupName, clientConfig.BlockName).Inc()
 
 	return &client
@@ -186,6 +214,16 @@ func (c *Client) Send(data []byte) (int, *gerr.GatewayDError) {
 		return 0, gerr.ErrClientNotConnected
 	}
 
+	// Snapshot the connection under the lock to avoid a race with Close(),
+	// which sets c.conn = nil.
+	c.mu.Lock()
+	conn := c.conn
+	c.mu.Unlock()
+	if conn == nil {
+		span.RecordError(gerr.ErrClientNotConnected)
+		return 0, gerr.ErrClientNotConnected
+	}
+
 	sent := 0
 	dataSize := len(data)
 	for {
@@ -194,7 +232,7 @@ func (c *Client) Send(data []byte) (int, *gerr.GatewayDError) {
 			break
 		}
 
-		written, err := c.conn.Write(data)
+		written, err := conn.Write(data)
 		if err != nil {
 			c.logger.Error().Err(err).Msg("Couldn't send data to the server")
 			span.RecordError(err)
@@ -226,6 +264,16 @@ func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 		return 0, nil, gerr.ErrClientNotConnected
 	}
 
+	// Snapshot the connection under the lock to avoid a race with Close(),
+	// which sets c.conn = nil.
+	c.mu.Lock()
+	conn := c.conn
+	c.mu.Unlock()
+	if conn == nil {
+		span.RecordError(gerr.ErrClientNotConnected)
+		return 0, nil, gerr.ErrClientNotConnected
+	}
+
 	var ctx context.Context
 	var cancel context.CancelFunc
 	if c.ReceiveTimeout > 0 {
@@ -240,7 +288,7 @@ func (c *Client) Receive() (int, []byte, *gerr.GatewayDError) {
 	// Read the data in chunks.
 	for ctx.Err() == nil {
 		chunk := make([]byte, c.ReceiveChunkSize)
-		read, err := c.conn.Read(chunk)
+		read, err := conn.Read(chunk)
 		if read > 0 {
 			total += read
 			buffer.Write(chunk[:read])
@@ -312,9 +360,50 @@ func (c *Client) Reconnect() error {
 	)
 	c.connected.Store(true)
 	c.logger.Debug().Str("address", c.Address).Msg("Reconnected to server")
+
+	// Re-authenticate if startup params are configured.
+	if c.StartupParams != nil && c.StartupParams.User != "" {
+		if pgErr := pgStartup(
+			c.conn,
+			c.StartupParams.User,
+			c.StartupParams.Database,
+			c.StartupParams.Password,
+			c.logger,
+		); pgErr != nil {
+			c.logger.Error().Err(pgErr).Msg("PostgreSQL startup handshake failed after reconnect")
+			span.RecordError(pgErr)
+			return pgErr
+		}
+		c.logger.Info().
+			Str("user", c.StartupParams.User).
+			Str("database", c.StartupParams.Database).
+			Msg("Backend connection re-authenticated after reconnect")
+	}
+
 	metrics.ServerConnections.WithLabelValues(c.GroupName, c.BlockName).Inc()
 	span.AddEvent("Reconnected to server")
 
+	return nil
+}
+
+// ResetSession sends DISCARD ALL to the backend to reset session state without
+// tearing down the TCP connection. Returns nil on success.
+func (c *Client) ResetSession() error {
+	_, span := otel.Tracer(config.TracerName).Start(c.ctx, "ResetSession")
+	defer span.End()
+
+	if !c.connected.Load() || c.conn == nil {
+		span.RecordError(gerr.ErrClientNotConnected)
+		return gerr.ErrClientNotConnected
+	}
+
+	if err := pgResetSession(c.conn, c.logger); err != nil {
+		c.logger.Error().Err(err).Msg("Failed to reset session")
+		span.RecordError(err)
+		return err
+	}
+
+	span.AddEvent("Session reset successfully")
 	return nil
 }
 

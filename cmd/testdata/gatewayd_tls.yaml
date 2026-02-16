@@ -26,6 +26,10 @@ clients:
       backoff: 1s
       backoffMultiplier: 2.0
       disableBackoffCaps: false
+      # startupParams:
+      #   user: postgres
+      #   database: postgres
+      #   password: postgres
 
 pools:
   default:
