@@ -51,40 +51,31 @@ func pgStartup(conn net.Conn, user, database, password string, logger zerolog.Lo
 		case *pgproto3.AuthenticationOk:
 			logger.Debug().Msg("Backend authentication successful (AuthenticationOk)")
 			// Continue reading until ReadyForQuery.
-
 		case *pgproto3.AuthenticationCleartextPassword:
 			if err := pgSendPassword(conn, password); err != nil {
 				return err
 			}
-
 		case *pgproto3.AuthenticationMD5Password:
 			hash := pgMD5Password(user, password, msg.Salt)
 			if err := pgSendPassword(conn, hash); err != nil {
 				return err
 			}
-
 		case *pgproto3.AuthenticationSASL:
 			if err := pgHandleSCRAM(conn, frontend, user, password, msg.AuthMechanisms, logger); err != nil {
 				return err
 			}
-
 		case *pgproto3.ParameterStatus:
 			logger.Trace().Str("name", msg.Name).Str("value", msg.Value).Msg("ParameterStatus")
-
 		case *pgproto3.BackendKeyData:
 			logger.Debug().Uint32("pid", msg.ProcessID).Uint32("key", msg.SecretKey).Msg("BackendKeyData")
-
 		case *pgproto3.ReadyForQuery:
 			logger.Debug().Str("txStatus", string(msg.TxStatus)).Msg("Backend ready for queries")
 			return nil
-
 		case *pgproto3.ErrorResponse:
 			return gerr.ErrPgStartupFailed.Wrap(
 				fmt.Errorf("backend error: %s (code %s): %s", msg.Severity, msg.Code, msg.Message))
-
 		case *pgproto3.NoticeResponse:
 			logger.Debug().Str("severity", msg.Severity).Str("message", msg.Message).Msg("NoticeResponse")
-
 		default:
 			logger.Warn().Str("type", fmt.Sprintf("%T", msg)).Msg("Unexpected message during PG startup")
 		}
@@ -250,15 +241,12 @@ func pgResetSession(conn net.Conn, logger zerolog.Logger) error {
 		switch msg := msg.(type) {
 		case *pgproto3.CommandComplete:
 			logger.Trace().Str("tag", string(msg.CommandTag)).Msg("DISCARD ALL completed")
-
 		case *pgproto3.ReadyForQuery:
 			logger.Debug().Str("txStatus", string(msg.TxStatus)).Msg("Session reset, backend ready")
 			return nil
-
 		case *pgproto3.ErrorResponse:
 			return gerr.ErrPgResetSessionFailed.Wrap(
 				fmt.Errorf("backend error: %s (code %s): %s", msg.Severity, msg.Code, msg.Message))
-
 		default:
 			logger.Warn().Str("type", fmt.Sprintf("%T", msg)).Msg("Unexpected message during session reset")
 		}

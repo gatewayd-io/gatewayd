@@ -56,19 +56,19 @@ type Client struct {
 	BlockName string `json:"-"`
 	GroupName string `json:"-"`
 
-	Network            string        `json:"network" jsonschema:"enum=tcp,enum=udp,enum=unix" yaml:"network"`
-	Address            string        `json:"address" yaml:"address"`
-	TCPKeepAlive       bool          `json:"tcpKeepAlive" yaml:"tcpKeepAlive"`
-	TCPKeepAlivePeriod time.Duration `json:"tcpKeepAlivePeriod" jsonschema:"oneof_type=string;integer" yaml:"tcpKeepAlivePeriod"`
-	ReceiveChunkSize   int           `json:"receiveChunkSize" yaml:"receiveChunkSize"`
-	ReceiveDeadline    time.Duration `json:"receiveDeadline" jsonschema:"oneof_type=string;integer" yaml:"receiveDeadline"`
-	ReceiveTimeout     time.Duration `json:"receiveTimeout" jsonschema:"oneof_type=string;integer" yaml:"receiveTimeout"`
-	SendDeadline       time.Duration `json:"sendDeadline" jsonschema:"oneof_type=string;integer" yaml:"sendDeadline"`
-	DialTimeout        time.Duration `json:"dialTimeout" jsonschema:"oneof_type=string;integer" yaml:"dialTimeout"`
-	Retries            int           `json:"retries" yaml:"retries"`
-	Backoff            time.Duration `json:"backoff" jsonschema:"oneof_type=string;integer" yaml:"backoff"`
-	BackoffMultiplier  float64       `json:"backoffMultiplier" yaml:"backoffMultiplier"`
-	DisableBackoffCaps bool          `json:"disableBackoffCaps" yaml:"disableBackoffCaps"`
+	Network            string         `json:"network" jsonschema:"enum=tcp,enum=udp,enum=unix" yaml:"network"`
+	Address            string         `json:"address" yaml:"address"`
+	TCPKeepAlive       bool           `json:"tcpKeepAlive" yaml:"tcpKeepAlive"`
+	TCPKeepAlivePeriod time.Duration  `json:"tcpKeepAlivePeriod" jsonschema:"oneof_type=string;integer" yaml:"tcpKeepAlivePeriod"`
+	ReceiveChunkSize   int            `json:"receiveChunkSize" yaml:"receiveChunkSize"`
+	ReceiveDeadline    time.Duration  `json:"receiveDeadline" jsonschema:"oneof_type=string;integer" yaml:"receiveDeadline"`
+	ReceiveTimeout     time.Duration  `json:"receiveTimeout" jsonschema:"oneof_type=string;integer" yaml:"receiveTimeout"`
+	SendDeadline       time.Duration  `json:"sendDeadline" jsonschema:"oneof_type=string;integer" yaml:"sendDeadline"`
+	DialTimeout        time.Duration  `json:"dialTimeout" jsonschema:"oneof_type=string;integer" yaml:"dialTimeout"`
+	Retries            int            `json:"retries" yaml:"retries"`
+	Backoff            time.Duration  `json:"backoff" jsonschema:"oneof_type=string;integer" yaml:"backoff"`
+	BackoffMultiplier  float64        `json:"backoffMultiplier" yaml:"backoffMultiplier"`
+	DisableBackoffCaps bool           `json:"disableBackoffCaps" yaml:"disableBackoffCaps"`
 	StartupParams      *StartupParams `json:"startupParams,omitempty" yaml:"startupParams,omitempty"`
 }
 
