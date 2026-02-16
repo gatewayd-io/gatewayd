@@ -663,29 +663,22 @@ func (s *Server) Run() *gerr.GatewayDError {
 			s.connections++
 			s.mu.Unlock()
 
-			// For every new connection, a new unbuffered channel is created to help
-			// stop the proxy, recycle the server connection and close stale connections.
-			stopConnection := make(chan struct{})
-			go func(server *Server, conn *ConnWrapper, stopCh chan struct{}) {
-				if action := server.OnTraffic(conn); action == Close {
-					stopCh <- struct{}{}
-				}
-			}(s, conn, stopConnection)
+			// OnTraffic blocks until both traffic goroutines (client->server
+			// and server->client) have finished. After it returns, we
+			// decrement the connection counter and run the OnClose hooks.
+			// During shutdown, proxy.Shutdown() closes connections which
+			// unblocks OnTraffic, so this goroutine always completes.
+			go func(server *Server, conn *ConnWrapper) {
+				action := server.OnTraffic(conn)
 
-			go func(server *Server, conn *ConnWrapper, stopCh chan struct{}) {
-				for {
-					select {
-					case <-stopCh:
-						server.mu.Lock()
-						server.connections--
-						server.mu.Unlock()
-						server.OnClose(conn, err)
-						return
-					case <-server.stopServer:
-						return
-					}
+				server.mu.Lock()
+				server.connections--
+				server.mu.Unlock()
+
+				if action == Close {
+					server.OnClose(conn, err)
 				}
-			}(s, conn, stopConnection)
+			}(s, conn)
 		}
 	}
 }
