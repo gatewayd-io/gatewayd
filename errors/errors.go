@@ -56,6 +56,8 @@ const (
 	ErrCodeLoadBalancerStrategyNotFound
 	ErrCodeNoProxiesAvailable
 	ErrCodeNoLoadBalancerRules
+	ErrCodePgStartupFailed
+	ErrCodePgResetSessionFailed
 )
 
 var (
@@ -207,6 +209,13 @@ var (
 
 	ErrNoLoadBalancerRules = &GatewayDError{
 		ErrCodeNoLoadBalancerRules, "No load balancer rules provided.", nil,
+	}
+
+	ErrPgStartupFailed = &GatewayDError{
+		ErrCodePgStartupFailed, "PostgreSQL startup handshake failed", nil,
+	}
+	ErrPgResetSessionFailed = &GatewayDError{
+		ErrCodePgResetSessionFailed, "PostgreSQL session reset (DISCARD ALL) failed", nil,
 	}
 
 	// Unwrapped errors.

@@ -245,10 +245,26 @@ func (pr *Proxy) Disconnect(conn *ConnWrapper) *gerr.GatewayDError {
 	}
 
 	if client, ok := client.(*Client); ok {
-		// Recycle the server connection by reconnecting.
-		if err := client.Reconnect(); err != nil {
-			pr.Logger.Error().Err(err).Msg("Failed to reconnect to the client")
-			span.RecordError(err)
+		// Try to reset the session without tearing down the TCP connection.
+		// This sends DISCARD ALL and is much cheaper than a full reconnect.
+		// If it fails (broken pipe, bad state, etc.), fall back to a full reconnect.
+		if client.StartupParams != nil && client.IsConnected() {
+			if err := client.ResetSession(); err != nil {
+				pr.Logger.Warn().Err(err).Msg(
+					"Session reset failed, falling back to full reconnect")
+				span.RecordError(err)
+				if err := client.Reconnect(); err != nil {
+					pr.Logger.Error().Err(err).Msg("Failed to reconnect to the client")
+					span.RecordError(err)
+				}
+			}
+		} else {
+			// No startup params configured or client disconnected:
+			// use the original reconnect behavior.
+			if err := client.Reconnect(); err != nil {
+				pr.Logger.Error().Err(err).Msg("Failed to reconnect to the client")
+				span.RecordError(err)
+			}
 		}
 
 		// If the client is not in the pool, put it back.

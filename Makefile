@@ -68,6 +68,17 @@ build-linux-packages:
 	@sha256sum dist/gatewayd-$(VERSION:v%=%).x86_64.rpm | sed 's/dist\///g' >> dist/checksums.txt
 	@sha256sum dist/gatewayd-$(VERSION:v%=%).aarch64.rpm | sed 's/dist\///g' >> dist/checksums.txt
 
+test-postgres-up:
+	@docker run -d --rm --name gatewayd-write-postgres -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres postgres:latest
+	@docker run -d --rm --name gatewayd-read-postgres -p 5433:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres postgres:latest
+	@echo "Waiting for PostgreSQL containers to be ready..."
+	@until docker exec gatewayd-write-postgres pg_isready -U postgres > /dev/null 2>&1; do sleep 1; done
+	@until docker exec gatewayd-read-postgres pg_isready -U postgres > /dev/null 2>&1; do sleep 1; done
+	@echo "write-postgres: localhost:5432  read-postgres: localhost:5433"
+
+test-postgres-down:
+	@docker rm -f gatewayd-write-postgres gatewayd-read-postgres 2>/dev/null || true
+
 run: tidy
 	@go run -tags embed_plugin_template,embed_swagger main.go run --dev
 

@@ -47,6 +47,15 @@ clients:
       backoff: 1s # duration
       backoffMultiplier: 2.0 # 0 means no backoff
       disableBackoffCaps: false
+      # PostgreSQL pre-authentication for backend pool connections.
+      # When set, GatewayD performs the PostgreSQL startup handshake
+      # (including authentication) right after establishing each backend
+      # TCP connection. This enables the auth plugin's identity broker
+      # model and DISCARD ALL-based connection recycling.
+      startupParams:
+        user: postgres
+        database: postgres
+        password: postgres
     reads:
       network: tcp
       address: localhost:5433
@@ -62,6 +71,10 @@ clients:
       backoff: 1s # duration
       backoffMultiplier: 2.0 # 0 means no backoff
       disableBackoffCaps: false
+      # startupParams:
+      #   user: postgres
+      #   database: postgres
+      #   password: postgres
 
 pools:
   default:

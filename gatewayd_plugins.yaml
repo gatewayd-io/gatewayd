@@ -56,7 +56,7 @@ policies: []
 # and should only be used if one only has a single database in their PostgreSQL instance.
 plugins:
   - name: gatewayd-plugin-cache
-    enabled: True
+    enabled: False
     url: github.com/gatewayd-io/gatewayd-plugin-cache@latest
     localPath: ../gatewayd-plugin-cache/gatewayd-plugin-cache
     args: ["--log-level", "info"]
@@ -77,3 +77,24 @@ plugins:
       - SENTRY_DSN=https://70eb1abcd32e41acbdfc17bc3407a543@o4504550475038720.ingest.sentry.io/4505342961123328
       - CACHE_CHANNEL_BUFFER_SIZE=100
     checksum: c2c5fcc2877f1b9d479e602b96d077c57b0141a5bd059ef25faf5893ac8ab80d
+  - name: gatewayd-plugin-auth
+    enabled: True
+    localPath: ../gatewayd-plugin-auth/gatewayd-plugin-auth
+    args: ["--log-level", "info"]
+    checksum: 63667643806884b3286251337b1340e7319899675264931c689444d322444382
+    url: github.com/gatewayd-io/gatewayd-plugin-auth@latest
+    env:
+      - MAGIC_COOKIE_KEY=GATEWAYD_PLUGIN
+      - MAGIC_COOKIE_VALUE=5712b87aa5d7e9f9e9ab643e6603181c5b796015cb1c09d6f5ada882bf2a1872
+      # Authentication method used for client-side identity brokering.
+      # Supported: cleartext, md5, scram-sha-256
+      - AUTH_TYPE=md5
+      # Path to the YAML file containing user credentials.
+      - CREDENTIALS_FILE=../gatewayd-plugin-auth/credentials.yaml
+      # PostgreSQL server version advertised to clients in AuthOk response.
+      - SERVER_VERSION=17.4
+      # Enable Casbin-based query authorization (optional).
+      # When enabled, authenticated queries are checked against the policy.
+      # - AUTHORIZATION_ENABLED=true
+      # - CASBIN_MODEL_PATH=../gatewayd-plugin-auth/model.conf
+      # - CASBIN_POLICY_PATH=../gatewayd-plugin-auth/policy.csv
