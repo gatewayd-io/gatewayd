@@ -24,7 +24,7 @@ func TestPgMD5Password(t *testing.T) {
 	assert.True(t, len(hash) > 3)
 	assert.Equal(t, "md5", hash[:3])
 	// The hash should be "md5" + 32 hex characters.
-	assert.Len(t, hash, 35) //nolint:mnd
+	assert.Len(t, hash, 35)
 }
 
 // TestPgStartup_SCRAM tests the full PostgreSQL startup handshake with SCRAM-SHA-256.

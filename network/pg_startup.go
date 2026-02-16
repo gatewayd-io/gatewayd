@@ -3,6 +3,7 @@ package network
 import (
 	"crypto/md5" //nolint:gosec
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -95,8 +96,8 @@ func pgSendPassword(conn net.Conn, password string) error {
 	return nil
 }
 
-// pgMD5Password computes the PostgreSQL-style MD5 password hash:
-// "md5" + md5(md5(password + user) + salt)
+// pgMD5Password computes the PostgreSQL-style MD5 password hash.
+// "md5" + md5(md5(password + user) + salt).
 func pgMD5Password(user, password string, salt [4]byte) string {
 	// Inner hash: md5(password + user)
 	inner := md5.Sum([]byte(password + user)) //nolint:gosec
@@ -161,8 +162,8 @@ func pgHandleSCRAM(
 	if err != nil {
 		return gerr.ErrPgStartupFailed.Wrap(fmt.Errorf("receive sasl continue: %w", err))
 	}
-	saslContinue, ok := msg.(*pgproto3.AuthenticationSASLContinue)
-	if !ok {
+	saslContinue, isSASLContinue := msg.(*pgproto3.AuthenticationSASLContinue)
+	if !isSASLContinue {
 		if errResp, isErr := msg.(*pgproto3.ErrorResponse); isErr {
 			return gerr.ErrPgStartupFailed.Wrap(
 				fmt.Errorf("SCRAM error: %s: %s", errResp.Severity, errResp.Message))
@@ -232,8 +233,8 @@ func pgResetSession(conn net.Conn, logger zerolog.Logger) error {
 	for {
 		msg, err := frontend.Receive()
 		if err != nil {
-			if err == io.EOF {
-				return gerr.ErrPgResetSessionFailed.Wrap(fmt.Errorf("connection closed during reset"))
+			if errors.Is(err, io.EOF) {
+				return gerr.ErrPgResetSessionFailed.Wrap(errors.New("connection closed during reset"))
 			}
 			return gerr.ErrPgResetSessionFailed.Wrap(fmt.Errorf("receive: %w", err))
 		}

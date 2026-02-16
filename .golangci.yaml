@@ -71,6 +71,7 @@ linters-settings:
           - "github.com/docker/go-connections/nat"
           - "github.com/hashicorp/raft"
           - "go.opentelemetry.io/otel"
+          - "github.com/xdg-go/scram"
       test:
         files:
           - $test

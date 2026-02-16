@@ -341,7 +341,7 @@ func (s *Server) OnClose(conn *ConnWrapper, err error) Action {
 // it interrupts the other by expiring its read deadline. OnTraffic waits for BOTH goroutines
 // to finish before returning, ensuring the backend connection is idle and can be safely
 // reused for session reset (DISCARD ALL) without concurrent reader conflicts.
-func (s *Server) OnTraffic(conn *ConnWrapper, stopConnection chan struct{}) Action {
+func (s *Server) OnTraffic(conn *ConnWrapper, _ chan struct{}) Action {
 	_, span := otel.Tracer("gatewayd").Start(s.ctx, "OnTraffic")
 	defer span.End()
 
@@ -368,14 +368,14 @@ func (s *Server) OnTraffic(conn *ConnWrapper, stopConnection chan struct{}) Acti
 
 	stack := NewStack()
 
-	var wg sync.WaitGroup
-	wg.Add(2)
+	var trafficWaitGroup sync.WaitGroup
+	trafficWaitGroup.Add(2) //nolint:mnd
 
 	// Pass the traffic from the client to server.
 	// When this goroutine exits it expires the backend read deadline to
 	// unblock the server->client goroutine's Receive() call.
 	go func(server *Server, conn *ConnWrapper, stack *Stack) {
-		defer wg.Done()
+		defer trafficWaitGroup.Done()
 		for {
 			server.Logger.Trace().Msg("Passing through traffic from client to server")
 
@@ -402,7 +402,7 @@ func (s *Server) OnTraffic(conn *ConnWrapper, stopConnection chan struct{}) Acti
 	// When this goroutine exits it expires the frontend read deadline to
 	// unblock the client->server goroutine's Read() call.
 	go func(server *Server, conn *ConnWrapper, stack *Stack) {
-		defer wg.Done()
+		defer trafficWaitGroup.Done()
 		for {
 			server.Logger.Trace().Msg("Passing through traffic from server to client")
 
@@ -427,7 +427,7 @@ func (s *Server) OnTraffic(conn *ConnWrapper, stopConnection chan struct{}) Acti
 	// Wait for BOTH goroutines to finish. This guarantees the backend
 	// connection is idle (no concurrent readers/writers) before Disconnect
 	// attempts DISCARD ALL for session reset.
-	wg.Wait()
+	trafficWaitGroup.Wait()
 
 	// Clear the backend deadline so Disconnect -> ResetSession -> DISCARD ALL
 	// can read/write on the connection without hitting a stale deadline.
