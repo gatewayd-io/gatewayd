@@ -18,6 +18,7 @@ import (
 	"github.com/go-co-op/gocron"
 	promClient "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
+	"github.com/prometheus/common/model"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -167,7 +168,7 @@ func (m *Merger) MergeMetrics(pluginMetrics map[string][]byte) *gerr.GatewayDErr
 		}
 
 		// Retrieve plugin metrics.
-		textParser := expfmt.TextParser{}
+		textParser := expfmt.NewTextParser(model.UTF8Validation)
 		reader := bytes.NewReader(metrics)
 		metrics, err := textParser.TextToMetricFamilies(reader)
 		if err != nil {
