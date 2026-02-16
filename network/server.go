@@ -40,7 +40,7 @@ type IServer interface {
 	OnBoot() Action
 	OnOpen(conn *ConnWrapper) ([]byte, Action)
 	OnClose(conn *ConnWrapper, err error) Action
-	OnTraffic(conn *ConnWrapper, stopConnection chan struct{}) Action
+	OnTraffic(conn *ConnWrapper) Action
 	OnShutdown()
 	OnTick() (time.Duration, Action)
 	Run() *gerr.GatewayDError
@@ -341,7 +341,7 @@ func (s *Server) OnClose(conn *ConnWrapper, err error) Action {
 // it interrupts the other by expiring its read deadline. OnTraffic waits for BOTH goroutines
 // to finish before returning, ensuring the backend connection is idle and can be safely
 // reused for session reset (DISCARD ALL) without concurrent reader conflicts.
-func (s *Server) OnTraffic(conn *ConnWrapper, _ chan struct{}) Action {
+func (s *Server) OnTraffic(conn *ConnWrapper) Action {
 	_, span := otel.Tracer("gatewayd").Start(s.ctx, "OnTraffic")
 	defer span.End()
 
@@ -666,16 +666,16 @@ func (s *Server) Run() *gerr.GatewayDError {
 			// For every new connection, a new unbuffered channel is created to help
 			// stop the proxy, recycle the server connection and close stale connections.
 			stopConnection := make(chan struct{})
-			go func(server *Server, conn *ConnWrapper, stopConnection chan struct{}) {
-				if action := server.OnTraffic(conn, stopConnection); action == Close {
-					stopConnection <- struct{}{}
+			go func(server *Server, conn *ConnWrapper, stopCh chan struct{}) {
+				if action := server.OnTraffic(conn); action == Close {
+					stopCh <- struct{}{}
 				}
 			}(s, conn, stopConnection)
 
-			go func(server *Server, conn *ConnWrapper, stopConnection chan struct{}) {
+			go func(server *Server, conn *ConnWrapper, stopCh chan struct{}) {
 				for {
 					select {
-					case <-stopConnection:
+					case <-stopCh:
 						server.mu.Lock()
 						server.connections--
 						server.mu.Unlock()
