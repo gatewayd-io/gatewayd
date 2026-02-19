@@ -1,6 +1,6 @@
 module github.com/gatewayd-io/gatewayd
 
-go 1.24.0
+go 1.24.1
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
@@ -8,7 +8,7 @@ require (
 	github.com/codingsince1985/checksum v1.3.0
 	github.com/cybercyst/go-scaffold v0.0.0-20240606114431-816e6211c151
 	github.com/docker/go-connections v0.6.0
-	github.com/envoyproxy/protoc-gen-validate v1.3.0
+	github.com/envoyproxy/protoc-gen-validate v1.3.3
 	github.com/gatewayd-io/gatewayd-plugin-sdk v0.4.4
 	github.com/getsentry/sentry-go v0.42.0
 	github.com/go-co-op/gocron v1.37.0
@@ -141,7 +141,7 @@ require (
 	github.com/shirou/gopsutil/v4 v4.25.6 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/skeema/knownhosts v1.3.0 // indirect
-	github.com/spf13/afero v1.11.0 // indirect
+	github.com/spf13/afero v1.15.0 // indirect
 	github.com/spf13/pflag v1.0.9 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/tetratelabs/wazero v1.9.0 // indirect
