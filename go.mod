@@ -13,6 +13,7 @@ require (
 	github.com/getsentry/sentry-go v0.42.0
 	github.com/go-co-op/gocron v1.37.0
 	github.com/google/go-github/v68 v68.0.0
+	github.com/google/go-github/v83 v83.0.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.28.0
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-plugin v1.7.0
@@ -93,7 +94,7 @@ require (
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
-	github.com/google/go-querystring v1.1.0 // indirect
+	github.com/google/go-querystring v1.2.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/go-immutable-radix v1.0.0 // indirect
 	github.com/hashicorp/go-metrics v0.5.4 // indirect
