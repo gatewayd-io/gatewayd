@@ -67,7 +67,7 @@ jobs:
           go-version: "1.25"
 
       - name: Lint code with golangci-lint 🚨
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v9
         with:
           version: "latest"
           install-mode: "goinstall"
