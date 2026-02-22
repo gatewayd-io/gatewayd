@@ -191,6 +191,7 @@ jobs:
         if: matrix.plugin == 'cache'
         run: |
           sleep 2
+          redis-cli FLUSHALL
           psql ${PGURL} -c "CREATE TABLE cache_test (id serial PRIMARY KEY, name varchar(255));" | grep CREATE || exit 1
           psql ${PGURL} -c "INSERT INTO cache_test (name) VALUES ('cached_value');" | grep INSERT || exit 1
           psql ${PGURL} -c "SELECT * FROM cache_test;" | grep cached_value || exit 1
@@ -206,6 +207,7 @@ jobs:
       - name: Test cache plugin over TLS 🧪
         if: matrix.plugin == 'cache'
         run: |
+          redis-cli FLUSHALL
           psql ${PGURL_TLS} -c "CREATE TABLE cache_tls_test (id serial PRIMARY KEY, name varchar(255));" | grep CREATE || exit 1
           psql ${PGURL_TLS} -c "INSERT INTO cache_tls_test (name) VALUES ('tls_cached');" | grep INSERT || exit 1
           psql ${PGURL_TLS} -c "SELECT * FROM cache_tls_test;" | grep tls_cached || exit 1
