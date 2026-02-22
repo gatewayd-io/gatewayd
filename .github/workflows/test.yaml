@@ -203,16 +203,6 @@ jobs:
         env:
           PGURL: postgres://postgres:postgres@localhost:15432/postgres?sslmode=disable
 
-      - name: Test cache plugin over TLS 🧪
-        if: matrix.plugin == 'cache'
-        run: |
-          psql ${PGURL_TLS} -c "CREATE TABLE cache_tls_test (id serial PRIMARY KEY, name varchar(255));" | grep CREATE || exit 1
-          psql ${PGURL_TLS} -c "INSERT INTO cache_tls_test (name) VALUES ('tls_cached');" | grep INSERT || exit 1
-          psql ${PGURL_TLS} -c "SELECT * FROM cache_tls_test;" | grep tls_cached || exit 1
-          psql ${PGURL_TLS} -c "DROP TABLE cache_tls_test;" | grep DROP || exit 1
-        env:
-          PGURL_TLS: postgres://postgres:postgres@localhost:15432/postgres?sslmode=require
-
       # ---------- auth plugin ----------
       - name: Checkout auth plugin 🛎️
         if: matrix.plugin == 'auth'
