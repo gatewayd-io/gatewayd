@@ -16,7 +16,7 @@
     <a href="https://docs.gatewayd.io/"><img src="https://img.shields.io/badge/read-docs-brightgreen" alt="Documentation"></a>
     <a href="https://pkg.go.dev/github.com/gatewayd-io/gatewayd"><img src="https://pkg.go.dev/badge/github.com/gatewayd-io/gatewayd.svg" alt="Go Reference"></a>
     <a href="https://coveralls.io/github/gatewayd-io/gatewayd?branch=main"><img src="https://coveralls.io/repos/github/gatewayd-io/gatewayd/badge.svg?branch=main" alt="Coverage Status" /></a>
-    <a href="https://awesome-go.com/database-tools/"><img src="https://awesome.re/badge.svg" alt="Mentioned in Awesome Go" /></a>
+    <a href="https://awesome-go.com/#database-tools"><img src="https://awesome.re/badge.svg" alt="Mentioned in Awesome Go" /></a>
 </p>
 
 **GatewayD** is a free and open-source cloud-native database gateway and framework for building data-driven applications. It is a middleware that sits between your database servers and clients and proxies all their communication. It is like API gateways in system design, but instead is used for proxying database traffic, rather than HTTP traffic.
@@ -83,6 +83,7 @@ The docs cover all aspects of using GatewayD. Some highlights include:
 - [gatewayd-plugin-cache](https://docs.gatewayd.io/plugins/gatewayd-plugin-cache): learn how to use the `gatewayd-plugin-cache` plugin for caching queries and their results.
 - [gatewayd-plugin-js](https://docs.gatewayd.io/plugins/gatewayd-plugin-js): learn how to use the experimental `gatewayd-plugin-js` plugin for executing JavaScript code in GatewayD.
 - [gatewayd-plugin-sql-ids-ips](https://docs.gatewayd.io/plugins/gatewayd-plugin-sql-ids-ips): learn how to use the `gatewayd-plugin-sql-ids-ips` plugin for detecting and preventing SQL injection attacks by using the [DeepSQLi](https://github.com/gatewayd-io/DeepSQLi) deep learning model.
+- [gatewayd-plugin-auth](https://docs.gatewayd.io/plugins/gatewayd-plugin-auth): learn how to use the `gatewayd-plugin-auth` plugin for authentication, authorization and access management.
 
 ## Contributing
 
