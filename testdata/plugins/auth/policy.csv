@@ -1,0 +1,5 @@
+p, admin, *, *, *
+p, readonly, *, *, read
+
+g, testuser, admin
+g, readonly, readonly
