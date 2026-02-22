@@ -92,10 +92,14 @@ jobs:
           ignore: "api/v1/*,usagereport/*"
 
   test-plugin:
-    name: Test GatewayD Plugins
+    name: "Test Plugin: ${{ matrix.plugin }}"
     runs-on: ubuntu-latest
     needs: test
-    timeout-minutes: 5
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        plugin: [cache, auth, js, sql-ids-ips]
     services:
       postgres:
         image: postgres
@@ -110,6 +114,15 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      redis:
+        image: redis
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - name: Checkout 🛎️
         uses: actions/checkout@v4
@@ -121,19 +134,27 @@ jobs:
         with:
           go-version: "1.25"
 
-      - name: Checkout test plugin 🛎️
+      - name: Build GatewayD 🏗️
+        run: make build-dev
+
+      - name: Install PSQL 🧑‍💻
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends postgresql-client
+
+      # ---------- cache plugin ----------
+      - name: Checkout cache plugin 🛎️
+        if: matrix.plugin == 'cache'
         uses: actions/checkout@v4
         with:
-          repository: gatewayd-io/plugin-template-go
-          path: plugin-template-go
+          repository: gatewayd-io/gatewayd-plugin-cache
+          path: gatewayd-plugin-cache
 
-      - name: Build template plugin 🏗️
+      - name: Build and configure cache plugin 🏗️
+        if: matrix.plugin == 'cache'
         run: |
-          # Build GatewayD
-          make build-dev
-          # Build template plugin
-          cd plugin-template-go && make build && cp plugin-template-go ../ptg && cd ..
-          export SHA256SUM=$(sha256sum ptg | awk '{print $1}')
+          cd gatewayd-plugin-cache && make build-dev && cd ..
+          export SHA256SUM=$(sha256sum gatewayd-plugin-cache/gatewayd-plugin-cache | awk '{print $1}')
           cat <<EOF > gatewayd_plugins.yaml
           metricsMergerPeriod: 1s
           healthCheckPeriod: 1s
@@ -141,39 +162,285 @@ jobs:
           timeout: 30s
 
           plugins:
-            - name: plugin-template-go
+            - name: gatewayd-plugin-cache
               enabled: True
-              url: github.com/gatewayd-io/plugin-template-go
-              localPath: ./ptg
+              url: github.com/gatewayd-io/gatewayd-plugin-cache
+              localPath: ./gatewayd-plugin-cache/gatewayd-plugin-cache
               args: ["--log-level", "debug"]
               env:
                 - MAGIC_COOKIE_KEY=GATEWAYD_PLUGIN
                 - MAGIC_COOKIE_VALUE=5712b87aa5d7e9f9e9ab643e6603181c5b796015cb1c09d6f5ada882bf2a1872
+                - REDIS_URL=redis://localhost:6379/0
+                - EXPIRY=1h
+                - DEFAULT_DB_NAME=postgres
+                - METRICS_ENABLED=True
+                - METRICS_UNIX_DOMAIN_SOCKET=/tmp/gatewayd-plugin-cache.sock
+                - METRICS_PATH=/metrics
+                - API_GRPC_ADDRESS=localhost:19090
+                - PERIODIC_INVALIDATOR_ENABLED=False
+                - EXIT_ON_STARTUP_ERROR=False
+                - CACHE_CHANNEL_BUFFER_SIZE=100
               checksum: ${SHA256SUM}
           EOF
 
-      - name: Run GatewayD with template plugin 🚀
+      - name: Run GatewayD with cache plugin 🚀
+        if: matrix.plugin == 'cache'
         run: ./gatewayd run -c testdata/gatewayd_tls.yaml &
 
-      - name: Install PSQL 🧑‍💻
+      - name: Test cache plugin 🧪
+        if: matrix.plugin == 'cache'
         run: |
-          sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends postgresql-client
-
-      - name: Run a test with PSQL over plaintext connection 🧪
-        run: |
-          psql ${PGURL} -c  "CREATE TABLE test_table (id serial PRIMARY KEY, name varchar(255));" | grep CREATE || exit 1
-          psql ${PGURL} -c "INSERT INTO test_table (name) VALUES ('test');" | grep INSERT || exit 1
-          psql ${PGURL} -c "SELECT * FROM test_table;" | grep test || exit 1
-          psql ${PGURL} -c "DROP TABLE test_table;" | grep DROP || exit 1
+          sleep 2
+          psql ${PGURL} -c "CREATE TABLE cache_test (id serial PRIMARY KEY, name varchar(255));" | grep CREATE || exit 1
+          psql ${PGURL} -c "INSERT INTO cache_test (name) VALUES ('cached_value');" | grep INSERT || exit 1
+          psql ${PGURL} -c "SELECT * FROM cache_test;" | grep cached_value || exit 1
+          # Second identical SELECT should succeed (served from cache or DB)
+          psql ${PGURL} -c "SELECT * FROM cache_test;" | grep cached_value || exit 1
+          # Write should invalidate cache
+          psql ${PGURL} -c "INSERT INTO cache_test (name) VALUES ('new_value');" | grep INSERT || exit 1
+          psql ${PGURL} -c "SELECT * FROM cache_test;" | grep new_value || exit 1
+          psql ${PGURL} -c "DROP TABLE cache_test;" | grep DROP || exit 1
         env:
           PGURL: postgres://postgres:postgres@localhost:15432/postgres?sslmode=disable
 
-      - name: Run a test with PSQL over TLS connection 🧪
+      - name: Test cache plugin over TLS 🧪
+        if: matrix.plugin == 'cache'
         run: |
-          psql ${PGURL_TLS} -c  "CREATE TABLE test_table (id serial PRIMARY KEY, name varchar(255));" | grep CREATE || exit 1
-          psql ${PGURL_TLS} -c "INSERT INTO test_table (name) VALUES ('test');" | grep INSERT || exit 1
-          psql ${PGURL_TLS} -c "SELECT * FROM test_table;" | grep test || exit 1
-          psql ${PGURL_TLS} -c "DROP TABLE test_table;" | grep DROP || exit 1
+          psql ${PGURL_TLS} -c "CREATE TABLE cache_tls_test (id serial PRIMARY KEY, name varchar(255));" | grep CREATE || exit 1
+          psql ${PGURL_TLS} -c "INSERT INTO cache_tls_test (name) VALUES ('tls_cached');" | grep INSERT || exit 1
+          psql ${PGURL_TLS} -c "SELECT * FROM cache_tls_test;" | grep tls_cached || exit 1
+          psql ${PGURL_TLS} -c "SELECT * FROM cache_tls_test;" | grep tls_cached || exit 1
+          psql ${PGURL_TLS} -c "DROP TABLE cache_tls_test;" | grep DROP || exit 1
         env:
           PGURL_TLS: postgres://postgres:postgres@localhost:15432/postgres?sslmode=require
+
+      # ---------- auth plugin ----------
+      - name: Checkout auth plugin 🛎️
+        if: matrix.plugin == 'auth'
+        uses: actions/checkout@v4
+        with:
+          repository: gatewayd-io/gatewayd-plugin-auth
+          path: gatewayd-plugin-auth
+
+      - name: Build and configure auth plugin 🏗️
+        if: matrix.plugin == 'auth'
+        run: |
+          cd gatewayd-plugin-auth && make build-dev && cd ..
+          export SHA256SUM=$(sha256sum gatewayd-plugin-auth/gatewayd-plugin-auth | awk '{print $1}')
+          cat <<EOF > gatewayd_plugins.yaml
+          metricsMergerPeriod: 1s
+          healthCheckPeriod: 1s
+          reloadOnCrash: true
+          timeout: 30s
+
+          plugins:
+            - name: gatewayd-plugin-auth
+              enabled: True
+              url: github.com/gatewayd-io/gatewayd-plugin-auth
+              localPath: ./gatewayd-plugin-auth/gatewayd-plugin-auth
+              args: ["--log-level", "debug"]
+              env:
+                - MAGIC_COOKIE_KEY=GATEWAYD_PLUGIN
+                - MAGIC_COOKIE_VALUE=5712b87aa5d7e9f9e9ab643e6603181c5b796015cb1c09d6f5ada882bf2a1872
+                - AUTH_TYPE=cleartext
+                - CREDENTIALS_FILE=testdata/plugins/auth/credentials.yaml
+                - SERVER_VERSION=17.4
+                - AUTHORIZATION_ENABLED=true
+                - CASBIN_MODEL_PATH=testdata/plugins/auth/model.conf
+                - CASBIN_POLICY_PATH=testdata/plugins/auth/policy.csv
+              checksum: ${SHA256SUM}
+          EOF
+
+      - name: Run GatewayD with auth plugin 🚀
+        if: matrix.plugin == 'auth'
+        run: ./gatewayd run -c testdata/gatewayd_auth.yaml &
+
+      - name: Test auth plugin - valid credentials 🧪
+        if: matrix.plugin == 'auth'
+        run: |
+          sleep 2
+          psql "postgres://testuser:testpass@localhost:15432/postgres?sslmode=disable" -c "SELECT 1 AS auth_ok;" | grep auth_ok || exit 1
+
+      - name: Test auth plugin - invalid credentials 🧪
+        if: matrix.plugin == 'auth'
+        run: |
+          # Connection with wrong password must fail
+          if psql "postgres://testuser:wrongpass@localhost:15432/postgres?sslmode=disable" -c "SELECT 1;" 2>/dev/null; then
+            echo "ERROR: Connection with wrong password should have failed"
+            exit 1
+          fi
+          echo "OK: Invalid credentials correctly rejected"
+
+      - name: Test auth plugin - authorization 🧪
+        if: matrix.plugin == 'auth'
+        run: |
+          # Admin user (testuser) can do everything
+          psql "postgres://testuser:testpass@localhost:15432/postgres?sslmode=disable" -c "CREATE TABLE auth_test (id serial PRIMARY KEY, name varchar(255));" | grep CREATE || exit 1
+          psql "postgres://testuser:testpass@localhost:15432/postgres?sslmode=disable" -c "INSERT INTO auth_test (name) VALUES ('admin_write');" | grep INSERT || exit 1
+          psql "postgres://testuser:testpass@localhost:15432/postgres?sslmode=disable" -c "SELECT * FROM auth_test;" | grep admin_write || exit 1
+          # Readonly user can SELECT
+          psql "postgres://readonly:readpass@localhost:15432/postgres?sslmode=disable" -c "SELECT * FROM auth_test;" | grep admin_write || exit 1
+          # Readonly user cannot INSERT (should fail)
+          if psql "postgres://readonly:readpass@localhost:15432/postgres?sslmode=disable" -c "INSERT INTO auth_test (name) VALUES ('should_fail');" 2>/dev/null; then
+            echo "ERROR: Readonly user should not be able to INSERT"
+            exit 1
+          fi
+          echo "OK: Authorization enforcement working"
+          # Cleanup
+          psql "postgres://testuser:testpass@localhost:15432/postgres?sslmode=disable" -c "DROP TABLE auth_test;" | grep DROP || exit 1
+
+      # ---------- js plugin ----------
+      - name: Checkout js plugin 🛎️
+        if: matrix.plugin == 'js'
+        uses: actions/checkout@v4
+        with:
+          repository: gatewayd-io/gatewayd-plugin-js
+          path: gatewayd-plugin-js
+
+      - name: Build and configure js plugin 🏗️
+        if: matrix.plugin == 'js'
+        run: |
+          cd gatewayd-plugin-js && make build-dev && cd ..
+          export SHA256SUM=$(sha256sum gatewayd-plugin-js/gatewayd-plugin-js | awk '{print $1}')
+          cat <<EOF > gatewayd_plugins.yaml
+          metricsMergerPeriod: 1s
+          healthCheckPeriod: 1s
+          reloadOnCrash: true
+          timeout: 30s
+
+          plugins:
+            - name: gatewayd-plugin-js
+              enabled: True
+              url: github.com/gatewayd-io/gatewayd-plugin-js
+              localPath: ./gatewayd-plugin-js/gatewayd-plugin-js
+              args: ["--log-level", "debug"]
+              env:
+                - MAGIC_COOKIE_KEY=GATEWAYD_PLUGIN
+                - MAGIC_COOKIE_VALUE=5712b87aa5d7e9f9e9ab643e6603181c5b796015cb1c09d6f5ada882bf2a1872
+                - SCRIPT_PATH=testdata/plugins/js/test_hooks.js
+              checksum: ${SHA256SUM}
+          EOF
+
+      - name: Run GatewayD with js plugin 🚀
+        if: matrix.plugin == 'js'
+        run: ./gatewayd run -c testdata/gatewayd_tls.yaml &
+
+      - name: Test js plugin 🧪
+        if: matrix.plugin == 'js'
+        run: |
+          sleep 2
+          # JS hook intercepts and logs queries while passing them through
+          psql ${PGURL} -c "CREATE TABLE js_test (id serial PRIMARY KEY, name varchar(255));" | grep CREATE || exit 1
+          psql ${PGURL} -c "INSERT INTO js_test (name) VALUES ('js_hook_test');" | grep INSERT || exit 1
+          psql ${PGURL} -c "SELECT * FROM js_test;" | grep js_hook_test || exit 1
+          psql ${PGURL} -c "UPDATE js_test SET name = 'updated' WHERE id = 1;" | grep UPDATE || exit 1
+          psql ${PGURL} -c "SELECT * FROM js_test;" | grep updated || exit 1
+          psql ${PGURL} -c "DROP TABLE js_test;" | grep DROP || exit 1
+        env:
+          PGURL: postgres://postgres:postgres@localhost:15432/postgres?sslmode=disable
+
+      - name: Test js plugin over TLS 🧪
+        if: matrix.plugin == 'js'
+        run: |
+          psql ${PGURL_TLS} -c "CREATE TABLE js_tls_test (id serial PRIMARY KEY, val int);" | grep CREATE || exit 1
+          psql ${PGURL_TLS} -c "INSERT INTO js_tls_test (val) VALUES (42);" | grep INSERT || exit 1
+          psql ${PGURL_TLS} -c "SELECT * FROM js_tls_test;" | grep 42 || exit 1
+          psql ${PGURL_TLS} -c "DROP TABLE js_tls_test;" | grep DROP || exit 1
+        env:
+          PGURL_TLS: postgres://postgres:postgres@localhost:15432/postgres?sslmode=require
+
+      # ---------- sql-ids-ips plugin ----------
+      - name: Checkout sql-ids-ips plugin 🛎️
+        if: matrix.plugin == 'sql-ids-ips'
+        uses: actions/checkout@v4
+        with:
+          repository: gatewayd-io/gatewayd-plugin-sql-ids-ips
+          path: gatewayd-plugin-sql-ids-ips
+
+      - name: Start mock prediction API 🤖
+        if: matrix.plugin == 'sql-ids-ips'
+        run: python3 testdata/plugins/mock_sqli_api.py 8000 &
+
+      - name: Build and configure sql-ids-ips plugin 🏗️
+        if: matrix.plugin == 'sql-ids-ips'
+        run: |
+          cd gatewayd-plugin-sql-ids-ips && make build-dev && cd ..
+          export SHA256SUM=$(sha256sum gatewayd-plugin-sql-ids-ips/gatewayd-plugin-sql-ids-ips | awk '{print $1}')
+          cat <<EOF > gatewayd_plugins.yaml
+          metricsMergerPeriod: 1s
+          healthCheckPeriod: 1s
+          reloadOnCrash: true
+          timeout: 30s
+
+          plugins:
+            - name: gatewayd-plugin-sql-ids-ips
+              enabled: True
+              url: github.com/gatewayd-io/gatewayd-plugin-sql-ids-ips
+              localPath: ./gatewayd-plugin-sql-ids-ips/gatewayd-plugin-sql-ids-ips
+              args: ["--log-level", "debug"]
+              env:
+                - MAGIC_COOKIE_KEY=GATEWAYD_PLUGIN
+                - MAGIC_COOKIE_VALUE=5712b87aa5d7e9f9e9ab643e6603181c5b796015cb1c09d6f5ada882bf2a1872
+                - PREDICTION_API_ADDRESS=http://localhost:8000
+                - THRESHOLD=0.8
+                - ENABLE_LIBINJECTION=True
+                - LIBINJECTION_PERMISSIVE_MODE=True
+                - RESPONSE_TYPE=error
+                - ERROR_MESSAGE=SQL injection detected
+                - ERROR_DETAIL=Back off, you are not welcome here.
+                - ERROR_SEVERITY=EXCEPTION
+                - ERROR_NUMBER=42000
+                - METRICS_ENABLED=True
+                - METRICS_UNIX_DOMAIN_SOCKET=/tmp/gatewayd-plugin-sql-ids-ips.sock
+                - METRICS_PATH=/metrics
+              checksum: ${SHA256SUM}
+          EOF
+
+      - name: Run GatewayD with sql-ids-ips plugin 🚀
+        if: matrix.plugin == 'sql-ids-ips'
+        run: ./gatewayd run -c testdata/gatewayd_tls.yaml &
+
+      - name: Test sql-ids-ips plugin - legitimate queries 🧪
+        if: matrix.plugin == 'sql-ids-ips'
+        run: |
+          sleep 2
+          psql ${PGURL} -c "CREATE TABLE sqli_test (id serial PRIMARY KEY, name varchar(255));" | grep CREATE || exit 1
+          psql ${PGURL} -c "INSERT INTO sqli_test (name) VALUES ('safe_value');" | grep INSERT || exit 1
+          psql ${PGURL} -c "SELECT * FROM sqli_test WHERE id = 1;" | grep safe_value || exit 1
+          psql ${PGURL} -c "UPDATE sqli_test SET name = 'still_safe' WHERE id = 1;" | grep UPDATE || exit 1
+          psql ${PGURL} -c "SELECT * FROM sqli_test;" | grep still_safe || exit 1
+        env:
+          PGURL: postgres://postgres:postgres@localhost:15432/postgres?sslmode=disable
+
+      - name: Test sql-ids-ips plugin - injection blocked 🧪
+        if: matrix.plugin == 'sql-ids-ips'
+        run: |
+          # OR 1=1 injection should be blocked
+          if psql ${PGURL} -c "SELECT * FROM sqli_test WHERE id = 1 OR 1=1;" 2>/dev/null; then
+            echo "ERROR: OR 1=1 injection should have been blocked"
+            exit 1
+          fi
+          echo "OK: OR 1=1 injection blocked"
+
+          # UNION SELECT injection should be blocked
+          if psql ${PGURL} -c "SELECT * FROM sqli_test UNION SELECT 1, version();" 2>/dev/null; then
+            echo "ERROR: UNION SELECT injection should have been blocked"
+            exit 1
+          fi
+          echo "OK: UNION SELECT injection blocked"
+
+          # Stacked query injection should be blocked
+          if psql ${PGURL} -c "SELECT * FROM sqli_test; DROP TABLE sqli_test;" 2>/dev/null; then
+            echo "ERROR: Stacked query injection should have been blocked"
+            exit 1
+          fi
+          echo "OK: Stacked query injection blocked"
+        env:
+          PGURL: postgres://postgres:postgres@localhost:15432/postgres?sslmode=disable
+
+      - name: Test sql-ids-ips plugin - cleanup 🧪
+        if: matrix.plugin == 'sql-ids-ips'
+        run: |
+          psql ${PGURL} -c "DROP TABLE IF EXISTS sqli_test;" | grep DROP || exit 1
+        env:
+          PGURL: postgres://postgres:postgres@localhost:15432/postgres?sslmode=disable
