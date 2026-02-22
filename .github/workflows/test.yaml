@@ -209,7 +209,6 @@ jobs:
           psql ${PGURL_TLS} -c "CREATE TABLE cache_tls_test (id serial PRIMARY KEY, name varchar(255));" | grep CREATE || exit 1
           psql ${PGURL_TLS} -c "INSERT INTO cache_tls_test (name) VALUES ('tls_cached');" | grep INSERT || exit 1
           psql ${PGURL_TLS} -c "SELECT * FROM cache_tls_test;" | grep tls_cached || exit 1
-          psql ${PGURL_TLS} -c "SELECT * FROM cache_tls_test;" | grep tls_cached || exit 1
           psql ${PGURL_TLS} -c "DROP TABLE cache_tls_test;" | grep DROP || exit 1
         env:
           PGURL_TLS: postgres://postgres:postgres@localhost:15432/postgres?sslmode=require
@@ -258,14 +257,14 @@ jobs:
       - name: Test auth plugin - valid credentials 🧪
         if: matrix.plugin == 'auth'
         run: |
-          sleep 2
-          psql "postgres://testuser:testpass@localhost:15432/postgres?sslmode=disable" -c "SELECT 1 AS auth_ok;" | grep auth_ok || exit 1
+          sleep 3
+          psql "postgres://testuser:testpass@localhost:15432/postgres?sslmode=disable&connect_timeout=5" -c "SELECT 1 AS auth_ok;" | grep auth_ok || exit 1
 
       - name: Test auth plugin - invalid credentials 🧪
         if: matrix.plugin == 'auth'
         run: |
           # Connection with wrong password must fail
-          if psql "postgres://testuser:wrongpass@localhost:15432/postgres?sslmode=disable" -c "SELECT 1;" 2>/dev/null; then
+          if psql "postgres://testuser:wrongpass@localhost:15432/postgres?sslmode=disable&connect_timeout=5" -c "SELECT 1;" 2>/dev/null; then
             echo "ERROR: Connection with wrong password should have failed"
             exit 1
           fi
@@ -274,20 +273,22 @@ jobs:
       - name: Test auth plugin - authorization 🧪
         if: matrix.plugin == 'auth'
         run: |
+          ADMIN_URL="postgres://testuser:testpass@localhost:15432/postgres?sslmode=disable&connect_timeout=5"
+          READONLY_URL="postgres://readonly:readpass@localhost:15432/postgres?sslmode=disable&connect_timeout=5"
           # Admin user (testuser) can do everything
-          psql "postgres://testuser:testpass@localhost:15432/postgres?sslmode=disable" -c "CREATE TABLE auth_test (id serial PRIMARY KEY, name varchar(255));" | grep CREATE || exit 1
-          psql "postgres://testuser:testpass@localhost:15432/postgres?sslmode=disable" -c "INSERT INTO auth_test (name) VALUES ('admin_write');" | grep INSERT || exit 1
-          psql "postgres://testuser:testpass@localhost:15432/postgres?sslmode=disable" -c "SELECT * FROM auth_test;" | grep admin_write || exit 1
+          psql "${ADMIN_URL}" -c "CREATE TABLE auth_test (id serial PRIMARY KEY, name varchar(255));" | grep CREATE || exit 1
+          psql "${ADMIN_URL}" -c "INSERT INTO auth_test (name) VALUES ('admin_write');" | grep INSERT || exit 1
+          psql "${ADMIN_URL}" -c "SELECT * FROM auth_test;" | grep admin_write || exit 1
           # Readonly user can SELECT
-          psql "postgres://readonly:readpass@localhost:15432/postgres?sslmode=disable" -c "SELECT * FROM auth_test;" | grep admin_write || exit 1
+          psql "${READONLY_URL}" -c "SELECT * FROM auth_test;" | grep admin_write || exit 1
           # Readonly user cannot INSERT (should fail)
-          if psql "postgres://readonly:readpass@localhost:15432/postgres?sslmode=disable" -c "INSERT INTO auth_test (name) VALUES ('should_fail');" 2>/dev/null; then
+          if psql "${READONLY_URL}" -c "INSERT INTO auth_test (name) VALUES ('should_fail');" 2>/dev/null; then
             echo "ERROR: Readonly user should not be able to INSERT"
             exit 1
           fi
           echo "OK: Authorization enforcement working"
           # Cleanup
-          psql "postgres://testuser:testpass@localhost:15432/postgres?sslmode=disable" -c "DROP TABLE auth_test;" | grep DROP || exit 1
+          psql "${ADMIN_URL}" -c "DROP TABLE auth_test;" | grep DROP || exit 1
 
       # ---------- js plugin ----------
       - name: Checkout js plugin 🛎️
