@@ -520,6 +520,10 @@ func (pr *Proxy) PassThroughToClient(conn *ConnWrapper, stack *Stack) *gerr.Gate
 	if received == 0 {
 		span.AddEvent("No data to send to client")
 		stack.PopLastRequest()
+		if err != nil {
+			span.RecordError(err)
+			return err
+		}
 		return nil
 	}
 
