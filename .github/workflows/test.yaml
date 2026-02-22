@@ -57,7 +57,7 @@ jobs:
           --health-retries 5
     steps:
       - name: Checkout 🛎️
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -125,7 +125,7 @@ jobs:
           --health-retries 5
     steps:
       - name: Checkout 🛎️
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -145,7 +145,7 @@ jobs:
       # ---------- cache plugin ----------
       - name: Checkout cache plugin 🛎️
         if: matrix.plugin == 'cache'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: gatewayd-io/gatewayd-plugin-cache
           path: gatewayd-plugin-cache
@@ -219,7 +219,7 @@ jobs:
       # ---------- auth plugin ----------
       - name: Checkout auth plugin 🛎️
         if: matrix.plugin == 'auth'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: gatewayd-io/gatewayd-plugin-auth
           path: gatewayd-plugin-auth
@@ -296,7 +296,7 @@ jobs:
       # ---------- js plugin ----------
       - name: Checkout js plugin 🛎️
         if: matrix.plugin == 'js'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: gatewayd-io/gatewayd-plugin-js
           path: gatewayd-plugin-js
@@ -356,7 +356,7 @@ jobs:
       # ---------- sql-ids-ips plugin ----------
       - name: Checkout sql-ids-ips plugin 🛎️
         if: matrix.plugin == 'sql-ids-ips'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: gatewayd-io/gatewayd-plugin-sql-ids-ips
           path: gatewayd-plugin-sql-ids-ips

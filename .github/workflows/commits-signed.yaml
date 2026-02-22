@@ -9,6 +9,6 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Check signed commits in PR
       uses: 1Password/check-signed-commits-action@v1
