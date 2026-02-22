@@ -1,0 +1,50 @@
+# GatewayD config for auth plugin CI tests.
+# Backend connections are pre-authenticated via startupParams.
+
+loggers:
+  default:
+    level: debug
+    output: ["console"]
+    noColor: True
+
+metrics:
+  default:
+    enabled: True
+
+clients:
+  default:
+    writes:
+      address: localhost:5432
+      network: tcp
+      tcpKeepAlive: False
+      tcpKeepAlivePeriod: 30s
+      receiveChunkSize: 8192
+      receiveDeadline: 0s
+      receiveTimeout: 0s
+      sendDeadline: 0s
+      dialTimeout: 60s
+      retries: 3
+      backoff: 1s
+      backoffMultiplier: 2.0
+      disableBackoffCaps: false
+      startupParams:
+        user: postgres
+        database: postgres
+        password: postgres
+
+pools:
+  default:
+    writes:
+      size: 10
+
+proxies:
+  default:
+    writes:
+      healthCheckPeriod: 60s
+
+servers:
+  default:
+    address: 0.0.0.0:15432
+
+api:
+  enabled: True

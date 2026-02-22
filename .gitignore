@@ -49,3 +49,6 @@ raft/node*/
 # Accidental installation of plugin
 plugins/gatewayd-plugin-cache
 plugins/
+
+# Allow test plugin fixtures
+!testdata/plugins/
