@@ -10,7 +10,7 @@ require (
 	github.com/docker/go-connections v0.6.0
 	github.com/envoyproxy/protoc-gen-validate v1.3.3
 	github.com/gatewayd-io/gatewayd-plugin-sdk v0.4.4
-	github.com/getsentry/sentry-go v0.42.0
+	github.com/getsentry/sentry-go v0.43.0
 	github.com/go-co-op/gocron v1.37.0
 	github.com/google/go-github/v68 v68.0.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.28.0
