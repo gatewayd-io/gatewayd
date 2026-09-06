@@ -7,7 +7,7 @@ require (
 	github.com/NYTimes/gziphandler v1.1.1
 	github.com/codingsince1985/checksum v1.3.0
 	github.com/cybercyst/go-scaffold v0.0.0-20240606114431-816e6211c151
-	github.com/docker/go-connections v0.6.0
+	github.com/docker/go-connections v0.8.1
 	github.com/envoyproxy/protoc-gen-validate v1.3.3
 	github.com/gatewayd-io/gatewayd-plugin-sdk v0.4.4
 	github.com/getsentry/sentry-go v0.42.0
